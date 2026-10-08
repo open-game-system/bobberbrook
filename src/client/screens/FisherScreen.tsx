@@ -60,7 +60,7 @@ export function FisherScreen({ seat, host, hosting }: { seat: number; host: bool
     const saved = readProgress(localStore());
     if (saved) send({ type: "PROGRESS", progress: saved });
   }, [host, send]);
-  const progressKey = `${lake.shells}:${lake.catchSeq}`;
+  const progressKey = `${lake.shells}:${lake.catchSeq}:${lake.discovered.length}`;
   useEffect(() => {
     if (host && lake.progressLoaded) writeProgress(localStore(), progressOf(lake));
     // progressKey changes whenever the journal or shells do.

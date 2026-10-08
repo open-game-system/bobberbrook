@@ -5,7 +5,11 @@ export const RoomInputPropsSchema = z.object({});
 const Stick = z.number().min(-1).max(1);
 
 export const JournalEntrySchema = z.object({ count: z.number().int().min(0), bestCm: z.number().min(0), firstBy: z.string().max(40).nullable() });
-export const ProgressSchema = z.object({ journal: z.record(z.string().max(40), JournalEntrySchema), shells: z.number().int().min(0).max(1_000_000) });
+export const ProgressSchema = z.object({
+  journal: z.record(z.string().max(40), JournalEntrySchema),
+  shells: z.number().int().min(0).max(1_000_000),
+  discovered: z.array(z.enum(["moonwell", "mistmarsh", "pools", "hollow", "tarn"])).max(5).optional(),
+});
 
 export const RoomClientEventSchema = z.discriminatedUnion("type", [
   // Any phone. ogsToken: the OGS app's game token; the Room server verifies it before the machine sees the join.

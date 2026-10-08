@@ -615,7 +615,7 @@ export function setCampfire(lake: Lake, on: boolean, now: number): Lake {
   });
 }
 
-export type Progress = { journal: Record<string, JournalEntry>; shells: number };
+export type Progress = { journal: Record<string, JournalEntry>; shells: number; discovered?: AreaId[] };
 
 /** The family's saved progress (from the host phone), merged in once per room. */
 export function loadProgress(lake: Lake, progress: Progress): Lake {
@@ -631,10 +631,16 @@ export function loadProgress(lake: Lake, progress: Progress): Lake {
     }
     d.shells += progress.shells;
     d.rodTier = rodTierFor(d.shells);
+    // Places found on earlier visits stay found (no second celebration), each with its swirl.
+    for (const id of progress.discovered ?? []) {
+      if (d.discovered.includes(id)) continue;
+      d.discovered.push(id);
+      spawnSwirl(d, d.now, false, id);
+    }
   });
 }
 
 export function progressOf(lake: Lake): Progress {
-  return { journal: lake.journal, shells: lake.shells };
+  return { journal: lake.journal, shells: lake.shells, discovered: lake.discovered };
 }
 

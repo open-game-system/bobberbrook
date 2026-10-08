@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { AREAS, TRAILS, advance, areaAt, areaById, castFrom, castRingIn, inPond, onLand, pondOutline, pondRadius, walkable } from "./world";
-import { LEASH, join, leash, move, newLake, step, type Lake } from "./lake";
+import { LEASH, join, leash, loadProgress, move, newLake, progressOf, step, type Lake } from "./lake";
 
 /** A point on a place's shore, just out of the water, at an angle. */
 const shore = (id: Parameters<typeof areaById>[0], theta: number) => {
@@ -89,5 +89,13 @@ describe("exploring", () => {
   it("walks faster than before for the long trails", () => {
     const l = move(twoFishers(), 0, { x: 1, y: 0 }, T0);
     expect(l.fishers[0]!.vel.x).toBe(5);
+  });
+
+  it("keeps places found on earlier visits, with a swirl each and no new celebration", () => {
+    const l = loadProgress(newLake(4, T0), { journal: {}, shells: 0, discovered: ["moonwell", "hollow"] });
+    expect(l.discovered).toEqual(["moonwell", "hollow"]);
+    expect(l.discovery).toBeNull();
+    expect(l.swirls.filter((s) => s.area === "hollow")).toHaveLength(1);
+    expect(progressOf(l).discovered).toEqual(["moonwell", "hollow"]);
   });
 });
