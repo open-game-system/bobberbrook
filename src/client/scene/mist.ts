@@ -108,7 +108,7 @@ export function buildMist(full: boolean): Mist {
   return {
     mesh,
     assign(places, trails) {
-      const next = places.map((p) => p.id).join(";");
+      const next = places.map((p) => `${p.id}@${p.center.x}`).join(";");
       if (next === sig) return;
       sig = next;
       cards.length = 0;

@@ -147,7 +147,7 @@ export function groundColor(x: number, z: number, y: number, slope: number, out:
   // Forest trails: worn earth that runs on into each clearing and fades before the shore.
   path = Math.max(path, trailWear(x, z) * smoothstep(1.5, 5, d));
   if (path > 0) out.lerp(tmp.copy(DIRT).multiplyScalar(0.92 + 0.15 * n2), Math.max(0, Math.min(1, path)) * 0.9);
-  if (sea < 6) out.lerp(BEACH, (1 - smoothstep(1, 6, sea)) * 0.85);
+  if (sea < 3) out.lerp(BEACH, (1 - smoothstep(0.5, 3, sea)) * 0.85);
   // Rock on steep faces, moss on top.
   const rock = smoothstep(0.55, 0.85, slope);
   if (rock > 0) {

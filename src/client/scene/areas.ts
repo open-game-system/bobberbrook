@@ -7,6 +7,7 @@ import { heightAt, trailWear } from "./terrain";
 import type { TodState } from "./tod";
 import { buildLandmark, type Landmark, type LandmarkStyle } from "./landmarks";
 import { placeHash } from "./valley";
+import { landmarkFor } from "./biomes";
 import { placesWithin } from "./worldQuery";
 import type { Jobs } from "./stream";
 
@@ -70,7 +71,7 @@ const RECIPES: Record<Exclude<Biome, "moonwell">, Recipe> = {
 
 /** Which set-piece builder dresses a biome (home places use their own). */
 const STYLE: Record<Exclude<Biome, "moonwell">, LandmarkStyle> = {
-  marsh: "mistmarsh", pools: "pools", hollow: "hollow", tarn: "tarn", willow: "mistmarsh", crystal: "tarn", ember: "hollow", frost: "tarn",
+  marsh: "mistmarsh", pools: "pools", hollow: "hollow", tarn: "tarn", willow: "willow", crystal: "crystal", ember: "ember", frost: "frost",
 };
 
 export type AreaDressing = {
@@ -218,7 +219,7 @@ export function buildAreaDressing(full: boolean, m: AreaMats, jobs: Jobs): AreaD
     const g: Group = yield* dress(a, recipe, full, m, l.glow, lilyMat, a.key, a.home);
     yield;
     const style: LandmarkStyle = a.home ? (a.id as LandmarkStyle) : STYLE[a.biome === "moonwell" ? "tarn" : a.biome];
-    const lm = buildLandmark(a, style, a.home ? 0 : Math.floor(placeHash(a.key, 5) * 1000), full, m.painted, m.tree);
+    const lm = buildLandmark(a, style, a.home ? 0 : Math.floor(placeHash(a.key, 5) * 1000), full, m.painted, m.tree, a.home ? null : landmarkFor(a.biome, placeHash(a.key, 6)));
     if (!l.alive) {
       disposeGroup(g);
       lm.dispose();

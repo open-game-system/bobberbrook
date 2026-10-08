@@ -29,6 +29,7 @@ import { rng, vnoise } from "./noise";
 import { heightAt } from "./terrain";
 import type { TodState } from "./tod";
 import { flowMaterial, ribbon } from "./water";
+import { buildPlaceLandmark, crystalKit, emberKit, frostKit, willowKit, type LandmarkKind } from "./biomes";
 
 /**
  * Each place's signature set-pieces, from its concept art: Mistmarsh's willows, boardwalk and
@@ -503,24 +504,38 @@ function tarn(c: Ctx): void {
   c.group.add(cm);
 }
 
-const BUILDERS: Record<Exclude<AreaId, "moonwell">, (c: Ctx) => void> = { mistmarsh, hollow, pools, tarn };
+const BUILDERS: Record<LandmarkStyle, (c: Ctx) => void> = {
+  mistmarsh,
+  hollow,
+  pools,
+  tarn,
+  willow: (c) => willowKit(c, () => willowGeometry(7 + (c.seed % 5))),
+  crystal: crystalKit,
+  ember: emberKit,
+  frost: frostKit,
+};
 
 /** Base glow of each place's landmark material (the hollow glows even by day). */
-const GLOW_BASE: Record<Exclude<AreaId, "moonwell">, [number, number]> = {
+const GLOW_BASE: Record<LandmarkStyle, [number, number]> = {
+  willow: [0.8, 1.6],
+  crystal: [1.2, 1.9],
+  ember: [1.0, 1.8],
+  frost: [0.9, 1.6],
   mistmarsh: [0.75, 1.6],
   hollow: [1.25, 1.7],
   pools: [0.9, 1.4],
   tarn: [0.9, 1.9],
 };
 
-export type LandmarkStyle = Exclude<AreaId, "moonwell">;
+export type LandmarkStyle = Exclude<AreaId, "moonwell"> | "willow" | "crystal" | "ember" | "frost";
 
-export function buildLandmark(a: Area, style: LandmarkStyle, seed: number, full: boolean, painted: Material, tree: Material): Landmark {
+export function buildLandmark(a: Area, style: LandmarkStyle, seed: number, full: boolean, painted: Material, tree: Material, landmark: LandmarkKind | null = null): Landmark {
   const id = style;
   const group = new Group();
   group.name = `landmark-${a.id}`;
   const c: Ctx = { a, seed, wood: [], glow: [], full, group, painted, tree, extra: [], flows: [] };
   BUILDERS[id](c);
+  if (landmark) buildPlaceLandmark(c, landmark);
   const glowMat = new MeshBasicMaterial({ vertexColors: true });
   if (c.wood.length) {
     const m = new Mesh(merge(c.wood), painted);

@@ -269,9 +269,9 @@ function towerOf(p: Platform): { x: number; z: number } {
 
 // ---------- the module ----------
 
-type Live = { p: Platform; vehicle: Group; sail: Mesh | null; props: Mesh[]; base: Group | null; ready: number; alive: boolean };
+type Live = { p: Platform; vehicle: Group; sail: Mesh | null; props: Mesh[]; base: Group | null; ready: number; alive: boolean; bodies: Mesh[] };
 
-export function buildVehicles(full: boolean, painted: Material, paintedDouble: Material): Vehicles {
+export function buildVehicles(full: boolean, painted: Material, paintedDouble: Material, fadeMat: Material = painted, fadeDouble: Material = paintedDouble): Vehicles {
   const group = new Group();
   group.name = "vehicles";
   const boat = boatGeometry();
@@ -317,9 +317,11 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
     vehicle.name = `${p.kind}-${p.id}`;
     let sail: Mesh | null = null;
     const props: Mesh[] = [];
+    const bodies: Mesh[] = [];
     let base: Group | null = null;
     if (p.kind === "boat") {
-      const b = new Mesh(boat.body, painted);
+      const b = new Mesh(boat.body, fadeMat);
+      bodies.push(b);
       b.castShadow = full;
       const g = new Mesh(boat.glow, glowMat);
       sail = new Mesh(boat.sail, paintedDouble);
@@ -329,7 +331,7 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
       // The dock: from the land end (at) out along the route.
       base = new Group();
       base.name = `dock-${p.id}`;
-      const d = new Mesh(dock.body, painted);
+      const d = new Mesh(dock.body, fadeMat);
       d.castShadow = full;
       d.receiveShadow = true;
       base.add(d, new Mesh(dock.glow, glowMat));
@@ -339,7 +341,8 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
       base.rotation.y = -Math.atan2(dz, dx);
       group.add(base);
     } else {
-      const b = new Mesh(zep.body, painted);
+      const b = new Mesh(zep.body, fadeMat);
+      bodies.push(b);
       b.castShadow = full;
       const g = new Mesh(zep.glow, glowMat);
       vehicle.add(b, g);
@@ -364,7 +367,7 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
     restPose(p, pose);
     place(vehicle, pose);
     group.add(vehicle);
-    return { p, vehicle, sail, props, base, ready: 0, alive: true };
+    return { p, vehicle, sail, props, base, ready: 0, alive: true, bodies };
   }
 
   function place(v: Group, ps: Pose): void {
@@ -479,6 +482,9 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
         const twin = ride && rl && l !== rl && l.p.place === rl.p.toPlace && l.p.toPlace === rl.p.place;
         l.vehicle.visible = !twin;
         const busy = l === rl ? 1 : l.ready;
+        // Moored vehicles fade like trees when they stand between the camera and the family; the ride's never does.
+        for (const b of l.bodies) b.material = l === rl ? painted : fadeMat;
+        if (l.sail) l.sail.material = l === rl ? paintedDouble : fadeDouble;
         if (l.sail) l.sail.scale.set(1, 0.25 + 0.75 * busy, 1);
         for (const pr of l.props) pr.rotation.x += dt * (1.5 + 14 * busy);
         if (l !== rl && l.p.kind === "boat") {

@@ -184,7 +184,9 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   scene.add(mist.mesh);
   const fow = buildFogOfWar(jobs);
   scene.add(fow.mesh);
-  const vehicles = buildVehicles(full, painted, paintedDouble);
+  const treeMatDouble = occluderMaterial(occ);
+  treeMatDouble.side = DoubleSide;
+  const vehicles = buildVehicles(full, painted, paintedDouble, treeMat, treeMatDouble);
   scene.add(vehicles.group);
   const rideFocus = [new Vector3(), new Vector3(), new Vector3()];
   /** Each nearby place's veil (1 = not found yet), eased. */
@@ -597,6 +599,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       props.dispose();
       sway.dispose();
       treeMat.dispose();
+      treeMatDouble.dispose();
       treeDepth.dispose();
       parts.water.dispose();
       parts.glow.dispose();

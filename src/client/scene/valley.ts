@@ -212,8 +212,8 @@ const BIOME_LOOKS: Record<"willow" | "crystal" | "ember" | "frost", AreaLook> = 
   },
   // Snowy pines, frosted grass, pale blue ice edge.
   frost: {
-    grassA: B(0x9ab0c8), grassB: B(0xc8d8e8), grassC: B(0xb0b8f0),
-    canopy: [B(0xd0e0ff), B(0xc0d0f0), B(0xe0e8ff)],
+    grassA: B(0xc8d8ea), grassB: B(0xeef4fc), grassC: B(0xc0c8f4),
+    canopy: [B(0xe8f0ff), B(0xd8e4ff), B(0xf4f8ff)],
     waterShallow: B(0xd8f8ff), waterDeep: B(0x8098e0), calm: 0.85,
     fog: B(0xc8d8f8), fogK: 0.5, fogScale: 0.8, sunK: 1.0, hemiK: 1.1, hemiSky: B(0xe0ecff), glowAdd: 0.2, mistAdd: 0.25, exposureK: 1.0, grade: B(0xf2f6ff),
   },
@@ -248,7 +248,8 @@ function vary(c: Color, dh: number, dl: number): Color {
 /** A place's look: the home valley's hand-tuned ones, else its biome's with a seeded sub-palette. */
 export function lookOf(p: Place): AreaLook {
   if (p.home) return LOOKS[p.id];
-  const hit = lookCache.get(p.key);
+  const ck = `${p.key}:${p.biome}:${p.center.x}`;
+  const hit = lookCache.get(ck);
   if (hit) return hit;
   const base = biomeLook(p.biome);
   const dh = (placeHash(p.key, 1) - 0.5) * 0.08;
@@ -263,6 +264,6 @@ export function lookOf(p: Place): AreaLook {
     waterShallow: vary(base.waterShallow, dh * 0.6, 0),
     waterDeep: vary(base.waterDeep, dh, 0),
   };
-  lookCache.set(p.key, look);
+  lookCache.set(ck, look);
   return look;
 }

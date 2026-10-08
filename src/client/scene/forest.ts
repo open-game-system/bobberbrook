@@ -2,6 +2,7 @@ import { BufferGeometry, Color, ConeGeometry, CylinderGeometry, Group, Instanced
 import { CAMPFIRE, SOUTH, TRAIL_HALF_WIDTH, angleGap } from "../../game/world";
 import { CANOPY, blob, bushGeometry, instanced, oakGeometry, pineGeometry, type Inst } from "./kit";
 import { birchGeometry, willowGeometry } from "./landmarks";
+import { paleOakGeometry, snowPineGeometry } from "./biomes";
 import { fbm, hash2, rng, vnoise } from "./noise";
 import { merge, paint, prep, puffNormals } from "./geo";
 import { FALLS, heightAt } from "./terrain";
@@ -65,15 +66,15 @@ const FAR_DIST = 300;
 const FOREST_R = 250;
 
 /** How a biome leans the forest mix: pines, willows, birches. */
-const MIX: Partial<Record<Biome, { pine: number; willow: number; birch: number }>> = {
+const MIX: Partial<Record<Biome, { pine: number; willow: number; birch: number; pale?: number; snow?: number }>> = {
   marsh: { pine: -0.2, willow: 1.1, birch: 0 },
-  willow: { pine: -0.3, willow: 1.5, birch: 0 },
+  willow: { pine: -0.3, willow: 1.5, birch: 0, pale: 0.3 },
   pools: { pine: 0, willow: 0, birch: 1.0 },
-  crystal: { pine: 0.1, willow: 0, birch: 0.8 },
+  crystal: { pine: 0.1, willow: 0, birch: 0.8, pale: 0.6 },
   hollow: { pine: -0.3, willow: 0, birch: 0 },
   tarn: { pine: 0.35, willow: 0, birch: 0 },
-  frost: { pine: 0.55, willow: 0, birch: 0.15 },
-  ember: { pine: -0.25, willow: 0, birch: 0.1 },
+  frost: { pine: 0.55, willow: 0, birch: 0.15, snow: 1.2 },
+  ember: { pine: -0.25, willow: 0, birch: 0.1, pale: 1.1 },
 };
 
 const ck = (i: number, j: number) => (i + 32768) * 65536 + (j + 32768);
@@ -87,6 +88,8 @@ export function buildForest(full: boolean, treeMat: Material, jobs: Jobs): Fores
     { hi: bushGeometry(), lo: bushGeometry(), shadows: false },
     { hi: willowGeometry(3), lo: oakLo(0), shadows: true },
     { hi: birchGeometry(9), lo: oakLo(2), shadows: true },
+    { hi: paleOakGeometry(31), lo: paleOakGeometry(31), shadows: true },
+    { hi: snowPineGeometry(), lo: snowPineGeometry(), shadows: true },
   ];
   const group = new Group();
   group.name = "forest";
@@ -132,12 +135,16 @@ export function buildForest(full: boolean, treeMat: Material, jobs: Jobs): Fores
         let pineK = 0.45;
         let willowK = 0;
         let birchK = 0;
+        let paleK = 0;
+        let snowK = 0;
         for (let i = 0; i < n; i++) {
           const m = MIX[W[i]!.place.biome];
           if (!m) continue;
           pineK += m.pine * W[i]!.w;
           willowK += m.willow * W[i]!.w;
           birchK += m.birch * W[i]!.w;
+          paleK += (m.pale ?? 0) * W[i]!.w;
+          snowK += (m.snow ?? 0) * W[i]!.w;
         }
         let k: number;
         let s: number;
@@ -151,6 +158,10 @@ export function buildForest(full: boolean, treeMat: Material, jobs: Jobs): Fores
           // Willows round the marshes, birches round the pools.
           if (!nearTrail && o > 6 && r5 < willowK - 0.15) k = 5;
           else if (r5 < birchK - 0.15) k = 6;
+          // The new biomes' own trees: amber/frost/prism canopies, snowy pines.
+          const r7 = vnoise(px * 0.7, pz * 0.7, 91);
+          if (k === 3 && r7 < snowK - 0.1) k = 8;
+          else if (k < 3 && r7 < paleK - 0.1) k = 7;
           s = (0.95 + r6 * 0.6 + Math.min(o, 40) * 0.012) * (k === 3 ? 1.15 : k === 5 ? 0.85 : 1);
           if (nearTrail) {
             if (r1 < 0.4) continue;

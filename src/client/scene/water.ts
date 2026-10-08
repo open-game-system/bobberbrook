@@ -430,7 +430,7 @@ export function buildWater(): Water {
     uRipples: { value: ripples },
     uSwirls: { value: swirls },
   };
-  type Slot = { mesh: Mesh; mat: ShaderMaterial; id: string | null };
+  type Slot = { mesh: Mesh; mat: ShaderMaterial; id: string | null; cx: number };
   const slots: Slot[] = [];
   for (let i = 0; i < POND_SLOTS; i++) {
     const m = new ShaderMaterial({
@@ -455,7 +455,7 @@ export function buildWater(): Water {
     mesh.name = `pond-slot-${i}`;
     mesh.renderOrder = 1;
     mesh.visible = false;
-    slots.push({ mesh, mat: m, id: null });
+    slots.push({ mesh, mat: m, id: null, cx: 0 });
   }
   const give = (slot: Slot, a: Place) => {
     const look = lookOf(a);
@@ -473,6 +473,7 @@ export function buildWater(): Water {
     slot.mesh.name = `pond-${a.id}`;
     slot.mesh.visible = true;
     slot.id = a.id;
+    slot.cx = a.center.x;
   };
   const seaMat = new ShaderMaterial({
     vertexShader: SEA_VERT,
@@ -519,14 +520,14 @@ export function buildWater(): Water {
     sea: seaMat,
     assign(places) {
       const want = places.slice(0, POND_SLOTS);
-      const ids = new Set<string>(want.map((p) => p.id));
-      const free = slots.filter((sl) => sl.id === null || !ids.has(sl.id));
+      const ids = new Set<string>(want.map((p) => `${p.id}@${p.center.x}`));
+      const free = slots.filter((sl) => sl.id === null || !ids.has(`${sl.id}@${sl.cx}`));
       for (const sl of free) {
         sl.id = null;
         sl.mesh.visible = false;
       }
       for (const p of want) {
-        if (slots.some((sl) => sl.id === p.id)) continue;
+        if (slots.some((sl) => sl.id === p.id && sl.cx === p.center.x)) continue;
         const sl = free.shift();
         if (sl) give(sl, p);
       }
