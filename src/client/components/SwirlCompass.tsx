@@ -5,7 +5,7 @@ import type { Compass } from "../compass";
  * or the golden one), shrinking as you get close, and a glowing "here" ring when you've arrived.
  */
 export function SwirlCompass({ c }: { c: Compass }) {
-  const near = Math.max(0.45, Math.min(1, c.distance / 18));
+  const near = Math.max(0.75, Math.min(1.1, 0.7 + c.distance / 40));
   return (
     <div className={`compass ${c.golden ? "golden" : ""} ${c.arrived ? "arrived" : ""}`} aria-hidden="true">
       <div className="compass-swirl" />
