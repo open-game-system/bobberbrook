@@ -106,6 +106,11 @@ export const sfx = {
   upgrade: (o: Opts = {}) => {
     [0, 2, 4, 5, 7, 10].forEach((n, i) => tone(note(n + 5), 0.6, { gain: 0.22, type: "triangle", ...o, at: (o.at ?? 0) + i * 0.11 }));
   },
+  /** Picking up a trail shell: a bright little two-note twinkle. */
+  shell: (o: Opts = {}) => {
+    tone(note(12), 0.18, { gain: 0.3, type: "triangle", ...o });
+    tone(note(14), 0.28, { gain: 0.3, type: "triangle", ...o, at: (o.at ?? 0) + 0.07 });
+  },
   /** A soft step on moss and earth. */
   step: (o: Opts = {}) => whoosh(0.09, 380, 180, { gain: 0.22, q: 1.4, ...o }),
   golden: (o: Opts = {}) => {

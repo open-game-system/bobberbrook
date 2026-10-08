@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { AREAS, TRAILS, advance, areaAt, areaById, castFrom, castRingIn, crossesWater, inPond, onLand, pondOutline, pondRadius, roundThePond, walkable } from "./world";
-import { FOLLOW_AFTER_MS, FOLLOW_NEAR, LEASH, action, join, leash, loadProgress, move, newLake, progressOf, step, type Lake } from "./lake";
+import { FOLLOW_AFTER_MS, FOLLOW_NEAR, LEASH, SPARKLES_PER_TRAIL, action, join, leash, loadProgress, move, newLake, progressOf, step, type Lake } from "./lake";
 
 /** A point on a place's shore, just out of the water, at an angle. */
 const shore = (id: Parameters<typeof areaById>[0], theta: number) => {
@@ -161,5 +161,27 @@ describe("tagging along", () => {
     f = step(f, T0 + FOLLOW_AFTER_MS + 2000);
     expect(f.fishers[1]!.mode).not.toBe("walk");
     expect(f.fishers[1]!.vel).toEqual({ x: 0, z: 0 });
+  });
+});
+
+describe("trail treasures", () => {
+  const T0 = 1000;
+  it("lines every trail with a few sparkles to pick up", () => {
+    const l = newLake(4, T0);
+    expect(l.sparkles.length).toBe(TRAILS.length * SPARKLES_PER_TRAIL);
+    for (const s of l.sparkles) expect(walkable(s.pos)).toBe(true);
+  });
+  it("gives a shell to whoever walks over one, then it's gone for a while", () => {
+    let l = join(newLake(4, T0), { name: "A", ogsId: null }).lake;
+    const sp = l.sparkles[0]!;
+    l = { ...l, fishers: l.fishers.map((f) => ({ ...f, pos: { ...sp.pos } })) };
+    l = step(l, T0 + 10);
+    expect(l.shells).toBe(1);
+    expect(l.sparkles[0]!.backAt).toBeGreaterThan(T0 + 10);
+    expect(l.pickup).toMatchObject({ seat: 0, sparkleId: sp.id, seq: 1 });
+    l = step(l, T0 + 20);
+    expect(l.shells).toBe(1);
+    l = step(l, l.sparkles[0]!.backAt + 1);
+    expect(l.shells).toBe(2);
   });
 });

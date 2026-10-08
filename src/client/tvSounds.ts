@@ -40,6 +40,7 @@ const CUES: CueTable = {
   campfire: (e) => (e.on ? [{ kind: "line", line: "campfire" }] : []),
   joined: () => [],
   hooked: () => [],
+  treasure: (e, pan) => [{ kind: "sfx", id: "shell", opts: { pan: pan(e.seat) } }],
   discovered: (e) => [{ kind: "sfx", id: "golden", opts: {} }, { kind: "line", line: `area-${e.area}` }],
 };
 

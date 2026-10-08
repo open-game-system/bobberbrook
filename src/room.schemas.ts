@@ -89,6 +89,8 @@ export const LakeSchema = z.object({
   progressLoaded: z.boolean(),
   discovered: z.array(AreaIdSchema),
   discovery: z.object({ area: AreaIdSchema, seat: z.number(), at: z.number(), seq: z.number() }).nullable(),
+  sparkles: z.array(z.object({ id: z.number(), pos: VecSchema, backAt: z.number() })),
+  pickup: z.object({ seat: z.number(), sparkleId: z.number(), at: z.number(), seq: z.number() }).nullable(),
 });
 
 export const RoomPublicContextSchema = z.object({

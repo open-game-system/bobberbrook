@@ -52,4 +52,10 @@ describe("lakeEvents", () => {
     expect(lakeEvents(l, found)).toEqual([{ kind: "discovered", seat: 0, area: "mistmarsh" }]);
     expect(lakeEvents(found, found)).toEqual([]);
   });
+
+  it("sees a trail shell picked up", () => {
+    const l = shoreLake();
+    const got = { ...l, pickup: { seat: 0, sparkleId: 3, at: 5, seq: 1 } };
+    expect(lakeEvents(l, got)).toEqual([{ kind: "treasure", seat: 0 }]);
+  });
 });

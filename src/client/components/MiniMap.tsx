@@ -52,6 +52,11 @@ export function MiniMap({ lake, mySeat, now }: { lake: Lake; mySeat: number; now
             </g>
           );
         })}
+        {lake.sparkles
+          .filter((sp) => sp.backAt <= lake.now)
+          .map((sp) => (
+            <circle key={sp.id} className="map-sparkle" cx={sp.pos.x} cy={sp.pos.z} r="1.4" fill="#ffe9a0" />
+          ))}
         <rect x={-DOCK.halfWidth} y={DOCK.tipZ} width={DOCK.halfWidth * 2} height={DOCK.rootZ - DOCK.tipZ} fill="#b07a42" rx="0.4" />
         {lake.swirls.map((s) => (
           <g key={s.id} transform={`translate(${s.pos.x} ${s.pos.z})`} className={s.golden ? "swirl golden" : "swirl"}>

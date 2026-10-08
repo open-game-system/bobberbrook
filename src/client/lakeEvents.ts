@@ -12,7 +12,8 @@ export type LakeEvent =
   | { kind: "upgrade"; tier: number }
   | { kind: "golden-swirl" }
   | { kind: "campfire"; on: boolean }
-  | { kind: "discovered"; seat: number; area: AreaId };
+  | { kind: "discovered"; seat: number; area: AreaId }
+  | { kind: "treasure"; seat: number };
 
 export function lakeEvents(prev: Lake | null, next: Lake): LakeEvent[] {
   if (!prev) return [];
@@ -22,6 +23,7 @@ export function lakeEvents(prev: Lake | null, next: Lake): LakeEvent[] {
   if (next.campfire !== prev.campfire) out.push({ kind: "campfire", on: next.campfire });
   const d = next.discovery;
   if (d && d.seq !== prev.discovery?.seq) out.push({ kind: "discovered", seat: d.seat, area: d.area });
+  if (next.pickup && next.pickup.seq !== prev.pickup?.seq) out.push({ kind: "treasure", seat: next.pickup.seat });
   return out;
 }
 

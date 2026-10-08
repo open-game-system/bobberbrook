@@ -14,6 +14,7 @@ const PLAY: Record<DeviceCue, () => void> = {
   thrash: () => sfx.thrash({ gain: 0.5 }),
   reelClick: () => sfx.reelClick(),
   place: () => sfx.golden(),
+  shell: () => sfx.shell(),
 };
 
 /**

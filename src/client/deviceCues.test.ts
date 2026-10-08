@@ -30,6 +30,15 @@ describe("eventCues", () => {
   });
 });
 
+describe("a trail shell", () => {
+  it("twinkles on the picker's device only", () => {
+    const l = shore();
+    const got = { ...l, pickup: { seat: 1, sparkleId: 0, at: 5, seq: 1 } };
+    expect(eventCues(l, got, 1)).toEqual(["shell"]);
+    expect(eventCues(l, got, 0)).toEqual([]);
+  });
+});
+
 describe("a new place", () => {
   it("chimes on every device, once", () => {
     const l = shore();

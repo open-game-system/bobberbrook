@@ -4,12 +4,13 @@ import { thrashingAt } from "../game/reel";
 import { lakeEvents, type LakeEvent } from "./lakeEvents";
 
 /** A sound the controller plays for its own fisher. */
-export type DeviceCue = "bite" | "catch" | "junk" | "newFish" | "missed" | "cast" | "nibble" | "thrash" | "reelClick" | "place";
+export type DeviceCue = "bite" | "catch" | "junk" | "newFish" | "missed" | "cast" | "nibble" | "thrash" | "reelClick" | "place" | "shell";
 
 const EVENT_CUES: Partial<Record<LakeEvent["kind"], (e: LakeEvent) => DeviceCue[]>> = {
   bite: () => ["bite"],
   missed: () => ["missed"],
   cast: () => ["cast"],
+  treasure: () => ["shell"],
   caught: (e) => {
     if (e.kind !== "caught") return [];
     const junk = fishById(e.fishId)?.rarity === "junk";

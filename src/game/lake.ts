@@ -3,7 +3,7 @@ import { dayPhase, timeOfDay, type TimeOfDay } from "./daycycle";
 import { FISH, JOURNAL_FISH, SHELLS, bitesNow, fishById, type FishDef, type Rarity } from "./fish";
 import { between, pickWeighted, rand } from "./rng";
 import { REEL_START, integrateReel, type Reel } from "./reel";
-import { WALK_SPEED, advance, angleGap, areaAt, areaById, castFrom, castRingIn, distance, navNext, spawnPoint, type AreaId, type Vec, type Water } from "./world";
+import { TRAILS, WALK_SPEED, advance, angleGap, areaAt, areaById, castFrom, castRingIn, distance, navNext, spawnPoint, type AreaId, type Vec, type Water } from "./world";
 
 /** Everything on the lake that changes with time. The room keeps one of these; every screen sees it. */
 export const MAX_FISHERS = 4;
@@ -63,6 +63,9 @@ export type Fisher = {
 
 export type Swirl = { id: number; area: AreaId; pos: Vec; theta: number; golden: boolean; since: number; until: number; catches: number };
 
+/** A glowing shell on a trail: walk over it for a shell; it comes back later. */
+export type Sparkle = { id: number; pos: Vec; backAt: number };
+
 /** The last newly found place (the TV and narrator celebrate it). */
 export type Discovery = { area: AreaId; seat: number; at: number; seq: number };
 
@@ -90,6 +93,9 @@ export type Lake = {
   /** Places the family has found this room (Moonwell Lake from the start). */
   discovered: AreaId[];
   discovery: Discovery | null;
+  /** Shell sparkles along the trails, and the last one picked up (the TV and the picker's device chime). */
+  sparkles: Sparkle[];
+  pickup: { seat: number; sparkleId: number; at: number; seq: number } | null;
 };
 
 export function newLake(seed: number, now: number): Lake {
@@ -112,6 +118,8 @@ export function newLake(seed: number, now: number): Lake {
     progressLoaded: false,
     discovered: ["moonwell"],
     discovery: null,
+    sparkles: trailSparkles(),
+    pickup: null,
   };
   return produce(lake, (d) => {
     spawnSwirl(d, now, false, "moonwell");
@@ -203,6 +211,41 @@ function discover(d: Draft<Lake>, now: number): void {
     d.discovered.push(area.id);
     d.discovery = { area: area.id, seat: f.seat, at: now, seq: (d.discovery?.seq ?? 0) + 1 };
     spawnSwirl(d, now, false, area.id);
+  }
+}
+
+export const SPARKLES_PER_TRAIL = 4;
+export const SPARKLE_BACK_MS = 3 * 60_000;
+const SPARKLE_REACH = 1.6;
+
+/** Sparkles spaced evenly along each trail (not at the ends, which are in the places). */
+export function trailSparkles(): Sparkle[] {
+  return TRAILS.flatMap((t, ti) =>
+    Array.from({ length: SPARKLES_PER_TRAIL }, (_, i) => {
+      const k = (i + 1) / (SPARKLES_PER_TRAIL + 1);
+      // A little side-to-side so they zig-zag down the path.
+      const side = (i % 2 === 0 ? 1 : -1) * 1.1;
+      const dx = t.to.x - t.from.x;
+      const dz = t.to.z - t.from.z;
+      const len = Math.hypot(dx, dz) || 1;
+      return { id: ti * 10 + i, pos: { x: t.from.x + dx * k + (-dz / len) * side, z: t.from.z + dz * k + (dx / len) * side }, backAt: 0 };
+    }),
+  );
+}
+
+function pickUpSparkles(d: Draft<Lake>, now: number): void {
+  for (const s of d.sparkles) {
+    if (now < s.backAt) continue;
+    const f = d.fishers.find((x) => distance(x.pos, s.pos) <= SPARKLE_REACH);
+    if (!f) continue;
+    s.backAt = now + SPARKLE_BACK_MS;
+    d.shells += 1;
+    const tier = rodTierFor(d.shells);
+    if (tier > d.rodTier) {
+      d.rodTier = tier;
+      d.upgradeSeq += 1;
+    }
+    d.pickup = { seat: f.seat, sparkleId: s.id, at: now, seq: (d.pickup?.seq ?? 0) + 1 };
   }
 }
 
@@ -466,6 +509,7 @@ export function step(lake: Lake, now: number): Lake {
     keepApart(d.fishers);
     leash(d.fishers);
     tagAlong(d.fishers, now);
+    pickUpSparkles(d, now);
     discover(d, now);
     refreshSwirls(d, now);
   });
