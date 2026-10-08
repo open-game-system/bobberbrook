@@ -1,6 +1,8 @@
 # Status
 
-- Spec, rules, room, controllers, TV shell, audio, voice, OGS phone seam tests: done.
-- TV 3D scene: being built (src/client/scene/**, lab page /scene-lab.html).
-- OGS catalogue PR: open-game-system/open-game-system#33 (merge after the game is deployed).
-- Next: first full session recording, round 00 critic, hill-climb to 8.
+- Live: https://bobberbrook.jonathanrmumm.workers.dev, in the OGS catalogue (open-game-system#33 merged; launcher art deployed).
+- Endless valley: generated world, fog of war, boats and zeppelins, 30 fish, auto-follow, trail treasures.
+- Hill-climb: rounds 00–02 logged in critic/aaa/SCORECARD.md (min 3 → 3 → 4); round 03 evidence predates the
+  boarding fix; round 04 running. Progress videos in recordings/progress/ (git-ignored).
+- Quality: CRAP < 8 on rules/glue (last check before the endless valley), mutation 94.6% on src/game (before the endless valley).
+- Not yet verified on the real iPad/Chromecast.

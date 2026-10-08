@@ -62,6 +62,25 @@ Mom (phone). Works with 1–4 fishers.
 | `COUCH` | TV | OGS TV token |
 | `RESUME` | actor-kit system | room restored from storage |
 
+## The endless valley (owner, 2026-10-08)
+
+- **World:** a grid of 96 m cells generated from the family's world seed (`src/game/regions.ts`,
+  `worldFor(seed)`): each land cell is a place to fish (one of 8 biomes: marsh, pools, hollow, tarn, willow,
+  crystal, ember, frost) with a generated name, pond, clearing and landmark; some cells are open sea.
+  The five hand-made places (Moonwell Lake, Mistmarsh, Whisperfall Pools, Glowshroom Hollow, Starfall Tarn)
+  are the home valley at the centre. Neighbouring places are joined by forest trails.
+- **Persistent:** the seed, the places found, the fog of war and the journal live in the family's save on the
+  host phone (`PROGRESS`); the same seed always makes the same world.
+- **Fog of war:** 24 m tiles revealed round everyone as they walk (wider from a zeppelin); the device
+  mini-map, the full map (tap the mini-map, or Map on the host phone) and the TV show the fog.
+- **Boats and zeppelins:** a boat crosses each sea from a dock; a zeppelin tower in each 5×5 block of cells
+  (Moonwell's on its east shore) flies to the neighbouring blocks' towers. Everyone stands on a mooring
+  together for 3 s and it leaves; a tagging-along kid walks onto the mooring by itself.
+- **Tagging along:** a fisher who hasn't touched the stick for 6 s and is over 9 m from the family walks to
+  them (by trail, round ponds); the family stays within a 30 m leash.
+- **Trail treasures:** glowing shells along trails, a shell each, back after 3 minutes.
+- **Fish:** 30 species (rarer ones more likely farther from home); the Moonfin rises at Starfall Tarn at night.
+
 ## Decisions and assumptions
 
 - 3D renders on the TV page only (streamed to the Chromecast); devices are 2D controllers with a
