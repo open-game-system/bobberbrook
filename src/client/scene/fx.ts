@@ -43,30 +43,39 @@ export class Fx {
     }
   }
 
-  /** The bite: the most exciting thing on screen. A crown of white water, a big ring, spray. */
+  /** The bite: the most exciting thing on screen. A tall white burst, a crown, a double ring, droplets, glints. */
   biteSplash(x: number, z: number, t: number): void {
-    this.surface.ripple(x, z, t, 1.6);
-    this.surface.ripple(x, z, t + 0.25, 1.0);
-    for (let i = 0; i < (this.lite ? 40 : 80); i++) {
+    this.surface.ripple(x, z, t, 2.2);
+    this.surface.ripple(x, z, t + 0.18, 1.4);
+    this.surface.ripple(x, z, t + 0.4, 0.9);
+    // Central column.
+    for (let i = 0; i < (this.lite ? 25 : 50); i++) {
       const a = this.r() * Math.PI * 2;
-      const s = 0.8 + this.r() * 2.4;
-      const up = 3.5 + this.r() * 4.5;
-      this.water.emit({ x: x + Math.cos(a) * 0.2, y: 0.1, z: z + Math.sin(a) * 0.2, vx: Math.cos(a) * s, vy: up, vz: Math.sin(a) * s, life: 1.1, size: 0.18 + this.r() * 0.22, r: 0.95, g: 1, b: 1, gravity: 11, alpha: 0.95 });
+      const s = this.r() * 0.7;
+      this.water.emit({ x: x + Math.cos(a) * 0.15, y: 0.1, z: z + Math.sin(a) * 0.15, vx: Math.cos(a) * s, vy: 6 + this.r() * 5, vz: Math.sin(a) * s, life: 1.3, size: 0.22 + this.r() * 0.3, r: 1, g: 1, b: 1, gravity: 12, alpha: 1 });
     }
-    for (let i = 0; i < 18; i++) {
+    // Crown.
+    for (let i = 0; i < (this.lite ? 45 : 90); i++) {
       const a = this.r() * Math.PI * 2;
-      this.water.emit({ x: x + Math.cos(a) * 0.5, y: 0.1, z: z + Math.sin(a) * 0.5, vx: Math.cos(a) * 0.6, vy: 0.4, vz: Math.sin(a) * 0.6, life: 1.0, size: 0.45, r: 0.92, g: 0.98, b: 1, alpha: 0.4, grow: 1.2, drag: 2 });
+      const s = 1.4 + this.r() * 2.8;
+      const up = 3.0 + this.r() * 4.0;
+      this.water.emit({ x: x + Math.cos(a) * 0.3, y: 0.1, z: z + Math.sin(a) * 0.3, vx: Math.cos(a) * s, vy: up, vz: Math.sin(a) * s, life: 1.1, size: 0.2 + this.r() * 0.26, r: 0.95, g: 1, b: 1, gravity: 11, alpha: 0.95 });
     }
-    this.sparkle(x, 0.6, z, 10, 1, 1, 0.9, 1.6);
+    // White water ring on the surface.
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2;
+      this.water.emit({ x: x + Math.cos(a) * 0.6, y: 0.1, z: z + Math.sin(a) * 0.6, vx: Math.cos(a) * 1.4, vy: 0.3, vz: Math.sin(a) * 1.4, life: 1.1, size: 0.6, r: 0.95, g: 1, b: 1, alpha: 0.5, grow: 1.4, drag: 2.2 });
+    }
+    this.sparkle(x, 0.8, z, 18, 1, 1, 0.9, 2.4, 0.4);
   }
 
   /** Continuous small spray while a fish thrashes (call every ~0.1 s). */
   thrash(x: number, z: number, t: number, k: number): void {
-    if (this.r() < 0.35) this.surface.ripple(x, z, t, 0.8);
-    for (let i = 0; i < 7 * k; i++) {
+    if (this.r() < 0.45) this.surface.ripple(x, z, t, 0.95);
+    for (let i = 0; i < 11 * k; i++) {
       const a = this.r() * Math.PI * 2;
       const s = 0.8 + this.r() * 1.6;
-      this.water.emit({ x: x + Math.cos(a) * 0.3, y: 0.08, z: z + Math.sin(a) * 0.3, vx: Math.cos(a) * s, vy: 2.0 + this.r() * 2.6, vz: Math.sin(a) * s, life: 0.8, size: 0.16 + this.r() * 0.16, r: 0.96, g: 1, b: 1, gravity: 10, alpha: 0.95 });
+      this.water.emit({ x: x + Math.cos(a) * 0.3, y: 0.08, z: z + Math.sin(a) * 0.3, vx: Math.cos(a) * s, vy: 2.4 + this.r() * 3.2, vz: Math.sin(a) * s, life: 0.85, size: 0.18 + this.r() * 0.2, r: 0.97, g: 1, b: 1, gravity: 10, alpha: 0.95 });
     }
   }
 

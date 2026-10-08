@@ -95,16 +95,23 @@ void main() {
   float cosT = clamp(dot(N, V), 0.0, 1.0);
   float fres = 0.04 + 0.96 * pow(1.0 - cosT, 5.0);
   // Painted depth gradient.
-  float dz = smoothstep(0.2, 9.0, depth);
-  vec3 base = mix(uShallow * 1.05, uDeep, dz);
-  base = mix(base, uShallow * 1.25 + 0.05, (1.0 - smoothstep(0.0, 1.4, depth)) * 0.5);
+  // Painted depth: pale cyan shallows, a teal band, a deep teal-violet middle (wobbly contours, not rings).
+  float dw = depth + (vn(p * 0.35 + 7.0) - 0.5) * 2.2;
+  float dz = smoothstep(0.3, 7.0, dw);
+  vec3 deepV = mix(uDeep, vec3(0.16, 0.1, 0.42) * (0.5 + 0.5 * length(uDeep) * 1.6), 0.38);
+  vec3 base = mix(uShallow * 1.05, deepV, dz);
+  base = mix(base, mix(uShallow, vec3(1.0), 0.3) * 1.15, (1.0 - smoothstep(0.0, 1.6, dw)) * 0.6);
   // Shallow-water shimmer (caustic-like).
   float c1 = vn(p * 1.7 + vec2(uTime * 0.3, -uTime * 0.2));
   float c2 = vn(p * 1.7 * 1.3 - vec2(uTime * 0.25, uTime * 0.31));
   float caus = pow(1.0 - abs(c1 - c2), 8.0);
   base += vec3(0.75, 1.0, 0.9) * caus * (1.0 - dz) * 0.22;
   // Far-shore reflections: a darker, greener band hugging the edge.
-  base = mix(base, uShoreTint, (1.0 - smoothstep(0.5, 4.5, depth)) * 0.28 * (1.0 - cosT * 0.5));
+  // Reflections of the shore trees: a dark band hugging the far edges, broken into vertical streaks by ripples.
+  float streaks = 0.65 + 0.35 * vn(vec2(p.x * 2.6, p.y * 0.45) + g * 6.0);
+  base = mix(base, uShoreTint, (1.0 - smoothstep(0.5, 7.0, depth)) * 0.42 * streaks * (1.0 - cosT * 0.4) * smoothstep(-4.0, 2.0, -p.y));
+  // Soft drifting highlights (wind patches).
+  base += mix(uShallow, vec3(1.0), 0.5) * smoothstep(0.58, 0.85, vn(p * 0.22 + vec2(uTime * 0.05, uTime * 0.03))) * 0.07 * (0.6 + 0.4 * dz);
   // Swirls: a lighter patch, circling streaks, a golden glow.
   for (int i = 0; i < ${MAX_SWIRLS}; i++) {
     vec4 s = uSwirls[i];
