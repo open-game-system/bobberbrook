@@ -4,7 +4,7 @@ import { speciesCount, type Lake } from "../game/lake";
 
 export const APP_ID = "bobberbrook";
 
-/** The sitting as the OGS app shows it: "Journal 7 of 18", with the room as detail. */
+/** The sitting as the OGS app shows it: "Journal 7 of 30", with the room as detail. */
 export function sittingReport(input: { roomCode: string; lake: Lake; resumeUrl: string }): InstanceReportInput {
   const n = speciesCount(input.lake.journal);
   return {

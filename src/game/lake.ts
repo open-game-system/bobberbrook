@@ -3,7 +3,13 @@ import { dayPhase, timeOfDay, type TimeOfDay } from "./daycycle";
 import { FISH, JOURNAL_FISH, SHELLS, bitesNow, fishById, type FishDef, type Rarity } from "./fish";
 import { between, pickWeighted, rand } from "./rng";
 import { REEL_START, integrateReel, type Reel } from "./reel";
-import { TRAILS, WALK_SPEED, advance, angleGap, areaAt, areaById, castFrom, castRingIn, distance, navNext, spawnPoint, type AreaId, type Vec, type Water } from "./world";
+import { TRAILS, WALK_SPEED, angleGap, castRingIn, distance, spawnPoint, type Vec, type Water } from "./world";
+import { worldFor, type World } from "./regions";
+
+/** A place's id: "moonwell", "mistmarsh"… in the home valley, "i,j" for a generated place. */
+export type PlaceId = string;
+/** The world everything walks in when a caller doesn't name one (tests, the lab): the home valley and beyond. */
+export const HOME_WORLD_SEED = 1;
 
 /** Everything on the lake that changes with time. The room keeps one of these; every screen sees it. */
 export const MAX_FISHERS = 4;
@@ -29,7 +35,7 @@ export const ROD_AT = [0, 12, 40, 100] as const;
 export const ROD_NAMES = ["Willow", "Bamboo", "Brass", "Starlight"] as const;
 export const MOONFIN_JOURNAL = 8;
 
-export type Mode = "walk" | "cast" | "wait" | "bite" | "reel" | "catch";
+export type Mode = "walk" | "cast" | "wait" | "bite" | "reel" | "catch" | "ride";
 
 export type Catch = { fishId: string; cm: number; shells: number; isNew: boolean; golden: boolean; at: number; seq: number };
 
@@ -61,13 +67,15 @@ export type Fisher = {
   missSeq: number;
 };
 
-export type Swirl = { id: number; area: AreaId; pos: Vec; theta: number; golden: boolean; since: number; until: number; catches: number };
+export type Swirl = { id: number; area: PlaceId; pos: Vec; theta: number; golden: boolean; since: number; until: number; catches: number };
 
 /** A glowing shell on a trail: walk over it for a shell; it comes back later. */
 export type Sparkle = { id: number; pos: Vec; backAt: number };
 
+export type Ride = { platformId: string; kind: "boat" | "zeppelin"; from: Vec; to: Vec; toPlace: PlaceId; departAt: number; arriveAt: number; seats: number[] };
+
 /** The last newly found place (the TV and narrator celebrate it). */
-export type Discovery = { area: AreaId; seat: number; at: number; seq: number };
+export type Discovery = { area: PlaceId; seat: number; at: number; seq: number };
 
 export type JournalEntry = { count: number; bestCm: number; firstBy: string | null };
 
@@ -91,8 +99,16 @@ export type Lake = {
   campfire: boolean;
   progressLoaded: boolean;
   /** Places the family has found this room (Moonwell Lake from the start). */
-  discovered: AreaId[];
+  discovered: PlaceId[];
   discovery: Discovery | null;
+  /** The family's world: the same seed always makes the same endless valley. */
+  worldSeed: number;
+  /** Fog-of-war tiles the family has seen ("i,j" in FOG_TILE-metre tiles). */
+  revealed: string[];
+  /** Everyone standing at a boat dock or zeppelin tower together: it leaves BOARD_MS after they gathered. */
+  boarding: { platformId: string; since: number } | null;
+  /** The family's boat or zeppelin trip, while it's under way. */
+  ride: Ride | null;
   /** Shell sparkles along the trails, and the last one picked up (the TV and the picker's device chime). */
   sparkles: Sparkle[];
   pickup: { seat: number; sparkleId: number; at: number; seq: number } | null;
@@ -120,6 +136,10 @@ export function newLake(seed: number, now: number): Lake {
     discovery: null,
     sparkles: trailSparkles(),
     pickup: null,
+    worldSeed: HOME_WORLD_SEED,
+    revealed: [],
+    boarding: null,
+    ride: null,
   };
   return produce(lake, (d) => {
     spawnSwirl(d, now, false, "moonwell");
@@ -154,7 +174,9 @@ export function speciesCount(journal: Record<string, JournalEntry>): number {
 
 // ---------- swirls ----------
 
-function spawnSwirl(d: Draft<Lake>, now: number, golden: boolean, area: AreaId): void {
+function spawnSwirl(d: Draft<Lake>, now: number, golden: boolean, area: PlaceId): void {
+  const place = worldFor(d.worldSeed).placeById(area);
+  if (!place) return;
   const others = d.swirls.filter((s) => s.area === area).map((s) => s.theta);
   let theta = 0;
   for (let i = 0; i < 12; i++) {
@@ -165,7 +187,7 @@ function spawnSwirl(d: Draft<Lake>, now: number, golden: boolean, area: AreaId):
   d.swirls.push({
     id: d.swirlSeq,
     area,
-    pos: castRingIn(areaById(area), theta),
+    pos: castRingIn(place, theta),
     theta,
     golden,
     since: now,
@@ -198,15 +220,20 @@ function bringGolden(d: Draft<Lake>, now: number): void {
   d.nextGoldenAt = now + GOLDEN_EVERY_MS;
   if (d.swirls.some((s) => s.golden)) return;
   // The golden swirl shows up somewhere the family has been, more often away from home.
-  const away = d.discovered.filter((a) => a !== "moonwell");
-  const places = away.length > 0 && roll(d) < 0.75 ? away : d.discovered;
+  const w = worldFor(d.worldSeed);
+  const near = d.discovered.filter((id) => {
+    const p = w.placeById(id);
+    return p !== null && (d.fishers.length === 0 || d.fishers.some((f) => distance(f.pos, p.center) < 2.2 * 96));
+  });
+  const away = near.filter((a) => a !== "moonwell");
+  const places = away.length > 0 && roll(d) < 0.75 ? away : near.length > 0 ? near : d.discovered;
   spawnSwirl(d, now, true, places[Math.floor(roll(d) * places.length)] ?? "moonwell");
 }
 
 /** Whoever walks into a place nobody has found yet discovers it: a celebration and a swirl there. */
 function discover(d: Draft<Lake>, now: number): void {
   for (const f of d.fishers) {
-    const area = areaAt(f.pos);
+    const area = worldFor(d.worldSeed).areaAt(f.pos);
     if (!area || d.discovered.includes(area.id)) continue;
     d.discovered.push(area.id);
     d.discovery = { area: area.id, seat: f.seat, at: now, seq: (d.discovery?.seq ?? 0) + 1 };
@@ -258,7 +285,7 @@ const FOLLOW_SPEED = WALK_SPEED * 0.85;
 type Tagger = Pick<Fisher, "pos" | "vel" | "mode" | "lastInputAt" | "following" | "movedAt">;
 
 /** Steers each idle, walking fisher toward the nearest other fisher, by trail and round the ponds, and stops them close by. */
-export function tagAlong(fishers: Tagger[], now: number): void {
+export function tagAlong(fishers: Tagger[], now: number, w: World = worldFor(HOME_WORLD_SEED)): void {
   for (const f of fishers) {
     const others = fishers.filter((o) => o !== f);
     if (others.length === 0 || f.mode !== "walk" || now - f.lastInputAt < FOLLOW_AFTER_MS) continue;
@@ -269,7 +296,7 @@ export function tagAlong(fishers: Tagger[], now: number): void {
       f.following = false;
       continue;
     }
-    const way = navNext(f.pos, near.pos);
+    const way = w.navNext(f.pos, near.pos);
     const d = distance(way, f.pos) || 1;
     f.following = true;
     f.vel = { x: ((way.x - f.pos.x) / d) * FOLLOW_SPEED, z: ((way.z - f.pos.z) / d) * FOLLOW_SPEED };
@@ -280,7 +307,7 @@ export function tagAlong(fishers: Tagger[], now: number): void {
 export const LEASH = 30;
 
 /** Pulls any fisher who strayed past LEASH from the others' middle back toward them. */
-export function leash(fishers: { pos: Vec }[]): void {
+export function leash(fishers: { pos: Vec }[], w: World = worldFor(HOME_WORLD_SEED)): void {
   if (fishers.length < 2) return;
   for (const f of fishers) {
     const others = fishers.filter((o) => o !== f);
@@ -288,7 +315,7 @@ export function leash(fishers: { pos: Vec }[]): void {
     const cz = others.reduce((a, o) => a + o.pos.z, 0) / others.length;
     const dist = Math.hypot(f.pos.x - cx, f.pos.z - cz);
     if (dist <= LEASH) continue;
-    f.pos = advance(f.pos, { x: (cx - f.pos.x) / dist, z: (cz - f.pos.z) / dist }, dist - LEASH);
+    f.pos = w.advance(f.pos, { x: (cx - f.pos.x) / dist, z: (cz - f.pos.z) / dist }, dist - LEASH);
   }
 }
 
@@ -302,7 +329,7 @@ function swirlAt(d: Draft<Lake>, bobber: Vec): Swirl | undefined {
 
 // ---------- what bites ----------
 
-export type BiteContext = { water: Water; tod: TimeOfDay; tier: number; swirl: "none" | "plain" | "golden"; species: number; known: (id: string) => boolean };
+export type BiteContext = { water: Water; tod: TimeOfDay; tier: number; swirl: "none" | "plain" | "golden"; species: number; known: (id: string) => boolean; ring?: number };
 
 /** Chooses what bites: treasure, junk, the Moonfin, or a fish that lives in this water at this time. */
 export function chooseCatch(ctx: BiteContext, r: () => number): FishDef {
@@ -341,11 +368,13 @@ const RARITY_BASE: Partial<Record<Rarity, (tier: number) => number>> = {
 const PLAIN_SWIRL_BOOST: Partial<Record<Rarity, number>> = { rare: 2.5, uncommon: 1.5 };
 
 /** How likely a fish is to be the one that bites, relative to the others in the pool. */
-export function catchWeight(f: FishDef, ctx: Pick<BiteContext, "tier" | "swirl" | "known">): number {
+export function catchWeight(f: FishDef, ctx: Pick<BiteContext, "tier" | "swirl" | "known" | "ring">): number {
   const base = (RARITY_BASE[f.rarity] ?? ((tier: number) => 9 + 4 * tier))(ctx.tier);
   const swirlBoost = ctx.swirl === "plain" ? (PLAIN_SWIRL_BOOST[f.rarity] ?? 1) : 1;
+  // The farther from home, the likelier the rare ones (up to triple).
+  const farBoost = f.rarity === "rare" ? Math.min(3, 1 + 0.25 * Math.max(0, (ctx.ring ?? 0) - 1)) : 1;
   // Species the family hasn't met yet come along a little more often: the journal keeps filling.
-  return base * swirlBoost * (ctx.known(f.id) ? 1 : 1.6);
+  return base * swirlBoost * farBoost * (ctx.known(f.id) ? 1 : 1.6);
 }
 
 function biteWait(d: Draft<Lake>, f: Draft<Fisher>, swirl: Swirl | undefined): number {
@@ -363,8 +392,8 @@ function scheduleBite(d: Draft<Lake>, f: Draft<Fisher>, from: number): void {
 
 // ---------- time ----------
 
-function settle(f: Draft<Fisher>, now: number): void {
-  if (f.vel.x !== 0 || f.vel.z !== 0) f.pos = advance(f.pos, f.vel, (now - f.movedAt) / 1000);
+function settle(f: Draft<Fisher>, now: number, w: World): void {
+  if (f.vel.x !== 0 || f.vel.z !== 0) f.pos = w.advance(f.pos, f.vel, (now - f.movedAt) / 1000);
   f.movedAt = now;
 }
 
@@ -378,6 +407,7 @@ function hook(d: Draft<Lake>, f: Draft<Fisher>, at: number): void {
       swirl: swirl ? (swirl.golden ? "golden" : "plain") : "none",
       species: speciesCount(d.journal),
       known: (id) => (d.journal[id]?.count ?? 0) > 0,
+      ring: worldFor(d.worldSeed).areaAt(f.pos)?.ring ?? 0,
     },
     () => roll(d),
   );
@@ -489,13 +519,15 @@ const MODE_STEPS: Record<Mode, ModeStep> = {
   bite: stepBite,
   reel: stepReel,
   catch: stepCatch,
+  ride: () => false,
 };
 
 /** At most this many mode changes in one step (cast → wait → bite → miss → wait … stays bounded). */
 const MAX_MODE_STEPS = 8;
 
 function stepFisher(d: Draft<Lake>, f: Draft<Fisher>, now: number): void {
-  settle(f, now);
+  if (f.mode === "ride") return;
+  settle(f, now, worldFor(d.worldSeed));
   // Each step either moves the fisher on to its next mode at a known moment, or stops.
   for (let guard = 0; guard < MAX_MODE_STEPS && MODE_STEPS[f.mode](d, f, now); guard++);
 }
@@ -505,21 +537,132 @@ export function step(lake: Lake, now: number): Lake {
   if (now < lake.now) return lake;
   return produce(lake, (d) => {
     d.now = now;
-    for (const f of d.fishers) stepFisher(d, f, now);
-    keepApart(d.fishers);
-    leash(d.fishers);
-    tagAlong(d.fishers, now);
+    const w = worldFor(d.worldSeed);
+    if (d.ride) {
+      ride(d, now);
+    } else {
+      for (const f of d.fishers) stepFisher(d, f, now);
+      keepApart(d.fishers, w);
+      leash(d.fishers, w);
+      tagAlong(d.fishers, now, w);
+      board(d, now, w);
+    }
     pickUpSparkles(d, now);
+    reveal(d);
     discover(d, now);
+    keepSwirlsNear(d, now, w);
     refreshSwirls(d, now);
   });
+}
+
+// ---------- boats and zeppelins ----------
+
+/** How close to a dock or tower everyone must stand to board, and how long they wait there. */
+export const PLATFORM_REACH = 3.5;
+export const BOARD_MS = 3000;
+const RIDE_SPEED = { boat: 12, zeppelin: 20 } as const;
+export const RIDE_MIN_MS = 10_000;
+export const RIDE_MAX_MS = 26_000;
+
+/** When the whole family stands together at a dock or tower, it leaves after BOARD_MS. */
+function board(d: Draft<Lake>, now: number, w: World): void {
+  const walking = d.fishers.filter((f) => f.mode === "walk");
+  if (d.fishers.length === 0 || walking.length !== d.fishers.length) {
+    d.boarding = null;
+    return;
+  }
+  const mid = { x: d.fishers.reduce((a, f) => a + f.pos.x, 0) / d.fishers.length, z: d.fishers.reduce((a, f) => a + f.pos.z, 0) / d.fishers.length };
+  const platform = w.platformsNear(mid, 1).find((p) => d.fishers.every((f) => distance(f.pos, p.at) <= PLATFORM_REACH));
+  if (!platform) {
+    d.boarding = null;
+    return;
+  }
+  if (d.boarding?.platformId !== platform.id) {
+    d.boarding = { platformId: platform.id, since: now };
+    return;
+  }
+  if (now - d.boarding.since < BOARD_MS) return;
+  const ms = Math.max(RIDE_MIN_MS, Math.min(RIDE_MAX_MS, (distance(platform.at, platform.to) / RIDE_SPEED[platform.kind]) * 1000));
+  d.ride = { platformId: platform.id, kind: platform.kind, from: platform.at, to: platform.to, toPlace: platform.toPlace, departAt: now, arriveAt: now + ms, seats: d.fishers.map((f) => f.seat) };
+  d.boarding = null;
+  for (const f of d.fishers) {
+    f.mode = "ride";
+    f.bobber = null;
+    f.swirlId = null;
+    f.catch = null;
+  }
+  ride(d, now);
+}
+
+/** Moves the riders along the way, and sets them down at the far dock or tower on arrival. */
+function ride(d: Draft<Lake>, now: number): void {
+  const r = d.ride;
+  if (!r) return;
+  const k = Math.min(1, (now - r.departAt) / (r.arriveAt - r.departAt));
+  const dur = (r.arriveAt - r.departAt) / 1000;
+  const v = { x: (r.to.x - r.from.x) / dur, z: (r.to.z - r.from.z) / dur };
+  d.fishers.forEach((f, i) => {
+    const off = { x: Math.cos(i * 1.7) * 0.9, z: Math.sin(i * 1.7) * 0.9 };
+    f.pos = { x: r.from.x + (r.to.x - r.from.x) * k + off.x, z: r.from.z + (r.to.z - r.from.z) * k + off.z };
+    f.movedAt = now;
+    f.vel = k < 1 ? v : { x: 0, z: 0 };
+  });
+  if (k < 1) return;
+  for (const f of d.fishers) {
+    f.mode = "walk";
+    f.lastInputAt = now;
+    f.following = false;
+  }
+  // Step off the platform a little so nobody boards straight back.
+  const w = worldFor(d.worldSeed);
+  const place = w.placeById(r.toPlace);
+  if (place) for (const f of d.fishers) f.pos = w.advance(f.pos, { x: place.center.x - f.pos.x, z: place.center.z - f.pos.z }, 4 / Math.max(1, distance(place.center, f.pos)));
+  d.ride = null;
+}
+
+// ---------- fog of war ----------
+
+export const FOG_TILE = 24;
+const tileKey = (p: Vec) => `${Math.floor(p.x / FOG_TILE)},${Math.floor(p.z / FOG_TILE)}`;
+
+/** Clears the fog round everyone (wider from a zeppelin). */
+function reveal(d: Draft<Lake>): void {
+  const seen = new Set(d.revealed);
+  const radius = d.ride?.kind === "zeppelin" ? 3 : 2;
+  for (const f of d.fishers)
+    for (let dx = -radius; dx <= radius; dx++)
+      for (let dz = -radius; dz <= radius; dz++) {
+        if (dx * dx + dz * dz > radius * radius + 1) continue;
+        const k = tileKey({ x: f.pos.x + dx * FOG_TILE, z: f.pos.z + dz * FOG_TILE });
+        if (!seen.has(k)) {
+          seen.add(k);
+          d.revealed.push(k);
+        }
+      }
+}
+
+export function isRevealed(lake: Pick<Lake, "revealed">, p: Vec): boolean {
+  return lake.revealed.includes(tileKey(p));
+}
+
+/** Generated places keep a swirl while someone is there; their swirls fade when everyone is far away (the home valley's stay). */
+function keepSwirlsNear(d: Draft<Lake>, now: number, w: World): void {
+  const far = (s: Swirl) => d.fishers.every((f) => distance(f.pos, s.pos) > 2.2 * 96);
+  const homeIds = new Set(["moonwell", "mistmarsh", "pools", "hollow", "tarn"]);
+  const kept = d.fishers.length > 0 ? d.swirls.filter((s) => s.golden || homeIds.has(s.area) || !far(s)) : d.swirls;
+  if (kept.length !== d.swirls.length) d.swirls = kept;
+  for (const f of d.fishers) {
+    const place = w.areaAt(f.pos);
+    if (!place || place.home || !d.discovered.includes(place.id) || d.swirls.some((s) => s.area === place.id)) continue;
+    spawnSwirl(d, now, false, place.id);
+  }
 }
 
 /** How close two fishers may stand (metres). */
 export const FISHER_SPACE = 1.8;
 
 /** Nudges any two fishers standing closer than FISHER_SPACE apart, each half the way, onto walkable ground. */
-export function keepApart(fishers: { pos: Vec; seat: number }[]): void {
+export function keepApart(fishers: { pos: Vec; seat: number }[], w: World = worldFor(HOME_WORLD_SEED)): void {
   for (let i = 0; i < fishers.length; i++)
     for (let j = i + 1; j < fishers.length; j++) {
       const a = fishers[i]!;
@@ -532,8 +675,8 @@ export function keepApart(fishers: { pos: Vec; seat: number }[]): void {
       const ux = dist > 1e-6 ? dx / dist : b.seat > a.seat ? 1 : -1;
       const uz = dist > 1e-6 ? dz / dist : 0;
       const push = (FISHER_SPACE - dist) / 2;
-      a.pos = advance(a.pos, { x: -ux, z: -uz }, push);
-      b.pos = advance(b.pos, { x: ux, z: uz }, push);
+      a.pos = w.advance(a.pos, { x: -ux, z: -uz }, push);
+      b.pos = w.advance(b.pos, { x: ux, z: uz }, push);
     }
 }
 
@@ -580,6 +723,7 @@ export function join(lake: Lake, input: { name: string | null; ogsId: string | n
       missSeq: 0,
     });
     d.fishers.sort((a, b) => a.seat - b.seat);
+    reveal(d);
   });
   return { lake: next, seat };
 }
@@ -601,7 +745,7 @@ export function rename(lake: Lake, seat: number, name: string): Lake {
 
 function withFisher(lake: Lake, seat: number, now: number, recipe: (d: Draft<Lake>, f: Draft<Fisher>) => void): Lake {
   const stepped = step(lake, now);
-  if (!stepped.fishers.some((f) => f.seat === seat) || stepped.campfire) return stepped;
+  if (!stepped.fishers.some((f) => f.seat === seat) || stepped.campfire || stepped.ride) return stepped;
   return produce(stepped, (d) => {
     const f = d.fishers.find((x) => x.seat === seat)!;
     recipe(d, f);
@@ -653,7 +797,7 @@ export function action(lake: Lake, seat: number, now: number): Lake {
       hook(d, f, now);
       return;
     }
-    const cast = canCast(f, now) ? castFrom(f.pos) : null;
+    const cast = canCast(f, now) ? worldFor(d.worldSeed).castFrom(f.pos) : null;
     if (!cast) return;
     const swirl = swirlAt(d, cast.bobber);
     f.mode = "cast";
@@ -700,7 +844,7 @@ export function setCampfire(lake: Lake, on: boolean, now: number): Lake {
   });
 }
 
-export type Progress = { journal: Record<string, JournalEntry>; shells: number; discovered?: AreaId[] };
+export type Progress = { journal: Record<string, JournalEntry>; shells: number; discovered?: PlaceId[]; worldSeed?: number; revealed?: string[] };
 
 /** The family's saved progress (from the host phone), merged in once per room. */
 export function loadProgress(lake: Lake, progress: Progress): Lake {
@@ -716,6 +860,10 @@ export function loadProgress(lake: Lake, progress: Progress): Lake {
     }
     d.shells += progress.shells;
     d.rodTier = rodTierFor(d.shells);
+    // The family's own endless valley (saved): same seed, same world, everything found stays put.
+    if (progress.worldSeed !== undefined) d.worldSeed = progress.worldSeed;
+    const seen = new Set(d.revealed);
+    for (const t of progress.revealed ?? []) if (!seen.has(t)) d.revealed.push(t);
     // Places found on earlier visits stay found (no second celebration), each with its swirl.
     for (const id of progress.discovered ?? []) {
       if (d.discovered.includes(id)) continue;
@@ -726,6 +874,6 @@ export function loadProgress(lake: Lake, progress: Progress): Lake {
 }
 
 export function progressOf(lake: Lake): Progress {
-  return { journal: lake.journal, shells: lake.shells, discovered: lake.discovered };
+  return { journal: lake.journal, shells: lake.shells, discovered: lake.discovered, worldSeed: lake.worldSeed, revealed: lake.revealed };
 }
 

@@ -8,7 +8,9 @@ export const JournalEntrySchema = z.object({ count: z.number().int().min(0), bes
 export const ProgressSchema = z.object({
   journal: z.record(z.string().max(40), JournalEntrySchema),
   shells: z.number().int().min(0).max(1_000_000),
-  discovered: z.array(z.enum(["moonwell", "mistmarsh", "pools", "hollow", "tarn"])).max(5).optional(),
+  discovered: z.array(z.string().max(24)).max(5000).optional(),
+  worldSeed: z.number().int().min(0).max(2 ** 31).optional(),
+  revealed: z.array(z.string().max(24)).max(50_000).optional(),
 });
 
 export const RoomClientEventSchema = z.discriminatedUnion("type", [
@@ -38,8 +40,8 @@ export const RoomClientEventSchema = z.discriminatedUnion("type", [
 export const RoomServiceEventSchema = z.discriminatedUnion("type", [z.object({ type: z.literal("NOOP") })]);
 
 const VecSchema = z.object({ x: z.number(), z: z.number() });
-const AreaIdSchema = z.enum(["moonwell", "mistmarsh", "pools", "hollow", "tarn"]);
-const WaterSchema = z.enum(["dock", "lily", "falls", "reeds", "shore", "marsh", "pools", "hollow", "tarn"]);
+const AreaIdSchema = z.string().max(24);
+const WaterSchema = z.enum(["dock", "lily", "falls", "reeds", "shore", "marsh", "pools", "hollow", "tarn", "willow", "crystal", "ember", "frost"]);
 
 export const FisherSchema = z.object({
   seat: z.number(),
@@ -53,7 +55,7 @@ export const FisherSchema = z.object({
   lastInputAt: z.number(),
   following: z.boolean(),
   facing: z.number(),
-  mode: z.enum(["walk", "cast", "wait", "bite", "reel", "catch"]),
+  mode: z.enum(["walk", "cast", "wait", "bite", "reel", "catch", "ride"]),
   bobber: VecSchema.nullable(),
   water: WaterSchema.nullable(),
   swirlId: z.number().nullable(),
@@ -89,6 +91,12 @@ export const LakeSchema = z.object({
   progressLoaded: z.boolean(),
   discovered: z.array(AreaIdSchema),
   discovery: z.object({ area: AreaIdSchema, seat: z.number(), at: z.number(), seq: z.number() }).nullable(),
+  worldSeed: z.number(),
+  revealed: z.array(z.string()),
+  boarding: z.object({ platformId: z.string(), since: z.number() }).nullable(),
+  ride: z
+    .object({ platformId: z.string(), kind: z.enum(["boat", "zeppelin"]), from: VecSchema, to: VecSchema, toPlace: z.string(), departAt: z.number(), arriveAt: z.number(), seats: z.array(z.number()) })
+    .nullable(),
   sparkles: z.array(z.object({ id: z.number(), pos: VecSchema, backAt: z.number() })),
   pickup: z.object({ seat: z.number(), sparkleId: z.number(), at: z.number(), seq: z.number() }).nullable(),
 });

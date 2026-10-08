@@ -308,5 +308,16 @@
       "references": []
     },
     "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "assets-src/fish/sheet-c.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Hand-painted stylized game illustration in the fantasy MMO tradition: chunky rounded shapes, saturated painterly colour with visible brush strokes and painted highlights, soft rim light, clean readable silhouettes. Natural fish eyes, no cartoon faces, no smiles, no text, no letters, no labels, no numbers, no border. A sprite sheet: twelve different magical stylized fish, each fish side view facing right, arranged in a neat grid of 4 columns and 3 rows with generous empty space between them, every fish fully inside its own cell and not touching any other, on a fully transparent background. Row 1: a soft green-grey willow bream with long trailing willow-leaf fins; a mossy olive gar with a long snout and fuzzy moss patches on its back; a dreamscale koi in lavender and pearl white with flowing veil fins; a warm amber ember perch with glowing orange stripes. Row 2: a copper carp with shiny copper-penny scales; a lanternjaw fish in deep red with a glowing amber light in its mouth area; a tiny frost minnow, pale icy blue with white frosted fins; an icefin trout, silver with translucent ice-crystal fins. Row 3: an aurora char with shimmering green-violet aurora bands along its sides; a glass tetra, small and see-through like glass with a rainbow sheen; a prism bass with faceted gem-like scales in teal and magenta; a round geode puffer with a stony outer shell cracked open to show purple crystals.",
+      "references": []
+    },
+    "date": "2026-10-08"
   }
 ]

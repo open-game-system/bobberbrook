@@ -11,6 +11,8 @@ SHEETS = [
                                        "lily-carp", "pike", "rainbow-trout", "salmon", "crystal-char", "bass"]),
     ("assets-src/fish/sheet-b.png", 3, ["sturgeon", "glowfin", "lanternfish", "moonfin", "ember-shiner", "puffer",
                                        "boot", "teapot", "chest"]),
+    ("assets-src/fish/sheet-c.png", 4, ["willow-bream", "mossback-gar", "dreamscale-koi", "ember-perch", "copper-carp", "lanternjaw",
+                                       "frost-minnow", "icefin-trout", "aurora-char", "glass-tetra", "prism-bass", "geode-puffer"]),
 ]
 OUT = "public/art/fish"
 os.makedirs(OUT, exist_ok=True)

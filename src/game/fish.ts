@@ -20,7 +20,7 @@ export type FishDef = {
 };
 
 // Stryker disable all: the catalogue is content (names, colours, sizes); its rules are tested through chooseCatch.
-const ALL_WATERS: readonly Water[] = ["dock", "lily", "falls", "reeds", "shore", "marsh", "pools", "hollow", "tarn"];
+const ALL_WATERS: readonly Water[] = ["dock", "lily", "falls", "reeds", "shore", "marsh", "pools", "hollow", "tarn", "willow", "crystal", "ember", "frost"];
 
 export const FISH: readonly FishDef[] = [
   { id: "brook-trout", name: "Brook Trout", rarity: "common", waters: ["shore", "falls", "reeds", "pools"], when: "any", cm: [18, 34],
@@ -59,6 +59,31 @@ export const FISH: readonly FishDef[] = [
     fight: { calmMs: [1500, 2300], thrashMs: [500, 800], pull: 0.6 }, colors: { body: "#e9d27a", belly: "#f6eec0", fin: "#d4b04a", accent: "#8a6a2a" } },
   { id: "moonfin", name: "Moonfin", rarity: "legendary", waters: ["tarn"], when: "night", cm: [70, 120],
     fight: { calmMs: [1000, 1500], thrashMs: [900, 1300], pull: 1.4 }, colors: { body: "#28307a", belly: "#6a7ad6", fin: "#c8d0ff", accent: "#e8eeff" }, glow: true },
+  // The far valley's own fish (one common, one uncommon, one rare per biome).
+  { id: "willow-bream", name: "Willow Bream", rarity: "common", waters: ["willow"], when: "any", cm: [18, 32],
+    fight: { calmMs: [1600, 2500], thrashMs: [400, 700], pull: 0.5 }, colors: { body: "#8a9a6a", belly: "#dfe6c8", fin: "#7a9a4a", accent: "#4a5a2a" } },
+  { id: "mossback-gar", name: "Mossback Gar", rarity: "uncommon", waters: ["willow", "marsh"], when: "any", cm: [50, 100],
+    fight: { calmMs: [1200, 1900], thrashMs: [700, 1000], pull: 1.0 }, colors: { body: "#6a7a2a", belly: "#c9c88a", fin: "#5a6a2a", accent: "#9ab83a" } },
+  { id: "dreamscale-koi", name: "Dreamscale Koi", rarity: "rare", waters: ["willow"], when: "any", cm: [40, 75],
+    fight: { calmMs: [1300, 2000], thrashMs: [700, 1000], pull: 0.9 }, colors: { body: "#d8c8f0", belly: "#ffffff", fin: "#e8dcff", accent: "#b08ae0" }, glow: true },
+  { id: "ember-perch", name: "Ember Perch", rarity: "common", waters: ["ember"], when: "any", cm: [15, 30],
+    fight: { calmMs: [1600, 2500], thrashMs: [400, 700], pull: 0.5 }, colors: { body: "#c8641a", belly: "#ffcf6a", fin: "#e8501a", accent: "#ffa03a" }, glow: true },
+  { id: "copper-carp", name: "Copper Carp", rarity: "uncommon", waters: ["ember"], when: "any", cm: [30, 60],
+    fight: { calmMs: [1400, 2200], thrashMs: [600, 900], pull: 0.8 }, colors: { body: "#c06a2a", belly: "#f0c08a", fin: "#d0703a", accent: "#8a3a1a" } },
+  { id: "lanternjaw", name: "Lanternjaw", rarity: "rare", waters: ["ember", "hollow"], when: "any", cm: [25, 45],
+    fight: { calmMs: [1200, 1800], thrashMs: [700, 1000], pull: 1.0 }, colors: { body: "#a0201a", belly: "#e0603a", fin: "#c0301a", accent: "#ffd84a" }, glow: true },
+  { id: "frost-minnow", name: "Frost Minnow", rarity: "common", waters: ["frost"], when: "any", cm: [6, 12],
+    fight: { calmMs: [1800, 2800], thrashMs: [300, 500], pull: 0.3 }, colors: { body: "#c8dcf0", belly: "#ffffff", fin: "#e8f4ff", accent: "#8ab0d8" } },
+  { id: "icefin-trout", name: "Icefin Trout", rarity: "uncommon", waters: ["frost"], when: "any", cm: [25, 50],
+    fight: { calmMs: [1300, 2100], thrashMs: [600, 900], pull: 0.8 }, colors: { body: "#a8b8c8", belly: "#eef4f8", fin: "#d8f0ff", accent: "#5a6a7a" } },
+  { id: "aurora-char", name: "Aurora Char", rarity: "rare", waters: ["frost", "tarn"], when: "night", cm: [30, 55],
+    fight: { calmMs: [1200, 1800], thrashMs: [700, 1000], pull: 1.0 }, colors: { body: "#2a3a5a", belly: "#8ae6c6", fin: "#a07ae0", accent: "#4ae0a0" }, glow: true },
+  { id: "glass-tetra", name: "Glass Tetra", rarity: "common", waters: ["crystal"], when: "any", cm: [5, 10],
+    fight: { calmMs: [1800, 2800], thrashMs: [300, 500], pull: 0.3 }, colors: { body: "#e0f0f0", belly: "#ffffff", fin: "#f0f8ff", accent: "#c0a0ff" } },
+  { id: "prism-bass", name: "Prism Bass", rarity: "uncommon", waters: ["crystal"], when: "any", cm: [30, 55],
+    fight: { calmMs: [1200, 2000], thrashMs: [700, 1100], pull: 1.0 }, colors: { body: "#2aa0a8", belly: "#c0f0f0", fin: "#c040a0", accent: "#e060c0" } },
+  { id: "geode-puffer", name: "Geode Puffer", rarity: "rare", waters: ["crystal"], when: "any", cm: [20, 40],
+    fight: { calmMs: [1500, 2300], thrashMs: [500, 800], pull: 0.7 }, colors: { body: "#b8a890", belly: "#e0d8c8", fin: "#d0c0e8", accent: "#9a5ae0" } },
   { id: "boot", name: "Old Boot", rarity: "junk", waters: ["shore", "reeds", "dock", "marsh"], when: "any", cm: [25, 30],
     fight: { calmMs: [2500, 3000], thrashMs: [200, 300], pull: 0.1 }, colors: { body: "#5a3a22", belly: "#5a3a22", fin: "#3a2616", accent: "#2a1a10" } },
   { id: "teapot", name: "Little Teapot", rarity: "junk", waters: ["lily", "shore", "dock", "hollow"], when: "any", cm: [15, 20],

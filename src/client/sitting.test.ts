@@ -9,6 +9,6 @@ describe("sittingReport", () => {
   });
   it("names it by the journal once fish are in it", () => {
     const lake = { ...newLake(1, 0), journal: { perch: { count: 1, bestCm: 1, firstBy: null }, boot: { count: 1, bestCm: 1, firstBy: null } } };
-    expect(sittingReport({ roomCode: "KQTP", lake, resumeUrl: "u" })).toMatchObject({ title: "Journal 1 of 18", detail: "Room KQTP" });
+    expect(sittingReport({ roomCode: "KQTP", lake, resumeUrl: "u" })).toMatchObject({ title: "Journal 1 of 30", detail: "Room KQTP" });
   });
 });

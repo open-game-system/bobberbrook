@@ -31,7 +31,7 @@ describe("coachLine", () => {
       mode: "catch",
       catch: { fishId: "golden-koi", cm: 40, shells: 4, isNew: true, golden: false, at: 0, seq: 1 },
     });
-    expect(coachLine(l, 0, 100)).toBe("New fish! Juneau caught a Golden Koi. That's 1 of 18 in the journal.");
+    expect(coachLine(l, 0, 100)).toBe("New fish! Juneau caught a Golden Koi. That's 1 of 30 in the journal.");
   });
   it("calls the golden swirl", () => {
     const l = { ...family(), swirls: [{ id: 1, area: "moonwell" as const, pos: { x: 0, z: 0 }, theta: Math.PI, golden: true, since: 0, until: 1e9, catches: 0 }] };

@@ -8,8 +8,8 @@ describe("the fish", () => {
     expect(fishById("perch")?.name).toBe("Stripy Perch");
     expect(fishById("nope")).toBeUndefined();
   });
-  it("keeps junk and treasure out of the journal (18 species to find)", () => {
-    expect(JOURNAL_FISH).toHaveLength(18);
+  it("keeps junk and treasure out of the journal (30 species to find)", () => {
+    expect(JOURNAL_FISH).toHaveLength(30);
     expect(JOURNAL_FISH.map((f) => f.id)).not.toContain("boot");
     expect(JOURNAL_FISH.map((f) => f.id)).not.toContain("chest");
     expect(JOURNAL_FISH.map((f) => f.id)).toContain("moonfin");

@@ -62,3 +62,4 @@
 {"date":"2026-10-08T21:27:51.498Z","project":"bobberbrook","service":"gemini","unit":"gemini_usd","amount":0.0005255,"estimated":false,"label":"area-moonwell","files":["area-moonwell.m4a"],"model":"gemini-3.8-flash-tts","voice":"Sulafat","tokens":58}
 {"date":"2026-10-08T21:27:51.662Z","project":"bobberbrook","service":"gemini","unit":"gemini_usd","amount":0.0011675,"estimated":false,"label":"area-tarn","files":["area-tarn.m4a"],"model":"gemini-3.8-flash-tts","voice":"Sulafat","tokens":129}
 {"date":"2026-10-08T21:27:52.393Z","project":"bobberbrook","service":"gemini","unit":"gemini_usd","amount":0.00077,"estimated":false,"label":"teach-explore","files":["teach-explore.m4a"],"model":"gemini-3.8-flash-tts","voice":"Sulafat","tokens":85}
+{"date":"2026-10-08T22:53:08.210Z","project":"bobberbrook","service":"codex","unit":"codex_images","amount":1,"estimated":false,"label":"codex image_generation","files":["assets-src/fish/sheet-c.png"],"usd":0}

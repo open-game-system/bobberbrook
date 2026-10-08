@@ -5,7 +5,7 @@
  */
 export type Vec = { x: number; z: number };
 /** Moonwell Lake's own waters (dock, lily pads, below the falls, reeds, open shore), then one per far area. */
-export type Water = "dock" | "lily" | "falls" | "reeds" | "shore" | "marsh" | "pools" | "hollow" | "tarn";
+export type Water = "dock" | "lily" | "falls" | "reeds" | "shore" | "marsh" | "pools" | "hollow" | "tarn" | "willow" | "crystal" | "ember" | "frost";
 
 export const WALK_SPEED = 5;
 /** How far from the water's edge a fisher can still cast. */
@@ -81,14 +81,14 @@ export function walkable(p: Vec): boolean {
 }
 
 /** Headings to try when the way ahead is blocked, nearest first (radians). */
-const STEER = [0, 0.5, -0.5, 1.0, -1.0, 1.4, -1.4];
+export const STEER_HEADINGS = [0, 0.5, -0.5, 1.0, -1.0, 1.4, -1.4];
 
 /** Open ground except for a tree or rock standing there. */
 function hitsObstacle(p: Vec): boolean {
   return !OBSTACLES.every((o) => Math.hypot(p.x - o.x, p.z - o.z) >= o.r + 0.5);
 }
 
-function turned(v: Vec, a: number): Vec {
+export function turned(v: Vec, a: number): Vec {
   const c = Math.cos(a);
   const s = Math.sin(a);
   return { x: v.x * c - v.z * s, z: v.x * s + v.z * c };
@@ -104,7 +104,7 @@ export function advance(pos: Vec, vel: Vec, dt: number): Vec {
     left -= h;
     // Straight on; a tree or rock in the way: veer round it; the shore: slide along it on one axis.
     const ahead = { x: p.x + vel.x * h, z: p.z + vel.z * h };
-    const heads = walkable(ahead) ? [vel] : hitsObstacle(ahead) ? STEER.map((a) => turned(vel, a)) : [{ x: vel.x, z: 0 }, { x: 0, z: vel.z }];
+    const heads = walkable(ahead) ? [vel] : hitsObstacle(ahead) ? STEER_HEADINGS.map((a) => turned(vel, a)) : [{ x: vel.x, z: 0 }, { x: 0, z: vel.z }];
     const next = heads.map((v) => ({ x: p.x + v.x * h, z: p.z + v.z * h })).find(walkable);
     if (!next) break;
     p = next;
