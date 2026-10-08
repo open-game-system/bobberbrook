@@ -9,7 +9,7 @@ export function isView(v: string): v is ViewName {
   return (VIEWS as readonly string[]).includes(v);
 }
 
-const EL = (50 * Math.PI) / 180;
+const EL = (40 * Math.PI) / 180;
 
 /** The group camera: from the south, high three-quarter, eased, yaw roughly fixed. */
 export class CameraRig {
@@ -86,9 +86,9 @@ export class CameraRig {
       const hf = 2 * Math.atan(Math.tan(vf / 2) * cam.aspect);
       const needW = w / 2 / Math.tan(hf / 2);
       const needH = ((d * Math.sin(EL) + 3) / 2) / Math.tan(vf / 2);
-      this.wantDist = Math.min(64, Math.max(26, Math.max(needW, needH)));
+      this.wantDist = Math.min(66, Math.max(31, Math.max(needW, needH)));
       // Pull the centre a little toward the lake so the water stays in the frame.
-      this.wantTarget.set(cx * 0.9, 0.6, cz * 0.88 - 1.2);
+      this.wantTarget.set(cx * 0.85, 0.6, cz * 0.7 - 2.5);
     } else {
       const R = (th: number, k: number) => lakeRadius(th) * k;
       switch (v) {

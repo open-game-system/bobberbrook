@@ -70,10 +70,10 @@ function angleLerp(a: number, b: number, t: number): number {
 }
 
 function bobberGeometry(): BufferGeometry {
-  const top = paint(prep(new SphereGeometry(0.15, 14, 7, 0, Math.PI * 2, 0, Math.PI / 2)), 0xffffff, 0xffffff);
-  const bottom = paint(prep(new SphereGeometry(0.15, 14, 7, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2)), 0xe02a2a, 0xff4a3a);
+  const top = paint(prep(new SphereGeometry(0.15, 14, 7, 0, Math.PI * 2, 0, Math.PI / 2)), 0xff3a2a, 0xff5a40);
+  const bottom = paint(prep(new SphereGeometry(0.15, 14, 7, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2)), 0xf4f4f4, 0xffffff);
   const band = paint(prep(new CylinderGeometry(0.152, 0.152, 0.03, 14)), 0x2a2a2a);
-  const stick = paint(prep(new CylinderGeometry(0.018, 0.018, 0.16, 6).translate(0, 0.2, 0)), 0xe02a2a);
+  const stick = paint(prep(new CylinderGeometry(0.018, 0.018, 0.16, 6).translate(0, 0.2, 0)), 0xffffff);
   return merge([top, bottom, band, stick]);
 }
 
@@ -122,6 +122,7 @@ class FisherView {
   private catchJunk = false;
   private catchCm = 30;
   private catchEnd = -1;
+  private catchAspect = 1.6;
   private sparkAcc = 0;
   readonly hold = new Vector3();
   private readonly tip = new Vector3();
@@ -155,7 +156,7 @@ class FisherView {
     this.line = new Mesh(this.lineGeo, lineMat);
     this.line.frustumCulled = false;
     this.line.renderOrder = 8;
-    this.card = new CatchCard(textures.placeholder, cardGeo.rays, cardGeo.plane);
+    this.card = new CatchCard(cardGeo.rays, cardGeo.plane);
   }
 
   attach(parent: Group): void {
@@ -396,7 +397,7 @@ class FisherView {
         this.catchJunk = def?.rarity === "junk";
         this.catchCm = f.catch.cm;
         this.catchEnd = -1;
-        this.card.cardMat.map = this.textures.get(this.catchId);
+        this.catchAspect = this.card.paint(this.textures.image(this.catchId), def?.glow ? (def.colors.accent) : "rgba(255,255,255,0.95)");
         fx.leap(this.catchFromX, this.catchFromZ, t, this.catchJunk);
       }
     }
@@ -454,6 +455,8 @@ class FisherView {
     rig.markerMat.opacity = biting ? 0.6 + 0.4 * Math.sin(t * 16) : 0.55 + 0.1 * Math.sin(t * 2);
     rig.marker.scale.setScalar(biting ? 1.25 : 1);
     rig.tag.position.set(this.x, this.y + (lake.campfire ? 2.4 : 2.75) * Math.min(1, this.appear * 1.4), this.z);
+    const tagK = this.card.group.visible ? 0 : 1;
+    rig.tag.visible = tagK > 0;
     rig.tag.scale.set(0.15, 0.033, 1);
 
     // ---- bobber + line ----
@@ -482,25 +485,27 @@ class FisherView {
     const g = this.card.group;
     g.visible = true;
     const s = Math.min(1, age / LEAP_S);
-    this.hold.set(this.x, this.y + 3.35, this.z);
+    this.hold.set(this.x, this.y + 4.3, this.z);
     const e = s * s * (3 - 2 * s);
     const gx = this.catchFromX + (this.hold.x - this.catchFromX) * e;
     const gz = this.catchFromZ + (this.hold.z - this.catchFromZ) * e;
     const gy = 0.1 + (this.hold.y - 0.1) * e + Math.sin(s * Math.PI) * 3.0;
     g.position.set(gx, gy, gz);
     g.quaternion.copy(camera.quaternion);
-    const aspect = this.textures.aspectOf(this.catchId);
-    const w = (1.3 + Math.min(1.5, this.catchCm / 70)) * (this.catchNew ? 1.15 : 1);
+    const aspect = this.catchAspect;
+    const w = (2.6 + Math.min(1.6, this.catchCm / 60)) * (this.catchNew ? 1.12 : 1);
     const scale = (age < LEAP_S ? 0.55 + 0.45 * s : 1 + Math.max(0, 0.18 - (age - LEAP_S) * 0.6)) * (1 - out);
-    this.card.card.scale.set(w * scale, (w / aspect) * scale, 1);
+    const W = w * (640 / 520) * scale;
+    this.card.card.scale.set(W, W, 1);
+    void aspect;
     const wiggle = age < LEAP_S ? (this.catchJunk ? s * Math.PI * 4 : Math.sin(age * 22) * 0.35) : Math.sin(age * 7) * 0.12;
     this.card.card.rotation.z = wiggle;
     // Rays behind a new species (gold), soft white otherwise.
     const rayK = age > LEAP_S * 0.8 ? Math.min(1, (age - LEAP_S * 0.8) * 3) * (1 - out) : 0;
     this.card.rays.visible = rayK > 0;
     this.card.rays.rotation.z = t * 0.6;
-    this.card.rays.scale.setScalar(w * (this.catchNew ? 2.2 : 1.3) * (0.8 + 0.2 * Math.sin(t * 3)));
-    this.card.raysMat.color.setRGB(1, this.catchNew || this.catchGolden ? 0.9 : 1, this.catchNew || this.catchGolden ? 0.6 : 1).multiplyScalar(rayK * (this.catchNew ? 1.2 : 0.45));
+    this.card.rays.scale.setScalar(w * (this.catchNew ? 1.5 : 1.0) * (0.85 + 0.15 * Math.sin(t * 3)));
+    this.card.raysMat.color.setRGB(1, this.catchNew || this.catchGolden ? 0.9 : 1, this.catchNew || this.catchGolden ? 0.6 : 1).multiplyScalar(rayK * (this.catchNew ? 0.75 : 0.25));
     if (age < LEAP_S && Math.random() < 0.6) fx.drip(gx, gy - 0.3, gz);
     if (age >= LEAP_S && age - dt < LEAP_S) {
       // Lands in the hands.
@@ -628,6 +633,19 @@ export class FisherViews {
     out.z = found.z;
     out.age = t - found.catchStart;
     return out;
+  }
+
+  debug(): unknown[] {
+    return this.views.map((v) => {
+      return {
+        seat: v.seat,
+        present: v.present,
+        cardVisible: v.card.group.visible,
+        cardPos: v.card.group.position.toArray(),
+        cardScale: v.card.card.scale.toArray(),
+        catchStart: v.catchStart,
+      };
+    });
   }
 
   presentCount(): number {

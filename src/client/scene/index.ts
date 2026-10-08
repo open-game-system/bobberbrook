@@ -51,6 +51,7 @@ export type SceneDebug = {
   info(): SceneInfo;
   setView(name: string): string;
   setPhase(phase: number | null): number | null;
+  debug(): unknown;
 };
 
 declare global {
@@ -92,6 +93,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   renderer.toneMapping = NeutralToneMapping;
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.shadowMap.enabled = full;
+  renderer.info.autoReset = false;
   renderer.shadowMap.type = PCFShadowMap;
   const size = () => ({ w: Math.max(1, canvas.clientWidth || window.innerWidth), h: Math.max(1, canvas.clientHeight || window.innerHeight) });
   let { w, h } = size();
@@ -208,6 +210,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     rig.beginFocus();
     fishers.forEachFocus((x, y, z) => rig.addFocus(x, y, z));
     rig.update(t, dt, lake?.campfire ?? false, fishers.catchFocus(t, catchBuf));
+    renderer.info.reset();
     if (post) post.render();
     else renderer.render(scene, camera);
   };
@@ -268,6 +271,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       rig.setView(name);
       return name;
     },
+    debug: () => ({ fishers: fishers.debug(), camera: camera.position.toArray() }),
     setPhase(p) {
       if (p !== null && (!Number.isFinite(p) || p < 0 || p > 1)) throw new Error(`phase must be 0..1 or null, got ${String(p)}`);
       phaseOverride = p;

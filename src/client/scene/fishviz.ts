@@ -4,7 +4,7 @@ import {
   BufferGeometry,
   Color,
   CylinderGeometry,
-  DataTexture,
+  CanvasTexture,
   DoubleSide,
   Group,
   InstancedMesh,
@@ -12,10 +12,7 @@ import {
   MeshBasicMaterial,
   Object3D,
   PlaneGeometry,
-  RGBAFormat,
   SRGBColorSpace,
-  TextureLoader,
-  type Texture,
 } from "three";
 import { FISH_IDS } from "../../game/fish";
 
@@ -85,38 +82,31 @@ export class FishShadows {
   }
 }
 
-/** The painted fish sprites, loaded once. */
+/** The painted fish sprites, loaded once as images (drawn into each card's canvas). */
 export class FishTextures {
-  readonly placeholder: Texture;
-  private readonly map = new Map<string, Texture>();
-  private readonly aspect = new Map<string, number>();
+  private readonly imgs = new Map<string, HTMLImageElement>();
 
   constructor(base: string) {
-    this.placeholder = new DataTexture(new Uint8Array([255, 255, 255, 0]), 1, 1, RGBAFormat);
-    this.placeholder.needsUpdate = true;
-    const loader = new TextureLoader();
     for (const id of FISH_IDS) {
-      const t = loader.load(`${base}${id}.webp`, (tex) => {
-        const img: unknown = tex.image;
-        if (img instanceof HTMLImageElement || img instanceof ImageBitmap) this.aspect.set(id, img.width / Math.max(1, img.height));
-      });
-      t.colorSpace = SRGBColorSpace;
-      t.anisotropy = 4;
-      this.map.set(id, t);
+      const img = new Image();
+      img.decoding = "async";
+      img.src = `${base}${id}.webp`;
+      this.imgs.set(id, img);
     }
   }
 
-  get(id: string): Texture {
-    return this.map.get(id) ?? this.placeholder;
+  image(id: string): HTMLImageElement | undefined {
+    const img = this.imgs.get(id);
+    return img && img.complete && img.naturalWidth > 0 ? img : undefined;
   }
 
   aspectOf(id: string): number {
-    return this.aspect.get(id) ?? 1.6;
+    const img = this.image(id);
+    return img ? img.naturalWidth / Math.max(1, img.naturalHeight) : 1.6;
   }
 
   dispose(): void {
-    for (const t of this.map.values()) t.dispose();
-    this.placeholder.dispose();
+    this.imgs.clear();
   }
 }
 
@@ -143,8 +133,16 @@ export class CatchCard {
   readonly cardMat: MeshBasicMaterial;
   readonly raysMat: MeshBasicMaterial;
 
-  constructor(placeholder: Texture, raysGeo: BufferGeometry, planeGeo: PlaneGeometry) {
-    this.cardMat = new MeshBasicMaterial({ map: placeholder, transparent: true, alphaTest: 0.02, side: DoubleSide, depthWrite: false });
+  private readonly canvas: HTMLCanvasElement;
+  private readonly tex: CanvasTexture;
+
+  constructor(raysGeo: BufferGeometry, planeGeo: PlaneGeometry) {
+    this.canvas = document.createElement("canvas");
+    this.canvas.width = 640;
+    this.canvas.height = 640;
+    this.tex = new CanvasTexture(this.canvas);
+    this.tex.colorSpace = SRGBColorSpace;
+    this.cardMat = new MeshBasicMaterial({ map: this.tex, transparent: true, alphaTest: 0.02, side: DoubleSide, depthWrite: false });
     this.card = new Mesh(planeGeo, this.cardMat);
     this.card.renderOrder = 15;
     this.raysMat = new MeshBasicMaterial({ vertexColors: true, transparent: true, blending: AdditiveBlending, depthWrite: false, side: DoubleSide });
@@ -154,7 +152,30 @@ export class CatchCard {
     this.group.add(this.rays, this.card);
   }
 
+  /** Paints the fish into the card with a soft white halo (reads on any background). Returns the aspect. */
+  paint(img: HTMLImageElement | undefined, glow: string): number {
+    const c = this.canvas;
+    const ctx = c.getContext("2d");
+    if (!ctx) return 1.6;
+    ctx.clearRect(0, 0, c.width, c.height);
+    if (!img) return 1.6;
+    const aspect = img.naturalWidth / Math.max(1, img.naturalHeight);
+    const pad = 60;
+    const w = c.width - pad * 2;
+    const h = w / aspect;
+    const y = (c.height - h) / 2;
+    ctx.save();
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = 34;
+    for (let i = 0; i < 3; i++) ctx.drawImage(img, pad, y, w, h);
+    ctx.restore();
+    ctx.drawImage(img, pad, y, w, h);
+    this.tex.needsUpdate = true;
+    return aspect;
+  }
+
   dispose(): void {
+    this.tex.dispose();
     this.cardMat.dispose();
     this.raysMat.dispose();
   }

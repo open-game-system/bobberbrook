@@ -67,8 +67,11 @@ for (const [scenario, phase, hero] of shots) {
   await page.screenshot({ path: file });
   files.push([label, file]);
   const info = await page.evaluate(() => window.__scene.info());
-  const luma = await page.evaluate(async () => {
-    const c = document.querySelector("canvas");
+  const png = (await import("node:fs")).readFileSync(file).toString("base64");
+  const luma = await page.evaluate(async (b64) => {
+    const c = new Image();
+    c.src = `data:image/png;base64,${b64}`;
+    await c.decode();
     const s = document.createElement("canvas");
     s.width = 192; s.height = 108;
     const x = s.getContext("2d");
@@ -77,7 +80,7 @@ for (const [scenario, phase, hero] of shots) {
     let sum = 0;
     for (let i = 0; i < d.length; i += 4) sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
     return sum / (d.length / 4);
-  });
+  }, png);
   metrics.shots.push({ label, renderer: info.renderer, programsAtStart: before.programs, programs: info.programs, calls: info.calls, triangles: info.triangles, p50: info.frameP50, p95: info.frameP95, meanLuma: Math.round(luma) });
   console.log(label, JSON.stringify(metrics.shots.at(-1)));
 }

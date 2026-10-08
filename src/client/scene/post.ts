@@ -58,7 +58,7 @@ export function buildPost(renderer: WebGLRenderer, scene: Scene, camera: Camera,
   const target = new WebGLRenderTarget(w, h, { type: HalfFloatType, samples: 4 });
   const composer = new EffectComposer(renderer, target);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new Vector2(w / 2, h / 2), 0.42, 0.55, 0.92);
+  const bloom = new UnrealBloomPass(new Vector2(w / 2, h / 2), 0.38, 0.5, 1.0);
   composer.addPass(bloom);
   const grade = new ShaderPass(GradeShader);
   composer.addPass(grade);
