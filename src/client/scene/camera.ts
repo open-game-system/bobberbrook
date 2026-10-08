@@ -74,6 +74,8 @@ export class CameraRig {
   private revealW = 0;
   private catchW = 0;
   private override: ViewName = "auto";
+  /** The closest the group framing comes (further out when framing one place of a split family, so the place reads). */
+  minDist = MIN_DIST;
   private readonly pts: Vector3[] = Array.from({ length: MAX_POINTS }, () => new Vector3());
   private n = 0;
   private first = true;
@@ -139,7 +141,7 @@ export class CameraRig {
       x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z); ym += p.y;
     }
     const t = this.cx.set((x0 + x1) / 2, ym / this.n + 1.2, (z0 + z1) / 2);
-    let d = Math.min(MAX_DIST, Math.max(MIN_DIST, 0.9 * Math.max(x1 - x0, (z1 - z0) * 1.4) + 14));
+    let d = Math.min(MAX_DIST, Math.max(this.minDist, 0.9 * Math.max(x1 - x0, (z1 - z0) * 1.4) + 14));
     for (let iter = 0; iter < 4; iter++) {
       this.pose(cam, t, d, 0, EL, PITCH_UP);
       let nx0 = Infinity, nx1 = -Infinity, ny0 = Infinity, ny1 = -Infinity;
@@ -163,7 +165,7 @@ export class CameraRig {
       t.x += offX * halfW;
       // Screen-up on the ground is "away from the camera" (−z) foreshortened by the elevation.
       t.z -= (offY * halfH) / Math.max(0.35, Math.sin(EL + PITCH_UP));
-      d = Math.min(MAX_DIST, Math.max(MIN_DIST, d * (0.35 + 0.65 * s)));
+      d = Math.min(MAX_DIST, Math.max(this.minDist, d * (0.35 + 0.65 * s)));
     }
     this.wantTarget.copy(t);
     this.wantDist = d;

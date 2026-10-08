@@ -87,6 +87,9 @@ class FisherView {
   rig: FisherRig;
   /** The colour the rig was built in: always the fisher's own `color` (chosen per device), never the seat's. */
   private colorName = "green";
+  get color(): string {
+    return this.colorName;
+  }
   private parent: Group | null = null;
   readonly bobber: Mesh;
   readonly line: Mesh;
@@ -813,6 +816,11 @@ export class FisherViews {
       fn(v.x, v.y, v.z);
       if (v.bobberVisible) fn(v.bob.x, Math.max(0, v.bob.y), v.bob.z);
     }
+  }
+
+  /** Every present fisher by seat, with their colour name and bobber (null when none is out). */
+  forEachSeat(fn: (seat: number, x: number, y: number, z: number, color: string, bob: Vector3 | null) => void): void {
+    for (const v of this.views) if (v.present) fn(v.seat, v.x, v.y, v.z, v.color, v.bobberVisible ? v.bob : null);
   }
 
   forEachFisher(fn: (x: number, y: number, z: number) => void): void {

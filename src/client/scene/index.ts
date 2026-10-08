@@ -42,6 +42,8 @@ import { paintedMaterial } from "./geo";
 import { Mood } from "./mood";
 import { buildMist } from "./mist";
 import { Splashes } from "./splash";
+import { SplitFocus, type Member } from "./split";
+import { EdgeMarkers, type Marker } from "./markers";
 import { AREAS, areaAt, areaById } from "../../game/world";
 import { AREA_INDEX } from "./valley";
 import { DoubleSide } from "three";
@@ -206,6 +208,12 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   scene.add(swirls.group);
   const world = new Group();
   scene.add(world);
+  const splitFocus = new SplitFocus();
+  const members: Member[] = [];
+  const markerList: Marker[] = [];
+  let framed: ReadonlySet<number> = new Set();
+  const markers = new EdgeMarkers();
+  scene.add(...markers.meshes);
   // Every dissolving tree casts its shadow through the same fade (no shadow without its tree).
   const treeDepth = occluderDepthMaterial(occ);
   scene.traverse((o) => {
@@ -304,14 +312,29 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     parts.water.update(dt, t);
     splashes.frame(t);
     parts.glow.update(dt, t);
+    // Spread out: frame the active place (a line in the water, else the latest mover), mark the rest.
+    members.length = 0;
+    fishers.forEachSeat((seat, x, _y, z) => {
+      const f = lake?.fishers.find((ff) => ff.seat === seat);
+      const m = f?.mode;
+      const activity = m === "bite" || m === "reel" || m === "catch" ? "hot" : m === "cast" || m === "wait" ? "line" : "idle";
+      members.push({ seat, x, z, activity, inputAt: (f?.lastInputAt ?? 0) / 1000, place: areaAt({ x, z })?.id ?? null });
+    });
+    const sp = splitFocus.update(members, sn / 1000);
+    framed = sp.framed;
+    rig.minDist += ((sp.split ? 23 : 17) - rig.minDist) * Math.min(1, dt * 2);
     rig.beginFocus();
-    fishers.forEachFocus((x, y, z) => rig.addFocus(x, y, z));
+    fishers.forEachSeat((seat, x, y, z, _c, bob) => {
+      if (!framed.has(seat)) return;
+      rig.addFocus(x, y, z);
+      if (bob) rig.addFocus(bob.x, Math.max(0, bob.y), bob.z);
+    });
     const cf = fishers.catchFocus(t, catchBuf);
     // Out on a trail (between places), the camera looks further ahead.
     let n = 0;
     let gx = 0;
     let gz = 0;
-    fishers.forEachFisher((x, _y, z) => { gx += x; gz += z; n++; });
+    fishers.forEachSeat((seat, x, _y, z) => { if (framed.has(seat)) { gx += x; gz += z; n++; } });
     const onTrail = n > 0 && areaAt({ x: gx / n, z: gz / n }) === null ? 1 : 0;
     trailW += (onTrail - trailW) * Math.min(1, dt * 1.5);
     const reveal = revealAge >= 0 && revealAge < 3.5 ? { x: revealArea.center.x, z: revealArea.center.z, age: revealAge } : null;
@@ -322,8 +345,8 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     const foc = occ.uFocus.value;
     foc[fi++]!.copy(rig.focus);
     if (cf) foc[fi++]!.set(cf.x, cf.y + 2.5, cf.z);
-    fishers.forEachFisher((x, y, z) => {
-      if (fi < MAX_FOCUS) foc[fi++]!.set(x, y + 1, z);
+    fishers.forEachSeat((seat, x, y, z) => {
+      if (fi < MAX_FOCUS && framed.has(seat)) foc[fi++]!.set(x, y + 1, z);
     });
     while (fi < MAX_FOCUS) foc[fi++]!.set(0, -100, 0);
     // The action's screen box and how far away its nearest fisher is (see occluderMaterial).
@@ -337,10 +360,16 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       const sy = tmpO.y * 0.5 + 0.5;
       bx0 = Math.min(bx0, sx); bx1 = Math.max(bx1, sx); by0 = Math.min(by0, sy); by1 = Math.max(by1, sy);
     };
-    fishers.forEachFisher((x, y, z) => {
+    fishers.forEachSeat((seat, x, y, z) => {
+      if (!framed.has(seat)) return;
       boxPt(x, y, z);
       boxPt(x, y + 3.2, z);
     });
+    markerList.length = 0;
+    fishers.forEachSeat((seat, x, y, z, color) => {
+      markerList.push({ seat, x, y, z, color, show: sp.split && !framed.has(seat) });
+    });
+    markers.update(camera, markerList, t, dt);
     if (near < Infinity) {
       occ.uBox.value.set(bx0, by0, bx1, by1);
       occ.uNear.value = near - 1.5;
@@ -409,7 +438,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       rig.setView(name);
       return name;
     },
-    debug: () => ({ fishers: fishers.debug(), camera: camera.position.toArray(), rig: rig.debug(), trees: forest.count, veil: Array.from(veil), mood: mood.debug() }),
+    debug: () => ({ split: { framed: [...framed], markers: markers.debug() }, fishers: fishers.debug(), camera: camera.position.toArray(), rig: rig.debug(), trees: forest.count, veil: Array.from(veil), mood: mood.debug() }),
     pick(x, y) {
       const rc = new Raycaster();
       rc.setFromCamera(new Vector2(x * 2 - 1, 1 - y * 2), camera);
@@ -460,9 +489,11 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
         y0 = Math.min(y0, sy);
         y1 = Math.max(y1, sy);
       };
-      fishers.forEachFocus((x, y, z) => {
+      fishers.forEachSeat((seat, x, y, z, _c, bob) => {
+        if (!framed.has(seat)) return;
         addPt(x, y, z);
         addPt(x, y + 3.2, z);
+        if (bob) addPt(bob.x, Math.max(0, bob.y), bob.z);
       });
       if (!Number.isFinite(x0)) return { x: cw * 0.22, y: ch * 0.18, w: cw * 0.56, h: ch * 0.64 };
       const pad = Math.min(cw, ch) * 0.06;
@@ -488,6 +519,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       trails.dispose();
       areas.dispose();
       mist.dispose();
+      markers.dispose();
       splashes.dispose();
       painted.dispose();
       paintedDouble.dispose();
