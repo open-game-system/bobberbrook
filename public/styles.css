@@ -161,12 +161,13 @@ button { font: inherit; color: inherit; }
 
 /* portrait phones (grown-ups): map and words share the top, controls stay at the thumbs */
 @media (orientation: portrait) {
-  .fisher-top { flex-direction: column; align-items: center; }
-  .minimap { width: 44vw; height: 44vw; }
-  .host .minimap { position: absolute; right: 3vw; top: 0; width: 30vw; height: 30vw; }
-  .host .host-strip { width: 94vw; margin-top: 31vw; }
-  .fisher-middle { top: 58%; width: 44vw; }
-  .host .fisher-middle { top: 60%; }
+  .fisher-top { flex-direction: column; align-items: center; top: calc(env(safe-area-inset-top) + 3vw); }
+  .minimap { width: 58vw; height: 58vw; }
+  .host .fisher-top { gap: 3vw; }
+  .host .host-strip { order: -1; width: 94vw; }
+  .host .minimap { width: 52vw; height: 52vw; }
+  .fisher-middle { top: 60%; width: 46vw; }
+  .host .fisher-middle { top: 66%; width: 40vw; }
   .stick { --size: 40vw; }
   .action { --size: 42vw; }
 }
