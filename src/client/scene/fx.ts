@@ -10,6 +10,7 @@ export class Fx {
   private fireflyAcc = 0;
   private mistAcc = 0;
   private emberAcc = 0;
+  private mistGroundAcc = 0;
   private seed = 1;
 
   constructor(
@@ -134,15 +135,26 @@ export class Fx {
       this.water.emit({ x, y: 0.4 + this.r() * 0.6, z, vx: (this.r() - 0.5) * 0.8, vy: 0.5 + this.r() * 0.6, vz: 0.4 + this.r() * 0.6, life: 2.4, size: 1.1 + this.r() * 0.8, r: 0.95, g: 0.98, b: 1, alpha: 0.22 + 0.15 * tod.mist, grow: 1.2, drag: 0.6 });
       if (this.r() < 0.5) this.water.emit({ x, y: 0.3, z, vx: (this.r() - 0.5) * 1.8, vy: 2 + this.r() * 2, vz: 0.6 + this.r(), life: 0.8, size: 0.15, r: 1, g: 1, b: 1, gravity: 9, alpha: 0.8 });
     }
-    // Fireflies over the shore at night.
-    this.fireflyAcc += dt * tod.glow * (this.lite ? 6 : 14);
+    // Wisps: glowing teal and violet motes drifting over the shore and water (more at night).
+    this.fireflyAcc += dt * (this.lite ? 4 + 6 * tod.glow : 8 + 14 * tod.glow);
     while (this.fireflyAcc > 1) {
       this.fireflyAcc -= 1;
       const th = this.r() * Math.PI * 2;
-      const rr = lakeRadius(th) + 0.5 + this.r() * 9;
+      const rr = lakeRadius(th) - 4 + this.r() * 14;
       const x = Math.cos(th) * rr;
       const z = Math.sin(th) * rr;
-      this.glow.emit({ x, y: heightAt(x, z) + 0.4 + this.r() * 1.6, z, vx: (this.r() - 0.5) * 0.5, vy: (this.r() - 0.4) * 0.3, vz: (this.r() - 0.5) * 0.5, life: 4 + this.r() * 3, size: 0.28, r: 0.85, g: 1, b: 0.45, shape: 0 });
+      const violet = this.r() < 0.4;
+      this.glow.emit({ x, y: Math.max(0, heightAt(x, z)) + 0.4 + this.r() * 2.2, z, vx: (this.r() - 0.5) * 0.5, vy: (this.r() - 0.3) * 0.25, vz: (this.r() - 0.5) * 0.5, life: 4 + this.r() * 4, size: 0.22 + this.r() * 0.2, r: violet ? 0.75 : 0.45, g: violet ? 0.55 : 1, b: 1, alpha: 0.6 + 0.4 * tod.glow, shape: 0 });
+    }
+    // Ground mist: big soft lavender puffs hugging the water and the grass.
+    this.mistGroundAcc += dt * (this.lite ? 2 : 5) * (0.4 + tod.mist);
+    while (this.mistGroundAcc > 1) {
+      this.mistGroundAcc -= 1;
+      const th = this.r() * Math.PI * 2;
+      const rr = lakeRadius(th) - 3 + this.r() * 10;
+      const x = Math.cos(th) * rr;
+      const z = Math.sin(th) * rr;
+      this.water.emit({ x, y: Math.max(0, heightAt(x, z)) + 0.3, z, vx: 0.25 + this.r() * 0.2, vy: 0.02, vz: (this.r() - 0.5) * 0.2, life: 9, size: 5 + this.r() * 4, r: tod.fog.r * 1.2 + 0.15, g: tod.fog.g * 1.2 + 0.15, b: tod.fog.b * 1.1 + 0.2, alpha: 0.07 + 0.07 * tod.mist, grow: 0.6 });
     }
     // Embers.
     const fire = Math.max(tod.glow, campfire);

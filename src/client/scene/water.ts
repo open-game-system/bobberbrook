@@ -119,6 +119,11 @@ void main() {
     ringFoam += streak * s.z * 0.5;
     base += tint * pat * s.w * 0.25 * (0.7 + 0.3 * sin(uTime * 3.0));
   }
+  // Moonwell glow: the water lights itself, more at night; drifting glints under the surface.
+  float glowK = 0.35 + 0.65 * uGlow;
+  base += uShallow * glowK * (0.22 + 0.18 * (1.0 - dz));
+  float mote = smoothstep(0.93, 1.0, vn(p * 2.3 + vec2(uTime * 0.12, uTime * 0.07))) * smoothstep(0.9, 1.0, vn(p * 5.1 - uTime * 0.2));
+  base += vec3(0.6, 1.0, 1.0) * mote * glowK * 2.0;
   vec3 R = reflect(-V, N);
   vec3 sky = mix(uSkyHorizon, uSkyTop, smoothstep(0.0, 0.6, R.y));
   vec3 col = mix(base, sky, fres * 0.65);

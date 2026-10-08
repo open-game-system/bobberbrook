@@ -63,29 +63,115 @@ function blob(r: number, x: number, y: number, z: number, seed: number, w = 10, 
   return prep(g);
 }
 
-function oakGeometry(): BufferGeometry {
+/** Canopy colours: bottom, top, sunlit tips. 0 violet, 1 teal, 2 rose. */
+const CANOPY: [number, number, number][] = [
+  [0x2a1f5c, 0x8a62d0, 0xc8a4ff],
+  [0x123c4c, 0x3a9a9a, 0x8ae0d0],
+  [0x3a1f5a, 0xb86ac0, 0xffb4e8],
+];
+
+function oakGeometry(variant = 0): BufferGeometry {
   const trunk = prep(new CylinderGeometry(0.3, 0.5, 3.0, 9).translate(0, 1.5, 0));
-  paint(trunk, 0x5a3c26, 0x8a6442);
+  paint(trunk, 0x3a2c3a, 0x6a5460);
   const roots = prep(new ConeGeometry(0.85, 0.7, 9).translate(0, 0.25, 0));
-  paint(roots, 0x4f3420, 0x6b4a2e);
+  paint(roots, 0x302430, 0x4a3a46);
   const blobs: [number, number, number, number][] = [
     [0, 3.9, 0, 1.8], [1.35, 3.4, 0.35, 1.3], [-1.25, 3.5, -0.2, 1.35], [0.25, 3.4, 1.25, 1.25],
     [-0.35, 3.5, -1.2, 1.3], [0.55, 4.8, -0.25, 1.35], [-0.65, 4.6, 0.55, 1.2], [0.9, 4.3, 0.9, 1.0],
   ];
   const canopy = merge(blobs.map(([x, y, z, r], i) => blob(r, x, y, z, i * 1.7)));
   puffNormals(canopy, 0, 4.0, 0, 0.8);
-  paint(canopy, 0x2c6a2c, 0x9bd14e, (p, n, c) => {
+  paint(canopy, CANOPY[variant]![0]!, CANOPY[variant]![1]!, (p, n, c) => {
     const k = vnoise(p.x * 2.2 + 10, p.z * 2.2 + p.y, 4);
     c.multiplyScalar(0.86 + 0.28 * k);
-    // A warmer, sunlit top.
-    if (n.y > 0.55) c.lerp(new Color(0xc4dc5a), (n.y - 0.55) * 0.5);
+    // A moonlit top.
+    if (n.y > 0.55) c.lerp(new Color(CANOPY[variant]![2]!), (n.y - 0.55) * 0.6);
   });
   return merge([trunk, roots, canopy]);
 }
 
+/** A colossal ancient tree: flared roots, a leaning trunk, a mushroom-like canopy, hanging moss. */
+function giantGeometry(variant: number): BufferGeometry {
+  const r = rng(77 + variant);
+  const parts: BufferGeometry[] = [];
+  const trunk = new CylinderGeometry(1.5, 2.6, 24, 14, 6);
+  jitter(trunk, 0.12, variant + 2);
+  trunk.computeVertexNormals();
+  trunk.translate(0, 12, 0);
+  const tp = prep(trunk);
+  paint(tp, 0x2a2030, 0x5a4658, (p, _n, c) => c.multiplyScalar(0.85 + 0.3 * vnoise(p.x * 1.5, p.y * 0.3, 5)));
+  parts.push(tp);
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2 + r() * 0.4;
+    const root = new CylinderGeometry(1.15, 0.3, 6.5, 7);
+    root.translate(0, -3.25, 0);
+    root.rotateZ(1.0 + r() * 0.2);
+    root.rotateY(a);
+    root.translate(0, 3.4, 0);
+    const rp = prep(root);
+    paint(rp, 0x261c2a, 0x4a3a4a);
+    parts.push(rp);
+  }
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + r();
+    const br = new CylinderGeometry(0.35, 0.8, 9, 7);
+    br.translate(0, 4.5, 0);
+    br.rotateZ(0.75 + r() * 0.25);
+    br.rotateY(a);
+    br.translate(0, 17 + r() * 4, 0);
+    const bp = prep(br);
+    paint(bp, 0x2e2434, 0x52404e);
+    parts.push(bp);
+  }
+  const [c0, c1, c2] = CANOPY[variant]!;
+  const blobs: BufferGeometry[] = [];
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 9) * Math.PI * 2;
+    const rr = i === 0 ? 0 : 5 + r() * 3;
+    const g = new SphereGeometry(i === 0 ? 8.5 : 5.2 + r() * 2.2, 14, 9);
+    g.scale(1, 0.48, 1);
+    jitter(g, 0.12, i * 1.3 + variant);
+    g.computeVertexNormals();
+    g.translate(Math.cos(a) * rr, 26 + (i === 0 ? 2.5 : r() * 2.5 - (rr > 0 ? 1.5 : 0)), Math.sin(a) * rr);
+    blobs.push(prep(g));
+  }
+  const canopy = merge(blobs);
+  puffNormals(canopy, 0, 25, 0, 0.7);
+  paint(canopy, c0, c1, (p, n, c) => {
+    c.multiplyScalar(0.85 + 0.3 * vnoise(p.x * 0.5, p.z * 0.5 + p.y, 6));
+    if (n.y > 0.5) c.lerp(new Color(c2), (n.y - 0.5) * 0.7);
+  });
+  parts.push(canopy);
+  // Hanging moss.
+  for (let i = 0; i < 18; i++) {
+    const a = r() * Math.PI * 2;
+    const rr = 3 + r() * 8;
+    const len = 2.5 + r() * 4;
+    const g = new ConeGeometry(0.18, len, 4);
+    g.rotateX(Math.PI);
+    g.translate(Math.cos(a) * rr, 24.2 - len / 2, Math.sin(a) * rr);
+    const mp = prep(g);
+    paint(mp, 0x3a8a7a, 0x2a5a5a);
+    parts.push(mp);
+  }
+  return merge(parts);
+}
+
+function mushroomGeometry(): BufferGeometry {
+  const stem = prep(new CylinderGeometry(0.05, 0.07, 0.3, 6).translate(0, 0.15, 0));
+  paint(stem, 0x9ab8d0, 0xe0f0ff);
+  const cap = prep(new SphereGeometry(0.17, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.75, 1).translate(0, 0.27, 0));
+  paint(cap, 0xffffff, 0xd8ecff);
+  const small = prep(new SphereGeometry(0.09, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2).translate(0.16, 0.12, 0.05));
+  const sstem = prep(new CylinderGeometry(0.03, 0.04, 0.13, 5).translate(0.16, 0.06, 0.05));
+  paint(small, 0xffffff);
+  paint(sstem, 0xc0d8f0);
+  return merge([stem, cap, small, sstem]);
+}
+
 function pineGeometry(): BufferGeometry {
   const trunk = prep(new CylinderGeometry(0.16, 0.3, 1.6, 7).translate(0, 0.8, 0));
-  paint(trunk, 0x4f3620, 0x6e4e30);
+  paint(trunk, 0x3a2c38, 0x5a4652);
   const layers: [number, number, number][] = [
     [1.3, 1.75, 2.3], [2.35, 1.4, 2.0], [3.3, 1.05, 1.75], [4.15, 0.68, 1.4],
   ];
@@ -96,7 +182,7 @@ function pineGeometry(): BufferGeometry {
     g.translate(0, y + h / 2, 0);
     const p = prep(g);
     puffNormals(p, 0, y + h * 0.2, 0, 0.55);
-    paint(p, 0x1f4f30, 0x4f8e46, (pp, _n, c) => c.multiplyScalar(0.9 + 0.2 * vnoise(pp.x * 3, pp.z * 3 + pp.y, 9)));
+    paint(p, 0x102e40, 0x2f6e78, (pp, _n, c) => c.multiplyScalar(0.9 + 0.2 * vnoise(pp.x * 3, pp.z * 3 + pp.y, 9)));
     return p;
   });
   return merge([trunk, ...cones]);
@@ -108,9 +194,9 @@ function rockGeometry(seed: number): BufferGeometry {
   jitter(g, 0.32, seed);
   g.computeVertexNormals();
   const p = prep(g);
-  paint(p, 0x6c655f, 0xa59d92, (pp, n, c) => {
+  paint(p, 0x5a5468, 0x9a94ac, (pp, n, c) => {
     c.multiplyScalar(0.88 + 0.22 * vnoise(pp.x * 3 + seed, pp.z * 3, 2));
-    if (n.y > 0.55) c.lerp(new Color(0x6f9e3c), Math.min(1, (n.y - 0.55) * 2.2) * 0.8);
+    if (n.y > 0.55) c.lerp(new Color(0x3e8a6c), Math.min(1, (n.y - 0.55) * 2.2) * 0.8);
   });
   return p;
 }
@@ -119,7 +205,7 @@ function bushGeometry(): BufferGeometry {
   const parts = [blob(0.75, 0, 0.55, 0, 1, 9, 7), blob(0.6, 0.6, 0.45, 0.2, 2, 9, 7), blob(0.55, -0.55, 0.42, -0.1, 3, 9, 7), blob(0.5, 0.1, 0.9, -0.35, 4, 9, 7)];
   const g = merge(parts);
   puffNormals(g, 0, 0.5, 0, 0.8);
-  paint(g, 0x2f6a2c, 0x8cc84a, (p, _n, c) => c.multiplyScalar(0.88 + 0.24 * vnoise(p.x * 3, p.z * 3, 7)));
+  paint(g, 0x1a3a50, 0x4a8a8a, (p, _n, c) => c.multiplyScalar(0.88 + 0.24 * vnoise(p.x * 3, p.z * 3, 7)));
   return g;
 }
 
@@ -142,7 +228,7 @@ function tuftGeometry(): BufferGeometry {
   // Grass normals point up so tufts light like the ground they stand on.
   const nor = g.getAttribute("normal");
   for (let i = 0; i < nor.count; i++) nor.setXYZ(i, 0, 1, 0);
-  paint(g, 0x3c7a2a, 0xb4d660);
+  paint(g, 0x24504c, 0x86c4b0);
   return g;
 }
 
@@ -179,16 +265,16 @@ function reedGeometry(cattail: boolean): BufferGeometry {
     g.rotateX(((i % 2) - 0.5) * 0.18);
     g.translate(Math.cos(i * 2.3) * 0.12, 0, Math.sin(i * 2.3) * 0.12);
     const p = prep(g);
-    paint(p, 0x3d6e2a, 0xa9c45c);
+    paint(p, 0x24584a, 0x7ab49a);
     parts.push(p);
   }
   if (cattail) {
     for (let i = 0; i < 2; i++) {
       const x = i * 0.12 - 0.05;
       const stalk = prep(new CylinderGeometry(0.014, 0.018, 1.5, 4).translate(x, 0.75, i * 0.05));
-      paint(stalk, 0x4f7a32);
+      paint(stalk, 0x2e6a52);
       const head = prep(new CylinderGeometry(0.065, 0.065, 0.3, 7).translate(x, 1.5 + i * 0.12, i * 0.05));
-      paint(head, 0x6a3f22, 0x7f4c28);
+      paint(head, 0x4a3448, 0x6a4a5e);
       parts.push(stalk, head);
     }
   }
@@ -263,7 +349,7 @@ function cottageGeometry(seed: number): { body: BufferGeometry; windows: BufferG
       beams.push(b);
     }
   }
-  const roofCols = [0xb4523a, 0x4a6aa0, 0x8a4a6a, 0xc0703a];
+  const roofCols = [0x6a4aa8, 0x7a52b8, 0x5a4a9a, 0x8a5ac0];
   const roof = prep(roofGeometry(w + 0.6, d + 0.7, 1.4 + r() * 0.4).translate(0, h, 0));
   paint(roof, roofCols[Math.floor(r() * roofCols.length)]!, 0xffffff, (_p, _n, c) => c.multiplyScalar(0.85));
   const chim = prep(new BoxGeometry(0.4, 1.2, 0.4).translate(w * 0.25, h + 1.0, -d * 0.15));
@@ -339,7 +425,17 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     if (R() < 0.55) pines.push({ x, y, z, s: s * 1.15, ry: R() * 6, tint: tint(0.85, 1.05) });
     else oaks.push({ x, y, z, s, ry: R() * 6, tint: tint(0.85, 1.08) });
   }
-  add(instanced(oakGeometry(), treeMat, oaks, true)).name = "oaks";
+  for (let v = 0; v < 3; v++) add(instanced(oakGeometry(v), treeMat, oaks.filter((_, i) => i % 3 === v), true)).name = `oaks-${v}`;
+  // The giants: colossal ancient trees towering over the rim.
+  const giants: Inst[][] = [[], [], []];
+  const giantSpots: [number, number, number][] = [[-2.5, 9, 0], [-0.62, 10, 2], [3.0, 8, 1], [0.12, 9, 0], [-1.98, 6, 1], [-1.12, 6, 2], [2.45, 12, 2], [0.75, 13, 1]];
+  for (const [th, e, v] of giantSpots) {
+    const r = outerRadius(th) + e;
+    const x = Math.cos(th) * r;
+    const z = Math.sin(th) * r;
+    giants[v]!.push({ x, y: heightAt(x, z) - 0.4, z, s: 0.95 + R() * 0.3, ry: R() * 6 });
+  }
+  for (let v = 0; v < 3; v++) if (giants[v]!.length) add(instanced(giantGeometry(v), treeMat, giants[v]!, true)).name = `giants-${v}`;
   add(instanced(pineGeometry(), treeMat, pines, true)).name = "pines";
 
   // --- rocks: obstacles, shore stones, the falls, the fire ring ---
@@ -398,8 +494,8 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   const tufts: Inst[] = [];
   const flowers: Inst[] = [];
   const lupines: Inst[] = [];
-  const flowerCols = [0xffffff, 0xfff2a0, 0xffd23a, 0xc9a6ff, 0xff9ec4, 0x8ab8ff].map((h) => new Color(h));
-  const lupineCols = [0x7a5ad8, 0x9a6ae8, 0xd070c0, 0x6a7ae0].map((h) => new Color(h));
+  const flowerCols = [0xffffff, 0xc9a6ff, 0x9ad8ff, 0xb08aff, 0xff9ee0, 0x7ae8e0].map((h) => new Color(h));
+  const lupineCols = [0x7a5ad8, 0x9a6ae8, 0xc070e0, 0x5a8ae8].map((h) => new Color(h));
   const tuftN = full ? 5200 : 1800;
   for (let i = 0; i < tuftN * 3 && tufts.length < tuftN; i++) {
     const th = R() * Math.PI * 2;
@@ -504,6 +600,30 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   add(instanced(padGeometry(), matDouble, pads, false)).name = "pads";
   add(instanced(lilyGeometry(), mat, lilies, false)).name = "lilies";
 
+  // --- glowing mushrooms along the shore and round the giants ---
+  const shrooms: Inst[] = [];
+  const shroomCols = [new Color(0.5, 1.6, 2.2), new Color(0.9, 0.8, 2.4), new Color(0.4, 2.0, 1.8), new Color(1.6, 0.9, 2.2)];
+  for (let i = 0; i < (full ? 170 : 80); i++) {
+    const th = R() * Math.PI * 2;
+    if (angleGap(th, SOUTH) < 0.15) continue;
+    const d = 0.4 + Math.pow(R(), 1.5) * 9;
+    const r = lakeRadius(th) + d;
+    const x = Math.cos(th) * r;
+    const z = Math.sin(th) * r;
+    if (vnoise(x * 0.3, z * 0.3, 55) < 0.45) continue;
+    shrooms.push({ x, y: heightAt(x, z) - 0.02, z, s: 0.8 + R() * 1.2, ry: R() * 6, tint: shroomCols[Math.floor(R() * shroomCols.length)]! });
+  }
+  for (const list of giants) for (const gt of list) for (let k = 0; k < 10; k++) {
+    const a = R() * 6.28;
+    const rr = 3 + R() * 4;
+    const x = gt.x + Math.cos(a) * rr;
+    const z = gt.z + Math.sin(a) * rr;
+    shrooms.push({ x, y: heightAt(x, z) - 0.02, z, s: 1.5 + R() * 1.8, ry: R() * 6, tint: shroomCols[Math.floor(R() * shroomCols.length)]! });
+  }
+  const shroomMat = new MeshBasicMaterial({ vertexColors: true });
+  disposables.push(shroomMat);
+  add(instanced(mushroomGeometry(), shroomMat, shrooms, false)).name = "mushrooms";
+
   // --- the dock ---
   const deckY = 0.42;
   const dockParts: BufferGeometry[] = [];
@@ -575,11 +695,11 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   dock.name = "dock";
   dock.castShadow = true;
   dock.receiveShadow = true;
-  const glassMat = new MeshBasicMaterial({ color: 0xffd48a });
+  const glassMat = new MeshBasicMaterial({ color: 0x9af0ff });
   disposables.push(glassMat);
   const glass = add(new Mesh(new BoxGeometry(0.22, 0.28, 0.22), glassMat));
   glass.position.set(lx - 0.5, deckY + 1.62, lz);
-  const lanternLight = new PointLight(0xffb560, 0, 14, 1.6);
+  const lanternLight = new PointLight(0x8ae8ff, 0, 14, 1.6);
   lanternLight.position.set(lx - 0.5, deckY + 1.5, lz);
   group.add(lanternLight);
 
@@ -723,8 +843,9 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   fallen.castShadow = true;
 
   const winCol = windowMat.color;
-  const day = new Color(0x5a6a78);
-  const night = new Color(2.4, 1.5, 0.7);
+  const shroomCol = shroomMat.color;
+  const day = new Color(1.1, 0.75, 0.45);
+  const night = new Color(2.6, 1.6, 0.8);
   return {
     group,
     lanternLight,
@@ -732,9 +853,10 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     campSeats,
     update(tod, time, campfire) {
       winCol.copy(day).lerp(night, tod.glow);
+      shroomCol.setScalar(0.55 + 0.6 * tod.glow);
       const g = tod.glow;
-      glassMat.color.setRGB(1 + 2.2 * g, 0.85 + 1.3 * g, 0.55 + 0.4 * g);
-      lanternLight.intensity = 0.2 + 5 * g;
+      glassMat.color.setRGB(0.5 + 0.8 * g, 1.1 + 1.6 * g, 1.3 + 1.8 * g);
+      lanternLight.intensity = 1 + 5 * g;
       bulbMat.color.setScalar(0.75 + 1.9 * Math.max(g, campfire));
       const fire = 0.55 + 0.45 * Math.max(g, campfire);
       const fl1 = 0.85 + 0.15 * Math.sin(time * 13.0) * Math.sin(time * 7.3 + 1.0);
