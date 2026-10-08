@@ -4,7 +4,7 @@ import { FISH, JOURNAL_FISH, SHELLS, bitesNow, fishById, type FishDef, type Rari
 import { between, pickWeighted, rand } from "./rng";
 import { REEL_START, integrateReel, type Reel } from "./reel";
 import { TRAILS, WALK_SPEED, angleGap, castRingIn, distance, spawnPoint, type Vec, type Water } from "./world";
-import { worldFor, type World } from "./regions";
+import { worldFor, type Place, type Platform, type World } from "./regions";
 
 /** A place's id: "moonwell", "mistmarsh"… in the home valley, "i,j" for a generated place. */
 export type PlaceId = string;
@@ -288,39 +288,66 @@ type Tagger = Pick<Fisher, "pos" | "vel" | "mode" | "lastInputAt" | "following" 
 export function tagAlong(fishers: Tagger[], now: number, w: World = worldFor(HOME_WORLD_SEED)): void {
   for (const f of fishers) {
     const others = fishers.filter((o) => o !== f);
-    if (others.length === 0 || f.mode !== "walk" || now - f.lastInputAt < FOLLOW_AFTER_MS) continue;
-    const near = others.reduce((b, o) => (distance(o.pos, f.pos) < distance(b.pos, f.pos) ? o : b));
-    // Someone waiting at a dock or tower: walk right up onto that one so the trip can start.
-    const platform = w.platformsNear(near.pos, 0).find((p) => distance(p.at, near.pos) <= PLATFORM_REACH);
-    const mine = w.platformsNear(f.pos, 0).find((p) => distance(p.at, f.pos) <= PLATFORM_REACH - 1);
-    // Waiting at different moorings: the lower seat (the host, usually) holds, the other walks over.
-    const holdMine = mine !== undefined && (platform === undefined || platform.id === mine.id || f.seat < near.seat);
-    if (platform && !holdMine && distance(platform.at, f.pos) > PLATFORM_REACH - 1) {
-      const way = w.navNext(f.pos, platform.at);
-      const d = distance(way, f.pos) || 1;
-      // Slow down on arrival so they stop on the mooring instead of overshooting it.
-      const speed = FOLLOW_SPEED * Math.min(1, Math.max(0.15, (distance(platform.at, f.pos) - 0.6) / 2.5));
-      f.following = true;
-      f.vel = { x: ((way.x - f.pos.x) / d) * speed, z: ((way.z - f.pos.z) / d) * speed };
-      continue;
-    }
-    // On the family's mooring, or waiting on your own at a dock or tower: stay put.
-    if (platform || mine) {
-      if (f.following) f.vel = { x: 0, z: 0 };
-      f.following = false;
-      continue;
-    }
-    const gap = distance(near.pos, f.pos);
-    if (gap <= FOLLOW_NEAR || (!f.following && gap <= FOLLOW_FAR)) {
-      if (f.following) f.vel = { x: 0, z: 0 };
-      f.following = false;
-      continue;
-    }
-    const way = w.navNext(f.pos, near.pos);
-    const d = distance(way, f.pos) || 1;
-    f.following = true;
-    f.vel = { x: ((way.x - f.pos.x) / d) * FOLLOW_SPEED, z: ((way.z - f.pos.z) / d) * FOLLOW_SPEED };
+    if (others.length === 0 || resting(f, now)) continue;
+    tagStep(f, nearestOf(f, others), w);
   }
+}
+
+/** Not walking, or touched the controls lately: left alone. */
+function resting(f: Tagger, now: number): boolean {
+  return f.mode !== "walk" || now - f.lastInputAt < FOLLOW_AFTER_MS;
+}
+
+function nearestOf(f: Tagger, others: Tagger[]): Tagger {
+  return others.reduce((b, o) => (distance(o.pos, f.pos) < distance(b.pos, f.pos) ? o : b));
+}
+
+/** One fisher's tag-along move toward `near`, the closest of the others. */
+function tagStep(f: Tagger, near: Tagger, w: World): void {
+  // Someone waiting at a dock or tower: walk right up onto that one so the trip can start.
+  const platform = mooringAt(w, near.pos, PLATFORM_REACH);
+  const mine = mooringAt(w, f.pos, PLATFORM_REACH - 1);
+  const target = boardingTarget(f, near, platform, mine);
+  if (target) return steer(f, target.at, w, arrivalSpeed(distance(target.at, f.pos)));
+  // On the family's mooring, or waiting on your own at a dock or tower: stay put.
+  if (platform || mine || closeEnough(f, distance(near.pos, f.pos))) return halt(f);
+  steer(f, near.pos, w, FOLLOW_SPEED);
+}
+
+function mooringAt(w: World, p: Vec, reach: number): Platform | undefined {
+  return w.platformsNear(p, 0).find((q) => distance(q.at, p) <= reach);
+}
+
+/** The mooring to walk onto, if any. Waiting at different moorings: the lower seat (the host, usually) holds, the other walks over. */
+export function boardingTarget(f: Pick<Tagger, "pos" | "seat">, near: Pick<Tagger, "seat">, platform: Platform | undefined, mine: Platform | undefined): Platform | undefined {
+  if (!platform || holdsMine(f, near, platform, mine) || distance(platform.at, f.pos) <= PLATFORM_REACH - 1) return undefined;
+  return platform;
+}
+
+function holdsMine(f: Pick<Tagger, "seat">, near: Pick<Tagger, "seat">, platform: Platform, mine: Platform | undefined): boolean {
+  return mine !== undefined && (platform.id === mine.id || f.seat < near.seat);
+}
+
+/** Slow down on arrival so they stop on the mooring instead of overshooting it. */
+export function arrivalSpeed(dist: number): number {
+  return FOLLOW_SPEED * Math.min(1, Math.max(0.15, (dist - 0.6) / 2.5));
+}
+
+/** Close enough to stop; once stopped, they wait until the gap opens past FOLLOW_FAR. */
+export function closeEnough(f: Pick<Tagger, "following">, gap: number): boolean {
+  return gap <= FOLLOW_NEAR || (!f.following && gap <= FOLLOW_FAR);
+}
+
+function halt(f: Tagger): void {
+  if (f.following) f.vel = { x: 0, z: 0 };
+  f.following = false;
+}
+
+function steer(f: Tagger, to: Vec, w: World, speed: number): void {
+  const way = w.navNext(f.pos, to);
+  const d = distance(way, f.pos) || 1;
+  f.following = true;
+  f.vel = { x: ((way.x - f.pos.x) / d) * speed, z: ((way.z - f.pos.z) / d) * speed };
 }
 
 /** How far a fisher may wander from the rest of the family (the TV keeps everyone in one shot). */
@@ -671,15 +698,26 @@ export function isRevealed(lake: Pick<Lake, "revealed">, p: Vec): boolean {
 
 /** Generated places keep a swirl while someone is there; their swirls fade when everyone is far away (the home valley's stay). */
 function keepSwirlsNear(d: Draft<Lake>, now: number, w: World): void {
-  const far = (s: Swirl) => d.fishers.every((f) => distance(f.pos, s.pos) > 2.2 * 96);
-  const homeIds = new Set(["moonwell", "mistmarsh", "pools", "hollow", "tarn"]);
-  const kept = d.fishers.length > 0 ? d.swirls.filter((s) => s.golden || homeIds.has(s.area) || !far(s)) : d.swirls;
+  const kept = keptSwirls(d.swirls, d.fishers);
   if (kept.length !== d.swirls.length) d.swirls = kept;
   for (const f of d.fishers) {
     const place = w.areaAt(f.pos);
-    if (!place || place.home || !d.discovered.includes(place.id) || d.swirls.some((s) => s.area === place.id)) continue;
-    spawnSwirl(d, now, false, place.id);
+    if (wantsSwirl(d, place)) spawnSwirl(d, now, false, place.id);
   }
+}
+
+const HOME_SWIRL_AREAS = new Set(["moonwell", "mistmarsh", "pools", "hollow", "tarn"]);
+
+/** The swirls that stay: golden ones, the home valley's, and any with a fisher within two cells. Nobody here: all stay. */
+export function keptSwirls<S extends Pick<Swirl, "golden" | "area" | "pos">>(swirls: S[], fishers: { pos: Vec }[]): S[] {
+  if (fishers.length === 0) return swirls;
+  const far = (s: S) => fishers.every((f) => distance(f.pos, s.pos) > 2.2 * 96);
+  return swirls.filter((s) => s.golden || HOME_SWIRL_AREAS.has(s.area) || !far(s));
+}
+
+/** A found generated place someone stands in, with no swirl of its own yet. */
+export function wantsSwirl(d: Pick<Lake, "discovered" | "swirls">, place: Place | null): place is Place {
+  return place !== null && !place.home && d.discovered.includes(place.id) && !d.swirls.some((s) => s.area === place.id);
 }
 
 /** How close two fishers may stand (metres). */
@@ -813,26 +851,24 @@ export function heldStill(f: Pick<Fisher, "mode" | "catch">, now: number): boole
 export function action(lake: Lake, seat: number, now: number): Lake {
   return withFisher(lake, seat, now, (d, f) => {
     f.lastInputAt = now;
-    if (f.following) {
-      f.following = false;
-      f.vel = { x: 0, z: 0 };
-    }
-    if (f.mode === "bite") {
-      hook(d, f, now);
-      return;
-    }
+    halt(f);
+    if (f.mode === "bite") return hook(d, f, now);
     const cast = canCast(f, now) ? worldFor(d.worldSeed).castFrom(f.pos) : null;
-    if (!cast) return;
-    const swirl = swirlAt(d, cast.bobber);
-    f.mode = "cast";
-    f.vel = { x: 0, z: 0 };
-    f.castAt = now;
-    f.bobber = swirl ? { ...swirl.pos } : cast.bobber;
-    f.water = cast.water;
-    f.swirlId = swirl?.id ?? null;
-    f.facing = Math.atan2(f.bobber.z - f.pos.z, f.bobber.x - f.pos.x);
-    f.catch = null;
+    if (cast) startCast(d, f, cast, now);
   });
+}
+
+/** The line goes out: onto a swirl when the cast lands on one, else where it fell. */
+function startCast(d: Draft<Lake>, f: Draft<Fisher>, cast: { bobber: Vec; water: Water }, now: number): void {
+  const swirl = swirlAt(d, cast.bobber);
+  f.mode = "cast";
+  f.vel = { x: 0, z: 0 };
+  f.castAt = now;
+  f.bobber = swirl ? { ...swirl.pos } : cast.bobber;
+  f.water = cast.water;
+  f.swirlId = swirl?.id ?? null;
+  f.facing = Math.atan2(f.bobber.z - f.pos.z, f.bobber.x - f.pos.x);
+  f.catch = null;
 }
 
 /** A fisher can cast while walking, or to skip a catch card once it has been seen. */
@@ -875,19 +911,12 @@ export function loadProgress(lake: Lake, progress: Progress): Lake {
   if (lake.progressLoaded) return lake;
   return produce(lake, (d) => {
     d.progressLoaded = true;
-    for (const [id, e] of Object.entries(progress.journal)) {
-      if (!fishById(id)) continue;
-      const mine = d.journal[id];
-      d.journal[id] = mine
-        ? { count: mine.count + e.count, bestCm: Math.max(mine.bestCm, e.bestCm), firstBy: e.firstBy ?? mine.firstBy }
-        : { ...e };
-    }
+    for (const [id, e] of Object.entries(progress.journal)) if (fishById(id)) d.journal[id] = mergedEntry(d.journal[id], e);
     d.shells += progress.shells;
     d.rodTier = rodTierFor(d.shells);
     // The family's own endless valley (saved): same seed, same world, everything found stays put.
     if (progress.worldSeed !== undefined) d.worldSeed = progress.worldSeed;
-    const seen = new Set(d.revealed);
-    for (const t of progress.revealed ?? []) if (!seen.has(t)) d.revealed.push(t);
+    addUnseen(d.revealed, progress.revealed ?? []);
     // Places found on earlier visits stay found (no second celebration), each with its swirl.
     for (const id of progress.discovered ?? []) {
       if (d.discovered.includes(id)) continue;
@@ -895,6 +924,17 @@ export function loadProgress(lake: Lake, progress: Progress): Lake {
       spawnSwirl(d, d.now, false, id);
     }
   });
+}
+
+/** A saved journal entry added onto this room's: counts add, best size wins, the saved first-catcher wins. */
+export function mergedEntry(mine: JournalEntry | undefined, saved: JournalEntry): JournalEntry {
+  return mine ? { count: mine.count + saved.count, bestCm: Math.max(mine.bestCm, saved.bestCm), firstBy: saved.firstBy ?? mine.firstBy } : { ...saved };
+}
+
+/** Appends each of `more` not already in `list` (as it was before appending). */
+function addUnseen(list: string[], more: string[]): void {
+  const seen = new Set(list);
+  for (const t of more) if (!seen.has(t)) list.push(t);
 }
 
 export function progressOf(lake: Lake): Progress {
