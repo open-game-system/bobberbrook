@@ -13,8 +13,15 @@ thing is reverted, whatever it scored.
 - No words on the kids' devices (pictures, colour and sound only). Words live on the grown-up's phone.
 - Nothing scary for a 3-year-old (dark water monsters, sudden loud stings, snapping jaws).
 
+## Direction (owner, 2026-10-08, mid-build): "make the aesthetic more like Ashenvale in WoW"
+- Twilight night-elf forest: violet/indigo sky and fog, glowing moonwell-teal water, colossal ancient
+  trees with purple and teal canopies, layered mist, god rays, drifting wisps and fireflies, glowing
+  flowers and mushrooms, curved purple-roofed elven cottages with soft lamps. Gentle and magical, never creepy.
+- References: concept/ashenvale/ref-day.jpg, ref-night.jpg. This outranks the warm golden-hour look of
+  the first concept sheet (which stays as the lineage, not the target).
+
 ## Liked (keep)
-- The concept art's look (concept/web/01-key-art.jpg, 13-group-pool.jpg): chunky, hand-painted,
-  warm, WoW-like fantasy lake. Jon asked for "beautiful setting", "definitely 3D and WoW-like".
+- Chunky hand-painted WoW-like fantasy lake (concept/web/13-group-pool.jpg for the camera and the
+  group-around-a-swirl moment). Jon asked for "beautiful setting", "definitely 3D and WoW-like".
 - Running around and fishing in different places, progression and variety.
 - The painted fish sprites (public/art/fish/*.webp) and the Bobberbrook logo and cover.

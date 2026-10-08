@@ -1,6 +1,10 @@
 # Art style
 
-Hand-painted fantasy-MMO diorama (think classic WoW zones, A Short Hike's warmth): chunky low-poly
+**Target (owner, 2026-10-08): Ashenvale** — a twilight night-elf forest: violet/indigo sky and fog, glowing
+moonwell-teal water, colossal ancient trees with purple and teal canopies, mist, wisps, fireflies, glowing
+flowers, curved purple-roofed elven cottages. References: concept/ashenvale/ref-day.jpg, ref-night.jpg.
+
+Hand-painted fantasy-MMO diorama: chunky low-poly
 shapes with soft bevels, oversized rounded trees, saturated warm-cool colour, painted gradients,
 minimal specular, warm key light and cool fill. Not papercraft, not ink outlines, not felt.
 

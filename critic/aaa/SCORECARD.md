@@ -4,7 +4,7 @@
 mode, Mom on a phone, everyone watching one TV. Kid rows apply.
 
 References (the "10"): Animal Crossing: New Horizons fishing, Stardew Valley fishing (loop and
-collection), World of Warcraft (Elwynn Forest / Nagrand painted look, fishing pools, the bobber
+collection), World of Warcraft (Ashenvale's twilight forest look is the owner's target; fishing pools, the bobber
 splash), A Short Hike, Dredge's catch reveal, Super Mario Party / Mario Kart couch UI. A 7 = "competent
 indie demo". **An 8 = a first-party art director would sign off shipping it.** Grade every row
 against the references, never against the previous round. Stop when every row ≥ 8 (after ≥ 3 rounds).
@@ -12,7 +12,7 @@ against the references, never against the previous round. Stop when every row �
 | Row | 6 | 8 (ship bar) | 10 |
 |---|---|---|---|
 | Art direction & cohesion | consistent-ish, generic low-poly | one unmistakable hand-painted fantasy-MMO style across TV, controllers, journal and catch cards; strong shape language; palette with intent | instantly recognisable key art |
-| Environment & set dressing | a lake with props on it | a place with identity: the dock, lily pads, waterfall cliff, reeds and village read from across the room; dense, layered, lush vegetation; no empty floor | Elwynn-grade "I want to live there" |
+| Environment & set dressing | a lake with props on it | a place with identity: the dock, lily pads, waterfall cliff, reeds and village read from across the room; dense, layered, lush vegetation; no empty floor | Ashenvale-grade "I want to live there" |
 | Water & fishing FX | flat plane, a sphere bobber | painted water with depth, shore foam, reflections; the bobber plop, nibble dips, the BITE splash and reel thrash are crisp and satisfying | water you could watch for minutes |
 | Characters & animation | capsules that slide | appealing chunky fishers with personality, walk/idle/cast/reel/hold-up poses, anticipation and follow-through, never sliding or snapping | characters you'd buy as toys |
 | Lighting, time of day & mood | even daylight | morning, golden hour, night and dawn each beautiful; warm key, cool fill, soft shadows; night glows (lanterns, fireflies, glowing fish) | every frame is a painting |
