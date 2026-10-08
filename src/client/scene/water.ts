@@ -95,7 +95,7 @@ void main() {
   float cosT = clamp(dot(N, V), 0.0, 1.0);
   float fres = 0.04 + 0.96 * pow(1.0 - cosT, 5.0);
   // Painted depth gradient.
-  float dz = smoothstep(0.2, 7.5, depth);
+  float dz = smoothstep(0.2, 9.0, depth);
   vec3 base = mix(uShallow * 1.05, uDeep, dz);
   base = mix(base, uShallow * 1.25 + 0.05, (1.0 - smoothstep(0.0, 1.4, depth)) * 0.5);
   // Shallow-water shimmer (caustic-like).
@@ -121,7 +121,7 @@ void main() {
   }
   // Moonwell glow: the water lights itself, more at night; drifting glints under the surface.
   float glowK = 0.35 + 0.65 * uGlow;
-  base += uShallow * glowK * (0.22 + 0.18 * (1.0 - dz));
+  base += uShallow * glowK * (0.1 + 0.16 * (1.0 - dz));
   float mote = smoothstep(0.93, 1.0, vn(p * 2.3 + vec2(uTime * 0.12, uTime * 0.07))) * smoothstep(0.9, 1.0, vn(p * 5.1 - uTime * 0.2));
   base += vec3(0.6, 1.0, 1.0) * mote * glowK * 2.0;
   vec3 R = reflect(-V, N);

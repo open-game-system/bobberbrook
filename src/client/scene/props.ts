@@ -94,10 +94,10 @@ function oakGeometry(variant = 0): BufferGeometry {
 function giantGeometry(variant: number): BufferGeometry {
   const r = rng(77 + variant);
   const parts: BufferGeometry[] = [];
-  const trunk = new CylinderGeometry(1.5, 2.6, 24, 14, 6);
+  const trunk = new CylinderGeometry(1.6, 2.7, 16, 14, 5);
   jitter(trunk, 0.12, variant + 2);
   trunk.computeVertexNormals();
-  trunk.translate(0, 12, 0);
+  trunk.translate(0, 8, 0);
   const tp = prep(trunk);
   paint(tp, 0x2a2030, 0x5a4658, (p, _n, c) => c.multiplyScalar(0.85 + 0.3 * vnoise(p.x * 1.5, p.y * 0.3, 5)));
   parts.push(tp);
@@ -118,7 +118,7 @@ function giantGeometry(variant: number): BufferGeometry {
     br.translate(0, 4.5, 0);
     br.rotateZ(0.75 + r() * 0.25);
     br.rotateY(a);
-    br.translate(0, 17 + r() * 4, 0);
+    br.translate(0, 10 + r() * 3, 0);
     const bp = prep(br);
     paint(bp, 0x2e2434, 0x52404e);
     parts.push(bp);
@@ -132,11 +132,11 @@ function giantGeometry(variant: number): BufferGeometry {
     g.scale(1, 0.48, 1);
     jitter(g, 0.12, i * 1.3 + variant);
     g.computeVertexNormals();
-    g.translate(Math.cos(a) * rr, 26 + (i === 0 ? 2.5 : r() * 2.5 - (rr > 0 ? 1.5 : 0)), Math.sin(a) * rr);
+    g.translate(Math.cos(a) * rr, 18 + (i === 0 ? 2.5 : r() * 2.5 - (rr > 0 ? 1.5 : 0)), Math.sin(a) * rr);
     blobs.push(prep(g));
   }
   const canopy = merge(blobs);
-  puffNormals(canopy, 0, 25, 0, 0.7);
+  puffNormals(canopy, 0, 17, 0, 0.7);
   paint(canopy, c0, c1, (p, n, c) => {
     c.multiplyScalar(0.85 + 0.3 * vnoise(p.x * 0.5, p.z * 0.5 + p.y, 6));
     if (n.y > 0.5) c.lerp(new Color(c2), (n.y - 0.5) * 0.7);
@@ -149,9 +149,9 @@ function giantGeometry(variant: number): BufferGeometry {
     const len = 2.5 + r() * 4;
     const g = new ConeGeometry(0.18, len, 4);
     g.rotateX(Math.PI);
-    g.translate(Math.cos(a) * rr, 24.2 - len / 2, Math.sin(a) * rr);
+    g.translate(Math.cos(a) * rr, 16.2 - len / 2, Math.sin(a) * rr);
     const mp = prep(g);
-    paint(mp, 0x3a8a7a, 0x2a5a5a);
+    paint(mp, 0xc8a0ff, 0x7a4ac8);
     parts.push(mp);
   }
   return merge(parts);
@@ -603,7 +603,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   // --- glowing mushrooms along the shore and round the giants ---
   const shrooms: Inst[] = [];
   const shroomCols = [new Color(0.5, 1.6, 2.2), new Color(0.9, 0.8, 2.4), new Color(0.4, 2.0, 1.8), new Color(1.6, 0.9, 2.2)];
-  for (let i = 0; i < (full ? 170 : 80); i++) {
+  for (let i = 0; i < (full ? 110 : 60); i++) {
     const th = R() * Math.PI * 2;
     if (angleGap(th, SOUTH) < 0.15) continue;
     const d = 0.4 + Math.pow(R(), 1.5) * 9;
@@ -613,7 +613,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     if (vnoise(x * 0.3, z * 0.3, 55) < 0.45) continue;
     shrooms.push({ x, y: heightAt(x, z) - 0.02, z, s: 0.8 + R() * 1.2, ry: R() * 6, tint: shroomCols[Math.floor(R() * shroomCols.length)]! });
   }
-  for (const list of giants) for (const gt of list) for (let k = 0; k < 10; k++) {
+  for (const list of giants) for (const gt of list) for (let k = 0; k < 6; k++) {
     const a = R() * 6.28;
     const rr = 3 + R() * 4;
     const x = gt.x + Math.cos(a) * rr;
@@ -623,6 +623,28 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   const shroomMat = new MeshBasicMaterial({ vertexColors: true });
   disposables.push(shroomMat);
   add(instanced(mushroomGeometry(), shroomMat, shrooms, false)).name = "mushrooms";
+
+  // --- little amber lanterns along the path (warm accents) ---
+  const lamps: Inst[] = [];
+  for (let i = 0; i < 16; i++) {
+    const th = (i / 16) * Math.PI * 2 + 0.2;
+    if (angleGap(th, NORTH) < 0.3) continue;
+    const r = lakeRadius(th) + PATH_D + 1.0;
+    const x = Math.cos(th) * r;
+    const z = Math.sin(th) * r;
+    lamps.push({ x, y: heightAt(x, z) - 0.05, z, s: 1, ry: R() * 6 });
+  }
+  const lampPost = prep(new CylinderGeometry(0.05, 0.07, 1.3, 6).translate(0, 0.65, 0));
+  paint(lampPost, 0x3a2c38);
+  const lampHook = prep(new BoxGeometry(0.32, 0.04, 0.04).translate(0.14, 1.28, 0));
+  paint(lampHook, 0x3a2c38);
+  const lampCap = prep(new ConeGeometry(0.13, 0.12, 6).translate(0.28, 1.2, 0));
+  paint(lampCap, 0x2a2228);
+  add(instanced(merge([lampPost, lampHook, lampCap]), mat, lamps, true)).name = "lamp-posts";
+  const lampGlassMat = new MeshBasicMaterial({ color: 0xffffff });
+  disposables.push(lampGlassMat);
+  const lampGlass = new SphereGeometry(0.1, 8, 6).scale(1, 1.3, 1).translate(0.28, 1.05, 0);
+  add(instanced(lampGlass, lampGlassMat, lamps.map((l) => ({ ...l, tint: new Color(1, 0.7, 0.35) })), false)).name = "lamp-glass";
 
   // --- the dock ---
   const deckY = 0.42;
@@ -753,7 +775,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   // --- campfire: logs to sit on, fire, string lights ---
   const campParts: BufferGeometry[] = [];
   const campSeats: { x: number; z: number; facing: number }[] = [];
-  const seatAngles = [0.75, 1.35, 1.95, 2.55];
+  const seatAngles = [0.45, 1.25, 2.05, 2.85];
   seatAngles.forEach((a, i) => {
     const sx = CAMPFIRE.x + Math.cos(a) * 2.3;
     const sz = CAMPFIRE.z + Math.sin(a) * 2.3;
@@ -853,7 +875,8 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     campSeats,
     update(tod, time, campfire) {
       winCol.copy(day).lerp(night, tod.glow);
-      shroomCol.setScalar(0.55 + 0.6 * tod.glow);
+      lampGlassMat.color.setScalar(0.9 + 2.2 * tod.glow);
+      shroomCol.setScalar(0.3 + 0.75 * tod.glow);
       const g = tod.glow;
       glassMat.color.setRGB(0.5 + 0.8 * g, 1.1 + 1.6 * g, 1.3 + 1.8 * g);
       lanternLight.intensity = 1 + 5 * g;

@@ -34,7 +34,7 @@ export class SwirlViews {
     this.pillar.visible = true;
   }
 
-  frame(lake: Lake | null, sn: number, t: number, dt: number): void {
+  frame(lake: Lake | null, sn: number, t: number, dt: number, glow: number): void {
     for (const s of this.slots) s.live = false;
     if (lake) {
       for (const sw of lake.swirls) {
@@ -73,7 +73,11 @@ export class SwirlViews {
         const heading = a + Math.PI / 2;
         const sc = (0.8 + 0.4 * ((k * 7) % 3) / 2) * s.alpha;
         if (s.golden) this.shadows.add(x, z, heading, sc * 1.15, Math.sin(t * 8 + k) * 0.2, 0.95 * s.alpha + 0.05, 0.7 * s.alpha + 0.15, 0.2 + 0.1 * s.alpha);
-        else this.shadows.add(x, z, heading, sc, Math.sin(t * 8 + k) * 0.2, 0.05, 0.2, 0.24);
+        else {
+          // By day dark shadows; at dusk and night the school glows cyan, like the moonwell.
+          const g = glow * (0.85 + 0.15 * Math.sin(t * 3 + k));
+          this.shadows.add(x, z, heading, sc, Math.sin(t * 8 + k) * 0.2, 0.05 + 0.45 * g, 0.2 + 1.3 * g, 0.24 + 1.3 * g);
+        }
       }
       if (s.golden && s.alpha > gold) {
         gold = s.alpha;

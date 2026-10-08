@@ -11,7 +11,7 @@ export function isView(v: string): v is ViewName {
 
 const EL = (28 * Math.PI) / 180;
 /** Pitch the view up a little after aiming: the lake sits low in the frame, hills and sky above. */
-const PITCH_UP = 0.15;
+const PITCH_UP = 0.08;
 
 /** The group camera: from the south, high three-quarter, eased, yaw roughly fixed. */
 export class CameraRig {
@@ -88,14 +88,14 @@ export class CameraRig {
       const cx = (this.min.x + this.max.x) / 2;
       const cz = (this.min.z + this.max.z) / 2;
       const w = this.max.x - this.min.x + 9;
-      const d = this.max.z - this.min.z + 7;
+      const d = this.max.z - this.min.z + 10;
       const vf = (cam.fov * Math.PI) / 180;
       const hf = 2 * Math.atan(Math.tan(vf / 2) * cam.aspect);
       const needW = w / 2 / Math.tan(hf / 2);
       const needH = ((d * Math.sin(EL) + 3) / 2) / Math.tan(vf / 2);
       this.wantDist = Math.min(66, Math.max(31, Math.max(needW, needH)));
       // Pull the centre a little toward the lake so the water stays in the frame.
-      this.wantTarget.set(cx * 0.85, 0.6, cz * 0.7 - 2.5);
+      this.wantTarget.set(cx * 0.88, 0.6, cz * 0.85 + 1.0);
     } else {
       const R = (th: number, k: number) => lakeRadius(th) * k;
       switch (v) {

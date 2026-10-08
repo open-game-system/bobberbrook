@@ -203,7 +203,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     water.update(tod, t);
     props.update(tod, t, lake?.campfire ? 1 : 0);
     shadows.begin();
-    swirls.frame(lake, sn, t, dt);
+    swirls.frame(lake, sn, t, dt, tod.glow);
     fishers.frame(lake, sn, t, dt, camera, props.campSeats);
     shadows.end();
     fx.ambient(dt, tod, lake?.campfire ? 1 : 0);

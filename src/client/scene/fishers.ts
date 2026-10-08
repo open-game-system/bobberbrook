@@ -454,7 +454,7 @@ class FisherView {
     const biting = mode === "bite";
     rig.markerMat.opacity = biting ? 0.6 + 0.4 * Math.sin(t * 16) : 0.55 + 0.1 * Math.sin(t * 2);
     rig.marker.scale.setScalar(biting ? 1.25 : 1);
-    rig.tag.position.set(this.x, this.y + (lake.campfire ? 2.7 : 3.15) * Math.min(1, this.appear * 1.4), this.z);
+    rig.tag.position.set(this.x, this.y + (lake.campfire ? 2.7 + (this.seat % 2) * 0.6 : 3.15) * Math.min(1, this.appear * 1.4), this.z);
     const tagK = this.card.group.visible ? 0 : 1;
     rig.tag.visible = tagK > 0;
     rig.tag.scale.set(0.17, 0.0374, 1);

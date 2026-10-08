@@ -61,7 +61,8 @@ void main() {
     col += vec3(0.9, 0.95, 1.0) * (star + band * 0.6) * uStars * smoothstep(0.0, 0.2, h);
   }
   // Sun or moon disc (no face): a soft-edged disc.
-  float disc = smoothstep(0.9988, 0.9993, sd);
+  float disc = mix(smoothstep(0.9988, 0.9993, sd), smoothstep(0.9955, 0.9962, sd), uMoon);
+  col += vec3(0.6, 0.65, 1.0) * pow(sd, 120.0) * uMoon * 0.6;
   vec3 discCol = mix(uSunCol * 2.2 + 0.6, vec3(0.92, 0.94, 1.0) * (0.85 + 0.15 * vn(d.xz * 400.0)), uMoon);
   col = mix(col, discCol, disc * smoothstep(-0.02, 0.02, h));
   // Painted cumulus clouds over the horizon.
