@@ -195,6 +195,7 @@ async function main(): Promise<void> {
   const sc = SCENARIOS[name];
   if (!sc) throw new Error(`unknown scenario ${name}; try ${Object.keys(SCENARIOS).join(", ")}`);
   const seed = Number(q.get("seed") ?? "7");
+  const forceFish = q.get("fish");
   const phaseQ = q.get("phase");
   const phase = phaseQ !== null ? Number(phaseQ) : sc.phase;
   const canvas = document.createElement("canvas");
@@ -234,6 +235,8 @@ async function main(): Promise<void> {
       if (bot) lake = botStep(lake, f, bot, now);
     }
     if (sc.direct) lake = sc.direct(lake, now);
+    // ?fish=<id>: every hooked fish is this one (to see each rarity's catch moment).
+    if (forceFish) lake = produce(lake, (d) => { for (const f of d.fishers) if (f.reel && f.reel.fishId !== forceFish) f.reel.fishId = forceFish; });
     if (now % 2000 < dtMs) assignTargets();
   };
   const warmFrom = now;

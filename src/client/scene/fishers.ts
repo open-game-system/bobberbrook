@@ -8,6 +8,7 @@ import {
   SphereGeometry,
   CylinderGeometry,
   Vector3,
+  type ShaderMaterial,
   type Camera,
   type PlaneGeometry,
 } from "three";
@@ -16,7 +17,7 @@ import { REEL_START, thrashingAt } from "../../game/reel";
 import { fishById } from "../../game/fish";
 import { onDock, walkable, type Vec } from "../../game/world";
 import { FISHER_SCALE, ROD_SEGMENTS, buildFisher, type FisherRig, type RigMaterials } from "./character";
-import { CatchCard, type FishShadows, type FishTextures } from "./fishviz";
+import { CatchCard, lightPillar, type FishShadows, type FishTextures } from "./fishviz";
 import type { Fx } from "./fx";
 import { damp } from "./noise";
 import { heightAt } from "./terrain";
@@ -25,6 +26,9 @@ import { merge, paint, prep } from "./geo";
 const DECK_Y = 0.42;
 const LINE_SEGS = 18;
 const LEAP_S = 0.95;
+/** The fish is held up until this age (s), then tucked away over TUCK_S. */
+const TUCK_AT = 2.75;
+const TUCK_S = 0.45;
 
 const scratch: Vec = { x: 0, z: 0 };
 const predicted: Vec = { x: 0, z: 0 };
@@ -125,6 +129,10 @@ class FisherView {
   private catchNew = false;
   private catchGolden = false;
   private catchJunk = false;
+  /** 0 common/uncommon/junk (a small sparkle), 1 rare (gold rays), 2 legendary (big burst + light pillar). */
+  private catchTier = 0;
+  private readonly pillar: Mesh;
+  private readonly pillarMat: ShaderMaterial;
   private catchCm = 30;
   private catchEnd = -1;
   private catchAspect = 1.6;
@@ -164,11 +172,15 @@ class FisherView {
     this.line.frustumCulled = false;
     this.line.renderOrder = 8;
     this.card = new CatchCard(cardGeo.rays, cardGeo.plane);
+    const p = lightPillar();
+    this.pillar = p.mesh;
+    this.pillarMat = p.mat;
+    this.pillar.visible = false;
   }
 
   attach(parent: Group): void {
     this.parent = parent;
-    parent.add(this.rig.root, this.bobber, this.line, this.card.group, this.rig.tag);
+    parent.add(this.rig.root, this.bobber, this.line, this.card.group, this.rig.tag, this.pillar);
   }
 
   /** Rebuilds the rig in a new colour (shared materials, so no shader compiles). */
@@ -198,6 +210,8 @@ class FisherView {
     this.card.group.visible = true;
     this.card.group.position.set(0, -20, 0);
     this.rig.tag.visible = true;
+    this.pillar.visible = true;
+    this.pillar.position.set(0, -20, 0);
   }
 
   hideAll(): void {
@@ -206,6 +220,7 @@ class FisherView {
     this.line.visible = false;
     this.card.group.visible = false;
     this.rig.tag.visible = false;
+    this.pillar.visible = false;
   }
 
   frame(
@@ -437,6 +452,8 @@ class FisherView {
         this.catchNew = f.catch.isNew;
         this.catchGolden = f.catch.golden;
         this.catchJunk = def?.rarity === "junk";
+        const rar = def?.rarity ?? "common";
+        this.catchTier = rar === "legendary" ? 2 : rar === "rare" || rar === "treasure" ? 1 : 0;
         this.catchCm = f.catch.cm;
         this.catchEnd = -1;
         this.catchAspect = this.card.paint(this.textures.image(this.catchId), def?.glow ? (def.colors.accent) : "rgba(255,255,255,0.95)");
@@ -448,16 +465,19 @@ class FisherView {
     if (inCatch) {
       const age = t - this.catchStart;
       const still = f.mode === "catch" && !lake.campfire;
-      if (!still && this.catchEnd < 0) this.catchEnd = t;
-      const out = this.catchEnd >= 0 ? Math.min(1, (t - this.catchEnd) / 0.35) : 0;
+      // Held up for ~2 s (in time with the camera's push-in), then tucked away.
+      if ((!still || age > TUCK_AT) && this.catchEnd < 0) this.catchEnd = t;
+      const out = this.catchEnd >= 0 ? Math.min(1, (t - this.catchEnd) / TUCK_S) : 0;
       if (out >= 1) {
         this.catchStart = -1;
         this.card.group.visible = false;
+        this.pillar.visible = false;
+        fx.sparkle(this.x, this.y + 1.6, this.z, 8, 1, 0.95, 0.8, 1.2, 0.25);
       } else {
         this.updateCard(age, out, t, dt, camera, fx);
         if (still) {
           rodVisible = age < LEAP_S * 0.6;
-          const up = Math.min(1, age / LEAP_S);
+          const up = Math.min(1, age / LEAP_S) * (1 - out);
           target.armRx = -0.8 - 2.0 * up; target.armLx = -0.8 - 2.0 * up;
           target.armRz = -0.32 * up; target.armLz = 0.32 * up;
           target.lean = -0.08 * up;
@@ -539,41 +559,63 @@ class FisherView {
     const g = this.card.group;
     g.visible = true;
     const s = Math.min(1, age / LEAP_S);
-    this.hold.set(this.x, this.y + 4.8, this.z);
+    const tier = this.catchTier;
+    this.hold.set(this.x, this.y + 4.9, this.z);
+    // The leap: out of the water at the bobber, an arc into the raised hands.
     const e = s * s * (3 - 2 * s);
-    const gx = this.catchFromX + (this.hold.x - this.catchFromX) * e;
-    const gz = this.catchFromZ + (this.hold.z - this.catchFromZ) * e;
-    const gy = 0.1 + (this.hold.y - 0.1) * e + Math.sin(s * Math.PI) * 3.0;
+    let gx = this.catchFromX + (this.hold.x - this.catchFromX) * e;
+    let gz = this.catchFromZ + (this.hold.z - this.catchFromZ) * e;
+    let gy = -0.35 + (this.hold.y + 0.35) * e + Math.sin(s * Math.PI) * 2.0;
+    // Tucked away: down into the fisher's pack.
+    const o = out * out * (3 - 2 * out);
+    gx += (this.x - gx) * o;
+    gz += (this.z - gz) * o;
+    gy += (this.y + 1.4 - gy) * o;
     g.position.set(gx, gy, gz);
     g.quaternion.copy(camera.quaternion);
-    const aspect = this.catchAspect;
-    const w = (2.6 + Math.min(1.6, this.catchCm / 60)) * (this.catchNew ? 1.12 : 1);
-    const scale = (age < LEAP_S ? 0.55 + 0.45 * s : 1 + Math.max(0, 0.18 - (age - LEAP_S) * 0.6)) * (1 - out);
-    const W = w * (640 / 520) * scale;
+    const w = (2.3 + Math.min(1.4, this.catchCm / 60)) * (this.catchNew ? 1.12 : 1) * (tier === 2 ? 1.15 : 1);
+    // Grows out of the splash (never pops in), a little overshoot on landing, shrinks when tucked.
+    const grow = Math.min(1, age / 0.4);
+    const emerge = 0.12 + 0.88 * (1 - (1 - grow) * (1 - grow));
+    const land = age >= LEAP_S ? Math.max(0, 0.16 - (age - LEAP_S) * 0.5) * Math.sin(Math.min(Math.PI, (age - LEAP_S) * 9)) : 0;
+    const scale = (age < LEAP_S ? emerge * (0.6 + 0.4 * s) : 1 + land) * (1 - o);
+    const W = w * (640 / 520) * Math.max(0.001, scale);
     this.card.card.scale.set(W, W, 1);
-    void aspect;
     const wiggle = age < LEAP_S ? (this.catchJunk ? s * Math.PI * 4 : Math.sin(age * 22) * 0.35) : Math.sin(age * 7) * 0.12;
-    this.card.card.rotation.z = wiggle;
-    // Rays behind a new species (gold), soft white otherwise.
-    const rayK = age > LEAP_S * 0.8 ? Math.min(1, (age - LEAP_S * 0.8) * 3) * (1 - out) : 0;
+    this.card.card.rotation.z = wiggle * (1 - o);
+    // Rays behind rare catches and new species (gold); legendary: bigger, brighter.
+    const rayOn = tier >= 1 || this.catchNew || this.catchGolden;
+    const rayK = rayOn && age > LEAP_S * 0.8 ? Math.min(1, (age - LEAP_S * 0.8) * 3) * (1 - out) : 0;
     this.card.rays.visible = rayK > 0;
-    this.card.rays.rotation.z = t * 0.6;
-    this.card.rays.scale.setScalar(w * (this.catchNew ? 1.5 : 1.0) * (0.85 + 0.15 * Math.sin(t * 3)));
-    this.card.raysMat.color.setRGB(1, this.catchNew || this.catchGolden ? 0.9 : 1, this.catchNew || this.catchGolden ? 0.6 : 1).multiplyScalar(rayK * (this.catchNew ? 0.75 : 0.25));
-    if (age < LEAP_S && Math.random() < 0.6) fx.drip(gx, gy - 0.3, gz);
+    this.card.rays.rotation.z = t * (tier === 2 ? 0.9 : 0.6);
+    this.card.rays.scale.setScalar(w * (tier === 2 ? 1.55 : this.catchNew ? 1.35 : 1.15) * (0.85 + 0.15 * Math.sin(t * 3)) * (1 - o));
+    this.card.raysMat.color.setRGB(1, 0.9, 0.6).multiplyScalar(rayK * (tier === 2 ? 1.0 : 0.7));
+    // Legendary: a soft gold light pillar over the fisher.
+    const pil = tier === 2 && age > LEAP_S * 0.7 ? Math.min(1, (age - LEAP_S * 0.7) * 2) * (1 - out) : 0;
+    this.pillar.visible = pil > 0.001;
+    if (this.pillar.visible) {
+      this.pillar.position.set(this.x, this.y, this.z);
+      this.pillarMat.uniforms.uStrength!.value = pil * 1.3;
+      this.pillarMat.uniforms.uTime!.value = t;
+    }
+    if (age < LEAP_S && Math.random() < 0.7) fx.drip(gx, gy - 0.3, gz);
     if (age >= LEAP_S && age - dt < LEAP_S) {
-      // Lands in the hands.
-      fx.sparkle(gx, gy, gz, this.catchNew ? 46 : 22, 1, this.catchNew ? 0.88 : 1, this.catchNew ? 0.45 : 0.95, this.catchNew ? 4.2 : 2.6, this.catchNew ? 0.55 : 0.4);
-      if (this.catchGolden) fx.confetti(gx, gy + 0.5, gz);
+      // Lands in the hands: the burst grows with rarity.
+      const n = tier === 2 ? 70 : tier === 1 ? 34 : 12;
+      const gold = tier >= 1 || this.catchNew;
+      fx.sparkle(gx, gy, gz, n, 1, gold ? 0.88 : 1, gold ? 0.45 : 0.95, tier === 2 ? 6 : tier === 1 ? 3.6 : 2.0, tier === 2 ? 0.6 : 0.4);
+      if (this.catchGolden || tier === 2) fx.confetti(gx, gy + 0.5, gz);
       if (this.catchNew) fx.sparkle(gx, gy, gz, 30, 1, 1, 1, 6, 0.3);
+      if (tier === 2) fx.upgradeBurst(this.x, this.y, this.z);
     }
     if (age >= LEAP_S && out === 0) {
-      this.sparkAcc += dt * (this.catchNew ? 22 : 7);
+      this.sparkAcc += dt * (tier === 2 ? 30 : tier === 1 || this.catchNew ? 16 : 5);
       while (this.sparkAcc > 1) {
         this.sparkAcc -= 1;
         const a = Math.random() * Math.PI * 2;
         const rr = w * 0.7;
-        fx.sparkle(gx + Math.cos(a) * rr, gy + Math.sin(a) * rr * 0.6, gz, 1, 1, this.catchNew ? 0.88 : 1, this.catchNew ? 0.5 : 0.95, 0.6, 0.35);
+        const gold = tier >= 1 || this.catchNew;
+        fx.sparkle(gx + Math.cos(a) * rr, gy + Math.sin(a) * rr * 0.6, gz, 1, 1, gold ? 0.88 : 1, gold ? 0.5 : 0.95, 0.6, 0.35);
       }
     }
   }
@@ -608,6 +650,8 @@ class FisherView {
     this.rig.dispose();
     this.lineGeo.dispose();
     this.card.dispose();
+    this.pillar.geometry.dispose();
+    this.pillarMat.dispose();
   }
 }
 

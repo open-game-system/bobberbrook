@@ -80,13 +80,18 @@ export class Fx {
     }
   }
 
-  /** The fish leaves the water. */
+  /** The fish leaves the water: a crown of white water, a ring, spray. */
   leap(x: number, z: number, t: number, junk: boolean): void {
-    this.surface.ripple(x, z, t, junk ? 1.4 : 1.1);
-    for (let i = 0; i < (junk ? 60 : 40); i++) {
+    this.surface.ripple(x, z, t, 1.5);
+    this.surface.ripple(x, z, t + 0.2, 0.9);
+    for (let i = 0; i < (this.lite ? 40 : junk ? 80 : 70); i++) {
       const a = this.r() * Math.PI * 2;
-      const s = 0.6 + this.r() * (junk ? 2.6 : 1.6);
-      this.water.emit({ x, y: 0.1, z, vx: Math.cos(a) * s, vy: 2.5 + this.r() * (junk ? 5 : 3.5), vz: Math.sin(a) * s, life: 1.0, size: 0.16 + this.r() * 0.2, r: 0.96, g: 1, b: 1, gravity: 10, alpha: 0.95 });
+      const s = 0.6 + this.r() * (junk ? 2.6 : 2.0);
+      this.water.emit({ x: x + Math.cos(a) * 0.2, y: 0.1, z: z + Math.sin(a) * 0.2, vx: Math.cos(a) * s, vy: 3 + this.r() * (junk ? 5 : 4.5), vz: Math.sin(a) * s, life: 1.1, size: 0.16 + this.r() * 0.24, r: 0.96, g: 1, b: 1, gravity: 10, alpha: 0.95 });
+    }
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      this.water.emit({ x: x + Math.cos(a) * 0.4, y: 0.1, z: z + Math.sin(a) * 0.4, vx: Math.cos(a) * 0.9, vy: 0.5, vz: Math.sin(a) * 0.9, life: 0.9, size: 0.5, r: 0.94, g: 0.99, b: 1, alpha: 0.45, grow: 1.4, drag: 2 });
     }
   }
 
