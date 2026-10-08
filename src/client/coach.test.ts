@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { join, newLake, setCampfire, type Lake } from "../game/lake";
-import { coachLine } from "./coach";
+import { catchLine, coachLine } from "./coach";
 
 function family(): Lake {
   let l = newLake(1, 0);
@@ -42,5 +42,23 @@ describe("coachLine", () => {
   });
   it("says it's campfire time", () => {
     expect(coachLine(setCampfire(family(), true, 1), 0, 2)).toContain("Campfire");
+  });
+
+  it("names junk, treasure and repeat catches", () => {
+    const l = family();
+    expect(catchLine(l, "Juneau", { fishId: "boot", isNew: false, cm: 28 })).toBe("Juneau fished up an old boot! Silly.");
+    expect(catchLine(l, "Juneau", { fishId: "teapot", isNew: false, cm: 16 })).toBe("Juneau fished up a little teapot! Silly.");
+    expect(catchLine(l, "Juneau", { fishId: "chest", isNew: false, cm: 30 })).toBe("Juneau found a treasure chest full of shells!");
+    expect(catchLine(l, "Dad", { fishId: "perch", isNew: false, cm: 22 })).toBe("Dad caught a Stripy Perch, 22 cm.");
+  });
+  it("gives a time-of-day tip at night and golden hour", () => {
+    const at = (phase: number) => ({ ...family(), startedAt: 0, now: (phase - 0.08) * 12 * 60_000 });
+    expect(coachLine(at(0.4), 0, 0)).toContain("Golden Koi");
+    expect(coachLine(at(0.6), 0, 0)).toContain("glowing fish");
+    const full = { ...at(0.6), journal: Object.fromEntries(["brook-trout", "perch", "bluegill", "minnow", "catfish", "lily-carp", "pike", "rainbow-trout", "bass", "golden-koi"].map((id) => [id, { count: 1, bestCm: 1, firstBy: null }])) };
+    expect(coachLine(full, 0, 0)).toContain("Moonfin");
+  });
+  it("points at the swirls once the best rod is in hand", () => {
+    expect(coachLine({ ...family(), rodTier: 3, shells: 200 }, 0, 0)).toBe("Fish the swirls: that's where the rare fish are.");
   });
 });

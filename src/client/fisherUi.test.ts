@@ -44,3 +44,16 @@ describe("positionAt", () => {
     expect(positionAt(f, 10_000)).toEqual({ x: 3, z: 0 });
   });
 });
+
+describe("after a catch", () => {
+  it("shows the fish, then offers a recast at the water once it has been seen", () => {
+    let l = step(action(shore(), 0, T0), T0 + 900);
+    const at = me(l).biteAt + 5;
+    l = step(action(l, 0, at), at + 30_000);
+    const c = me(l).catch!;
+    expect(buttonState(l, me(l), c.at + 100)).toEqual({ kind: "caught", fishId: c.fishId, canRecast: false });
+    expect(buttonState(l, me(l), c.at + 1300)).toEqual({ kind: "caught", fishId: c.fishId, canRecast: true });
+    expect(needsTick(me(l), c.at + 3400)).toBe(true);
+    expect(needsTick(me(l), c.at + 100)).toBe(false);
+  });
+});

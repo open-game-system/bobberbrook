@@ -12,35 +12,75 @@ const WATER_NAME: Record<Water, string> = {
 
 const nameOf = (lake: Lake, seat: number) => lake.fishers.find((f) => f.seat === seat)?.name ?? ["Green", "Yellow", "Blue", "Pink"][seat] ?? "Someone";
 
+type Rule = (lake: Lake, mySeat: number, now: number) => string | null;
+
+const campfireLine: Rule = (lake) => (lake.campfire ? "Campfire time. Tell each other about your best catch!" : null);
+
+const myBite: Rule = (lake, mySeat) => {
+  const mine = lake.fishers.find((f) => f.seat === mySeat);
+  return mine?.mode === "bite" && !mine.easy ? "Your bobber dipped: tap now!" : null;
+};
+
+/** A kid who isn't on easy mode and is in this mode right now (easy fishers need no coaching). */
+const otherIn = (lake: Lake, mySeat: number, mode: "bite" | "reel") => lake.fishers.find((f) => f.seat !== mySeat && f.mode === mode && !f.easy);
+
+const theirBite: Rule = (lake, mySeat) => {
+  const f = otherIn(lake, mySeat, "bite");
+  return f ? `${nameOf(lake, f.seat)} has a bite! Tell them: tap now!` : null;
+};
+
+const theirReel: Rule = (lake, mySeat) => {
+  const f = otherIn(lake, mySeat, "reel");
+  return f ? `${nameOf(lake, f.seat)} is reeling: hold the button, let go when the fish splashes!` : null;
+};
+
+/** What a fresh catch says, by what came out of the water. */
+const article = (word: string) => (/^[aeiou]/i.test(word) ? "an" : "a");
+
+export function catchLine(lake: Lake, who: string, c: { fishId: string; isNew: boolean; cm: number }): string {
+  const def = fishById(c.fishId);
+  const name = def?.name ?? "fish";
+  const special: Partial<Record<string, string>> = {
+    junk: `${who} fished up ${article(name)} ${name.toLowerCase()}! Silly.`,
+    treasure: `${who} found a treasure chest full of shells!`,
+  };
+  const line = special[def?.rarity ?? ""];
+  if (line) return line;
+  return c.isNew ? `New fish! ${who} caught a ${name}. That's ${speciesCount(lake.journal)} of ${JOURNAL_FISH.length} in the journal.` : `${who} caught a ${name}, ${c.cm} cm.`;
+}
+
+const freshCatch: Rule = (lake, _mySeat, now) => {
+  const f = lake.fishers.find((x) => x.mode === "catch" && x.catch && now - x.catch.at < 3400);
+  return f?.catch ? catchLine(lake, nameOf(lake, f.seat), f.catch) : null;
+};
+
+const goldenSwirl: Rule = (lake) => {
+  const golden = lake.swirls.find((s) => s.golden);
+  return golden ? `A golden swirl ${WATER_NAME[waterAt(golden.theta)]}! Race there, everyone!` : null;
+};
+
+const timeTip: Rule = (lake) => {
+  const tod = todOf(lake);
+  if (tod === "night") return speciesCount(lake.journal) >= 10 ? "Night time: the Moonfin might rise in a swirl. Fish the swirls!" : "Night time: glowing fish are biting all over the lake.";
+  return tod === "golden" ? "Golden hour: the Golden Koi comes out by the lily pads." : null;
+};
+
+const rodTip: Rule = (lake) => {
+  const next = ROD_AT[lake.rodTier + 1];
+  return next !== undefined ? `${next - lake.shells} more shells for everyone's ${ROD_NAMES[lake.rodTier + 1]} rod.` : null;
+};
+
+/** In priority order: what's happening to someone right now first, then news, then a tip. */
+const RULES: Rule[] = [campfireLine, myBite, theirBite, theirReel, freshCatch, goldenSwirl, timeTip, rodTip];
+
 /**
  * The host phone's one line to read aloud. The grown-up is the coach: what's happening to the kids
  * right now comes first, then news, then a tip about where to go.
  */
 export function coachLine(lake: Lake, mySeat: number, now: number): string {
-  if (lake.campfire) return "Campfire time. Tell each other about your best catch!";
-  const mine = lake.fishers.find((f) => f.seat === mySeat);
-  if (mine?.mode === "bite" && !mine.easy) return "Your bobber dipped: tap now!";
-  const others = lake.fishers.filter((f) => f.seat !== mySeat);
-  const bite = others.find((f) => f.mode === "bite" && !f.easy);
-  if (bite) return `${nameOf(lake, bite.seat)} has a bite! Tell them: tap now!`;
-  const reeling = others.find((f) => f.mode === "reel" && !f.easy);
-  if (reeling) return `${nameOf(lake, reeling.seat)} is reeling: hold the button, let go when the fish splashes!`;
-  const fresh = lake.fishers.find((f) => f.mode === "catch" && f.catch && now - f.catch.at < 3400);
-  if (fresh?.catch) {
-    const def = fishById(fresh.catch.fishId);
-    const who = nameOf(lake, fresh.seat);
-    if (def?.rarity === "junk") return `${who} fished up a ${def.name.toLowerCase()}! Silly.`;
-    if (def?.rarity === "treasure") return `${who} found a treasure chest full of shells!`;
-    if (fresh.catch.isNew) return `New fish! ${who} caught a ${def?.name ?? "fish"}. That's ${speciesCount(lake.journal)} of ${JOURNAL_FISH.length} in the journal.`;
-    return `${who} caught a ${def?.name ?? "fish"}, ${fresh.catch.cm} cm.`;
+  for (const rule of RULES) {
+    const line = rule(lake, mySeat, now);
+    if (line) return line;
   }
-  const golden = lake.swirls.find((s) => s.golden);
-  if (golden) return `A golden swirl ${WATER_NAME[waterAt(golden.theta)]}! Race there, everyone!`;
-  const tod = todOf(lake);
-  if (tod === "night" && speciesCount(lake.journal) >= 10) return "Night time: the Moonfin might rise in a swirl. Fish the swirls!";
-  if (tod === "night") return "Night time: glowing fish are biting all over the lake.";
-  if (tod === "golden") return "Golden hour: the Golden Koi comes out by the lily pads.";
-  const next = ROD_AT[lake.rodTier + 1];
-  if (next !== undefined) return `${next - lake.shells} more shells for everyone's ${ROD_NAMES[lake.rodTier + 1]} rod.`;
   return "Fish the swirls: that's where the rare fish are.";
 }

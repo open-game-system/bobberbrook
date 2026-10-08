@@ -1,9 +1,19 @@
 import { useEffect, useRef } from "react";
 import type { Lake } from "../game/lake";
-import { thrashingAt } from "../game/reel";
-import { fishById } from "../game/fish";
-import { lakeEvents } from "./lakeEvents";
 import { sfx } from "./audio/sfx";
+import { eventCues, liveCues, type DeviceCue, type LiveMemory } from "./deviceCues";
+
+const PLAY: Record<DeviceCue, () => void> = {
+  bite: () => sfx.bite(),
+  catch: () => sfx.catch(),
+  junk: () => sfx.junk(),
+  newFish: () => sfx.newFish(),
+  missed: () => sfx.missed({ gain: 0.6 }),
+  cast: () => sfx.cast(),
+  nibble: () => sfx.nibble(),
+  thrash: () => sfx.thrash({ gain: 0.5 }),
+  reelClick: () => sfx.reelClick(),
+};
 
 /**
  * The few sounds a controller makes for its own fisher (the TV carries the world's sound): nibbles,
@@ -11,42 +21,13 @@ import { sfx } from "./audio/sfx";
  */
 export function useDeviceSounds(lake: Lake, seat: number, now: number): void {
   const prev = useRef<Lake | null>(null);
-  const nibbled = useRef(new Set<number>());
-  const lastClick = useRef(0);
-  const wasThrash = useRef(false);
+  const mem = useRef<LiveMemory>({ nibbled: new Set(), wasThrash: false, lastClickAt: 0 });
   useEffect(() => {
-    for (const e of lakeEvents(prev.current, lake)) {
-      if (!("seat" in e) || e.seat !== seat) continue;
-      if (e.kind === "bite") sfx.bite();
-      if (e.kind === "caught") {
-        const def = fishById(e.fishId);
-        if (def?.rarity === "junk") sfx.junk();
-        else sfx.catch();
-        if (e.isNew) sfx.newFish();
-      }
-      if (e.kind === "missed") sfx.missed({ gain: 0.6 });
-      if (e.kind === "cast") sfx.cast();
-    }
+    for (const cue of eventCues(prev.current, lake, seat)) PLAY[cue]();
     prev.current = lake;
   }, [lake, seat]);
   const me = lake.fishers.find((f) => f.seat === seat);
   useEffect(() => {
-    if (!me) return;
-    if (me.mode === "wait")
-      for (const t of me.nibbles)
-        if (now >= t && now < t + 300 && !nibbled.current.has(t)) {
-          nibbled.current.add(t);
-          sfx.nibble();
-        }
-    if (me.mode === "reel" && me.reel) {
-      const def = fishById(me.reel.fishId);
-      const thrash = def ? thrashingAt(def.fight, me.reel, now) : false;
-      if (thrash && !wasThrash.current) sfx.thrash({ gain: 0.5 });
-      wasThrash.current = thrash;
-      if (me.reel.holding && Date.now() - lastClick.current > 90) {
-        lastClick.current = Date.now();
-        sfx.reelClick();
-      }
-    }
+    for (const cue of liveCues(me, now, Date.now(), mem.current)) PLAY[cue]();
   });
 }
