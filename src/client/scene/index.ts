@@ -49,6 +49,7 @@ import type { Place } from "../../game/regions";
 import { createJobs } from "./stream";
 import { buildFogOfWar } from "./fow";
 import { buildVehicles } from "./vehicles";
+import { buildShells } from "./shells";
 import { activeWorld, placesWithin, setWorld, trailsWithin } from "./worldQuery";
 
 export type { LakeScene, SceneQuality } from "./types";
@@ -186,6 +187,8 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   scene.add(fow.mesh);
   const treeMatDouble = occluderMaterial(occ);
   treeMatDouble.side = DoubleSide;
+  const shells = buildShells();
+  scene.add(shells.mesh);
   const vehicles = buildVehicles(full, painted, paintedDouble, treeMat, treeMatDouble);
   scene.add(vehicles.group);
   const rideFocus = [new Vector3(), new Vector3(), new Vector3()];
@@ -357,6 +360,13 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     rays.update(tod, t);
     props.update(tod, t, lake?.campfire ? 1 : 0);
     vehicles.update(lake, sn, t, dt, tod, rig.focus.x, rig.focus.z);
+    shells.update(lake, sn, t, tod, fx, (seat) => {
+      let at: { x: number; y: number; z: number } | null = null;
+      fishers.forEachSeat((s2, x, y, z) => {
+        if (s2 === seat) at = { x, y, z };
+      });
+      return at;
+    });
     shadows.begin();
     swirls.frame(lake, sn, t, dt, tod.glow);
     fishers.frame(lake, sn, t, dt, camera, props.campSeats);
@@ -616,6 +626,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       areas.dispose();
       mist.dispose();
       vehicles.dispose();
+      shells.dispose();
       fow.dispose();
       markers.dispose();
       splashes.dispose();
