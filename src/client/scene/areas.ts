@@ -7,7 +7,7 @@ import { heightAt, trailWear } from "./terrain";
 import type { TodState } from "./tod";
 import { buildLandmark, type Landmark, type LandmarkStyle } from "./landmarks";
 import { placeHash } from "./valley";
-import { landmarkFor } from "./biomes";
+import { LANDMARKS, landmarkFor, type LandmarkKind } from "./biomes";
 import { placesWithin } from "./worldQuery";
 import type { Jobs } from "./stream";
 
@@ -79,6 +79,8 @@ export type AreaDressing = {
   /** Plans the places round the focus; glowOf/pulseOf give each place's extra glow and reveal pulse. */
   update(tod: TodState, camera: Camera, time: number, fx: number, fz: number, glowOf: (p: Place) => number, pulseOf: (id: string) => number): void;
   has(id: string): boolean;
+  /** Builds one place of every style and landmark at once, moved in front of the camera, so every material variant compiles up front; call again with false to drop them. */
+  showroom(on: boolean, places: readonly Place[], at: { x: number; z: number }): void;
   reset(): void;
   dispose(): void;
 };
@@ -213,13 +215,13 @@ export function buildAreaDressing(full: boolean, m: AreaMats, jobs: Jobs): AreaD
   let lastX = 1e9;
   let lastZ = 1e9;
 
-  function* build(l: Live): Generator<void, void> {
+  function* build(l: Live, forced: LandmarkKind | null = null): Generator<void, void> {
     const a = l.place;
     const recipe = RECIPES[a.biome === "moonwell" ? "tarn" : a.biome];
     const g: Group = yield* dress(a, recipe, full, m, l.glow, lilyMat, a.key, a.home);
     yield;
     const style: LandmarkStyle = a.home ? (a.id as LandmarkStyle) : STYLE[a.biome === "moonwell" ? "tarn" : a.biome];
-    const lm = buildLandmark(a, style, a.home ? 0 : Math.floor(placeHash(a.key, 5) * 1000), full, m.painted, m.tree, a.home ? null : landmarkFor(a.biome, placeHash(a.key, 6)));
+    const lm = buildLandmark(a, style, a.home ? 0 : Math.floor(placeHash(a.key, 5) * 1000), full, m.painted, m.tree, a.home ? null : forced ?? landmarkFor(a.biome, placeHash(a.key, 6)));
     if (!l.alive) {
       disposeGroup(g);
       lm.dispose();
@@ -253,9 +255,27 @@ export function buildAreaDressing(full: boolean, m: AreaMats, jobs: Jobs): AreaD
     l.lm = null;
   }
 
+  const shown: Live[] = [];
   return {
     group,
     has: (id) => live.get(id)?.g != null,
+    showroom(on, places, at) {
+      if (on) {
+        places.forEach((p, i) => {
+          const l: Live = { place: p, g: null, lm: null, glow: new MeshBasicMaterial({ vertexColors: true }), alive: true };
+          const g = build(l, LANDMARKS[i % LANDMARKS.length]!);
+          for (let r = g.next(); !r.done; r = g.next());
+          if (l.g) {
+            const lg: Group = l.g;
+            lg.position.set(at.x - p.center.x + (i % 4) * 3, 0, at.z - p.center.z + Math.floor(i / 4) * 3);
+          }
+          shown.push(l);
+        });
+      } else {
+        for (const l of shown) drop(l);
+        shown.length = 0;
+      }
+    },
     update(tod, camera, time, fx, fz, glowOf, pulseOf) {
       lilyMat.emissive.setRGB(0.9, 0.35, 0.7).multiplyScalar(0.15 + 0.6 * tod.glow);
       if (Math.hypot(fx - lastX, fz - lastZ) > 6) {

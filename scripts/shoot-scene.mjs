@@ -22,6 +22,17 @@ mkdirSync(out, { recursive: true });
 // scenario, phase (null = scenario default), wait for the hero moment?
 const SHOTS = [
   ["moonwell", null, true],
+  ["far-place", null, true],
+  ["biome-willow", null, true],
+  ["biome-crystal", null, true],
+  ["biome-ember", null, true],
+  ["biome-frost", null, true],
+  ["biome-marsh", null, true],
+  ["fog", null, true],
+  ["boarding", null, true],
+  ["tower", null, true],
+  ["boat-ride", null, true],
+  ["zeppelin-ride", null, true],
   ["mistmarsh", null, true],
   ["hollow", null, true],
   ["pools", null, true],
@@ -46,6 +57,7 @@ const shots = SHOTS.filter(([s]) => !only || only.includes(s)).slice(0, args.qui
 
 // Real GPU: full Chromium (not the headless shell, which renders on SwiftShader).
 const flags = ["--use-angle=metal", "--enable-gpu", "--ignore-gpu-blocklist"];
+const SOAKS = ["four-reel", "tower", "boarding"];
 // The soak runs uncapped (no vsync) so frame times measure the real cost; screenshots need vsync.
 const perfFlags = [...flags, "--disable-gpu-vsync", "--disable-frame-rate-limit"];
 async function launch(f = flags) {
@@ -103,16 +115,24 @@ if (!only || only.includes("four-reel")) {
   await page.screenshot({ path: join(out, "motion_a.png") });
   await page.waitForTimeout(100);
   await page.screenshot({ path: join(out, "motion_b.png") });
+  // Soaks (uncapped): four-reel (programs must not grow), tower (zeppelin boards then flies, streaming
+  // new chunks at 20 m/s), boarding (the boat boards then sails).
   const perf = await launch(perfFlags);
-  const pp = await perf.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
-  await pp.goto(`${base}/scene-lab.html?scenario=four-reel${args.lite ? "&lite=1" : ""}`);
-  await pp.waitForFunction(() => window.__lab?.ready === true, null, { timeout: 60_000 });
-  const p0 = await pp.evaluate(() => window.__scene.info().programs);
-  await pp.waitForTimeout(args.quick ? 3000 : 20_000);
-  const soak = await pp.evaluate(() => window.__scene.info());
+  metrics.soaks = {};
+  for (const sc of SOAKS) {
+    const pp = await perf.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
+    await pp.goto(`${base}/scene-lab.html?scenario=${sc}${args.lite ? "&lite=1" : ""}`);
+    await pp.waitForFunction(() => window.__lab?.ready === true, null, { timeout: 60_000 });
+    await pp.waitForTimeout(1500);
+    const p0 = await pp.evaluate(() => window.__scene.info().programs);
+    await pp.waitForTimeout(args.quick ? 3000 : 20_000);
+    const soak = await pp.evaluate(() => window.__scene.info());
+    await pp.close();
+    metrics.soaks[sc] = { programsBefore: p0, programsAfter: soak.programs, p50: soak.frameP50, p95: soak.frameP95, renderer: soak.renderer, frames: soak.frames };
+    console.log("soak", sc, JSON.stringify(metrics.soaks[sc]));
+  }
+  metrics.soak = metrics.soaks["four-reel"];
   await perf.close();
-  metrics.soak = { programsBefore: p0, programsAfter: soak.programs, p50: soak.frameP50, p95: soak.frameP95, renderer: soak.renderer, frames: soak.frames };
-  console.log("soak", JSON.stringify(metrics.soak));
 }
 metrics.errors = errors;
 writeFileSync(join(out, "metrics.json"), JSON.stringify(metrics, null, 2));

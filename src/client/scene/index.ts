@@ -44,7 +44,7 @@ import { buildMist } from "./mist";
 import { Splashes } from "./splash";
 import { SplitFocus, type Member } from "./split";
 import { EdgeMarkers, type Marker } from "./markers";
-import { DoubleSide } from "three";
+import { BufferAttribute, DoubleSide, PlaneGeometry, PointLight } from "three";
 import type { Place } from "../../game/regions";
 import { createJobs } from "./stream";
 import { buildFogOfWar } from "./fow";
@@ -347,7 +347,10 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     // The found place's landmark glows through the reveal.
     const pulseOf = (id: string) => (revealAge >= 0 && id === revealArea.id ? Math.max(0, Math.min(1, revealAge / 0.6, (5 - revealAge) / 1.5)) : 0);
     areas.update(tod, camera, t, rig.focus.x, rig.focus.z, (p) => mood.glowOf(p), pulseOf);
-    props.group.visible = Math.hypot(rig.focus.x, rig.focus.z) < 320;
+    // Far from home, Moonwell's set hides; its two lights stay in the scene (dark), so the light count
+    // (and with it every shader) never changes.
+    const homeNear = Math.hypot(rig.focus.x, rig.focus.z) < 320;
+    for (const o of props.group.children) if (!(o instanceof PointLight)) o.visible = homeNear;
     sky.mountains.position.set(camera.position.x, 0, camera.position.z);
     sky.update(tod, camera, t);
     water.update(tod, t);
@@ -453,6 +456,27 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   // ---- shader prewarm: everything visible, compiled against the target we really draw into ----
   fishers.showAllForPrewarm();
   vehicles.prewarm(true);
+  // A showroom: one place of every style (home builders, the four new kits, every landmark kind), a
+  // patch of sea and the fog blanket, all in front of the camera, so every variant compiles now.
+  const showroom: Place[] = [];
+  {
+    const w = activeWorld();
+    for (const id of ["mistmarsh", "pools", "hollow", "tarn"]) {
+      const p = w.placeById(id);
+      if (p) showroom.push(p);
+    }
+    const want = new Set<string>(["marsh", "pools", "hollow", "tarn", "willow", "crystal", "ember", "frost"]);
+    for (let r = 1; r < 9 && want.size > 0; r++)
+      for (const p of w.placesNear({ x: 0, z: 0 }, r)) if (!p.home && want.has(p.biome)) {
+        want.delete(p.biome);
+        showroom.push(p);
+      }
+  }
+  areas.showroom(true, showroom, { x: rig.focus.x, z: rig.focus.z - 6 });
+  const seaShow = new Mesh(new PlaneGeometry(6, 6).rotateX(-Math.PI / 2).setAttribute("aSea", new BufferAttribute(new Float32Array(8).fill(1), 2)), water.sea);
+  seaShow.position.set(rig.focus.x, 0.5, rig.focus.z);
+  scene.add(seaShow);
+  fow.mesh.visible = true;
   swirls.showAllForPrewarm();
   splashes.showAllForPrewarm();
   rig.update(0, 0, false, null);
@@ -473,6 +497,10 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   if (post) post.render();
   fishers.hideAll();
   vehicles.prewarm(false);
+  areas.showroom(false, [], { x: 0, z: 0 });
+  scene.remove(seaShow);
+  seaShow.geometry.dispose();
+  fow.mesh.visible = false;
   frame(performance.now(), 0);
 
   const percentile = (p: number) => {
@@ -505,7 +533,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       rig.setView(name);
       return name;
     },
-    debug: () => ({ split: { framed: [...framed], markers: markers.debug() }, fishers: fishers.debug(), camera: camera.position.toArray(), rig: rig.debug(), trees: forest.count, chunks: ground.count(), jobs: jobs.pending(), world: activeWorld().seed, ride: (() => { const o = { x: 0, y: 0, z: 0, facing: 0 }; const ok = vehicles.rideSeat(0, o); const n = vehicles.rideFocus(rideFocus); return { kind: vehicles.riding(), ok, seat0: [o.x, o.y, o.z].map(Math.round), focus: rideFocus.slice(0, n).map((v) => v.toArray().map(Math.round)) }; })(), fow: { on: fow.mesh.visible, ...fow.stats(), map: Array.from({ length: 11 }, (_, j) => Array.from({ length: 11 }, (_, i) => fow.veilAt(rig.focus.x + (i - 5) * 24, rig.focus.z + (j - 5) * 24)).join('')).join('/'), ahead: [fow.veilAt(rig.focus.x, rig.focus.z), fow.veilAt(rig.focus.x + 100, rig.focus.z), fow.veilAt(rig.focus.x - 100, rig.focus.z - 100)] }, near: nearPlaces.map((p) => `${p.id}:${p.biome}`), veil: Object.fromEntries(veil), mood: mood.debug() }),
+    debug: () => ({ split: { framed: [...framed], markers: markers.debug() }, fishers: fishers.debug(), camera: camera.position.toArray(), rig: rig.debug(), trees: forest.count, chunks: ground.count(), jobs: jobs.pending(), world: activeWorld().seed, progs: (renderer.info.programs ?? []).map((pr) => `${pr.name}#${pr.cacheKey}`), ride: (() => { const o = { x: 0, y: 0, z: 0, facing: 0 }; const ok = vehicles.rideSeat(0, o); const n = vehicles.rideFocus(rideFocus); return { kind: vehicles.riding(), ok, seat0: [o.x, o.y, o.z].map(Math.round), focus: rideFocus.slice(0, n).map((v) => v.toArray().map(Math.round)) }; })(), fow: { on: fow.mesh.visible, ...fow.stats(), map: Array.from({ length: 11 }, (_, j) => Array.from({ length: 11 }, (_, i) => fow.veilAt(rig.focus.x + (i - 5) * 24, rig.focus.z + (j - 5) * 24)).join('')).join('/'), ahead: [fow.veilAt(rig.focus.x, rig.focus.z), fow.veilAt(rig.focus.x + 100, rig.focus.z), fow.veilAt(rig.focus.x - 100, rig.focus.z - 100)] }, near: nearPlaces.map((p) => `${p.id}:${p.biome}`), veil: Object.fromEntries(veil), mood: mood.debug() }),
     pick(x, y) {
       const rc = new Raycaster();
       rc.setFromCamera(new Vector2(x * 2 - 1, 1 - y * 2), camera);
