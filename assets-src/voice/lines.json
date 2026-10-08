@@ -1,0 +1,102 @@
+[
+ {
+  "id": "fish-brook-trout",
+  "text": "Brook Trout!"
+ },
+ {
+  "id": "fish-perch",
+  "text": "Stripy Perch!"
+ },
+ {
+  "id": "fish-bluegill",
+  "text": "Bluegill!"
+ },
+ {
+  "id": "fish-minnow",
+  "text": "Silver Minnow!"
+ },
+ {
+  "id": "fish-catfish",
+  "text": "Whiskers Catfish!"
+ },
+ {
+  "id": "fish-lily-carp",
+  "text": "Lily Carp!"
+ },
+ {
+  "id": "fish-pike",
+  "text": "Pond Pike!"
+ },
+ {
+  "id": "fish-rainbow-trout",
+  "text": "Rainbow Trout!"
+ },
+ {
+  "id": "fish-bass",
+  "text": "Big Bass!"
+ },
+ {
+  "id": "fish-golden-koi",
+  "text": "Golden Koi!"
+ },
+ {
+  "id": "fish-salmon",
+  "text": "Leaping Salmon!"
+ },
+ {
+  "id": "fish-crystal-char",
+  "text": "Crystal Char!"
+ },
+ {
+  "id": "fish-ember-shiner",
+  "text": "Ember Shiner!"
+ },
+ {
+  "id": "fish-sturgeon",
+  "text": "Old Sturgeon!"
+ },
+ {
+  "id": "fish-glowfin",
+  "text": "Glowfin!"
+ },
+ {
+  "id": "fish-lanternfish",
+  "text": "Lanternfish!"
+ },
+ {
+  "id": "fish-puffer",
+  "text": "Bubble Puffer!"
+ },
+ {
+  "id": "fish-moonfin",
+  "text": "The Moonfin!"
+ },
+ {
+  "id": "fish-boot",
+  "text": "An old boot! Silly!"
+ },
+ {
+  "id": "fish-teapot",
+  "text": "A little teapot!"
+ },
+ {
+  "id": "fish-chest",
+  "text": "Treasure! A chest full of shells!"
+ },
+ {
+  "id": "new",
+  "text": "A new fish for the journal!"
+ },
+ {
+  "id": "upgrade",
+  "text": "Everybody's rod got better!"
+ },
+ {
+  "id": "golden",
+  "text": "A golden swirl! Hurry, everyone!"
+ },
+ {
+  "id": "campfire",
+  "text": "Campfire time."
+ }
+]

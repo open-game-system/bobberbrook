@@ -163,5 +163,49 @@
       "references": []
     },
     "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "assets-src/kit/icon.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Hand-painted stylized fantasy-MMO game art: chunky rounded shapes, oversized rounded trees, saturated painterly colour with visible brush strokes, warm golden-hour rim light, cozy and inviting, safe for small children. No faces on objects. Square app icon, full bleed, no text: a big red-and-white fishing bobber floating on sparkling turquoise water with ring ripples, a little golden fish leaping beside it with a splash, a lily pad, warm light, simple bold readable shape at small size.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "assets-src/kit/logo.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Hand-painted stylized fantasy-MMO game art: chunky rounded shapes, oversized rounded trees, saturated painterly colour with visible brush strokes, warm golden-hour rim light, cozy and inviting, safe for small children. No faces on objects. Game logo on a fully transparent background: the word 'Bobberbrook' in big chunky rounded hand-lettered wooden-sign letters in warm honey and teal, with a red-and-white bobber dotting the first 'o' and a little curling fishing line underlining the word, painterly highlights. Only the logo, nothing else, transparent background.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "assets-src/kit/cover.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Hand-painted stylized fantasy-MMO game art: chunky rounded shapes, oversized rounded trees, saturated painterly colour with visible brush strokes, warm golden-hour rim light, cozy and inviting, safe for small children. No faces on objects. Portrait game cover, 2:3 aspect ratio: at the top the title 'Bobberbrook' in big chunky rounded hand-lettered wooden-sign letters in warm honey and teal, a red-and-white bobber dotting the first 'o'. Below, a cozy round forest lake at golden hour: a little boy in a blue bucket hat and his dad in a green hat fishing from a wooden dock, a golden fish leaping out of a sparkling swirl, a waterfall in the distance, lily pads, fireflies. Only the one word of text.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "assets-src/kit/hero-clean.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Hand-painted stylized fantasy-MMO game art: chunky rounded shapes, oversized rounded trees, saturated painterly colour with visible brush strokes, warm golden-hour rim light, cozy and inviting, safe for small children. No faces on objects. Game key art, 16:9 widescreen, full bleed, no text, no letters, no logo, no UI: a sparkling round forest lake at golden hour seen from a high three-quarter camera, a wooden dock with a lantern reaching into the water from the bottom of the frame, a waterfall pouring from a mossy cliff on the far side, lily pads with pink water lilies on the left, reeds on the right, a swirling sparkling school of fish glinting in the middle of the lake, two chunky little fishers (a dad in a green hat and a 5-year-old boy in a blue bucket hat) casting from the dock with red and white bobbers on the water, cottages with warm windows on a hill, purple mountains.",
+      "references": []
+    },
+    "date": "2026-10-08"
   }
 ]
