@@ -6,7 +6,7 @@ import { ROD_AT, ROD_NAMES, speciesCount, todOf, type Lake } from "../../game/la
 import { createLakeScene, type LakeScene } from "../scene";
 import { lakeEvents } from "../lakeEvents";
 import { createLiveSounds, playLakeEvents } from "../tvSounds";
-import { startWorld, setTimeOfDayMood } from "../audio/world";
+import { startWorld, setTimeOfDayMood, setTraveling } from "../audio/world";
 import { unlockAudio } from "../audio/engine";
 import { voice } from "../audio/voice";
 import { sfx } from "../audio/sfx";
@@ -119,6 +119,7 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
     const loop = () => {
       const now = clock.now();
       live(latest.current, now);
+      setTraveling(latest.current.fishers.some((f) => f.vel.x !== 0 || f.vel.z !== 0));
       // Soft footsteps for whoever is walking (the trails were silent).
       const nowMs = performance.now();
       for (const f of latest.current.fishers) {

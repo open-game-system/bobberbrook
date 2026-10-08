@@ -13,6 +13,11 @@ let water: Layer | null = null;
 let night: Layer | null = null;
 let musicBus: GainNode | null = null;
 let tod: TimeOfDay = "morning";
+/** Someone is walking: the music adds a soft walking bass and shaker. */
+let traveling = false;
+export function setTraveling(on: boolean): void {
+  traveling = on;
+}
 let timers: number[] = [];
 
 /** A generated hall: decaying stereo noise, so the harp and pad bloom like a forest glade at dusk. */
@@ -192,6 +197,20 @@ function choir(ctx: AudioContext, out: AudioNode, freqs: number[], t: number, du
   }
 }
 
+function shaker(ctx: AudioContext, out: AudioNode, t: number): void {
+  const src = noiseSource(ctx, 1, false);
+  const hp = ctx.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 5000;
+  const e = ctx.createGain();
+  e.gain.setValueAtTime(0.0001, t);
+  e.gain.exponentialRampToValueAtTime(0.012, t + 0.02);
+  e.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+  src.connect(hp).connect(e).connect(out);
+  src.start(t);
+  src.stop(t + 0.15);
+}
+
 function pad(ctx: AudioContext, out: AudioNode, freqs: number[], t: number, dur: number, gain: number): void {
   for (const freq of freqs) {
     for (const det of [-6, 6]) {
@@ -234,6 +253,11 @@ function scheduleBar(ctx: AudioContext, bar: number, t: number): void {
     const degree = chord[i % 3]! + (i >= 3 ? 5 : 0);
     pluck(ctx, musicBus!, note(degree), t + s * BEAT, (isNight ? 0.035 : 0.045) * (1 - i * 0.08), bright);
   });
+  if (traveling) {
+    // A gentle walking bass on the beat and a soft shaker on the off-beats.
+    [0, 1, 2, 3].forEach((b) => pluck(ctx, musicBus!, note(chord[0]! - 5) / 2, t + b * BEAT, 0.05, 0.2));
+    [0.5, 1.5, 2.5, 3.5].forEach((b) => shaker(ctx, musicBus!, t + b * BEAT));
+  }
   [2.75, 3.25].forEach((s) => {
     if (Math.random() < 0.4) return;
     pluck(ctx, musicBus!, note(chord[Math.floor(Math.random() * 3)]! + 10), t + s * BEAT, 0.035, bright);
