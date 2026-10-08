@@ -210,9 +210,10 @@ const config: GameRigInput = {
       rig.mark("explore: back to the zeppelin tower");
       for (const p of [...trail].reverse()) await walkTo(dad, p, 2, 15_000);
       await walkTo(dad, { x: 18, z: 20 }, 2, 15_000);
-      await Promise.all([walkTo(dad, zep.at, 0.8, 20_000), walkTo(kid, { x: zep.at.x + 1.2, z: zep.at.z + 0.6 }, 0.8, 25_000)]);
+      // Dad steps onto the mooring; Juneau lets go of his stick and tags along onto it by himself.
+      await walkTo(dad, zep.at, 0.6, 20_000);
       rig.mark("at the zeppelin");
-      for (let i = 0; i < 80; i++) {
+      for (let i = 0; i < 160; i++) {
         const { lake } = await me(dad);
         if (Reflect.get(lake, "ride")) break;
         await dad.waitForTimeout(250);

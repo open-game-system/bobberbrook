@@ -427,7 +427,7 @@ export function createWorld(seed: number): World {
   /** Each route's mooring: beside the tower, on the side its zeppelin flies off toward. */
   function mooring(p: Place, d: Cell): Vec {
     const t = towerAt(p);
-    return { x: t.x + d.i * 2.4, z: t.z + d.j * 2.4 };
+    return { x: t.x + d.i * 3.5, z: t.z + d.j * 3.5 };
   }
 
   /** Zeppelin towers: one per 5×5 block of cells (Moonwell Lake's block: at Moonwell), linked to the neighbouring blocks' towers. */

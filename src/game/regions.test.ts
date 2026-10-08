@@ -108,6 +108,17 @@ describe("riding a zeppelin", () => {
   });
 });
 
+describe("tagging along to a ride", () => {
+  it("walks an idle kid right up to the tower where the family waits, and off they fly", () => {
+    const T0 = 10_000;
+    let l: Lake = { ...join(join(newLake(1, T0), { name: "A", ogsId: null }).lake, { name: "B", ogsId: null }).lake, worldSeed: seed };
+    const zep = worldFor(seed).platformsNear({ x: 0, z: 0 }, 0).find((p) => p.kind === "zeppelin")!;
+    l = { ...l, fishers: l.fishers.map((f) => (f.seat === 0 ? { ...f, pos: { ...zep.at } } : { ...f, pos: { x: 10, z: 19 } })) };
+    for (let t = T0; t < T0 + 60_000 && !l.ride; t += 250) l = step(l, t);
+    expect(l.ride?.platformId).toBe(zep.id);
+  });
+});
+
 describe("fog of war", () => {
   it("clears round everyone as they go, and remembers it", () => {
     const l = join(newLake(1, 1000), { name: "A", ogsId: null }).lake;

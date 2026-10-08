@@ -282,7 +282,7 @@ export const FOLLOW_FAR = 9;
 export const FOLLOW_NEAR = 4;
 const FOLLOW_SPEED = WALK_SPEED * 0.85;
 
-type Tagger = Pick<Fisher, "pos" | "vel" | "mode" | "lastInputAt" | "following" | "movedAt">;
+type Tagger = Pick<Fisher, "pos" | "vel" | "mode" | "lastInputAt" | "following" | "movedAt" | "seat">;
 
 /** Steers each idle, walking fisher toward the nearest other fisher, by trail and round the ponds, and stops them close by. */
 export function tagAlong(fishers: Tagger[], now: number, w: World = worldFor(HOME_WORLD_SEED)): void {
@@ -290,6 +290,26 @@ export function tagAlong(fishers: Tagger[], now: number, w: World = worldFor(HOM
     const others = fishers.filter((o) => o !== f);
     if (others.length === 0 || f.mode !== "walk" || now - f.lastInputAt < FOLLOW_AFTER_MS) continue;
     const near = others.reduce((b, o) => (distance(o.pos, f.pos) < distance(b.pos, f.pos) ? o : b));
+    // Someone waiting at a dock or tower: walk right up onto that one so the trip can start.
+    const platform = w.platformsNear(near.pos, 0).find((p) => distance(p.at, near.pos) <= PLATFORM_REACH);
+    const mine = w.platformsNear(f.pos, 0).find((p) => distance(p.at, f.pos) <= PLATFORM_REACH - 1);
+    // Waiting at different moorings: the lower seat (the host, usually) holds, the other walks over.
+    const holdMine = mine !== undefined && (platform === undefined || platform.id === mine.id || f.seat < near.seat);
+    if (platform && !holdMine && distance(platform.at, f.pos) > PLATFORM_REACH - 1) {
+      const way = w.navNext(f.pos, platform.at);
+      const d = distance(way, f.pos) || 1;
+      // Slow down on arrival so they stop on the mooring instead of overshooting it.
+      const speed = FOLLOW_SPEED * Math.min(1, Math.max(0.15, (distance(platform.at, f.pos) - 0.6) / 2.5));
+      f.following = true;
+      f.vel = { x: ((way.x - f.pos.x) / d) * speed, z: ((way.z - f.pos.z) / d) * speed };
+      continue;
+    }
+    // On the family's mooring, or waiting on your own at a dock or tower: stay put.
+    if (platform || mine) {
+      if (f.following) f.vel = { x: 0, z: 0 };
+      f.following = false;
+      continue;
+    }
     const gap = distance(near.pos, f.pos);
     if (gap <= FOLLOW_NEAR || (!f.following && gap <= FOLLOW_FAR)) {
       if (f.following) f.vel = { x: 0, z: 0 };
@@ -558,7 +578,7 @@ export function step(lake: Lake, now: number): Lake {
 // ---------- boats and zeppelins ----------
 
 /** How close to a dock or tower everyone must stand to board, and how long they wait there. */
-export const PLATFORM_REACH = 3.5;
+export const PLATFORM_REACH = 2.6;
 export const BOARD_MS = 3000;
 const RIDE_SPEED = { boat: 12, zeppelin: 20 } as const;
 export const RIDE_MIN_MS = 10_000;
@@ -572,7 +592,11 @@ function board(d: Draft<Lake>, now: number, w: World): void {
     return;
   }
   const mid = { x: d.fishers.reduce((a, f) => a + f.pos.x, 0) / d.fishers.length, z: d.fishers.reduce((a, f) => a + f.pos.z, 0) / d.fishers.length };
-  const platform = w.platformsNear(mid, 1).find((p) => d.fishers.every((f) => distance(f.pos, p.at) <= PLATFORM_REACH));
+  const platform = w
+    .platformsNear(mid, 1)
+    .filter((p) => d.fishers.every((f) => distance(f.pos, p.at) <= PLATFORM_REACH))
+    // The mooring everyone stands closest to, all together (moorings round one tower sit side by side).
+    .sort((a, b) => d.fishers.reduce((t, f) => t + distance(f.pos, a.at), 0) - d.fishers.reduce((t, f) => t + distance(f.pos, b.at), 0))[0];
   if (!platform) {
     d.boarding = null;
     return;
