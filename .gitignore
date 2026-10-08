@@ -9,3 +9,4 @@ recordings/
 assets-src/**/*.png
 !assets-src/fish/sheet-*.png
 wrangler.nobuild.toml
+coverage/
