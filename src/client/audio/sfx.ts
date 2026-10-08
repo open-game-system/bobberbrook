@@ -84,7 +84,7 @@ export const sfx = {
   },
   nibble: (o: Opts = {}) => tone(520, 0.07, { gain: 0.14, bend: 1.6, ...o }),
   bite: (o: Opts = {}) => {
-    whoosh(0.5, 2500, 400, { gain: 0.45, q: 0.6, ...o });
+    whoosh(0.5, 1500, 350, { gain: 0.45, q: 0.9, ...o });
     tone(note(9), 0.25, { gain: 0.3, type: "triangle", ...o, at: (o.at ?? 0) + 0.02 });
     tone(note(11), 0.35, { gain: 0.3, type: "triangle", ...o, at: (o.at ?? 0) + 0.12 });
   },
@@ -95,7 +95,7 @@ export const sfx = {
     tone(note(6), 0.4, { gain: 0.14, type: "triangle", bend: 0.6, ...o, at: (o.at ?? 0) + 0.1 });
   },
   catch: (o: Opts = {}) => {
-    whoosh(0.4, 3000, 900, { gain: 0.35, q: 0.6, ...o });
+    whoosh(0.45, 1400, 500, { gain: 0.3, q: 1.0, ...o });
     [5, 7, 9, 12].forEach((n, i) => tone(note(n), 0.35, { gain: 0.22, type: "triangle", ...o, at: (o.at ?? 0) + 0.1 + i * 0.07 }));
   },
   newFish: (o: Opts = {}) => {
@@ -106,6 +106,8 @@ export const sfx = {
   upgrade: (o: Opts = {}) => {
     [0, 2, 4, 5, 7, 10].forEach((n, i) => tone(note(n + 5), 0.6, { gain: 0.22, type: "triangle", ...o, at: (o.at ?? 0) + i * 0.11 }));
   },
+  /** A soft step on moss and earth. */
+  step: (o: Opts = {}) => whoosh(0.09, 380, 180, { gain: 0.22, q: 1.4, ...o }),
   golden: (o: Opts = {}) => {
     [12, 14, 16, 19].forEach((n, i) => tone(note(n), 0.9, { gain: 0.12, type: "sine", ...o, at: (o.at ?? 0) + i * 0.15 }));
   },

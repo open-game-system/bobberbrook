@@ -9,6 +9,7 @@ import { createLiveSounds, playLakeEvents } from "../tvSounds";
 import { startWorld, setTimeOfDayMood } from "../audio/world";
 import { unlockAudio } from "../audio/engine";
 import { voice } from "../audio/voice";
+import { sfx } from "../audio/sfx";
 import { FISH_IDS } from "../../game/fish";
 import { useOgsTv } from "../useOgsTv";
 import { AREAS, areaById } from "../../game/world";
@@ -113,10 +114,20 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
     voice.enable([...FISH_IDS.map((id) => `fish-${id}`), "new", "upgrade", "golden", "campfire", "teach-walk", "teach-bite", "teach-hold", "teach-letgo", "teach-swirl", "teach-explore", ...AREAS.map((a) => `area-${a.id}`)]);
     const live = createLiveSounds();
     const thrashing = new Set<number>();
+    const stepAt = new Map<number, number>();
     let raf = 0;
     const loop = () => {
       const now = clock.now();
       live(latest.current, now);
+      // Soft footsteps for whoever is walking (the trails were silent).
+      const nowMs = performance.now();
+      for (const f of latest.current.fishers) {
+        const moving = f.vel.x !== 0 || f.vel.z !== 0;
+        if (moving && nowMs - (stepAt.get(f.seat) ?? 0) > 340) {
+          stepAt.set(f.seat, nowMs);
+          sfx.step({ pan: Math.max(-0.6, Math.min(0.6, (f.pos.x - latest.current.fishers.reduce((a, x) => a + x.pos.x, 0) / latest.current.fishers.length) / 18)) });
+        }
+      }
       // "It's splashing! Let go!": each fisher's first two thrashes.
       for (const f of latest.current.fishers) {
         const def = f.reel ? fishById(f.reel.fishId) : undefined;
