@@ -178,3 +178,20 @@ describe("junk rolls", () => {
     expect(chooseCatch(ctx, () => rolls[i++]!).id).toBe("brook-trout");
   });
 });
+
+describe("bites, at the edges", () => {
+  it("lets the fish go exactly when the bite window closes", () => {
+    const waiting = step(action(onShore(lakeWith(1)), 0, T0), T0 + CAST_FLIGHT_MS);
+    const f = fisher(step(waiting, fisher(waiting).biteAt));
+    expect(fisher(step(waiting, f.biteUntil - 1)).missSeq).toBe(0);
+    expect(fisher(step(waiting, f.biteUntil)).missSeq).toBe(1);
+  });
+  it("brings species the family already knows a little less often", () => {
+    const bluegills = (journal: Lake["journal"]) =>
+      Array.from({ length: 300 }, (_, s) => hookOne({ ...lakeWith(1, s + 1), journal })).filter((r) => r.fishId === "bluegill").length;
+    const unknown = bluegills({});
+    const known = bluegills({ bluegill: { count: 1, bestCm: 20, firstBy: null } });
+    expect(unknown).toBeGreaterThan(0);
+    expect(known).toBeLessThan(unknown);
+  });
+});

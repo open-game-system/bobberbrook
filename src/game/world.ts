@@ -43,6 +43,7 @@ export const DOCK = {
 } as const;
 
 /** Big trees and rocks you walk around (the scene draws them here). */
+// Stryker disable all: placement data the scene draws; walking around them is tested.
 export const OBSTACLES: readonly { x: number; z: number; r: number; kind: "oak" | "pine" | "rock" }[] = [
   { x: 14, z: 22, r: 1.6, kind: "oak" },
   { x: -15, z: 21, r: 1.8, kind: "oak" },
@@ -53,6 +54,7 @@ export const OBSTACLES: readonly { x: number; z: number; r: number; kind: "oak" 
   { x: 7, z: 27, r: 1.4, kind: "pine" },
   { x: -6, z: 28, r: 1.3, kind: "pine" },
 ];
+// Stryker restore all
 
 /** The campfire (Campfire time) sits on the south-east shore. */
 export const CAMPFIRE: Vec = { x: 9, z: lakeRadius(1.15) * Math.sin(1.15) + 5 };

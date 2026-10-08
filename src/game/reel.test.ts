@@ -82,3 +82,12 @@ describe("integrating a reel", () => {
     expect(REEL_START).toBe(0.12);
   });
 });
+
+describe("a landed reel", () => {
+  it("stays landed through a thrash that follows", () => {
+    const calm = phaseLength(fight, 5, 0);
+    const thrash = phaseLength(fight, 5, 1);
+    const r = integrateReel(reel({ holding: true, progress: 0.99, at: calm - 200 }), fight, calm + thrash / 2, { easy: false, tier: 0 });
+    expect(r.progress).toBe(1);
+  });
+});
