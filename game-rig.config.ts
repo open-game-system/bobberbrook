@@ -171,12 +171,16 @@ const config: GameRigInput = {
     }
     // Exploring: the family walks the trail to Mistmarsh together and fishes there.
     rig.mark("explore: trail to Mistmarsh");
+    // Off the dock first (straight across would walk into the lake), then round the south shore to the trailhead.
     const trail = [
-      { x: -20, z: 12 },
-      { x: -24.9, z: 14.9 },
+      { x: 0, z: 18 },
+      { x: -10, z: 25 },
+      { x: -20, z: 19 },
+      { x: -24, z: 15 },
+      { x: -35, z: 21.5 },
       { x: -45.5, z: 28.1 },
     ];
-    for (const p of trail) await Promise.all([walkTo(dad, p, 1.5, 15_000), walkTo(kid, { x: p.x + 1.5, z: p.z + 1 }, 1.5, 15_000)]);
+    for (const p of trail) await Promise.all([walkTo(dad, p, 1.8, 15_000), walkTo(kid, { x: p.x + 1.5, z: p.z + 1.5 }, 1.8, 15_000)]);
     const marsh = (theta: number) => {
       const r = 13 + 2.2 * Math.sin(2 * theta + 1.3) + 1.6 * Math.sin(3 * theta + 0.4) + 1.0 * Math.sin(5 * theta - 0.7) + 1.2;
       return { x: -64 + Math.cos(theta) * r, z: 40 + Math.sin(theta) * r };
