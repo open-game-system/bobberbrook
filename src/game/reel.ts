@@ -67,14 +67,3 @@ export function integrateReel(reel: Reel, fight: Fight, to: number, opts: { easy
   }
   return { ...reel, progress, at: to };
 }
-
-/** When the reel will reach 1 if nothing changes (null if it won't within the horizon). */
-export function landsAt(reel: Reel, fight: Fight, opts: { easy: boolean; tier: number }, horizonMs = 60_000): number | null {
-  const step = 50;
-  let r = reel;
-  for (let t = reel.at + step; t <= reel.at + horizonMs; t += step) {
-    r = integrateReel(r, fight, t, opts);
-    if (r.progress >= 1) return t;
-  }
-  return null;
-}

@@ -21,6 +21,7 @@ export type FishDef = {
 
 const ALL_WATERS: readonly Water[] = ["dock", "lily", "falls", "reeds", "shore"];
 
+// Stryker disable all: the catalogue is content (names, colours, sizes); its rules are tested through chooseCatch.
 export const FISH: readonly FishDef[] = [
   { id: "brook-trout", name: "Brook Trout", rarity: "common", waters: ["shore", "falls", "reeds"], when: "any", cm: [18, 34],
     fight: { calmMs: [1500, 2400], thrashMs: [500, 800], pull: 0.6 }, colors: { body: "#7a6a3a", belly: "#e9a24c", fin: "#d4552f", accent: "#2f2a1a" } },
@@ -65,6 +66,8 @@ export const FISH: readonly FishDef[] = [
   { id: "chest", name: "Treasure Chest", rarity: "treasure", waters: ALL_WATERS, when: "any", cm: [30, 40],
     fight: { calmMs: [1800, 2500], thrashMs: [400, 600], pull: 0.5 }, colors: { body: "#7a4a22", belly: "#7a4a22", fin: "#d4a83a", accent: "#f0e0c0" } },
 ];
+
+// Stryker restore all
 
 export const FISH_IDS = FISH.map((f) => f.id);
 export type FishId = string;

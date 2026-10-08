@@ -1,6 +1,6 @@
 import { produce, type Draft } from "immer";
 import { dayPhase, timeOfDay, type TimeOfDay } from "./daycycle";
-import { FISH, JOURNAL_FISH, SHELLS, bitesNow, fishById, type FishDef } from "./fish";
+import { FISH, JOURNAL_FISH, SHELLS, bitesNow, fishById, type FishDef, type Rarity } from "./fish";
 import { between, pickWeighted, rand } from "./rng";
 import { REEL_START, integrateReel, type Reel } from "./reel";
 import { WALK_SPEED, advance, angleGap, castFrom, castRing, distance, spawnPoint, type Vec, type Water } from "./world";
@@ -153,18 +153,29 @@ function spawnSwirl(d: Draft<Lake>, now: number, golden: boolean): void {
   });
 }
 
+/** A swirl is spent when its time is up or it has given its catches. */
+export function swirlSpent(s: Pick<Swirl, "until" | "catches" | "golden">, now: number): boolean {
+  return now >= s.until || s.catches >= (s.golden ? GOLDEN_CATCHES : SWIRL_CATCHES);
+}
+
 function refreshSwirls(d: Draft<Lake>, now: number): void {
-  const spent = d.swirls.filter((s) => now >= s.until || s.catches >= (s.golden ? GOLDEN_CATCHES : SWIRL_CATCHES));
+  const spent = d.swirls.filter((s) => swirlSpent(s, now));
   if (spent.length === 0 && now < d.nextGoldenAt) return;
   const gone = new Set(spent.map((s) => s.id));
   d.swirls = d.swirls.filter((s) => !gone.has(s.id));
   for (const s of spent) if (!s.golden) spawnSwirl(d, now, false);
-  if (now >= d.nextGoldenAt) {
-    d.nextGoldenAt = now + GOLDEN_EVERY_MS;
-    if (!d.swirls.some((s) => s.golden)) spawnSwirl(d, now, true);
-  }
+  if (now >= d.nextGoldenAt) bringGolden(d, now);
   // A fisher whose swirl moved on keeps fishing the plain water there.
   for (const f of d.fishers) if (f.swirlId !== null && gone.has(f.swirlId)) f.swirlId = null;
+}
+
+function bringGolden(d: Draft<Lake>, now: number): void {
+  d.nextGoldenAt = now + GOLDEN_EVERY_MS;
+  if (!d.swirls.some((s) => s.golden)) spawnSwirl(d, now, true);
+}
+
+function swirlOf(d: Draft<Lake>, f: Draft<Fisher>): Draft<Swirl> | undefined {
+  return f.swirlId === null ? undefined : d.swirls.find((s) => s.id === f.swirlId);
 }
 
 function swirlAt(d: Draft<Lake>, bobber: Vec): Swirl | undefined {
@@ -177,25 +188,46 @@ export type BiteContext = { water: Water; tod: TimeOfDay; tier: number; swirl: "
 
 /** Chooses what bites: treasure, junk, the Moonfin, or a fish that lives in this water at this time. */
 export function chooseCatch(ctx: BiteContext, r: () => number): FishDef {
-  const treasure = fishById("chest")!;
-  if (r() < (ctx.swirl === "golden" ? 0.1 : 0.02)) return treasure;
-  if (ctx.swirl === "none") {
-    const junk = FISH.filter((f) => f.rarity === "junk" && f.waters.includes(ctx.water));
-    if (junk.length > 0 && r() < 0.05) return junk[Math.floor(r() * junk.length)]!;
-  }
-  const moonfin = fishById("moonfin")!;
-  if (ctx.swirl !== "none" && ctx.tod === "night" && ctx.species >= MOONFIN_JOURNAL && r() < 0.3) return moonfin;
+  if (r() < (ctx.swirl === "golden" ? 0.1 : 0.02)) return fishById("chest")!;
+  const junk = ctx.swirl === "none" ? junkRoll(ctx.water, r) : undefined;
+  if (junk) return junk;
+  if (moonfinRises(ctx) && r() < 0.3) return fishById("moonfin")!;
+  const pool = biterPool(ctx);
+  return pool[pickWeighted(pool.map((f) => catchWeight(f, ctx)), r())]!;
+}
+
+/** Outside swirls, now and then the line brings up junk from this water. */
+function junkRoll(water: Water, r: () => number): FishDef | undefined {
+  const junk = FISH.filter((f) => f.rarity === "junk" && f.waters.includes(water));
+  if (junk.length > 0 && r() < 0.05) return junk[Math.floor(r() * junk.length)];
+  return undefined;
+}
+
+/** The Moonfin can rise from a swirl at night once the journal is full enough. */
+function moonfinRises(ctx: BiteContext): boolean {
+  return ctx.swirl !== "none" && ctx.tod === "night" && ctx.species >= MOONFIN_JOURNAL;
+}
+
+/** The journal fish that bite here now (only rare ones in a golden swirl, when there are any). */
+export function biterPool(ctx: Pick<BiteContext, "water" | "tod" | "swirl">): FishDef[] {
   const here = (golden: boolean) =>
     JOURNAL_FISH.filter((f) => f.rarity !== "legendary" && f.waters.includes(ctx.water) && bitesNow(f, ctx.tod) && (!golden || f.rarity === "rare"));
-  let pool = here(ctx.swirl === "golden");
-  if (pool.length === 0) pool = here(false);
-  const weights = pool.map((f) => {
-    const base = f.rarity === "common" ? 60 : f.rarity === "uncommon" ? 30 + 5 * ctx.tier : 9 + 4 * ctx.tier;
-    const swirlBoost = ctx.swirl === "plain" ? (f.rarity === "rare" ? 2.5 : f.rarity === "uncommon" ? 1.5 : 1) : 1;
-    // Species the family hasn't met yet come along a little more often: the journal keeps filling.
-    return base * swirlBoost * (ctx.known(f.id) ? 1 : 1.6);
-  });
-  return pool[pickWeighted(weights, r())]!;
+  const pool = here(ctx.swirl === "golden");
+  return pool.length > 0 ? pool : here(false);
+}
+
+const RARITY_BASE: Partial<Record<Rarity, (tier: number) => number>> = {
+  common: () => 60,
+  uncommon: (tier) => 30 + 5 * tier,
+};
+const PLAIN_SWIRL_BOOST: Partial<Record<Rarity, number>> = { rare: 2.5, uncommon: 1.5 };
+
+/** How likely a fish is to be the one that bites, relative to the others in the pool. */
+export function catchWeight(f: FishDef, ctx: Pick<BiteContext, "tier" | "swirl" | "known">): number {
+  const base = (RARITY_BASE[f.rarity] ?? ((tier: number) => 9 + 4 * tier))(ctx.tier);
+  const swirlBoost = ctx.swirl === "plain" ? (PLAIN_SWIRL_BOOST[f.rarity] ?? 1) : 1;
+  // Species the family hasn't met yet come along a little more often: the journal keeps filling.
+  return base * swirlBoost * (ctx.known(f.id) ? 1 : 1.6);
 }
 
 function biteWait(d: Draft<Lake>, f: Draft<Fisher>, swirl: Swirl | undefined): number {
@@ -204,8 +236,7 @@ function biteWait(d: Draft<Lake>, f: Draft<Fisher>, swirl: Swirl | undefined): n
 }
 
 function scheduleBite(d: Draft<Lake>, f: Draft<Fisher>, from: number): void {
-  const swirl = f.swirlId === null ? undefined : d.swirls.find((s) => s.id === f.swirlId);
-  f.biteAt = from + biteWait(d, f, swirl);
+  f.biteAt = from + biteWait(d, f, swirlOf(d, f));
   f.biteUntil = f.biteAt + BITE_WINDOW_MS;
   const n = 1 + Math.floor(roll(d) * 3);
   const span = f.biteAt - from;
@@ -220,7 +251,7 @@ function settle(f: Draft<Fisher>, now: number): void {
 }
 
 function hook(d: Draft<Lake>, f: Draft<Fisher>, at: number): void {
-  const swirl = f.swirlId === null ? undefined : d.swirls.find((s) => s.id === f.swirlId);
+  const swirl = swirlOf(d, f);
   const def = chooseCatch(
     {
       water: f.water ?? "shore",
@@ -237,72 +268,115 @@ function hook(d: Draft<Lake>, f: Draft<Fisher>, at: number): void {
   f.reel = { fishId: def.id, cm, hookAt: at, seed: Math.floor(roll(d) * 2 ** 31), progress: REEL_START, at, holding: false };
 }
 
-function land(d: Draft<Lake>, f: Draft<Fisher>, at: number): void {
-  const reel = f.reel;
-  if (!reel) return;
-  const def = fishById(reel.fishId)!;
-  const swirl = f.swirlId === null ? undefined : d.swirls.find((s) => s.id === f.swirlId);
-  const golden = swirl?.golden === true;
-  const counts = def.rarity !== "junk" && def.rarity !== "treasure";
-  const isNew = counts && (d.journal[def.id]?.count ?? 0) === 0;
-  const shells = SHELLS[def.rarity] * (golden ? 2 : 1);
-  if (counts) {
-    const entry = d.journal[def.id] ?? { count: 0, bestCm: 0, firstBy: null };
-    d.journal[def.id] = { count: entry.count + 1, bestCm: Math.max(entry.bestCm, reel.cm), firstBy: entry.firstBy ?? f.name };
-  }
-  if (swirl) swirl.catches += 1;
+export const LOG_LENGTH = 40;
+
+/** Whether a catch goes in the journal (junk and treasure don't). */
+export function countsInJournal(def: Pick<FishDef, "rarity">): boolean {
+  return def.rarity !== "junk" && def.rarity !== "treasure";
+}
+
+/** The journal entry after one more of this fish: count, best size, and who caught the first. */
+export function journalAfter(entry: JournalEntry | undefined, cm: number, by: string | null): JournalEntry {
+  const e = entry ?? { count: 0, bestCm: 0, firstBy: null };
+  return { count: e.count + 1, bestCm: Math.max(e.bestCm, cm), firstBy: e.firstBy ?? by };
+}
+
+/** Adds shells to the family total and upgrades the rod when a milestone is passed. */
+function addShells(d: Draft<Lake>, shells: number): void {
   d.shells += shells;
   const tier = rodTierFor(d.shells);
   if (tier > d.rodTier) {
     d.rodTier = tier;
     d.upgradeSeq += 1;
   }
+}
+
+function pushLog(d: Draft<Lake>, entry: Lake["log"][number]): void {
+  d.log.push(entry);
+  if (d.log.length > LOG_LENGTH) d.log.splice(0, d.log.length - LOG_LENGTH);
+}
+
+function land(d: Draft<Lake>, f: Draft<Fisher>, at: number): void {
+  const reel = f.reel;
+  if (!reel) return;
+  const def = fishById(reel.fishId)!;
+  const swirl = swirlOf(d, f);
+  const golden = swirl?.golden === true;
+  const counts = countsInJournal(def);
+  const isNew = counts && (d.journal[def.id]?.count ?? 0) === 0;
+  const shells = SHELLS[def.rarity] * (golden ? 2 : 1);
+  if (counts) d.journal[def.id] = journalAfter(d.journal[def.id], reel.cm, f.name);
+  if (swirl) swirl.catches += 1;
+  addShells(d, shells);
   d.catchSeq += 1;
   f.catch = { fishId: def.id, cm: reel.cm, shells, isNew, golden, at, seq: d.catchSeq };
-  d.log.push({ seat: f.seat, fishId: def.id, cm: reel.cm, isNew, at });
-  if (d.log.length > 40) d.log.splice(0, d.log.length - 40);
+  pushLog(d, { seat: f.seat, fishId: def.id, cm: reel.cm, isNew, at });
   f.mode = "catch";
   f.reel = null;
   f.bobber = null;
 }
 
+/** One step of a fisher's mode: true when it moved on to another mode (so the next one may follow). */
+type ModeStep = (d: Draft<Lake>, f: Draft<Fisher>, now: number) => boolean;
+
+const stepCast: ModeStep = (d, f, now) => {
+  if (now < f.castAt + CAST_FLIGHT_MS) return false;
+  f.mode = "wait";
+  scheduleBite(d, f, f.castAt + CAST_FLIGHT_MS);
+  return true;
+};
+
+const stepWait: ModeStep = (_d, f, now) => {
+  if (now < f.biteAt) return false;
+  f.mode = "bite";
+  return true;
+};
+
+const stepBite: ModeStep = (d, f, now) => {
+  if (f.easy && now >= f.biteAt + EASY_HOOK_DELAY_MS) {
+    hook(d, f, f.biteAt + EASY_HOOK_DELAY_MS);
+    return true;
+  }
+  if (now < f.biteUntil) return false;
+  // It got away: a splash, and the bobber waits for the next one.
+  f.missSeq += 1;
+  f.mode = "wait";
+  scheduleBite(d, f, f.biteUntil);
+  return true;
+};
+
+/** Reeling never hands on within a step: a landed fish shows its catch from this moment. */
+const stepReel: ModeStep = (d, f, now) => {
+  if (!f.reel) return false;
+  const def = fishById(f.reel.fishId)!;
+  const r = integrateReel(f.reel, def.fight, now, { easy: f.easy, tier: d.rodTier });
+  f.reel = r;
+  if (r.progress >= 1 || now >= r.hookAt + RESCUE_REEL_MS) land(d, f, now);
+  return false;
+};
+
+const stepCatch: ModeStep = (_d, f, now) => {
+  if (!f.catch || now < f.catch.at + CATCH_SHOW_MS) return false;
+  f.mode = "walk";
+  return true;
+};
+
+const MODE_STEPS: Record<Mode, ModeStep> = {
+  walk: () => false,
+  cast: stepCast,
+  wait: stepWait,
+  bite: stepBite,
+  reel: stepReel,
+  catch: stepCatch,
+};
+
+/** At most this many mode changes in one step (cast → wait → bite → miss → wait … stays bounded). */
+const MAX_MODE_STEPS = 8;
+
 function stepFisher(d: Draft<Lake>, f: Draft<Fisher>, now: number): void {
   settle(f, now);
   // Each step either moves the fisher on to its next mode at a known moment, or stops.
-  for (let guard = 0; guard < 8; guard++) {
-    if (f.mode === "cast" && now >= f.castAt + CAST_FLIGHT_MS) {
-      f.mode = "wait";
-      scheduleBite(d, f, f.castAt + CAST_FLIGHT_MS);
-      continue;
-    }
-    if (f.mode === "wait" && now >= f.biteAt) {
-      f.mode = "bite";
-      continue;
-    }
-    if (f.mode === "bite" && f.easy && now >= f.biteAt + EASY_HOOK_DELAY_MS) {
-      hook(d, f, f.biteAt + EASY_HOOK_DELAY_MS);
-      continue;
-    }
-    if (f.mode === "bite" && now >= f.biteUntil) {
-      // It got away: a splash, and the bobber waits for the next one.
-      f.missSeq += 1;
-      f.mode = "wait";
-      scheduleBite(d, f, f.biteUntil);
-      continue;
-    }
-    if (f.mode === "reel" && f.reel) {
-      const def = fishById(f.reel.fishId)!;
-      const r = integrateReel(f.reel, def.fight, now, { easy: f.easy, tier: d.rodTier });
-      f.reel = r;
-      if (r.progress >= 1 || now >= r.hookAt + RESCUE_REEL_MS) land(d, f, now);
-      break;
-    }
-    if (f.mode === "catch" && f.catch && now >= f.catch.at + CATCH_SHOW_MS) {
-      f.mode = "walk";
-      continue;
-    }
-    break;
-  }
+  for (let guard = 0; guard < MAX_MODE_STEPS && MODE_STEPS[f.mode](d, f, now); guard++);
 }
 
 /** Brings the whole lake up to `now`: walking, bites, reels, swirls, the golden swirl. */
@@ -365,24 +439,33 @@ function withFisher(lake: Lake, seat: number, now: number, recipe: (d: Draft<Lak
 
 /** Joystick: x right, y up (−1..1). Walking reels in a line that's out; reeling and a fresh catch hold you still. */
 export function move(lake: Lake, seat: number, stick: { x: number; y: number }, now: number): Lake {
-  return withFisher(lake, seat, now, (d, f) => {
-    const len = Math.hypot(stick.x, stick.y);
-    const k = len > 1 ? 1 / len : 1;
-    const vx = stick.x * k * WALK_SPEED;
-    const vz = -stick.y * k * WALK_SPEED;
-    const moving = len > 0.15;
-    if (f.mode === "reel" || (f.mode === "catch" && f.catch && now < f.catch.at + CATCH_SKIP_MS)) {
+  return withFisher(lake, seat, now, (_d, f) => {
+    const vel = stickVelocity(stick);
+    if (heldStill(f, now)) {
       f.vel = { x: 0, z: 0 };
       return;
     }
-    if (moving && (f.mode === "cast" || f.mode === "wait" || f.mode === "bite" || f.mode === "catch")) {
+    if (vel && f.mode !== "walk") {
       f.mode = "walk";
       f.bobber = null;
       f.swirlId = null;
     }
-    f.vel = moving ? { x: vx, z: vz } : { x: 0, z: 0 };
-    if (moving) f.facing = Math.atan2(vz, vx);
+    f.vel = vel ?? { x: 0, z: 0 };
+    if (vel) f.facing = Math.atan2(vel.z, vel.x);
   });
+}
+
+/** The walking velocity a stick asks for (capped at full speed), or null for a stick at rest. */
+export function stickVelocity(stick: { x: number; y: number }): Vec | null {
+  const len = Math.hypot(stick.x, stick.y);
+  if (len <= 0.15) return null;
+  const k = len > 1 ? 1 / len : 1;
+  return { x: stick.x * k * WALK_SPEED, z: -stick.y * k * WALK_SPEED };
+}
+
+/** Reeling, and a catch just shown, hold a fisher still. */
+export function heldStill(f: Pick<Fisher, "mode" | "catch">, now: number): boolean {
+  return f.mode === "reel" || (f.mode === "catch" && f.catch !== null && now < f.catch.at + CATCH_SKIP_MS);
 }
 
 /** The one big button: cast at the water's edge, hook on a bite, skip a shown catch. */
@@ -392,9 +475,7 @@ export function action(lake: Lake, seat: number, now: number): Lake {
       hook(d, f, now);
       return;
     }
-    const canCast = f.mode === "walk" || (f.mode === "catch" && f.catch !== null && now >= f.catch.at + CATCH_SKIP_MS);
-    if (!canCast) return;
-    const cast = castFrom(f.pos);
+    const cast = canCast(f, now) ? castFrom(f.pos) : null;
     if (!cast) return;
     const swirl = swirlAt(d, cast.bobber);
     f.mode = "cast";
@@ -406,6 +487,11 @@ export function action(lake: Lake, seat: number, now: number): Lake {
     f.facing = Math.atan2(f.bobber.z - f.pos.z, f.bobber.x - f.pos.x);
     f.catch = null;
   });
+}
+
+/** A fisher can cast while walking, or to skip a catch card once it has been seen. */
+export function canCast(f: Pick<Fisher, "mode" | "catch">, now: number): boolean {
+  return f.mode === "walk" || (f.mode === "catch" && f.catch !== null && now >= f.catch.at + CATCH_SKIP_MS);
 }
 
 export function reelHold(lake: Lake, seat: number, holding: boolean, now: number): Lake {
