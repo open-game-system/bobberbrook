@@ -29,7 +29,9 @@ export function HostPanel({ hosting }: { hosting: Hosting }) {
   const couch = RoomContext.useSelector((s) => s.public.couch);
   const fishers = RoomContext.useSelector((s) => s.public.lake.fishers);
   const inOgs = useMemo(() => isOGSCastAvailable(), []);
-  const [open, setOpen] = useState(!inOgs);
+  // Open until someone else joins (then it folds into a small Invite button).
+  const [open, setOpen] = useState<boolean | null>(null);
+  const shown = open ?? fishers.length < 2;
   const ui = phoneJoinUi({ inOgs, couch, fishingIds: fishers.map((f) => f.ogsId) });
   const qr = useMemo(() => qrDataUrl(hosting.joinUrl), [hosting.joinUrl]);
   return (
@@ -40,11 +42,11 @@ export function HostPanel({ hosting }: { hosting: Hosting }) {
         </CastProvider>
       )}
       {ui.kind === "scan" && (
-        <div className={`host-join ${open ? "open" : ""}`}>
-          <button type="button" className="host-join-toggle" onClick={() => setOpen(!open)}>
-            {open ? "Hide" : `Invite · ${code}`}
+        <div className={`host-join ${shown ? "open" : ""}`}>
+          <button type="button" className="host-join-toggle" onClick={() => setOpen(!shown)}>
+            {shown ? "Done" : `Invite · ${code}`}
           </button>
-          {open && (
+          {shown && (
             <div className="host-join-body">
               <img className="host-qr" src={qr} alt={`QR code to join room ${code}`} />
               <div>

@@ -144,9 +144,11 @@ button { font: inherit; color: inherit; }
 .toggle input { width: 28px; height: 28px; }
 
 /* host join */
-.host-join { position: absolute; right: calc(env(safe-area-inset-right) + 2vmin); top: calc(env(safe-area-inset-top) + 2vmin); z-index: 10; }
-.host-join-toggle { border: 0; border-radius: 12px; padding: 6px 12px; background: rgba(8,34,38,.8); font-weight: 700; }
-.host-join-body { margin-top: 6px; display: flex; gap: 12px; align-items: center; padding: 12px; border-radius: 16px; background: rgba(8,34,38,.9); }
+.host-join { position: absolute; left: calc(env(safe-area-inset-left) + 2vmin); top: calc(env(safe-area-inset-top) + 2vmin); z-index: 10; }
+.host-join.open { inset: 0; display: grid; place-items: center; align-content: center; gap: 12px; background: rgba(4, 20, 24, 0.82); }
+.host-join-toggle { border: 0; border-radius: 12px; padding: 6px 12px; background: rgba(8,34,38,.85); font-weight: 700; font-size: 15px; }
+.host-join.open .host-join-toggle { order: 2; background: var(--sun); color: var(--ink); font-size: 22px; padding: 8px 28px; }
+.host-join-body { display: flex; gap: 16px; align-items: center; padding: 18px; border-radius: 22px; background: rgba(8,34,38,.95); border: 3px solid var(--wood-light); }
 .host-qr { width: 120px; height: 120px; border-radius: 8px; image-rendering: pixelated; }
 .kicker { margin: 0; font-size: 14px; opacity: 0.85; }
 .host-code { margin: 0; font-size: 34px; font-weight: 800; letter-spacing: 0.08em; }

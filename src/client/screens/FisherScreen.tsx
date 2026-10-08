@@ -27,6 +27,8 @@ const FRAME_MS = 100;
 export function FisherScreen({ seat, host, hosting }: { seat: number; host: boolean; hosting: Hosting | null }) {
   const send = RoomContext.useSend();
   const lake = RoomContext.useSelector((s) => s.public.lake);
+  const latestLake = useRef(lake);
+  latestLake.current = lake;
   const roomCode = RoomContext.useSelector((s) => s.public.roomCode);
   const clock = useMemo(() => createServerClock(), []);
   clock.observe(lake.now);
@@ -72,6 +74,12 @@ export function FisherScreen({ seat, host, hosting }: { seat: number; host: bool
   }, [reportKey]);
 
   useDeviceSounds(lake, seat, now);
+
+  // The evidence rig's bot (game-rig.config.ts) reads the lake and its seat from here.
+  useEffect(() => {
+    if (!new URLSearchParams(location.search).has("rig")) return;
+    Reflect.set(window, "__bb", { lake: () => latestLake.current, seat, now: () => clock.now() });
+  }, [seat, clock]);
 
   const onStick = useCallback((s: Stick) => send({ type: "MOVE", x: s.x, y: s.y }), [send]);
   const onPress = useCallback(() => {
