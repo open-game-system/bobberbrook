@@ -60,15 +60,20 @@ export function panFor(lake: Lake): Pan {
   };
 }
 
-function play(cue: Cue): void {
-  if (cue.kind === "sfx") sfx[cue.id](cue.opts);
-  else if (cue.kind === "fish") voice.fish(cue.fishId, cue.isNew);
-  else voice.line(cue.line);
+/** Where cues are played: the synth and the voice (fakes in tests). */
+export type Speakers = { sfx: (id: SfxId, opts: SfxOpts) => void; voice: Pick<typeof voice, "fish" | "line"> };
+const playSfx = (id: SfxId, opts: SfxOpts) => sfx[id](opts);
+const SPEAKERS: Speakers = { sfx: playSfx, voice };
+
+export function playCue(cue: Cue, out: Speakers = SPEAKERS): void {
+  if (cue.kind === "sfx") out.sfx(cue.id, cue.opts);
+  else if (cue.kind === "fish") out.voice.fish(cue.fishId, cue.isNew);
+  else out.voice.line(cue.line);
 }
 
 /** The world's sounds for each moment on the lake (the TV is the only screen that plays them). */
-export function playLakeEvents(lake: Lake, events: LakeEvent[]): void {
-  for (const cue of cuesFor(events, panFor(lake))) play(cue);
+export function playLakeEvents(lake: Lake, events: LakeEvent[], out: Speakers = SPEAKERS): void {
+  for (const cue of cuesFor(events, panFor(lake))) playCue(cue, out);
 }
 
 /** Nibble times of a waiting line that are sounding now and haven't been heard yet. */
@@ -84,7 +89,7 @@ export function thrashingNow(f: Pick<Fisher, "mode" | "reel">, now: number): boo
 }
 
 /** Continuous sounds: nibbles and thrashes as they happen (called every animation tick). */
-export function createLiveSounds() {
+export function createLiveSounds(out: Speakers["sfx"] = playSfx) {
   const nibbled = new Set<number>();
   const thrashing = new Map<number, boolean>();
   return (lake: Lake, now: number) => {
@@ -92,10 +97,10 @@ export function createLiveSounds() {
     for (const f of lake.fishers) {
       for (const t of nibblesDue(f, now, nibbled)) {
         nibbled.add(t);
-        sfx.nibble({ pan: pan(f.seat) });
+        out("nibble", { pan: pan(f.seat) });
       }
       const thrash = thrashingNow(f, now);
-      if (thrash && !thrashing.get(f.seat)) sfx.thrash({ pan: pan(f.seat) });
+      if (thrash && !thrashing.get(f.seat)) out("thrash", { pan: pan(f.seat) });
       thrashing.set(f.seat, thrash);
     }
     if (nibbled.size > 200) nibbled.clear();

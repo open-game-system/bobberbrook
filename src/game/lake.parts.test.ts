@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CATCH_SKIP_MS, GOLDEN_CATCHES, GOLDEN_EVERY_MS, GOLDEN_FIRST_MS, GOLDEN_LIFE_MS, LOG_LENGTH, RESCUE_REEL_MS, ROD_AT,
-  SWIRL_CATCHES, SWIRL_LIFE_MS, action, biterPool, canCast, catchWeight, chooseCatch, countsInJournal, heldStill, join, journalAfter,
+  SWIRL_CATCHES, SWIRL_LIFE_MS, action, biterPool, canCast, catchWeight, chooseCatch, countsInJournal, heldStill, join, journalAfter, landedCatch,
   loadProgress, move, newLake, reelHold, setCampfire, setEasy, step, stickVelocity, swirlSpent, todOf, type Catch, type Fisher, type Lake,
   type Swirl,
 } from "./lake";
@@ -314,6 +314,13 @@ describe("landing a catch", () => {
     expect(journalAfter(undefined, 20, "Juneau")).toEqual({ count: 1, bestCm: 20, firstBy: "Juneau" });
     expect(journalAfter({ count: 2, bestCm: 30, firstBy: "Dad" }, 25, "Juneau")).toEqual({ count: 3, bestCm: 30, firstBy: "Dad" });
     expect(journalAfter({ count: 2, bestCm: 30, firstBy: null }, 35, "Juneau")).toEqual({ count: 3, bestCm: 35, firstBy: "Juneau" });
+  });
+  it("values a catch by rarity, doubled from a golden swirl, new only for unmet journal fish", () => {
+    const met = { pike: { count: 1, bestCm: 40, firstBy: null } };
+    expect(landedCatch(fish("moonfin"), 99, false, {})).toEqual({ fishId: "moonfin", cm: 99, shells: 12, isNew: true, golden: false });
+    expect(landedCatch(fish("pike"), 50, true, met)).toEqual({ fishId: "pike", cm: 50, shells: 4, isNew: false, golden: true });
+    expect(landedCatch(fish("pike"), 50, false, { pike: { count: 0, bestCm: 0, firstBy: null } }).isNew).toBe(true);
+    expect(landedCatch(fish("boot"), 25, true, {})).toMatchObject({ shells: 0, isNew: false });
   });
   it("keeps junk and treasure out of the journal", () => {
     expect(countsInJournal(fish("perch"))).toBe(true);

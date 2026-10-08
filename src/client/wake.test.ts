@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { STALE_AFTER_MS, visibilityHandler, wakeLockAcquirer } from "./wake";
+import { STALE_AFTER_MS, lockHolder, visibilityHandler, wakeLockAcquirer } from "./wake";
 
 function page() {
   const calls: string[] = [];
@@ -65,5 +65,18 @@ describe("the wake lock", () => {
   });
   it("shrugs off a refused lock", async () => {
     expect(await acquire(true, true, () => Promise.reject(new Error("no")))).toEqual({ kept: [], asked: 1 });
+  });
+});
+
+describe("holding the lock", () => {
+  it("lets go of the lock it holds, and of nothing when it holds none", () => {
+    let released = 0;
+    const lock = { release: async () => void released++ };
+    const holder = lockHolder<typeof lock>();
+    holder.release();
+    expect(released).toBe(0);
+    holder.keep(lock);
+    holder.release();
+    expect(released).toBe(1);
   });
 });

@@ -15,6 +15,19 @@ export function wakeLockAcquirer<Lock>(deps: {
   };
 }
 
+/** Holds the wake lock we got, to let it go when the page is done with it. */
+export function lockHolder<Lock extends { release: () => Promise<void> }>(): { keep: (lock: Lock) => void; release: () => void } {
+  let held: Lock | null = null;
+  return {
+    keep: (lock) => {
+      held = lock;
+    },
+    release: () => {
+      void held?.release();
+    },
+  };
+}
+
 /**
  * The page's visibility handler: notes when it was hidden; on coming back after long enough for the
  * socket to drop, reloads; and asks for the wake lock again (a hidden page loses it).
@@ -37,14 +50,12 @@ export function visibilityHandler(deps: { hidden: () => boolean; now: () => numb
  */
 export function useStayConnected(): void {
   useEffect(() => {
-    let lock: WakeLockSentinel | null = null;
+    const lock = lockHolder<WakeLockSentinel>();
     const acquire = wakeLockAcquirer({
       supported: () => "wakeLock" in navigator,
       visible: () => document.visibilityState === "visible",
       request: () => navigator.wakeLock.request("screen"),
-      keep: (l: WakeLockSentinel) => {
-        lock = l;
-      },
+      keep: lock.keep,
     });
     const onVisibility = visibilityHandler({
       hidden: () => document.visibilityState === "hidden",
@@ -56,7 +67,7 @@ export function useStayConnected(): void {
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
-      void lock?.release();
+      lock.release();
     };
   }, []);
 }

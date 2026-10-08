@@ -165,7 +165,11 @@ function refreshSwirls(d: Draft<Lake>, now: number): void {
   d.swirls = d.swirls.filter((s) => !gone.has(s.id));
   for (const s of spent) if (!s.golden) spawnSwirl(d, now, false);
   if (now >= d.nextGoldenAt) bringGolden(d, now);
-  // A fisher whose swirl moved on keeps fishing the plain water there.
+  freeFishers(d, gone);
+}
+
+/** A fisher whose swirl moved on keeps fishing the plain water there. */
+function freeFishers(d: Draft<Lake>, gone: ReadonlySet<number>): void {
   for (const f of d.fishers) if (f.swirlId !== null && gone.has(f.swirlId)) f.swirlId = null;
 }
 
@@ -281,6 +285,12 @@ export function journalAfter(entry: JournalEntry | undefined, cm: number, by: st
   return { count: e.count + 1, bestCm: Math.max(e.bestCm, cm), firstBy: e.firstBy ?? by };
 }
 
+/** What a landed fish is worth: its shells (doubled from a golden swirl) and whether it is new to the journal. */
+export function landedCatch(def: FishDef, cm: number, golden: boolean, journal: Record<string, JournalEntry>): Omit<Catch, "at" | "seq"> {
+  const isNew = countsInJournal(def) && (journal[def.id]?.count ?? 0) === 0;
+  return { fishId: def.id, cm, shells: SHELLS[def.rarity] * (golden ? 2 : 1), isNew, golden };
+}
+
 /** Adds shells to the family total and upgrades the rod when a milestone is passed. */
 function addShells(d: Draft<Lake>, shells: number): void {
   d.shells += shells;
@@ -301,16 +311,13 @@ function land(d: Draft<Lake>, f: Draft<Fisher>, at: number): void {
   if (!reel) return;
   const def = fishById(reel.fishId)!;
   const swirl = swirlOf(d, f);
-  const golden = swirl?.golden === true;
-  const counts = countsInJournal(def);
-  const isNew = counts && (d.journal[def.id]?.count ?? 0) === 0;
-  const shells = SHELLS[def.rarity] * (golden ? 2 : 1);
-  if (counts) d.journal[def.id] = journalAfter(d.journal[def.id], reel.cm, f.name);
+  const landed = landedCatch(def, reel.cm, swirl?.golden === true, d.journal);
+  if (countsInJournal(def)) d.journal[def.id] = journalAfter(d.journal[def.id], reel.cm, f.name);
   if (swirl) swirl.catches += 1;
-  addShells(d, shells);
+  addShells(d, landed.shells);
   d.catchSeq += 1;
-  f.catch = { fishId: def.id, cm: reel.cm, shells, isNew, golden, at, seq: d.catchSeq };
-  pushLog(d, { seat: f.seat, fishId: def.id, cm: reel.cm, isNew, at });
+  f.catch = { ...landed, at, seq: d.catchSeq };
+  pushLog(d, { seat: f.seat, fishId: def.id, cm: reel.cm, isNew: landed.isNew, at });
   f.mode = "catch";
   f.reel = null;
   f.bobber = null;

@@ -17,6 +17,22 @@ function seatOf(context: RoomServerContext, event: RoomEvent): number | null {
 
 const isHost = (context: RoomServerContext, event: RoomEvent) => callerOf(event) !== null && callerOf(event) === context.server.hostId;
 
+/** Who is asking for a seat and as whom; null for the TV, a seated caller, or any other event. */
+function joinerOf(context: RoomServerContext, event: RoomEvent): { id: string; name: string | null; ogsId: string | null } | null {
+  const id = callerOf(event);
+  if (id === null || id === context.server.tvId || context.server.seats[id] !== undefined) return null;
+  if (event.type === "OGS_JOIN") return { id, name: tidyName(event.profile.name), ogsId: event.profile.id };
+  if (event.type === "JOIN") return { id, name: tidyName(event.name), ogsId: null };
+  return null;
+}
+
+/** The seat map with a caller in a seat. An OGS player coming back on a new device takes their seat back from the old one. */
+function seatsWith(seats: Record<string, number>, id: string, seat: number): Record<string, number> {
+  const next = { ...seats, [id]: seat };
+  for (const [other, s] of Object.entries(next)) if (other !== id && s === seat) delete next[other];
+  return next;
+}
+
 /** Every caller's own slot: the TV, or a fisher (its seat, and whether it is the host). */
 function withViews(context: RoomServerContext): RoomServerContext {
   const views: Record<string, RoomPrivateContext> = {};
@@ -35,17 +51,12 @@ export const roomMachine = setup({
   actions: {
     tick: assign(({ context }) => withLake(context, step(context.public.lake, Date.now()))),
     join: assign(({ context, event }) => {
-      const id = callerOf(event);
-      if ((event.type !== "JOIN" && event.type !== "OGS_JOIN") || id === null || id === context.server.tvId) return context;
-      if (context.server.seats[id] !== undefined) return context;
-      const name = tidyName(event.type === "OGS_JOIN" ? event.profile.name : event.name);
-      const ogsId = event.type === "OGS_JOIN" ? event.profile.id : null;
-      const joined = join(step(context.public.lake, Date.now()), { name, ogsId });
+      const who = joinerOf(context, event);
+      if (who === null) return context;
+      const joined = join(step(context.public.lake, Date.now()), { name: who.name, ogsId: who.ogsId });
       if (joined.seat === null) return context;
-      const seats = { ...context.server.seats, [id]: joined.seat };
-      // An OGS player coming back on a new device takes their seat back from the old one.
-      for (const [other, seat] of Object.entries(seats)) if (other !== id && seat === joined.seat) delete seats[other];
-      const hostId = context.server.hostId ?? id;
+      const seats = seatsWith(context.server.seats, who.id, joined.seat);
+      const hostId = context.server.hostId ?? who.id;
       return withViews({ ...withLake(context, joined.lake), server: { ...context.server, seats, hostId } });
     }),
     move: assign(({ context, event }) => {

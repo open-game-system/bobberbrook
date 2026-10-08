@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { join, newLake, type Fisher, type Lake } from "../game/lake";
-import { cuesFor, nibblesDue, panFor, thrashingNow } from "./tvSounds";
+import { createLiveSounds, cuesFor, nibblesDue, panFor, playCue, playLakeEvents, thrashingNow } from "./tvSounds";
 
 const pan = (seat: number) => seat / 10;
 
@@ -82,5 +82,75 @@ describe("live sounds", () => {
     expect(times.some((t) => thrashingNow({ ...reeling, mode: "catch" }, t))).toBe(false);
     expect(times.some((t) => thrashingNow({ ...reeling, reel: null }, t))).toBe(false);
     expect(times.some((t) => thrashingNow({ ...reeling, reel: { ...reel, fishId: "nope" } }, t))).toBe(false);
+  });
+});
+
+describe("playing", () => {
+  function speakers() {
+    const heard: unknown[] = [];
+    return {
+      heard,
+      out: {
+        sfx: (id: string, opts: object) => heard.push(["sfx", id, opts]),
+        voice: { fish: (id: string, isNew: boolean) => heard.push(["fish", id, isNew]), line: (line: string) => heard.push(["line", line]) },
+      },
+    };
+  }
+  it("plays each moment's cues on the synth and the voice, in order", () => {
+    const s = speakers();
+    const lake = join(newLake(1, 0), { name: "A", ogsId: null }).lake;
+    playLakeEvents(lake, [{ kind: "caught", seat: 0, fishId: "pike", isNew: false, golden: false, shells: 2 }, { kind: "upgrade", tier: 1 }], s.out);
+    const pan = panFor(lake)(0);
+    expect(s.heard).toEqual([["sfx", "catch", { pan }], ["fish", "pike", false], ["sfx", "upgrade", {}], ["line", "upgrade"]]);
+  });
+  it("plays a single cue", () => {
+    const s = speakers();
+    playCue({ kind: "line", line: "golden" }, s.out);
+    expect(s.heard).toEqual([["line", "golden"]]);
+  });
+});
+
+describe("the live sound loop", () => {
+  const base = join(newLake(1, 0), { name: "A", ogsId: null }).lake;
+  const withF = (over: Partial<Fisher>): Lake => ({ ...base, fishers: base.fishers.map((f) => ({ ...f, ...over })) });
+  it("plays each nibble once", () => {
+    const heard: string[] = [];
+    const tick = createLiveSounds((id) => heard.push(id));
+    const lake = withF({ mode: "wait", nibbles: [100, 500] });
+    tick(lake, 100);
+    tick(lake, 150);
+    tick(lake, 500);
+    expect(heard).toEqual(["nibble", "nibble"]);
+  });
+  it("forgets heard nibbles once it has heard over 200", () => {
+    const heard: string[] = [];
+    const tick = createLiveSounds((id) => heard.push(id));
+    const many = Array.from({ length: 201 }, (_, i) => 1000 + i);
+    tick(withF({ mode: "wait", nibbles: many }), 1200);
+    expect(heard).toHaveLength(201);
+    tick(withF({ mode: "wait", nibbles: many }), 1200);
+    expect(heard).toHaveLength(402);
+    const few = Array.from({ length: 200 }, (_, i) => 1000 + i);
+    const tick2 = createLiveSounds((id) => heard.push(id));
+    tick2(withF({ mode: "wait", nibbles: few }), 1199);
+    tick2(withF({ mode: "wait", nibbles: few }), 1199);
+    expect(heard).toHaveLength(602);
+  });
+  it("thrashes once at the start of each thrash", () => {
+    const heard: string[] = [];
+    const tick = createLiveSounds((id) => heard.push(id));
+    const reel = { fishId: "boot", cm: 25, hookAt: 0, seed: 1, progress: 0.2, at: 0, holding: false };
+    const lake = withF({ mode: "reel", reel });
+    const times = Array.from({ length: 200 }, (_, i) => i * 50);
+    let thrashes = 0;
+    let was = false;
+    for (const t of times) {
+      tick(lake, t);
+      const now = thrashingNow(lake.fishers[0]!, t);
+      if (now && !was) thrashes++;
+      was = now;
+    }
+    expect(thrashes).toBeGreaterThan(0);
+    expect(heard).toEqual(Array.from({ length: thrashes }, () => "thrash"));
   });
 });
