@@ -11,17 +11,20 @@ import {
   Vector3,
   Vector4,
 } from "three";
-import { lakeRadius } from "../../game/world";
+import { AREAS, pondRadius, type Area } from "../../game/world";
+import { LOOKS } from "./valley";
 import type { TodState } from "./tod";
 import { FALLS, heightAt } from "./terrain";
 
 export const MAX_RIPPLES = 24;
-export const MAX_SWIRLS = 4;
+export const MAX_SWIRLS = 8;
 
-/** GLSL port of world.ts lakeRadius (must stay in sync). */
-const LAKE_RADIUS_GLSL = /* glsl */ `
-float lakeRadius(float t) {
-  return 17.0 + 2.4 * sin(2.0 * t + 0.6) + 1.4 * sin(3.0 * t - 1.1) + 0.8 * sin(5.0 * t + 2.0);
+/** GLSL port of world.ts pondRadius (must stay in sync): base radius + bumps at 2, 3 and 5 lobes. */
+const POND_RADIUS_GLSL = /* glsl */ `
+uniform vec4 uPond;
+uniform vec3 uPhase;
+float pondRadius(float t) {
+  return uPond.x + uPond.y * sin(2.0 * t + uPhase.x) + uPond.z * sin(3.0 * t + uPhase.y) + uPond.w * sin(5.0 * t + uPhase.z);
 }`;
 
 const NOISE_GLSL = /* glsl */ `
@@ -56,15 +59,23 @@ uniform float uGlow;
 uniform vec4 uRipples[${MAX_RIPPLES}];
 uniform vec4 uSwirls[${MAX_SWIRLS}];
 uniform vec2 uFallsFoot;
+uniform vec2 uCenter;
+uniform vec3 uTintS;
+uniform vec3 uTintD;
+uniform float uCalm;
+uniform float uVeil;
+uniform float uStars;
+uniform vec3 uVeilCol;
 varying vec3 vWorld;
-${LAKE_RADIUS_GLSL}
+${POND_RADIUS_GLSL}
 ${NOISE_GLSL}
 
 void main() {
   vec2 p = vWorld.xz;
-  float r = length(p);
-  float th = atan(p.y, p.x);
-  float depth = lakeRadius(th) - r;
+  vec2 lp = p - uCenter;
+  float r = length(lp);
+  float th = atan(lp.y, lp.x);
+  float depth = pondRadius(th) - r;
   // Gentle wind ripples: a few directional waves + value noise.
   vec2 g = vec2(0.0);
   g += vec2(0.8, 0.6) * cos(dot(p, vec2(0.8, 0.6)) * 1.3 + uTime * 1.1) * 0.06;
@@ -74,6 +85,7 @@ void main() {
   float n2 = vn(p * 0.9 + vec2(0.37, 0.0) + uTime * 0.15);
   float n3 = vn(p * 0.9 + vec2(0.0, 0.37) + uTime * 0.15);
   g += vec2(n2 - n1, n3 - n1) * 0.35;
+  g *= 1.0 - 0.8 * uCalm;
   float ringFoam = 0.0;
   for (int i = 0; i < ${MAX_RIPPLES}; i++) {
     vec4 rp = uRipples[i];
@@ -98,9 +110,10 @@ void main() {
   // Painted depth: pale cyan shallows, a teal band, a deep teal-violet middle (wobbly contours, not rings).
   float dw = depth + (vn(p * 0.35 + 7.0) - 0.5) * 2.2;
   float dz = smoothstep(0.3, 7.0, dw);
-  vec3 deepV = mix(uDeep, vec3(0.16, 0.1, 0.42) * (0.5 + 0.5 * length(uDeep) * 1.6), 0.38);
-  vec3 base = mix(uShallow * 1.05, deepV, dz);
-  base = mix(base, mix(uShallow, vec3(1.0), 0.3) * 1.15, (1.0 - smoothstep(0.0, 1.6, dw)) * 0.6);
+  vec3 shallow = uShallow * uTintS;
+  vec3 deepV = mix(uDeep * uTintD, vec3(0.16, 0.1, 0.42) * (0.5 + 0.5 * length(uDeep) * 1.6), 0.38);
+  vec3 base = mix(shallow * 1.05, deepV, dz);
+  base = mix(base, mix(shallow, vec3(1.0), 0.3) * 1.15, (1.0 - smoothstep(0.0, 1.6, dw)) * 0.6);
   // Shallow-water shimmer (caustic-like).
   float c1 = vn(p * 1.7 + vec2(uTime * 0.3, -uTime * 0.2));
   float c2 = vn(p * 1.7 * 1.3 - vec2(uTime * 0.25, uTime * 0.31));
@@ -109,7 +122,7 @@ void main() {
   // Far-shore reflections: a darker, greener band hugging the edge.
   // Reflections of the shore trees: a dark band hugging the far edges, broken into vertical streaks by ripples.
   float streaks = 0.65 + 0.35 * vn(vec2(p.x * 2.6, p.y * 0.45) + g * 6.0);
-  base = mix(base, uShoreTint, (1.0 - smoothstep(0.5, 7.0, depth)) * 0.42 * streaks * (1.0 - cosT * 0.4) * smoothstep(-4.0, 2.0, -p.y));
+  base = mix(base, uShoreTint, (1.0 - smoothstep(0.5, 7.0, depth)) * 0.42 * streaks * (1.0 - cosT * 0.4) * smoothstep(-4.0, 2.0, -lp.y));
   // Soft drifting highlights (wind patches).
   base += mix(uShallow, vec3(1.0), 0.5) * smoothstep(0.58, 0.85, vn(p * 0.22 + vec2(uTime * 0.05, uTime * 0.03))) * 0.07 * (0.6 + 0.4 * dz);
   // Swirls: a lighter patch, circling streaks, a golden glow.
@@ -128,12 +141,21 @@ void main() {
   }
   // Moonwell glow: the water lights itself, more at night; drifting glints under the surface.
   float glowK = 0.35 + 0.65 * uGlow;
-  base += uShallow * glowK * (0.1 + 0.16 * (1.0 - dz));
+  base += shallow * glowK * (0.1 + 0.16 * (1.0 - dz));
   float mote = smoothstep(0.93, 1.0, vn(p * 2.3 + vec2(uTime * 0.12, uTime * 0.07))) * smoothstep(0.9, 1.0, vn(p * 5.1 - uTime * 0.2));
   base += vec3(0.6, 1.0, 1.0) * mote * glowK * 2.0;
   vec3 R = reflect(-V, N);
   vec3 sky = mix(uSkyHorizon, uSkyTop, smoothstep(0.0, 0.6, R.y));
-  vec3 col = mix(base, sky, fres * 0.65);
+  // Still water (the tarn) is a mirror: more sky, and the stars in it at night.
+  float mirror = uCalm * uCalm;
+  if (uStars > 0.01 && R.y > 0.0) {
+    vec2 sp = R.xz / (R.y + 0.35) * 90.0;
+    vec2 cell = floor(sp);
+    float rr = h21(cell);
+    float st = step(0.955, rr) * smoothstep(0.2, 0.0, length(fract(sp) - 0.5)) * (0.6 + 0.4 * sin(uTime * (1.0 + rr * 3.0) + rr * 40.0));
+    sky += vec3(0.9, 0.95, 1.0) * st * uStars * (0.4 + 1.6 * mirror);
+  }
+  vec3 col = mix(base, sky, fres * 0.65 + mirror * 0.4);
   vec3 H = normalize(uSunDir + V);
   float spec = pow(max(dot(N, H), 0.0), 220.0) * 2.2 + pow(max(dot(N, H), 0.0), 40.0) * 0.12;
   col += uSunCol * spec * smoothstep(-0.05, 0.15, uSunDir.y);
@@ -145,6 +167,8 @@ void main() {
   foam = max(foam, mouth);
   foam = max(foam, clamp(ringFoam, 0.0, 1.0));
   col = mix(col, vec3(0.97, 1.0, 1.0) * (0.85 + 0.15 * uGlow), clamp(foam, 0.0, 1.0) * 0.9);
+  // Undiscovered: veiled, darker, lost in a lilac haze.
+  col = mix(col, uVeilCol * (0.55 + 0.25 * vn(p * 0.2 + uTime * 0.05)), uVeil * 0.7);
   float alpha = mix(0.62, 0.96, smoothstep(0.0, 3.0, depth));
   alpha = max(alpha, foam);
   gl_FragColor = vec4(max(col, vec3(0.0)), alpha);
@@ -194,43 +218,50 @@ void main() {
 }`;
 
 export type Water = {
+  /** Moonwell Lake's water (the first pond). */
   lake: Mesh;
+  /** Every place's pond, in AREAS order. */
+  ponds: Mesh[];
   brook: Mesh;
   falls: Mesh;
   /** Add a ring ripple at (x, z) at time t (seconds). strength ≈ 0.3 nibble, 0.6 plop, 1.0+ splash. */
   ripple(x: number, z: number, t: number, strength: number): void;
   setSwirl(i: number, x: number, z: number, alpha: number, golden: number): void;
+  /** 1 = an undiscovered place, veiled; 0 = found. */
+  setVeil(areaIndex: number, v: number): void;
   update(tod: TodState, time: number): void;
   dispose(): void;
 };
 
-function lakeGeometry(): BufferGeometry {
-  const cols = 160;
-  const rows = 34;
-  const pos: number[] = [0, 0, 0];
+function pondGeometry(a: Area): BufferGeometry {
+  const big = a.pond.r > 15;
+  const cols = big ? 160 : 112;
+  const rows = big ? 34 : 24;
+  const pos: number[] = [a.center.x, 0, a.center.z];
   for (let j = 1; j <= rows; j++) {
     const f = j / rows;
     for (let i = 0; i < cols; i++) {
       const th = (i / cols) * Math.PI * 2;
-      const r = (lakeRadius(th) + 0.9) * Math.pow(f, 0.8);
-      pos.push(Math.cos(th) * r, 0, Math.sin(th) * r);
+      const r = (pondRadius(a, th) + 0.9) * Math.pow(f, 0.8);
+      pos.push(a.center.x + Math.cos(th) * r, 0, a.center.z + Math.sin(th) * r);
     }
   }
   const idx: number[] = [];
   for (let i = 0; i < cols; i++) idx.push(0, 1 + ((i + 1) % cols), 1 + i);
   for (let j = 0; j < rows - 1; j++) {
     for (let i = 0; i < cols; i++) {
-      const a = 1 + j * cols + i;
-      const b = 1 + j * cols + ((i + 1) % cols);
+      const p = 1 + j * cols + i;
+      const q = 1 + j * cols + ((i + 1) % cols);
       const c = 1 + (j + 1) * cols + i;
       const d = 1 + (j + 1) * cols + ((i + 1) % cols);
-      idx.push(a, d, c, a, b, d);
+      idx.push(p, d, c, p, q, d);
     }
   }
   const g = new BufferGeometry();
   g.setAttribute("position", new BufferAttribute(new Float32Array(pos), 3));
   g.setIndex(idx);
   g.computeVertexNormals();
+  g.computeBoundingSphere();
   return g;
 }
 
@@ -291,38 +322,51 @@ export function buildWater(): Water {
   const ripples: Vector4[] = Array.from({ length: MAX_RIPPLES }, () => new Vector4(0, 0, -100, 0));
   const swirls: Vector4[] = Array.from({ length: MAX_SWIRLS }, () => new Vector4(0, 0, 0, 0));
   let nextRipple = 0;
-  const lakeMat = new ShaderMaterial({
-    vertexShader: LAKE_VERT,
-    fragmentShader: LAKE_FRAG,
-    transparent: true,
-    depthWrite: true,
-    fog: true,
-    uniforms: UniformsUtils.merge([
-      UniformsLib.fog,
-      {
-        uShallow: { value: new Color() },
-        uDeep: { value: new Color() },
-        uSkyTop: { value: new Color() },
-        uSkyHorizon: { value: new Color() },
-        uSunDir: { value: new Vector3(0, 1, 0) },
-        uSunCol: { value: new Color() },
-        uShoreTint: { value: new Color(0x2f5a3a) },
-        uTime: { value: 0 },
-        uGlow: { value: 0 },
-        uRipples: { value: [] },
-        uSwirls: { value: [] },
-        uFallsFoot: { value: [0, 0] },
-      },
-    ]),
+  // Uniforms every pond shares (the same objects, so one update drives them all; one program).
+  const common = {
+    uShallow: { value: new Color() },
+    uDeep: { value: new Color() },
+    uSkyTop: { value: new Color() },
+    uSkyHorizon: { value: new Color() },
+    uSunDir: { value: new Vector3(0, 1, 0) },
+    uSunCol: { value: new Color() },
+    uShoreTint: { value: new Color(0x2f5a3a) },
+    uTime: { value: 0 },
+    uGlow: { value: 0 },
+    uStars: { value: 0 },
+    uVeilCol: { value: new Color(0x6a5a9a) },
+    uRipples: { value: ripples },
+    uSwirls: { value: swirls },
+  };
+  const pondMats: ShaderMaterial[] = [];
+  const ponds: Mesh[] = AREAS.map((a) => {
+    const look = LOOKS[a.id];
+    const m = new ShaderMaterial({
+      vertexShader: LAKE_VERT,
+      fragmentShader: LAKE_FRAG,
+      transparent: true,
+      depthWrite: true,
+      fog: true,
+      uniforms: UniformsUtils.merge([UniformsLib.fog]),
+    });
+    Object.assign(m.uniforms, common, {
+      uCenter: { value: new Vector2(a.center.x, a.center.z) },
+      uPond: { value: new Vector4(a.pond.r, a.pond.bumps[0], a.pond.bumps[1], a.pond.bumps[2]) },
+      uPhase: { value: new Vector3(a.pond.phases[0], a.pond.phases[1], a.pond.phases[2]) },
+      uTintS: { value: look.waterShallow.clone() },
+      uTintD: { value: look.waterDeep.clone() },
+      uCalm: { value: look.calm },
+      uVeil: { value: 0 },
+      // Only Moonwell has the falls; elsewhere the foam patch is parked far away.
+      uFallsFoot: { value: a.id === "moonwell" ? new Vector2(0, -(FALLS.edge - 0.4)) : new Vector2(9999, 9999) },
+    });
+    pondMats.push(m);
+    const mesh = new Mesh(pondGeometry(a), m);
+    mesh.name = `pond-${a.id}`;
+    mesh.renderOrder = 1;
+    return mesh;
   });
-  // UniformsUtils.merge clones values; arrays of vectors must be shared with our pools.
-  lakeMat.uniforms.uRipples = { value: ripples };
-  lakeMat.uniforms.uSwirls = { value: swirls };
-  lakeMat.uniforms.uFallsFoot = { value: new Vector2(0, -(FALLS.edge - 0.4)) };
-  const lakeGeo = lakeGeometry();
-  const lake = new Mesh(lakeGeo, lakeMat);
-  lake.name = "lake";
-  lake.renderOrder = 1;
+  const lake = ponds[0]!;
 
   // The brook from the foot of the falls to the lake.
   const pts: { x: number; y: number; z: number; w: number }[] = [];
@@ -353,9 +397,10 @@ export function buildWater(): Water {
   falls.name = "falls";
   falls.renderOrder = 3;
 
-  const u = lakeMat.uniforms;
+  const u = common;
   return {
     lake,
+    ponds,
     brook,
     falls,
     ripple(x, z, t, strength) {
@@ -367,17 +412,23 @@ export function buildWater(): Water {
       const s = swirls[i];
       if (s) s.set(x, z, alpha, golden);
     },
+    setVeil(i, v) {
+      const m = pondMats[i];
+      if (m) m.uniforms.uVeil!.value = v;
+    },
     update(tod, time) {
-      (u.uShallow!.value as Color).copy(tod.waterShallow);
-      (u.uDeep!.value as Color).copy(tod.waterDeep);
-      (u.uSkyTop!.value as Color).copy(tod.skyTop);
-      (u.uSkyHorizon!.value as Color).copy(tod.skyHorizon);
-      (u.uSunDir!.value as Vector3).copy(tod.discDir);
+      u.uShallow.value.copy(tod.waterShallow);
+      u.uDeep.value.copy(tod.waterDeep);
+      u.uSkyTop.value.copy(tod.skyTop);
+      u.uSkyHorizon.value.copy(tod.skyHorizon);
+      u.uSunDir.value.copy(tod.discDir);
       // Sun glints by day; a bright silver moon path at night.
-      (u.uSunCol!.value as Color).copy(tod.sun).multiplyScalar(tod.sunI * 0.12).lerp(moonPath, tod.moon);
-      (u.uShoreTint!.value as Color).setRGB(0.16, 0.32, 0.2).lerp(tod.hemiGround, 0.3).multiplyScalar(0.6 + 0.4 * (1 - tod.moon));
-      u.uTime!.value = time;
-      u.uGlow!.value = tod.glow;
+      u.uSunCol.value.copy(tod.sun).multiplyScalar(tod.sunI * 0.12).lerp(moonPath, tod.moon);
+      u.uShoreTint.value.setRGB(0.16, 0.32, 0.2).lerp(tod.hemiGround, 0.3).multiplyScalar(0.6 + 0.4 * (1 - tod.moon));
+      u.uTime.value = time;
+      u.uGlow.value = tod.glow;
+      u.uStars.value = tod.stars;
+      u.uVeilCol.value.copy(tod.fog).lerp(tod.hemiSky, 0.3).multiplyScalar(0.8);
       for (const m of [brookMat, fallsMat]) {
         m.uniforms.uTime!.value = time;
         (m.uniforms.uDeep!.value as Color).copy(tod.waterShallow).multiplyScalar(0.85);
@@ -385,8 +436,8 @@ export function buildWater(): Water {
       }
     },
     dispose() {
-      lakeGeo.dispose();
-      lakeMat.dispose();
+      for (const p of ponds) p.geometry.dispose();
+      for (const m of pondMats) m.dispose();
       brookGeo.dispose();
       brookMat.dispose();
       fallsGeo.dispose();

@@ -1,14 +1,14 @@
 /**
  * Scene lab: the TV scene full-window, driven by a local simulation with the real lake rules and
- * simple bots. ?scenario=morning|four-reel|golden-swirl|night-catch|rod-upgrade|campfire|empty
- * &phase=0..1 &seed=N &lite=1 &view=name
+ * simple bots. ?scenario=morning|four-reel|golden-swirl|night-catch|rod-upgrade|campfire|empty|
+ * moonwell|mistmarsh|pools|hollow|tarn|trail|discovery|night-tarn &phase=0..1 &seed=N &lite=1 &view=name
  */
 import { produce } from "immer";
 import { CATCH_SKIP_MS, SEAT_COLORS, action, join, move, newLake, reelHold, setCampfire, step, type Fisher, type Lake } from "../game/lake";
 import { DAY_MS, DAY_START } from "../game/daycycle";
 import { fishById } from "../game/fish";
 import { thrashingAt } from "../game/reel";
-import { DOCK, castFrom, castRing, distance, lakeRadius, type Vec } from "../game/world";
+import { AREAS, DOCK, TRAILS, areaAt, areaById, castFrom, castRing, castRingIn, distance, lakeRadius, pondRadius, type AreaId, type Vec } from "../game/world";
 import { createLakeScene } from "./scene";
 
 type Bot = { target: Vec; hookAt: number; nextCastAt: number; stick: { x: number; y: number }; holding: boolean; reactAt: number; wander: boolean };
@@ -28,6 +28,42 @@ const shore = (theta: number, out = 1.3): Vec => {
   const r = lakeRadius(theta) + out;
   return { x: Math.cos(theta) * r, z: Math.sin(theta) * r };
 };
+/** A spot on a place's shore, `out` metres from the water. */
+const shoreIn = (id: AreaId, theta: number, out = 1.3): Vec => {
+  const a = areaById(id);
+  const r = pondRadius(a, theta) + out;
+  return { x: a.center.x + Math.cos(theta) * r, z: a.center.z + Math.sin(theta) * r };
+};
+const discoverAll = (l: Lake): Lake => produce(l, (d) => { d.discovered = AREAS.map((a) => a.id); });
+const discoverOnly = (ids: AreaId[]) => (l: Lake): Lake => produce(l, (d) => { d.discovered = ["moonwell", ...ids]; });
+const swirlIn = (id: AreaId, theta: number, golden: boolean) => (l: Lake, now: number): Lake =>
+  produce(l, (d) => {
+    d.swirls = d.swirls.filter((s) => s.area !== id);
+    d.swirlSeq += 1;
+    d.swirls.push({ id: d.swirlSeq, area: id, pos: castRingIn(areaById(id), theta), theta, golden, since: now - 3000, until: now + 90_000, catches: 0 });
+  });
+const both = (...fs: ((l: Lake, now: number) => Lake)[]) => (l: Lake, now: number): Lake => fs.reduce((acc, f) => f(acc, now), l);
+/** A point on a trail: `t` 0..1 from its first place to its second, `lat` metres to its left. */
+const onTrailAt = (i: number, t: number, lat = 0): Vec => {
+  const tr = TRAILS[i]!;
+  const dx = tr.to.x - tr.from.x;
+  const dz = tr.to.z - tr.from.z;
+  const len = Math.hypot(dx, dz);
+  return { x: tr.from.x + dx * t - (dz / len) * lat, z: tr.from.z + dz * t + (dx / len) * lat };
+};
+const centroid = (l: Lake): Vec => {
+  const n = Math.max(1, l.fishers.length);
+  return { x: l.fishers.reduce((s, f) => s + f.pos.x, 0) / n, z: l.fishers.reduce((s, f) => s + f.pos.z, 0) / n };
+};
+const forceCatchFish = (seat: number, fishId: string, cm: number) => (l: Lake): Lake =>
+  produce(l, (d) => {
+    for (const f of d.fishers) if (f.mode === "reel" && f.reel && f.seat === seat && f.reel.fishId !== fishId) {
+      f.reel.fishId = fishId;
+      f.reel.cm = cm;
+    }
+    d.journal = Object.fromEntries(Object.entries(d.journal).filter(([id]) => id !== fishId));
+  });
+
 const DOCK_SPOT: Vec = { x: 0.3, z: DOCK.tipZ + 0.9 };
 
 function swirlSpot(lake: Lake, golden: boolean): Vec | null {
@@ -39,7 +75,7 @@ function forceSwirl(lake: Lake, theta: number, golden: boolean, now: number): La
   return produce(lake, (d) => {
     d.swirls = d.swirls.filter((s) => Math.abs(s.theta - theta) > 1);
     d.swirlSeq += 1;
-    d.swirls.push({ id: d.swirlSeq, pos: castRing(theta), theta, golden, since: now - 3000, until: now + 90_000, catches: 0 });
+    d.swirls.push({ id: d.swirlSeq, area: "moonwell", pos: castRing(theta), theta, golden, since: now - 3000, until: now + 90_000, catches: 0 });
   });
 }
 
@@ -116,6 +152,92 @@ const SCENARIOS: Record<string, Scenario> = {
     hero: (_l, now, s) => now - s > 4500,
   },
   empty: { phase: 0.4, fishers: [], hero: (_l, now, s) => now - s > 3000 },
+  // ---- the valley: each place with the family fishing there ----
+  moonwell: {
+    phase: 0.2,
+    fishers: [
+      { seat: 0, name: "Dad", spot: shore(2.4), at: shore(2.4, 2) },
+      { seat: 1, name: "Mom", spot: shore(0.9), at: shore(0.9, 2) },
+      { seat: 2, name: "Juneau", spot: DOCK_SPOT },
+    ],
+    setup: discoverAll,
+    hero: (_l, now, s) => now - s > 5000,
+  },
+  mistmarsh: {
+    phase: 0.44,
+    fishers: [
+      { seat: 0, name: "Dad", spot: shoreIn("mistmarsh", 0.2), at: shoreIn("mistmarsh", 0.2, 2) },
+      { seat: 2, name: "Juneau", spot: shoreIn("mistmarsh", 1.0), at: shoreIn("mistmarsh", 1.0, 2) },
+      { seat: 3, name: "Sis", spot: shoreIn("mistmarsh", 1.7), easy: true, at: shoreIn("mistmarsh", 1.7, 2) },
+    ],
+    setup: both(discoverOnly(["mistmarsh"]), swirlIn("mistmarsh", 0.6, false)),
+    hero: (_l, now, s) => now - s > 5000,
+  },
+  pools: {
+    phase: 0.24,
+    fishers: [
+      { seat: 1, name: "Mom", spot: shoreIn("pools", 0.4), at: shoreIn("pools", 0.4, 2) },
+      { seat: 2, name: "Juneau", spot: shoreIn("pools", 1.4), at: shoreIn("pools", 1.4, 2) },
+    ],
+    setup: both(discoverOnly(["pools"]), swirlIn("pools", 0.9, false)),
+    hero: (_l, now, s) => now - s > 5000,
+  },
+  hollow: {
+    phase: 0.3,
+    fishers: [
+      { seat: 0, name: "Dad", spot: shoreIn("hollow", 2.0), at: shoreIn("hollow", 2.0, 2) },
+      { seat: 2, name: "Juneau", spot: shoreIn("hollow", 1.2), at: shoreIn("hollow", 1.2, 2) },
+      { seat: 3, name: "Sis", spot: shoreIn("hollow", 0.5), easy: true, at: shoreIn("hollow", 0.5, 2) },
+    ],
+    setup: both(discoverOnly(["hollow"]), swirlIn("hollow", 1.4, false)),
+    hero: (_l, now, s) => now - s > 5000,
+  },
+  tarn: {
+    phase: 0.12,
+    fishers: [
+      { seat: 0, name: "Dad", spot: shoreIn("tarn", 1.9), at: shoreIn("tarn", 1.9, 2) },
+      { seat: 1, name: "Mom", spot: shoreIn("tarn", 1.2), at: shoreIn("tarn", 1.2, 2) },
+      { seat: 2, name: "Juneau", spot: shoreIn("tarn", 0.6), at: shoreIn("tarn", 0.6, 2) },
+      { seat: 3, name: "Sis", spot: shoreIn("tarn", 2.6), easy: true, at: shoreIn("tarn", 2.6, 2) },
+    ],
+    setup: both(discoverAll, swirlIn("tarn", 1.3, false)),
+    hero: (_l, now, s) => now - s > 5000,
+  },
+  // The family walking the trail from Moonwell Lake toward Mistmarsh (not found yet: it glows ahead).
+  trail: {
+    phase: 0.36,
+    fishers: [
+      { seat: 0, name: "Dad", spot: shoreIn("mistmarsh", -0.6, 1.5), at: onTrailAt(0, -0.16, 1.2) },
+      { seat: 1, name: "Mom", spot: shoreIn("mistmarsh", -0.4, 1.5), at: onTrailAt(0, -0.22, -1.2) },
+      { seat: 2, name: "Juneau", spot: shoreIn("mistmarsh", -0.8, 1.5), at: onTrailAt(0, -0.1, 0) },
+      { seat: 3, name: "Sis", spot: shoreIn("mistmarsh", -0.5, 1.5), at: onTrailAt(0, -0.26, 0.4) },
+    ],
+    warmUntil: () => true,
+    hero: (l, now, s) => now - s > 3500 && areaAt(centroid(l)) === null && centroid(l).x < -38,
+  },
+  // Juneau walks out of the trees into Mistmarsh: the discovery moment.
+  discovery: {
+    phase: 0.4,
+    fishers: [
+      { seat: 2, name: "Juneau", spot: shoreIn("mistmarsh", -0.55, 1.5), at: onTrailAt(0, 0.62, 0) },
+      { seat: 0, name: "Dad", spot: shoreIn("mistmarsh", -0.3, 1.5), at: onTrailAt(0, 0.48, 1.2) },
+      { seat: 1, name: "Mom", spot: shoreIn("mistmarsh", -0.8, 1.5), at: onTrailAt(0, 0.42, -1.2) },
+    ],
+    warmUntil: () => true,
+    hero: (l, now) => l.discovery !== null && now - l.discovery.at > 1300,
+  },
+  // A Moonfin, the legend of Starfall Tarn, at night.
+  "night-tarn": {
+    phase: 0.68,
+    fishers: [
+      { seat: 2, name: "Juneau", spot: shoreIn("tarn", 1.1), at: shoreIn("tarn", 1.1, 2) },
+      { seat: 0, name: "Dad", spot: shoreIn("tarn", 1.8), at: shoreIn("tarn", 1.8, 2) },
+    ],
+    setup: discoverAll,
+    direct: forceCatchFish(2, "moonfin", 96),
+    warmUntil: (l) => l.fishers.some((f) => f.seat === 2 && f.mode === "reel"),
+    hero: (l, now) => inCatch(l, now, 1300, 2000),
+  },
 };
 
 declare global {

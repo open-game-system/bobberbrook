@@ -1,4 +1,4 @@
-import { lakeRadius } from "../../game/world";
+import { AREAS, pondRadius, type Area } from "../../game/world";
 import { CAMPFIRE } from "../../game/world";
 import type { Particles } from "./particles";
 import type { Water } from "./water";
@@ -139,9 +139,22 @@ export class Fx {
   }
 
   /** Ambient: fireflies at night, mist and spray at the falls, embers from the fire. */
-  ambient(dt: number, tod: TodState, campfire: number): void {
-    // Falls mist + spray.
-    this.mistAcc += dt * (this.lite ? 8 : 18);
+  ambient(dt: number, tod: TodState, campfire: number, fx0 = 0, fz0 = 0): void {
+    // Wisps and ground mist gather round the pond nearest the action.
+    let near: Area = AREAS[0]!;
+    let best = Infinity;
+    for (const a of AREAS) {
+      const d = Math.hypot(a.center.x - fx0, a.center.z - fz0) - a.pond.r;
+      if (d < best) {
+        best = d;
+        near = a;
+      }
+    }
+    const cx = near.center.x;
+    const cz = near.center.z;
+    const edgeAt = (th: number) => pondRadius(near, th);
+    // Falls mist + spray (only when Moonwell is in view).
+    this.mistAcc += dt * (this.lite ? 8 : 18) * (near.id === "moonwell" ? 1 : 0);
     while (this.mistAcc > 1) {
       this.mistAcc -= 1;
       const x = (this.r() - 0.5) * 2.4;
@@ -154,9 +167,9 @@ export class Fx {
     while (this.fireflyAcc > 1) {
       this.fireflyAcc -= 1;
       const th = this.r() * Math.PI * 2;
-      const rr = lakeRadius(th) - 4 + this.r() * 14;
-      const x = Math.cos(th) * rr;
-      const z = Math.sin(th) * rr;
+      const rr = edgeAt(th) - 4 + this.r() * 14;
+      const x = cx + Math.cos(th) * rr;
+      const z = cz + Math.sin(th) * rr;
       const violet = this.r() < 0.4;
       this.glow.emit({ x, y: Math.max(0, heightAt(x, z)) + 0.4 + this.r() * 2.2, z, vx: (this.r() - 0.5) * 0.5, vy: (this.r() - 0.3) * 0.25, vz: (this.r() - 0.5) * 0.5, life: 4 + this.r() * 4, size: 0.22 + this.r() * 0.2, r: violet ? 0.75 : 0.45, g: violet ? 0.55 : 1, b: 1, alpha: 0.6 + 0.4 * tod.glow, shape: 0 });
     }
@@ -165,9 +178,9 @@ export class Fx {
     while (this.mistGroundAcc > 1) {
       this.mistGroundAcc -= 1;
       const th = this.r() * Math.PI * 2;
-      const rr = lakeRadius(th) - 3 + this.r() * 10;
-      const x = Math.cos(th) * rr;
-      const z = Math.sin(th) * rr;
+      const rr = edgeAt(th) - 3 + this.r() * 10;
+      const x = cx + Math.cos(th) * rr;
+      const z = cz + Math.sin(th) * rr;
       this.water.emit({ x, y: Math.max(0, heightAt(x, z)) + 0.3, z, vx: 0.25 + this.r() * 0.2, vy: 0.02, vz: (this.r() - 0.5) * 0.2, life: 9, size: 5 + this.r() * 4, r: tod.fog.r * 1.2 + 0.15, g: tod.fog.g * 1.2 + 0.15, b: tod.fog.b * 1.1 + 0.2, alpha: 0.07 + 0.07 * tod.mist, grow: 0.6 });
     }
     // Embers.

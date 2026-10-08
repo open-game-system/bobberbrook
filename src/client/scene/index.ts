@@ -30,6 +30,14 @@ import { newTodState, sampleTod } from "./tod";
 import type { LakeScene, SceneQuality } from "./types";
 import { buildWater } from "./water";
 import { buildRays } from "./rays";
+import { buildForest } from "./forest";
+import { buildTrails } from "./trails";
+import { buildAreaDressing } from "./areas";
+import { paintedMaterial } from "./geo";
+import { Mood } from "./mood";
+import { AREAS, areaAt, areaById } from "../../game/world";
+import { AREA_INDEX } from "./valley";
+import { DoubleSide } from "three";
 
 export type { LakeScene, SceneQuality } from "./types";
 
@@ -130,14 +138,30 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   const sky = buildSky();
   scene.add(sky.dome, sky.mountains);
   const groundMat = new MeshLambertMaterial({ vertexColors: true });
-  const ground = buildGround(groundMat, full ? 320 : 200);
-  scene.add(ground.mesh);
+  const ground = buildGround(groundMat, full ? 0.6 : 1.1);
+  scene.add(ground.group);
   const water = buildWater();
-  scene.add(water.lake, water.brook, water.falls);
+  scene.add(...water.ponds, water.brook, water.falls);
   const occ = { uCam: { value: new Vector3() }, uFocus: { value: Array.from({ length: MAX_FOCUS }, () => new Vector3(0, -100, 0)) } };
   const treeMat = occluderMaterial(occ);
   const props = buildProps(opts.quality, sway, treeMat);
   scene.add(props.group);
+  const painted = paintedMaterial();
+  const paintedDouble = paintedMaterial({ side: DoubleSide });
+  const forest = buildForest(full, treeMat);
+  scene.add(forest.group);
+  const trails = buildTrails(full, painted);
+  scene.add(trails.group);
+  const areas = buildAreaDressing(full, { painted, paintedDouble, sway, tree: treeMat });
+  scene.add(areas.group);
+  const mood = new Mood();
+  const glowBoost = new Float32Array(AREAS.length);
+  const veil = new Float32Array(AREAS.length).fill(1);
+  let discoverySeq = -1;
+  let revealAt = -1;
+  let revealArea = AREAS[0]!;
+  let trailW = 0;
+  let veilInit = false;
   const rays = buildRays();
   if (full) scene.add(rays.mesh);
   const parts = makeParticles();
@@ -180,10 +204,15 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
 
   const applyTod = (phase: number) => {
     sampleTod(phase, tod);
+    mood.apply(tod);
     sun.color.copy(tod.sun);
     sun.intensity = tod.sunI;
-    sun.position.copy(tod.lightDir).multiplyScalar(90);
-    sun.target.position.set(0, 0, 0);
+    // The shadow frustum follows the action (snapped to its texels so shadows do not crawl).
+    const texel = 88 / 2048;
+    const fx0 = Math.round(rig.focus.x / texel) * texel;
+    const fz0 = Math.round(rig.focus.z / texel) * texel;
+    sun.target.position.set(fx0, 0, fz0);
+    sun.position.copy(tod.lightDir).multiplyScalar(90).add(sun.target.position);
     hemi.color.copy(tod.hemiSky);
     hemi.groundColor.copy(tod.hemiGround);
     hemi.intensity = tod.hemiI;
@@ -202,7 +231,29 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     time.value = t;
     const sn = serverNow(now);
     const phase = phaseOverride ?? (lake ? dayPhase(lake.startedAt, sn) : 0.15);
+    mood.follow(rig.focus.x, rig.focus.z, dt);
     applyTod(phase);
+    // Places nobody has found yet stay veiled; a new find lifts its veil and plays the reveal.
+    AREAS.forEach((a, i) => {
+      const found = !lake || lake.discovered.includes(a.id);
+      veil[i] = veilInit ? Math.max(0, Math.min(1, veil[i]! + (found ? -dt / 2.2 : dt / 2.2))) : found ? 0 : 1;
+      water.setVeil(i, veil[i]!);
+      glowBoost[i] = mood.glowOf(a.id);
+    });
+    if (lake) veilInit = true;
+    if (lake?.discovery && lake.discovery.seq !== discoverySeq) {
+      const fresh = discoverySeq !== -1 || sn - lake.discovery.at < 4000;
+      discoverySeq = lake.discovery.seq;
+      if (fresh) {
+        revealAt = t;
+        revealArea = areaById(lake.discovery.area);
+      }
+    } else if (lake && !lake.discovery && discoverySeq === -1) discoverySeq = 0;
+    const revealAge = revealAt >= 0 ? t - revealAt : -1;
+    forest.update(camera);
+    trails.update(tod, t);
+    areas.update(tod, camera, glowBoost);
+    sky.mountains.position.set(camera.position.x, 0, camera.position.z);
     sky.update(tod, camera, t);
     water.update(tod, t);
     rays.update(tod, t);
@@ -211,13 +262,21 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     swirls.frame(lake, sn, t, dt, tod.glow);
     fishers.frame(lake, sn, t, dt, camera, props.campSeats);
     shadows.end();
-    fx.ambient(dt, tod, lake?.campfire ? 1 : 0);
+    fx.ambient(dt, tod, lake?.campfire ? 1 : 0, rig.focus.x, rig.focus.z);
     parts.water.update(dt, t);
     parts.glow.update(dt, t);
     rig.beginFocus();
     fishers.forEachFocus((x, y, z) => rig.addFocus(x, y, z));
     const cf = fishers.catchFocus(t, catchBuf);
-    rig.update(t, dt, lake?.campfire ?? false, cf);
+    // Out on a trail (between places), the camera looks further ahead.
+    let n = 0;
+    let gx = 0;
+    let gz = 0;
+    fishers.forEachFisher((x, _y, z) => { gx += x; gz += z; n++; });
+    const onTrail = n > 0 && areaAt({ x: gx / n, z: gz / n }) === null ? 1 : 0;
+    trailW += (onTrail - trailW) * Math.min(1, dt * 1.5);
+    const reveal = revealAge >= 0 && revealAge < 3.5 ? { x: revealArea.center.x, z: revealArea.center.z, age: revealAge } : null;
+    rig.update(t, dt, lake?.campfire ?? false, cf, trailW, reveal);
     // Trees between the camera and the action dissolve.
     occ.uCam.value.copy(camera.position);
     let fi = 0;
@@ -289,7 +348,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       rig.setView(name);
       return name;
     },
-    debug: () => ({ fishers: fishers.debug(), camera: camera.position.toArray(), rig: rig.debug() }),
+    debug: () => ({ fishers: fishers.debug(), camera: camera.position.toArray(), rig: rig.debug(), trees: forest.count, veil: Array.from(veil), mood: mood.debug() }),
     setPhase(p) {
       if (p !== null && (!Number.isFinite(p) || p < 0 || p > 1)) throw new Error(`phase must be 0..1 or null, got ${String(p)}`);
       phaseOverride = p;
@@ -350,6 +409,11 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       cancelAnimationFrame(raf);
       sky.dispose();
       ground.dispose();
+      forest.dispose();
+      trails.dispose();
+      areas.dispose();
+      painted.dispose();
+      paintedDouble.dispose();
       groundMat.dispose();
       water.dispose();
       rays.dispose();

@@ -2,6 +2,20 @@ import { PerspectiveCamera, Vector3 } from "three";
 import { CAMPFIRE, DOCK, EAST, NORTH, WEST, lakeRadius } from "../../game/world";
 import { damp } from "./noise";
 
+/** Critically damped spring toward a goal (exact step: no overshoot, stable at any dt). */
+export function spring(x: number, v: number, goal: number, omega: number, dt: number, out: { x: number; v: number }): void {
+  const y = x - goal;
+  const e = Math.exp(-omega * dt);
+  const k = (v + omega * y) * dt;
+  out.x = goal + (y + k) * e;
+  out.v = (v - omega * k) * e;
+}
+const S = { x: 0, v: 0 };
+
+/** A place being revealed (the discovery moment). */
+export type Reveal = { x: number; z: number; age: number };
+const REVEAL_S = 2.6;
+
 export const VIEWS = ["auto", "group", "establish", "campfire", "dock", "falls", "lily", "reeds", "overview", "top"] as const;
 export type ViewName = (typeof VIEWS)[number];
 
@@ -21,7 +35,7 @@ const MIN_DIST = 17;
 const MAX_DIST = 64;
 /** Where the fishers' box must fit, in NDC (x: ±, y: bottom..top; the top leaves room for name tags). */
 const FIT_X = 0.8;
-const FIT_Y0 = -0.82;
+const FIT_Y0 = -0.5;
 const FIT_Y1 = 0.5;
 /** Seconds the camera takes to settle in after the scene starts (from the establishing view). */
 const INTRO_S = 3.2;
@@ -50,6 +64,14 @@ export class CameraRig {
   private goalEl = EST_EL;
   private wantEl = EST_EL;
   private pitch = EST_PITCH;
+  /** Spring velocities: target xyz, dist, yaw, el, pitch. */
+  private readonly vel = new Float32Array(7);
+  /** Smoothed group motion (m/s) for looking ahead along a trail. */
+  private readonly motion = new Vector3();
+  private readonly lastCentre = new Vector3();
+  private haveCentre = false;
+  private ahead = 0;
+  private revealW = 0;
   private catchW = 0;
   private override: ViewName = "auto";
   private readonly pts: Vector3[] = Array.from({ length: MAX_POINTS }, () => new Vector3());
@@ -69,8 +91,8 @@ export class CameraRig {
     this.first = true;
   }
 
-  debug(): { dist: number; catchW: number; n: number; target: number[] } {
-    return { dist: this.dist, catchW: this.catchW, n: this.n, target: this.target.toArray() };
+  debug(): { dist: number; catchW: number; revealW: number; n: number; target: number[]; ahead: number } {
+    return { dist: this.dist, catchW: this.catchW, revealW: this.revealW, n: this.n, target: this.target.toArray(), ahead: this.ahead };
   }
 
   get view(): ViewName {
@@ -147,7 +169,11 @@ export class CameraRig {
     this.wantDist = d;
   }
 
-  update(t: number, dt: number, campfire: boolean, catchAt: CatchAt | null): void {
+  /**
+   * trail: 0..1, how much the family is out on a trail (look ahead along it); reveal: a place being
+   * discovered (the camera eases up and out to show it, unless a catch push-in is running).
+   */
+  update(t: number, dt: number, campfire: boolean, catchAt: CatchAt | null, trail = 0, reveal: Reveal | null = null): void {
     const cam = this.camera;
     const v = this.override;
     let rate = 1.4;
@@ -155,6 +181,32 @@ export class CameraRig {
     this.wantEl = EL;
     const groupMode = v === "auto" || v === "group";
     const est = v === "establish" || (v === "auto" && this.n === 0 && !campfire);
+    // Where the family is heading: smoothed centroid motion.
+    if (this.n > 0) {
+      let cx = 0;
+      let cz = 0;
+      for (let i = 0; i < this.n; i++) {
+        cx += this.pts[i]!.x;
+        cz += this.pts[i]!.z;
+      }
+      cx /= this.n;
+      cz /= this.n;
+      if (this.haveCentre && dt > 0) {
+        const k = damp(1.6, dt);
+        this.motion.x += ((cx - this.lastCentre.x) / dt - this.motion.x) * k;
+        this.motion.z += ((cz - this.lastCentre.z) / dt - this.motion.z) * k;
+      }
+      this.lastCentre.set(cx, 0, cz);
+      this.haveCentre = true;
+      // Look ahead: a point in front of the walkers joins the framing (further out on a trail).
+      const speed = Math.hypot(this.motion.x, this.motion.z);
+      const wantAhead = Math.min(1, Math.max(0, (speed - 0.8) / 2.5)) * (3 + 9 * trail);
+      this.ahead += (wantAhead - this.ahead) * damp(1.2, dt);
+      if (this.ahead > 0.3 && speed > 0.05 && this.n < MAX_POINTS - 1) {
+        const p = this.pts[this.n - 1]!;
+        this.pts[this.n++]!.set(cx + (this.motion.x / speed) * this.ahead, p.y, cz + (this.motion.z / speed) * this.ahead);
+      }
+    } else this.haveCentre = false;
     if (est) {
       this.wantTarget.set(Math.sin(t * 0.045) * 3, 0, -2 + Math.cos(t * 0.03) * 2);
       this.wantDist = 60 + Math.sin(t * 0.05) * 3;
@@ -177,8 +229,8 @@ export class CameraRig {
         case "falls": this.wantTarget.set(0, 3, -R(NORTH, 1) - 3); this.wantDist = 26; this.wantEl = 0.35; break;
         case "lily": this.wantTarget.set(Math.cos(WEST) * R(WEST, 0.85), 0, 0); this.wantDist = 20; this.wantEl = 0.7; this.wantYaw = -0.5; break;
         case "reeds": this.wantTarget.set(R(EAST, 0.9), 0.4, 0); this.wantDist = 20; this.wantEl = 0.6; this.wantYaw = 0.5; break;
-        case "overview": this.wantTarget.set(0, 0, -2); this.wantDist = 70; this.wantEl = 0.75; break;
-        case "top": this.wantTarget.set(0, 0, 0); this.wantDist = 85; this.wantEl = 1.5; break;
+        case "overview": this.wantTarget.set(0, 0, -20); this.wantDist = 150; this.wantEl = 0.9; break;
+        case "top": this.wantTarget.set(0, 0, -20); this.wantDist = 230; this.wantEl = 1.5; break;
         default: break;
       }
     }
@@ -196,35 +248,54 @@ export class CameraRig {
       this.wantDist += (Math.min(this.wantDist, 14) - this.wantDist) * w;
       this.wantEl += (0.4 - this.wantEl) * w;
     }
-    const wantPitch = est ? EST_PITCH : groupMode ? PITCH_UP * (1 - this.catchW * 0.6) : 0;
+    // The discovery reveal: up and out over the new place for ~2.5 s (a catch push-in wins).
+    let rw = 0;
+    if (reveal && groupMode && !campfire && this.catchW < 0.1) {
+      const a = reveal.age;
+      rw = a < 0.8 ? a / 0.8 : a < REVEAL_S - 0.9 ? 1 : Math.max(0, 1 - (a - (REVEAL_S - 0.9)) / 0.9);
+      rw = rw * rw * (3 - 2 * rw);
+    }
+    this.revealW += (rw - this.revealW) * damp(5, dt);
+    if (reveal && this.revealW > 0.001) {
+      const w = this.revealW;
+      this.wantTarget.lerp(this.tmp.set(reveal.x, 0.5, reveal.z), w * 0.55);
+      this.wantDist += (Math.max(this.wantDist * 1.25, 44) - this.wantDist) * w;
+      this.wantEl += (0.62 - this.wantEl) * w;
+    }
+    const wantPitch = est ? EST_PITCH : groupMode ? PITCH_UP * (1 - this.catchW * 0.6) * (1 - this.revealW * 0.5) : 0;
     if (this.first) {
-      // Start on the establishing view; a scene that starts with fishers eases in from it.
+      // Start on an establishing view over wherever the family is; it eases in from there.
       this.first = false;
       this.startT = t;
       const startEst = groupMode || est;
-      const tx = startEst ? 0 : this.wantTarget.x;
-      const tz = startEst ? -2 : this.wantTarget.z;
-      this.target.set(tx, startEst ? 0 : this.wantTarget.y, tz);
+      if (startEst && this.n > 0 && !est) this.target.set(this.wantTarget.x, 0, this.wantTarget.z - 2);
+      else if (startEst) this.target.set(0, 0, -2);
+      else this.target.copy(this.wantTarget);
       this.goalTarget.copy(this.target);
       this.dist = this.goalDist = startEst ? 60 : this.wantDist;
       this.yaw = this.goalYaw = startEst ? 0 : this.wantYaw;
       this.el = this.goalEl = startEst ? EST_EL : this.wantEl;
       this.pitch = startEst ? EST_PITCH : wantPitch;
+      this.vel.fill(0);
     }
-    // Ease-in after the start: the follow rate ramps up over the intro.
+    // Two stages: the goal is low-passed (no sudden goal jumps), then a critically damped spring follows
+    // it (continuous velocity and acceleration: no jerk, no overshoot).
     const intro = Math.min(1, Math.max(0, (t - this.startT) / INTRO_S));
     const r = rate * (0.25 + 0.75 * intro * intro);
-    const k1 = damp(r * 1.6, dt);
-    const k2 = damp(r * 2.2, dt);
+    const k1 = damp(r * 2.2, dt);
     this.goalTarget.lerp(this.wantTarget, k1);
     this.goalDist += (this.wantDist - this.goalDist) * k1;
     this.goalYaw += (this.wantYaw - this.goalYaw) * k1;
     this.goalEl += (this.wantEl - this.goalEl) * k1;
-    this.target.lerp(this.goalTarget, k2);
-    this.dist += (this.goalDist - this.dist) * k2;
-    this.yaw += (this.goalYaw - this.yaw) * k2;
-    this.el += (this.goalEl - this.el) * k2;
-    this.pitch += (wantPitch - this.pitch) * k2;
+    const om = r * 2.4;
+    const V = this.vel;
+    spring(this.target.x, V[0]!, this.goalTarget.x, om, dt, S); this.target.x = S.x; V[0] = S.v;
+    spring(this.target.y, V[1]!, this.goalTarget.y, om, dt, S); this.target.y = S.x; V[1] = S.v;
+    spring(this.target.z, V[2]!, this.goalTarget.z, om, dt, S); this.target.z = S.x; V[2] = S.v;
+    spring(this.dist, V[3]!, this.goalDist, om * 0.9, dt, S); this.dist = S.x; V[3] = S.v;
+    spring(this.yaw, V[4]!, this.goalYaw, om, dt, S); this.yaw = S.x; V[4] = S.v;
+    spring(this.el, V[5]!, this.goalEl, om, dt, S); this.el = S.x; V[5] = S.v;
+    spring(this.pitch, V[6]!, wantPitch, om * 1.2, dt, S); this.pitch = S.x; V[6] = S.v;
     this.pose(cam, this.target, this.dist, this.yaw, this.el, this.pitch);
   }
 }

@@ -21,6 +21,14 @@ mkdirSync(out, { recursive: true });
 
 // scenario, phase (null = scenario default), wait for the hero moment?
 const SHOTS = [
+  ["moonwell", null, false],
+  ["mistmarsh", null, false],
+  ["hollow", null, false],
+  ["pools", null, false],
+  ["tarn", null, false],
+  ["trail", null, true],
+  ["discovery", null, true],
+  ["night-tarn", null, true],
   ["morning", null, false],
   ["morning", 0.97, false],
   ["four-reel", null, true],
@@ -29,9 +37,7 @@ const SHOTS = [
   ["rod-upgrade", null, true],
   ["campfire", null, false],
   ["empty", 0.1, false],
-  ["empty", 0.42, false],
   ["empty", 0.65, false],
-  ["empty", 0.93, false],
 ];
 const only = typeof args.only === "string" ? args.only.split(",") : null;
 const shots = SHOTS.filter(([s]) => !only || only.includes(s)).slice(0, args.quick ? 4 : undefined);
