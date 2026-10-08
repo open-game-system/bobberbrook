@@ -76,6 +76,10 @@ export class CameraRig {
   private override: ViewName = "auto";
   /** The closest the group framing comes (further out when framing one place of a split family, so the place reads). */
   minDist = MIN_DIST;
+  /** Follow-rate multiplier (a ride needs a camera that keeps up). */
+  rateK = 1;
+  /** On a ride: the vehicle's heading (radians, atan2(z, x)) and kind (1 boat, 2 zeppelin), for a side-on travelling shot. */
+  ride: { heading: number; kind: number } | null = null;
   /** The place the establishing view looks over (where the family last was; Moonwell at first). */
   readonly anchor = new Vector3();
   private readonly pts: Vector3[] = Array.from({ length: MAX_POINTS }, () => new Vector3());
@@ -224,6 +228,21 @@ export class CameraRig {
       this.wantEl = 0.36;
       this.wantYaw = Math.PI + 0.1;
       rate = 1.1;
+    } else if (groupMode && this.ride) {
+      // The travelling shot: from the side and a little behind, so the vehicle sails across the frame.
+      this.fitGroup();
+      const h = this.ride.heading;
+      let px = -Math.sin(h);
+      let pz = Math.cos(h);
+      if (pz < 0) {
+        px = -px;
+        pz = -pz;
+      }
+      const ox = px * 0.85 - Math.cos(h) * 0.5;
+      const oz = pz * 0.85 - Math.sin(h) * 0.5;
+      this.wantYaw = Math.atan2(ox, oz);
+      this.wantEl = this.ride.kind === 2 ? 0.22 : 0.3;
+      rate = 1.6;
     } else if (groupMode) {
       this.fitGroup();
     } else if (v === "wide" && this.n > 0) {
@@ -292,7 +311,7 @@ export class CameraRig {
     // Two stages: the goal is low-passed (no sudden goal jumps), then a critically damped spring follows
     // it (continuous velocity and acceleration: no jerk, no overshoot).
     const intro = Math.min(1, Math.max(0, (t - this.startT) / INTRO_S));
-    const r = rate * (0.25 + 0.75 * intro * intro);
+    const r = rate * this.rateK * (0.25 + 0.75 * intro * intro);
     const k1 = damp(r * 2.2, dt);
     this.goalTarget.lerp(this.wantTarget, k1);
     this.goalDist += (this.wantDist - this.goalDist) * k1;

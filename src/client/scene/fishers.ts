@@ -247,6 +247,7 @@ class FisherView {
     fx: Fx,
     shadows: FishShadows,
     campSeat: { x: number; z: number; facing: number } | undefined,
+    ride: { x: number; y: number; z: number; facing: number } | null = null,
   ): void {
     if (!f) {
       if (this.present) {
@@ -265,7 +266,11 @@ class FisherView {
     let tx: number;
     let tz: number;
     let tFacing: number;
-    if (lake.campfire && campSeat) {
+    if (ride) {
+      tx = ride.x;
+      tz = ride.z;
+      tFacing = ride.facing;
+    } else if (lake.campfire && campSeat) {
       tx = campSeat.x;
       tz = campSeat.z;
       tFacing = campSeat.facing;
@@ -291,15 +296,15 @@ class FisherView {
     const px = this.x;
     const pz = this.z;
     const far = Math.hypot(tx - this.x, tz - this.z) > 9;
-    const k = far ? 1 : damp(lake.campfire ? 3 : 9, dt);
+    const k = far || ride ? 1 : damp(lake.campfire ? 3 : 9, dt);
     this.x += (tx - this.x) * k;
     this.z += (tz - this.z) * k;
     const sp = dt > 0 ? Math.hypot(this.x - px, this.z - pz) / dt : 0;
     this.speed += (sp - this.speed) * damp(10, dt);
     const moving = this.speed > 0.4;
-    if (moving && !lake.campfire) tFacing = Math.atan2(this.z - pz, this.x - px);
+    if (moving && !lake.campfire && !ride) tFacing = Math.atan2(this.z - pz, this.x - px);
     this.facing = angleLerp(this.facing, tFacing, damp(10, dt));
-    this.y = groundY(this.x, this.z);
+    this.y = ride ? ride.y : groundY(this.x, this.z);
     const root = rig.root;
     root.position.set(this.x, this.y, this.z);
     root.rotation.y = Math.PI / 2 - this.facing;
@@ -705,6 +710,10 @@ export class FisherViews {
     for (const v of this.views) v.hideAll();
   }
 
+  /** Where a riding seat stands on its boat or zeppelin (set by the scene). */
+  rideOf: ((seat: number, out: { x: number; y: number; z: number; facing: number }) => boolean) | null = null;
+  private readonly ridePose = { x: 0, y: 0, z: 0, facing: 0 };
+
   frame(lake: Lake | null, sn: number, t: number, dt: number, camera: Camera, campSeats: { x: number; z: number; facing: number }[]): void {
     for (let i = 0; i < 4; i++) this.bySeat[i] = undefined;
     if (lake) for (const f of lake.fishers) if (f.seat >= 0 && f.seat < 4) this.bySeat[f.seat] = f;
@@ -721,7 +730,8 @@ export class FisherViews {
     for (let i = 0; i < 4; i++) {
       const f = this.bySeat[i];
       const seat = f ? campSeats[ci++ % campSeats.length] : undefined;
-      if (lake) this.views[i]!.frame(f, lake, sn, t, dt, camera, this.fx, this.shadows, seat);
+      const riding = f && this.rideOf ? this.rideOf(i, this.ridePose) : false;
+      if (lake) this.views[i]!.frame(f, lake, sn, t, dt, camera, this.fx, this.shadows, seat, riding ? this.ridePose : null);
     }
     this.spreadCards(camera, dt);
     this.spreadTags(camera, dt);

@@ -48,6 +48,7 @@ import { DoubleSide } from "three";
 import type { Place } from "../../game/regions";
 import { createJobs } from "./stream";
 import { buildFogOfWar } from "./fow";
+import { buildVehicles } from "./vehicles";
 import { activeWorld, placesWithin, setWorld, trailsWithin } from "./worldQuery";
 
 export type { LakeScene, SceneQuality } from "./types";
@@ -183,6 +184,9 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   scene.add(mist.mesh);
   const fow = buildFogOfWar(jobs);
   scene.add(fow.mesh);
+  const vehicles = buildVehicles(full, painted, paintedDouble);
+  scene.add(vehicles.group);
+  const rideFocus = [new Vector3(), new Vector3(), new Vector3()];
   /** Each nearby place's veil (1 = not found yet), eased. */
   const veil = new Map<string, number>();
   const veilOf = (id: string) => veil.get(id) ?? 1;
@@ -211,6 +215,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     glowRod: new MeshBasicMaterial({ vertexColors: true, color: new Color(1.6, 1.8, 2.4) }),
   };
   const fishers = new FisherViews(rigMats, cardGeo, textures, fx, shadows);
+  fishers.rideOf = (seat, out) => vehicles.rideSeat(seat, out);
   scene.add(fishers.group);
   const swirls = new SwirlViews(water, shadows, fx);
   scene.add(swirls.group);
@@ -307,6 +312,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       mood.reset();
       veil.clear();
       fow.reset();
+      vehicles.reset();
       nearX = 1e9;
     }
     time.value = t;
@@ -345,6 +351,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     water.update(tod, t);
     rays.update(tod, t);
     props.update(tod, t, lake?.campfire ? 1 : 0);
+    vehicles.update(lake, sn, t, dt, tod, rig.focus.x, rig.focus.z);
     shadows.begin();
     swirls.frame(lake, sn, t, dt, tod.glow);
     fishers.frame(lake, sn, t, dt, camera, props.campSeats);
@@ -363,13 +370,18 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     });
     const sp = splitFocus.update(members, sn / 1000);
     framed = sp.framed;
-    rig.minDist += ((sp.split ? 23 : 17) - rig.minDist) * Math.min(1, dt * 2);
+    const riding = vehicles.riding();
+    rig.rateK += ((riding ? 3.2 : 1) - rig.rateK) * Math.min(1, dt * 2);
+    rig.ride = riding ? { heading: vehicles.heading(), kind: riding } : null;
+    rig.minDist += ((riding === 2 ? 34 : riding === 1 ? 26 : sp.split ? 23 : 17) - rig.minDist) * Math.min(1, dt * (riding ? 0.8 : 2));
     rig.beginFocus();
     fishers.forEachSeat((seat, x, y, z, _c, bob) => {
       if (!framed.has(seat)) return;
       rig.addFocus(x, y, z);
       if (bob) rig.addFocus(bob.x, Math.max(0, bob.y), bob.z);
     });
+    const nf = vehicles.rideFocus(rideFocus);
+    for (let i = 0; i < nf; i++) rig.addFocus(rideFocus[i]!.x, rideFocus[i]!.y, rideFocus[i]!.z);
     const cf = fishers.catchFocus(t, catchBuf);
     // Out on a trail (between places), the camera looks further ahead.
     let n = 0;
@@ -377,7 +389,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     let gz = 0;
     fishers.forEachSeat((seat, x, _y, z) => { if (framed.has(seat)) { gx += x; gz += z; n++; } });
     const here = n > 0 ? activeWorld().areaAt({ x: gx / n, z: gz / n }) : null;
-    const onTrail = n > 0 && here === null ? 1 : 0;
+    const onTrail = n > 0 && here === null && !riding ? 1 : 0;
     if (here) rig.anchor.set(here.center.x, 0, here.center.z);
     trailW += (onTrail - trailW) * Math.min(1, dt * 1.5);
     const reveal = revealAge >= 0 && revealAge < 3.5 ? { x: revealArea.center.x, z: revealArea.center.z, age: revealAge } : null;
@@ -438,6 +450,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
 
   // ---- shader prewarm: everything visible, compiled against the target we really draw into ----
   fishers.showAllForPrewarm();
+  vehicles.prewarm(true);
   swirls.showAllForPrewarm();
   splashes.showAllForPrewarm();
   rig.update(0, 0, false, null);
@@ -457,6 +470,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   else renderer.render(scene, camera);
   if (post) post.render();
   fishers.hideAll();
+  vehicles.prewarm(false);
   frame(performance.now(), 0);
 
   const percentile = (p: number) => {
@@ -489,7 +503,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       rig.setView(name);
       return name;
     },
-    debug: () => ({ split: { framed: [...framed], markers: markers.debug() }, fishers: fishers.debug(), camera: camera.position.toArray(), rig: rig.debug(), trees: forest.count, chunks: ground.count(), jobs: jobs.pending(), world: activeWorld().seed, fow: { on: fow.mesh.visible, ...fow.stats(), map: Array.from({ length: 11 }, (_, j) => Array.from({ length: 11 }, (_, i) => fow.veilAt(rig.focus.x + (i - 5) * 24, rig.focus.z + (j - 5) * 24)).join('')).join('/'), ahead: [fow.veilAt(rig.focus.x, rig.focus.z), fow.veilAt(rig.focus.x + 100, rig.focus.z), fow.veilAt(rig.focus.x - 100, rig.focus.z - 100)] }, near: nearPlaces.map((p) => `${p.id}:${p.biome}`), veil: Object.fromEntries(veil), mood: mood.debug() }),
+    debug: () => ({ split: { framed: [...framed], markers: markers.debug() }, fishers: fishers.debug(), camera: camera.position.toArray(), rig: rig.debug(), trees: forest.count, chunks: ground.count(), jobs: jobs.pending(), world: activeWorld().seed, ride: (() => { const o = { x: 0, y: 0, z: 0, facing: 0 }; const ok = vehicles.rideSeat(0, o); const n = vehicles.rideFocus(rideFocus); return { kind: vehicles.riding(), ok, seat0: [o.x, o.y, o.z].map(Math.round), focus: rideFocus.slice(0, n).map((v) => v.toArray().map(Math.round)) }; })(), fow: { on: fow.mesh.visible, ...fow.stats(), map: Array.from({ length: 11 }, (_, j) => Array.from({ length: 11 }, (_, i) => fow.veilAt(rig.focus.x + (i - 5) * 24, rig.focus.z + (j - 5) * 24)).join('')).join('/'), ahead: [fow.veilAt(rig.focus.x, rig.focus.z), fow.veilAt(rig.focus.x + 100, rig.focus.z), fow.veilAt(rig.focus.x - 100, rig.focus.z - 100)] }, near: nearPlaces.map((p) => `${p.id}:${p.biome}`), veil: Object.fromEntries(veil), mood: mood.debug() }),
     pick(x, y) {
       const rc = new Raycaster();
       rc.setFromCamera(new Vector2(x * 2 - 1, 1 - y * 2), camera);
@@ -571,6 +585,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       trails.dispose();
       areas.dispose();
       mist.dispose();
+      vehicles.dispose();
       fow.dispose();
       markers.dispose();
       splashes.dispose();

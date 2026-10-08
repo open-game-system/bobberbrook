@@ -151,6 +151,7 @@ const LAZY: Record<string, () => Scenario> = {
   "far-place": () => atPlace(findPlace((p) => p.ring === 4), 0.32),
   "boat-ride": () => atPlatform(findPlatform("boat"), 0.3, (l) => l.ride !== null && rideK(l) > 0.35, (l, now, s) => now - s > 2500 && l.ride !== null),
   "zeppelin-ride": () => atPlatform(findPlatform("zeppelin"), 0.36, (l) => l.ride !== null && rideK(l) > 0.4, (l, now, s) => now - s > 2500 && l.ride !== null),
+  tower: () => atPlatform(findPlatform("zeppelin"), 0.3, (l) => l.boarding !== null, (l, now, s) => now - s > 1500 && l.boarding !== null),
   boarding: () => atPlatform(findPlatform("boat"), 0.4, (l) => l.boarding !== null, (l, now, s) => now - s > 1200 && l.boarding !== null),
   // The edge of what the family has explored: up the trail from Moonwell Lake toward the pools (not found yet).
   fog: () => ({
