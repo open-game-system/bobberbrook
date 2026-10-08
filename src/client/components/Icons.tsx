@@ -22,13 +22,14 @@ export function BobberIcon() {
   );
 }
 
+/** "Go to the water": an arrow walking into waves (no footprints: two dots and a curve read as a face). */
 export function FeetIcon() {
   return (
     <svg viewBox="0 0 100 100" aria-hidden="true">
-      <ellipse cx="36" cy="62" rx="10" ry="16" fill="rgba(255,255,255,.8)" />
-      <ellipse cx="62" cy="38" rx="10" ry="16" fill="rgba(255,255,255,.8)" />
-      <path d="M50 92 q30 -6 40 -26" stroke="#7fd8ff" strokeWidth="6" fill="none" strokeLinecap="round" />
-      <path d="M62 94 q22 -4 30 -18" stroke="#7fd8ff" strokeWidth="5" fill="none" strokeLinecap="round" opacity=".7" />
+      <path d="M12 70 q10 -10 20 0 t20 0 t20 0 t20 0" stroke="#7fd8ff" strokeWidth="7" fill="none" strokeLinecap="round" />
+      <path d="M12 86 q10 -10 20 0 t20 0 t20 0 t20 0" stroke="#4fb8e8" strokeWidth="7" fill="none" strokeLinecap="round" />
+      <path d="M50 12 v34" stroke="rgba(255,255,255,.9)" strokeWidth="10" strokeLinecap="round" />
+      <path d="M32 34 L50 54 L68 34" stroke="rgba(255,255,255,.9)" strokeWidth="10" fill="none" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
