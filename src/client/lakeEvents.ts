@@ -1,4 +1,4 @@
-import type { Lake } from "../game/lake";
+import type { Fisher, Lake } from "../game/lake";
 
 /** Moments worth a sound, a voice line or an effect, found by comparing two lake states. */
 export type LakeEvent =
@@ -14,24 +14,32 @@ export type LakeEvent =
 
 export function lakeEvents(prev: Lake | null, next: Lake): LakeEvent[] {
   if (!prev) return [];
-  const out: LakeEvent[] = [];
-  for (const f of next.fishers) {
-    const was = prev.fishers.find((p) => p.seat === f.seat);
-    if (!was) {
-      out.push({ kind: "joined", seat: f.seat });
-      continue;
-    }
-    if (f.mode === "cast" && was.mode !== "cast") out.push({ kind: "cast", seat: f.seat });
-    if (f.mode === "bite" && was.mode !== "bite") out.push({ kind: "bite", seat: f.seat });
-    if (f.mode === "reel" && was.mode !== "reel") out.push({ kind: "hooked", seat: f.seat });
-    if (f.missSeq > was.missSeq) out.push({ kind: "missed", seat: f.seat });
-    if (f.catch && f.catch.seq !== was.catch?.seq) {
-      out.push({ kind: "caught", seat: f.seat, fishId: f.catch.fishId, isNew: f.catch.isNew, golden: f.catch.golden, shells: f.catch.shells });
-    }
-  }
+  const out = next.fishers.flatMap((f) => fisherEvents(prev.fishers.find((p) => p.seat === f.seat), f));
   if (next.upgradeSeq > prev.upgradeSeq) out.push({ kind: "upgrade", tier: next.rodTier });
-  const goldenBefore = new Set(prev.swirls.filter((s) => s.golden).map((s) => s.id));
-  if (next.swirls.some((s) => s.golden && !goldenBefore.has(s.id))) out.push({ kind: "golden-swirl" });
+  if (newGoldenSwirl(prev, next)) out.push({ kind: "golden-swirl" });
   if (next.campfire !== prev.campfire) out.push({ kind: "campfire", on: next.campfire });
   return out;
+}
+
+/** Entering these modes is a moment of its own. */
+const ENTERED = [
+  ["cast", "cast"],
+  ["bite", "bite"],
+  ["reel", "hooked"],
+] as const;
+
+/** One fisher's moments between two states (`was` is undefined for a fisher who just joined). */
+export function fisherEvents(was: Fisher | undefined, f: Fisher): LakeEvent[] {
+  if (!was) return [{ kind: "joined", seat: f.seat }];
+  const out: LakeEvent[] = ENTERED.filter(([mode]) => f.mode === mode && was.mode !== mode).map(([, kind]) => ({ kind, seat: f.seat }));
+  if (f.missSeq > was.missSeq) out.push({ kind: "missed", seat: f.seat });
+  if (f.catch && f.catch.seq !== was.catch?.seq) {
+    out.push({ kind: "caught", seat: f.seat, fishId: f.catch.fishId, isNew: f.catch.isNew, golden: f.catch.golden, shells: f.catch.shells });
+  }
+  return out;
+}
+
+function newGoldenSwirl(prev: Lake, next: Lake): boolean {
+  const goldenBefore = new Set(prev.swirls.filter((s) => s.golden).map((s) => s.id));
+  return next.swirls.some((s) => s.golden && !goldenBefore.has(s.id));
 }

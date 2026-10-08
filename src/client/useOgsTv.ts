@@ -4,7 +4,7 @@ import { useOgsSession } from "@open-game-system/profile-kit/react";
 import { RoomContext } from "../room.context";
 import { isFramed } from "./framed";
 import { tvJoinUi } from "./joinMode";
-import { sittingReport } from "./sitting";
+import { ogsTvReports } from "./ogsTv";
 
 const FRAMED = isFramed(window);
 
@@ -18,18 +18,15 @@ export function useOgsTv(): "ticket" | "couch" | "pending" {
   const send = RoomContext.useSend();
   const roomCode = RoomContext.useSelector((s) => s.public.roomCode);
   const lake = RoomContext.useSelector((s) => s.public.lake);
-  const onOgsTv = session !== null && session !== undefined;
-  const token = onOgsTv ? session.token : "";
+  const tv = ogsTvReports({ session, roomCode, lake, origin: location.origin });
   useEffect(() => {
-    if (onOgsTv) reportOgsRoom(roomCode);
-  }, [onOgsTv, roomCode]);
+    if (tv.onOgsTv) reportOgsRoom(roomCode);
+  }, [tv.onOgsTv, roomCode]);
   useEffect(() => {
-    if (token) send({ type: "COUCH", ogsToken: token });
-  }, [token, send]);
-  const report = onOgsTv ? sittingReport({ roomCode, lake, resumeUrl: `${location.origin}/join/${roomCode}` }) : null;
-  const reportKey = report ? JSON.stringify({ ...report, instanceId: session?.instanceId }) : "";
+    if (tv.token) send({ type: "COUCH", ogsToken: tv.token });
+  }, [tv.token, send]);
   useEffect(() => {
-    if (report && session) reportOgsSitting({ ...report, instanceId: session.instanceId });
-  }, [reportKey]);
+    if (tv.sitting) reportOgsSitting(tv.sitting);
+  }, [tv.sittingKey]);
   return tvJoinUi({ framed: FRAMED, session });
 }

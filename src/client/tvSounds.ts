@@ -1,55 +1,86 @@
 import { fishById } from "../game/fish";
-import type { Lake } from "../game/lake";
+import type { Fisher, Lake } from "../game/lake";
 import { thrashingAt } from "../game/reel";
 import type { LakeEvent } from "./lakeEvents";
 import { sfx } from "./audio/sfx";
-import { voice } from "./audio/voice";
+import { voice, type Line } from "./audio/voice";
+
+export type SfxId = keyof typeof sfx;
+type SfxOpts = { pan?: number; gain?: number; at?: number };
+
+/** One sound to play: a synth sound (panned to its fisher), a fish's name, or a voice line. */
+export type Cue =
+  | { kind: "sfx"; id: SfxId; opts: SfxOpts }
+  | { kind: "fish"; fishId: string; isNew: boolean }
+  | { kind: "line"; line: Line };
+
+type Pan = (seat: number) => number;
+type EventOf<K extends LakeEvent["kind"]> = Extract<LakeEvent, { kind: K }>;
+type CueTable = { [K in LakeEvent["kind"]]: (e: EventOf<K>, pan: Pan) => Cue[] };
+
+const caughtCues = (e: EventOf<"caught">, pan: Pan): Cue[] => {
+  const p = pan(e.seat);
+  const cues: Cue[] = [{ kind: "sfx", id: fishById(e.fishId)?.rarity === "junk" ? "junk" : "catch", opts: { pan: p } }];
+  if (e.isNew) cues.push({ kind: "sfx", id: "newFish", opts: { pan: p * 0.5 } });
+  cues.push({ kind: "fish", fishId: e.fishId, isNew: e.isNew });
+  return cues;
+};
+
+/** The world's sounds for each moment on the lake. */
+const CUES: CueTable = {
+  cast: (e, pan) => [
+    { kind: "sfx", id: "cast", opts: { pan: pan(e.seat), gain: 0.5 } },
+    { kind: "sfx", id: "plop", opts: { pan: pan(e.seat), at: 0.85 } },
+  ],
+  bite: (e, pan) => [{ kind: "sfx", id: "bite", opts: { pan: pan(e.seat) } }],
+  missed: (e, pan) => [{ kind: "sfx", id: "missed", opts: { pan: pan(e.seat) } }],
+  caught: caughtCues,
+  upgrade: () => [{ kind: "sfx", id: "upgrade", opts: {} }, { kind: "line", line: "upgrade" }],
+  "golden-swirl": () => [{ kind: "sfx", id: "golden", opts: {} }, { kind: "line", line: "golden" }],
+  campfire: (e) => (e.on ? [{ kind: "line", line: "campfire" }] : []),
+  joined: () => [],
+  hooked: () => [],
+};
+
+function cueOf<K extends LakeEvent["kind"]>(e: EventOf<K>, pan: Pan): Cue[] {
+  const cues: CueTable[K] = CUES[e.kind];
+  return cues(e, pan);
+}
+
+/** The sounds for some moments, in order. */
+export function cuesFor(events: LakeEvent[], pan: Pan): Cue[] {
+  return events.flatMap((e) => cueOf(e, pan));
+}
 
 /** Pans a fisher's sounds to where they stand on the TV (west left, east right). */
-const panOf = (lake: Lake, seat: number) => {
-  const f = lake.fishers.find((x) => x.seat === seat);
-  return f ? Math.max(-0.8, Math.min(0.8, f.pos.x / 26)) : 0;
-};
+export function panFor(lake: Lake): Pan {
+  return (seat) => {
+    const f = lake.fishers.find((x) => x.seat === seat);
+    return f ? Math.max(-0.8, Math.min(0.8, f.pos.x / 26)) : 0;
+  };
+}
+
+function play(cue: Cue): void {
+  if (cue.kind === "sfx") sfx[cue.id](cue.opts);
+  else if (cue.kind === "fish") voice.fish(cue.fishId, cue.isNew);
+  else voice.line(cue.line);
+}
 
 /** The world's sounds for each moment on the lake (the TV is the only screen that plays them). */
 export function playLakeEvents(lake: Lake, events: LakeEvent[]): void {
-  for (const e of events) {
-    switch (e.kind) {
-      case "cast":
-        sfx.cast({ pan: panOf(lake, e.seat), gain: 0.5 });
-        sfx.plop({ pan: panOf(lake, e.seat), at: 0.85 });
-        break;
-      case "bite":
-        sfx.bite({ pan: panOf(lake, e.seat) });
-        break;
-      case "missed":
-        sfx.missed({ pan: panOf(lake, e.seat) });
-        break;
-      case "caught": {
-        const def = fishById(e.fishId);
-        const pan = panOf(lake, e.seat);
-        if (def?.rarity === "junk") sfx.junk({ pan });
-        else sfx.catch({ pan });
-        if (e.isNew) sfx.newFish({ pan: pan * 0.5 });
-        voice.fish(e.fishId, e.isNew);
-        break;
-      }
-      case "upgrade":
-        sfx.upgrade();
-        voice.line("upgrade");
-        break;
-      case "golden-swirl":
-        sfx.golden();
-        voice.line("golden");
-        break;
-      case "campfire":
-        if (e.on) voice.line("campfire");
-        break;
-      case "joined":
-      case "hooked":
-        break;
-    }
-  }
+  for (const cue of cuesFor(events, panFor(lake))) play(cue);
+}
+
+/** Nibble times of a waiting line that are sounding now and haven't been heard yet. */
+export function nibblesDue(f: Pick<Fisher, "mode" | "nibbles">, now: number, heard: ReadonlySet<number>): number[] {
+  return f.mode === "wait" ? f.nibbles.filter((t) => now >= t && now < t + 300 && !heard.has(t)) : [];
+}
+
+/** Whether this fisher's hooked fish is thrashing now. */
+export function thrashingNow(f: Pick<Fisher, "mode" | "reel">, now: number): boolean {
+  if (f.mode !== "reel" || !f.reel) return false;
+  const def = fishById(f.reel.fishId);
+  return def !== undefined && thrashingAt(def.fight, f.reel, now);
 }
 
 /** Continuous sounds: nibbles and thrashes as they happen (called every animation tick). */
@@ -57,16 +88,14 @@ export function createLiveSounds() {
   const nibbled = new Set<number>();
   const thrashing = new Map<number, boolean>();
   return (lake: Lake, now: number) => {
+    const pan = panFor(lake);
     for (const f of lake.fishers) {
-      if (f.mode === "wait")
-        for (const t of f.nibbles)
-          if (now >= t && now < t + 300 && !nibbled.has(t)) {
-            nibbled.add(t);
-            sfx.nibble({ pan: panOf(lake, f.seat) });
-          }
-      const def = f.reel ? fishById(f.reel.fishId) : undefined;
-      const thrash = f.mode === "reel" && f.reel !== null && def !== undefined && thrashingAt(def.fight, f.reel, now);
-      if (thrash && !thrashing.get(f.seat)) sfx.thrash({ pan: panOf(lake, f.seat) });
+      for (const t of nibblesDue(f, now, nibbled)) {
+        nibbled.add(t);
+        sfx.nibble({ pan: pan(f.seat) });
+      }
+      const thrash = thrashingNow(f, now);
+      if (thrash && !thrashing.get(f.seat)) sfx.thrash({ pan: pan(f.seat) });
       thrashing.set(f.seat, thrash);
     }
     if (nibbled.size > 200) nibbled.clear();
