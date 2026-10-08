@@ -23,7 +23,7 @@ import { merge, paint, prep } from "./geo";
 import { SEAT_HEX } from "./types";
 
 /** World scale of a fisher (model is built ~1 unit tall). */
-export const FISHER_SCALE = 1.75;
+export const FISHER_SCALE = 2.0;
 export const ROD_SEGMENTS = 4;
 const ROD_LEN = 1.75;
 

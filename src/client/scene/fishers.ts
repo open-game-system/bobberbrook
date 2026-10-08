@@ -142,7 +142,7 @@ class FisherView {
   ) {
     this.rig = buildFisher(seat, COLORS[seat]!, mats);
     this.bobber = new Mesh(bobberGeo, bobberMat);
-    this.bobber.scale.setScalar(1.6);
+    this.bobber.scale.setScalar(1.9);
     this.bobber.castShadow = true;
     this.linePos = new Float32Array((LINE_SEGS + 1) * 2 * 3);
     this.lineGeo = new BufferGeometry();
@@ -454,10 +454,10 @@ class FisherView {
     const biting = mode === "bite";
     rig.markerMat.opacity = biting ? 0.6 + 0.4 * Math.sin(t * 16) : 0.55 + 0.1 * Math.sin(t * 2);
     rig.marker.scale.setScalar(biting ? 1.25 : 1);
-    rig.tag.position.set(this.x, this.y + (lake.campfire ? 2.4 : 2.75) * Math.min(1, this.appear * 1.4), this.z);
+    rig.tag.position.set(this.x, this.y + (lake.campfire ? 2.7 : 3.15) * Math.min(1, this.appear * 1.4), this.z);
     const tagK = this.card.group.visible ? 0 : 1;
     rig.tag.visible = tagK > 0;
-    rig.tag.scale.set(0.15, 0.033, 1);
+    rig.tag.scale.set(0.17, 0.0374, 1);
 
     // ---- bobber + line ----
     this.bobberVisible = showBobber;
@@ -485,7 +485,7 @@ class FisherView {
     const g = this.card.group;
     g.visible = true;
     const s = Math.min(1, age / LEAP_S);
-    this.hold.set(this.x, this.y + 4.3, this.z);
+    this.hold.set(this.x, this.y + 4.8, this.z);
     const e = s * s * (3 - 2 * s);
     const gx = this.catchFromX + (this.hold.x - this.catchFromX) * e;
     const gz = this.catchFromZ + (this.hold.z - this.catchFromZ) * e;
@@ -616,6 +616,10 @@ export class FisherViews {
       fn(v.x, v.y, v.z);
       if (v.bobberVisible) fn(v.bob.x, Math.max(0, v.bob.y), v.bob.z);
     }
+  }
+
+  forEachFisher(fn: (x: number, y: number, z: number) => void): void {
+    for (const v of this.views) if (v.present) fn(v.x, v.y, v.z);
   }
 
   /** The one catch happening now (null when none, or more than one at once). */

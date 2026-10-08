@@ -9,7 +9,9 @@ export function isView(v: string): v is ViewName {
   return (VIEWS as readonly string[]).includes(v);
 }
 
-const EL = (40 * Math.PI) / 180;
+const EL = (28 * Math.PI) / 180;
+/** Pitch the view up a little after aiming: the lake sits low in the frame, hills and sky above. */
+const PITCH_UP = 0.15;
 
 /** The group camera: from the south, high three-quarter, eased, yaw roughly fixed. */
 export class CameraRig {
@@ -58,6 +60,11 @@ export class CameraRig {
     this.max.z = Math.max(this.max.z, z);
   }
 
+  /** The point the camera is about (for occlusion fading). */
+  get focus(): Vector3 {
+    return this.target;
+  }
+
   update(t: number, dt: number, campfire: boolean, catchAt: { x: number; y: number; z: number; age: number } | null): void {
     const cam = this.camera;
     const v = this.override;
@@ -72,10 +79,10 @@ export class CameraRig {
       this.wantEl = EL - 0.06 + Math.sin(t * 0.04) * 0.04;
       rate = 0.8;
     } else if (v === "campfire" || (v === "auto" && campfire)) {
-      this.wantTarget.set(CAMPFIRE.x - 0.5, 0.6, CAMPFIRE.z - 0.5);
+      this.wantTarget.set(CAMPFIRE.x, 0.9, CAMPFIRE.z + 0.6);
       this.wantDist = 17;
-      this.wantEl = 0.6;
-      this.wantYaw = -0.25;
+      this.wantEl = 0.4;
+      this.wantYaw = Math.PI + 0.25;
       rate = 1.2;
     } else if (groupMode) {
       const cx = (this.min.x + this.max.x) / 2;
@@ -112,8 +119,8 @@ export class CameraRig {
     if (catchAt && this.catchW > 0.001) {
       const w = this.catchW * 0.85;
       this.wantTarget.lerp(this.min.set(catchAt.x, catchAt.y, catchAt.z), w);
-      this.wantDist += (Math.min(this.wantDist, 17) - this.wantDist) * w;
-      this.wantEl += (0.62 - this.wantEl) * w;
+      this.wantDist += (Math.min(this.wantDist, 21) - this.wantDist) * w;
+      this.wantEl += (0.6 - this.wantEl) * w;
     }
     const k = this.first ? 1 : damp(rate, dt);
     this.first = false;
@@ -128,5 +135,6 @@ export class CameraRig {
       this.target.z + Math.cos(this.yaw) * ce * this.dist,
     );
     cam.lookAt(this.target);
+    if (groupMode || v === "establish") cam.rotateX(PITCH_UP * (1 - this.catchW));
   }
 }

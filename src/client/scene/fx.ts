@@ -54,7 +54,7 @@ export class Fx {
     }
     for (let i = 0; i < 18; i++) {
       const a = this.r() * Math.PI * 2;
-      this.water.emit({ x: x + Math.cos(a) * 0.5, y: 0.1, z: z + Math.sin(a) * 0.5, vx: Math.cos(a) * 0.6, vy: 0.4, vz: Math.sin(a) * 0.6, life: 1.2, size: 0.7, r: 0.92, g: 0.98, b: 1, alpha: 0.55, grow: 1.5, drag: 2 });
+      this.water.emit({ x: x + Math.cos(a) * 0.5, y: 0.1, z: z + Math.sin(a) * 0.5, vx: Math.cos(a) * 0.6, vy: 0.4, vz: Math.sin(a) * 0.6, life: 1.0, size: 0.45, r: 0.92, g: 0.98, b: 1, alpha: 0.4, grow: 1.2, drag: 2 });
     }
     this.sparkle(x, 0.6, z, 10, 1, 1, 0.9, 1.6);
   }

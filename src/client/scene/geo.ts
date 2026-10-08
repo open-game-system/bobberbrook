@@ -98,3 +98,59 @@ export function merge(parts: BufferGeometry[]): BufferGeometry {
   if (!m) throw new Error("merge failed: mismatched attributes");
   return m;
 }
+
+export type OccluderUniforms = { uCam: { value: Vector3 }; uFocus: { value: Vector3[] } };
+export const MAX_FOCUS = 5;
+
+/**
+ * Painted material for trees and bushes that dissolve (dithered) where they stand between the camera
+ * and the action, so a canopy never hides a fisher.
+ */
+export function occluderMaterial(u: OccluderUniforms): MeshLambertMaterial {
+  const m = new MeshLambertMaterial({ vertexColors: true });
+  m.onBeforeCompile = (shader) => {
+    shader.uniforms.uCam = u.uCam;
+    shader.uniforms.uFocus = u.uFocus;
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", "#include <common>\nvarying vec3 vOccW;")
+      .replace(
+        "#include <project_vertex>",
+        `#include <project_vertex>
+  vec4 occW = vec4(transformed, 1.0);
+  #ifdef USE_INSTANCING
+  occW = instanceMatrix * occW;
+  #endif
+  vOccW = (modelMatrix * occW).xyz;`,
+      );
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        "#include <common>",
+        `#include <common>
+varying vec3 vOccW;
+uniform vec3 uCam;
+uniform vec3 uFocus[${MAX_FOCUS}];`,
+      )
+      .replace(
+        "#include <clipping_planes_fragment>",
+        `#include <clipping_planes_fragment>
+  float occ = 0.0;
+  for (int i = 0; i < ${MAX_FOCUS}; i++) {
+    vec3 b = uFocus[i];
+    if (b.y < -50.0) continue;
+    vec3 ab = b - uCam;
+    float t = clamp(dot(vOccW - uCam, ab) / max(dot(ab, ab), 1e-3), 0.0, 1.0);
+    float d = length(vOccW - (uCam + ab * t));
+    occ = max(occ, (1.0 - smoothstep(3.0, 5.5, d)) * step(0.03, t) * (1.0 - smoothstep(0.86, 0.93, t)));
+  }
+  if (occ > 0.0) {
+    // 4x4 Bayer: an even screen-door, not noise.
+    ivec2 q = ivec2(mod(gl_FragCoord.xy, 4.0));
+    int k = q.x + q.y * 4;
+    float bayer[16] = float[16](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
+    if ((bayer[k] + 0.5) / 16.0 < min(1.0, occ * 1.15) * 0.82) discard;
+  }`,
+      );
+  };
+  m.customProgramCacheKey = () => "bobber-occluder";
+  return m;
+}

@@ -33,7 +33,7 @@ export function heightAt(x: number, z: number): number {
     const W = lerp(20, 2.4, c);
     y += H * smoothstep(-1, W, e);
     // Rolling hills further out, and a higher second step behind the falls.
-    y += (4 + 14 * fbm(x * 0.025, z * 0.025, 4, 11)) * smoothstep(W, W + 40, e);
+    y += (2 + 9 * fbm(x * 0.025, z * 0.025, 4, 11)) * smoothstep(W, W + 40, e) * (1 - 0.45 * smoothstep(60, 140, r) * Math.max(0, -Math.sin(th)));
     y += c * 5 * smoothstep(W + 6, W + 12, e);
   }
   // The brook: a shallow channel from the foot of the falls to the lake, and a notch over the cliff lip.

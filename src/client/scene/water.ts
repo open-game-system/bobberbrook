@@ -359,7 +359,7 @@ export function buildWater(): Water {
       (u.uSkyTop!.value as Color).copy(tod.skyTop);
       (u.uSkyHorizon!.value as Color).copy(tod.skyHorizon);
       (u.uSunDir!.value as Vector3).copy(tod.lightDir);
-      (u.uSunCol!.value as Color).copy(tod.sun).multiplyScalar(tod.sunI * 0.5);
+      (u.uSunCol!.value as Color).copy(tod.sun).multiplyScalar(tod.sunI * 0.5 * (1 - 0.75 * tod.moon));
       (u.uShoreTint!.value as Color).setRGB(0.16, 0.32, 0.2).lerp(tod.hemiGround, 0.3).multiplyScalar(0.6 + 0.4 * (1 - tod.moon));
       u.uTime!.value = time;
       u.uGlow!.value = tod.glow;

@@ -13,6 +13,7 @@ import {
   Object3D,
   PlaneGeometry,
   SRGBColorSpace,
+  ShaderMaterial,
 } from "three";
 import { FISH_IDS } from "../../game/fish";
 
@@ -185,21 +186,43 @@ export function sharedCardGeometry(): { rays: BufferGeometry; plane: PlaneGeomet
   return { rays: raysGeometry(14), plane: new PlaneGeometry(1, 1) };
 }
 
-/** A soft light pillar for the golden swirl. */
-export function lightPillar(): { mesh: Mesh; mat: MeshBasicMaterial } {
-  const g = new CylinderGeometry(1.6, 2.4, 9, 24, 6, true);
-  const pos = g.getAttribute("position");
-  const col = new Float32Array(pos.count * 3);
-  for (let i = 0; i < pos.count; i++) {
-    const t = (pos.getY(i) + 4.5) / 9;
-    const k = Math.pow(1 - t, 2.2) * 0.55;
-    col[i * 3] = 1 * k;
-    col[i * 3 + 1] = 0.82 * k;
-    col[i * 3 + 2] = 0.4 * k;
-  }
-  g.setAttribute("color", new BufferAttribute(col, 3));
-  g.translate(0, 4.5, 0);
-  const mat = new MeshBasicMaterial({ vertexColors: true, transparent: true, blending: AdditiveBlending, depthWrite: false, side: DoubleSide });
+/** A soft light pillar for the golden swirl: brightest where you look through it edge-on, fading up. */
+export function lightPillar(): { mesh: Mesh; mat: ShaderMaterial } {
+  const g = new CylinderGeometry(1.5, 2.3, 10, 28, 1, true);
+  g.translate(0, 5, 0);
+  const mat = new ShaderMaterial({
+    transparent: true,
+    blending: AdditiveBlending,
+    depthWrite: false,
+    side: DoubleSide,
+    uniforms: { uStrength: { value: 0 }, uTime: { value: 0 } },
+    vertexShader: /* glsl */ `
+varying float vH;
+varying float vFacing;
+varying float vA;
+void main() {
+  vH = position.y / 10.0;
+  vA = atan(position.z, position.x);
+  vec4 wp = modelMatrix * vec4(position, 1.0);
+  vec3 n = normalize(mat3(modelMatrix) * normal);
+  vec3 v = normalize(cameraPosition - wp.xyz);
+  vFacing = abs(dot(n, v));
+  gl_Position = projectionMatrix * viewMatrix * wp;
+}`,
+    fragmentShader: /* glsl */ `
+uniform float uStrength;
+uniform float uTime;
+varying float vH;
+varying float vFacing;
+varying float vA;
+void main() {
+  float edge = pow(1.0 - vFacing, 1.5) * 0.6 + 0.12;
+  float fade = pow(1.0 - clamp(vH, 0.0, 1.0), 2.0) * smoothstep(0.0, 0.06, vH);
+  float streak = 0.75 + 0.25 * sin(vA * 7.0 + uTime * 0.8 + vH * 3.0);
+  vec3 c = vec3(1.0, 0.8, 0.38) * edge * fade * streak * uStrength;
+  gl_FragColor = vec4(c, 1.0);
+}`,
+  });
   const mesh = new Mesh(g, mat);
   mesh.renderOrder = 13;
   return { mesh, mat };

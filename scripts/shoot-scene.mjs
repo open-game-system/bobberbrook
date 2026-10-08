@@ -37,11 +37,13 @@ const shots = SHOTS.filter(([s]) => !only || only.includes(s)).slice(0, args.qui
 
 // Real GPU: full Chromium (not the headless shell, which renders on SwiftShader).
 const flags = ["--use-angle=metal", "--enable-gpu", "--ignore-gpu-blocklist"];
-async function launch() {
+// The soak runs uncapped (no vsync) so frame times measure the real cost; screenshots need vsync.
+const perfFlags = [...flags, "--disable-gpu-vsync", "--disable-frame-rate-limit"];
+async function launch(f = flags) {
   const attempts = [{ channel: "chromium" }, { channel: "chrome" }];
   let last;
   for (const extra of attempts) {
-    try { return await chromium.launch({ headless: !args.headed, args: flags, ...extra }); } catch (e) { last = e; }
+    try { return await chromium.launch({ headless: !args.headed, args: f, ...extra }); } catch (e) { last = e; }
   }
   throw last;
 }
@@ -89,12 +91,17 @@ for (const [scenario, phase, hero] of shots) {
 if (!only || only.includes("four-reel")) {
   await page.goto(`${base}/scene-lab.html?scenario=four-reel${args.lite ? "&lite=1" : ""}`);
   await page.waitForFunction(() => window.__lab?.ready === true, null, { timeout: 60_000 });
-  const p0 = await page.evaluate(() => window.__scene.info().programs);
   await page.screenshot({ path: join(out, "motion_a.png") });
   await page.waitForTimeout(100);
   await page.screenshot({ path: join(out, "motion_b.png") });
-  if (!args.quick) await page.waitForTimeout(20_000);
-  const soak = await page.evaluate(() => window.__scene.info());
+  const perf = await launch(perfFlags);
+  const pp = await perf.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
+  await pp.goto(`${base}/scene-lab.html?scenario=four-reel${args.lite ? "&lite=1" : ""}`);
+  await pp.waitForFunction(() => window.__lab?.ready === true, null, { timeout: 60_000 });
+  const p0 = await pp.evaluate(() => window.__scene.info().programs);
+  await pp.waitForTimeout(args.quick ? 3000 : 20_000);
+  const soak = await pp.evaluate(() => window.__scene.info());
+  await perf.close();
   metrics.soak = { programsBefore: p0, programsAfter: soak.programs, p50: soak.frameP50, p95: soak.frameP95, renderer: soak.renderer, frames: soak.frames };
   console.log("soak", JSON.stringify(metrics.soak));
 }
@@ -106,6 +113,7 @@ const tiles = files.map(([label, f]) => ({ label, f }));
 const html = `<html><body style="margin:0;background:#111;display:grid;grid-template-columns:repeat(3,640px);gap:4px;font:600 18px system-ui;color:#fff">${tiles
   .map(({ label, f }) => `<div style="position:relative"><img src="file://${process.cwd()}/${f}" style="width:640px;height:360px;display:block"><div style="position:absolute;left:6px;top:4px;background:#0009;padding:2px 8px;border-radius:6px">${label}</div></div>`)
   .join("")}</body></html>`;
+await page.close();
 const sheetHtml = join(out, "sheet.html");
 writeFileSync(sheetHtml, html);
 const sp = await browser.newPage({ viewport: { width: 1928, height: Math.ceil(tiles.length / 3) * 364 } });

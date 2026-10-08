@@ -19,7 +19,7 @@ import { CameraRig, isView, VIEWS } from "./camera";
 import { FisherViews, type CatchFocus } from "./fishers";
 import { FishShadows, FishTextures, sharedCardGeometry } from "./fishviz";
 import { Fx } from "./fx";
-import { patchLambertWrap } from "./geo";
+import { MAX_FOCUS, occluderMaterial, patchLambertWrap } from "./geo";
 import { makeParticles } from "./particles";
 import { buildPost, type Post } from "./post";
 import { buildProps } from "./props";
@@ -133,7 +133,9 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   scene.add(ground.mesh);
   const water = buildWater();
   scene.add(water.lake, water.brook, water.falls);
-  const props = buildProps(opts.quality, sway);
+  const occ = { uCam: { value: new Vector3() }, uFocus: { value: Array.from({ length: MAX_FOCUS }, () => new Vector3(0, -100, 0)) } };
+  const treeMat = occluderMaterial(occ);
+  const props = buildProps(opts.quality, sway, treeMat);
   scene.add(props.group);
   const parts = makeParticles();
   scene.add(parts.water.points, parts.glow.points);
@@ -209,7 +211,18 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     parts.glow.update(dt, t);
     rig.beginFocus();
     fishers.forEachFocus((x, y, z) => rig.addFocus(x, y, z));
-    rig.update(t, dt, lake?.campfire ?? false, fishers.catchFocus(t, catchBuf));
+    const cf = fishers.catchFocus(t, catchBuf);
+    rig.update(t, dt, lake?.campfire ?? false, cf);
+    // Trees between the camera and the action dissolve.
+    occ.uCam.value.copy(camera.position);
+    let fi = 0;
+    const foc = occ.uFocus.value;
+    foc[fi++]!.copy(rig.focus);
+    if (cf) foc[fi++]!.set(cf.x, cf.y + 2.5, cf.z);
+    fishers.forEachFisher((x, y, z) => {
+      if (fi < MAX_FOCUS) foc[fi++]!.set(x, y + 1, z);
+    });
+    while (fi < MAX_FOCUS) foc[fi++]!.set(0, -100, 0);
     renderer.info.reset();
     if (post) post.render();
     else renderer.render(scene, camera);
@@ -336,6 +349,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       water.dispose();
       props.dispose();
       sway.dispose();
+      treeMat.dispose();
       parts.water.dispose();
       parts.glow.dispose();
       shadows.dispose();

@@ -296,7 +296,7 @@ export type Props = {
   dispose(): void;
 };
 
-export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial): Props {
+export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, treeMat: MeshLambertMaterial): Props {
   const full = quality === "full";
   const group = new Group();
   group.name = "props";
@@ -339,8 +339,8 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial):
     if (R() < 0.55) pines.push({ x, y, z, s: s * 1.15, ry: R() * 6, tint: tint(0.85, 1.05) });
     else oaks.push({ x, y, z, s, ry: R() * 6, tint: tint(0.85, 1.08) });
   }
-  add(instanced(oakGeometry(), mat, oaks, true)).name = "oaks";
-  add(instanced(pineGeometry(), mat, pines, true)).name = "pines";
+  add(instanced(oakGeometry(), treeMat, oaks, true)).name = "oaks";
+  add(instanced(pineGeometry(), treeMat, pines, true)).name = "pines";
 
   // --- rocks: obstacles, shore stones, the falls, the fire ring ---
   const rocks: Inst[] = [];
@@ -392,7 +392,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial):
     const z = o.z + Math.sin(a) * (o.r + 0.6);
     bushes.push({ x, y: heightAt(x, z) - 0.05, z, s: 0.55, ry: a });
   }
-  add(instanced(bushGeometry(), mat, bushes, true)).name = "bushes";
+  add(instanced(bushGeometry(), treeMat, bushes, true)).name = "bushes";
 
   // --- grass, flowers, lupines (swaying) ---
   const tufts: Inst[] = [];
@@ -633,7 +633,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial):
   // --- campfire: logs to sit on, fire, string lights ---
   const campParts: BufferGeometry[] = [];
   const campSeats: { x: number; z: number; facing: number }[] = [];
-  const seatAngles = [-2.2, -1.0, 0.6, 1.9];
+  const seatAngles = [0.75, 1.35, 1.95, 2.55];
   seatAngles.forEach((a, i) => {
     const sx = CAMPFIRE.x + Math.cos(a) * 2.3;
     const sz = CAMPFIRE.z + Math.sin(a) * 2.3;

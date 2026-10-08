@@ -1,4 +1,4 @@
-import { Group, PointLight, type Mesh, type MeshBasicMaterial } from "three";
+import { Group, PointLight, type Mesh, type ShaderMaterial } from "three";
 import type { Lake } from "../../game/lake";
 import { MAX_SWIRLS, type Water } from "./water";
 import type { FishShadows } from "./fishviz";
@@ -13,7 +13,7 @@ export class SwirlViews {
   readonly light: PointLight;
   private readonly slots: Slot[] = Array.from({ length: MAX_SWIRLS }, () => ({ id: -1, x: 0, z: 0, golden: false, alpha: 0, live: false, seed: 0 }));
   private readonly pillar: Mesh;
-  private readonly pillarMat: MeshBasicMaterial;
+  private readonly pillarMat: ShaderMaterial;
   private sparkAcc = 0;
 
   constructor(
@@ -96,7 +96,8 @@ export class SwirlViews {
     this.pillar.visible = gold > 0.01;
     this.pillar.position.set(gx, 0, gz);
     this.pillar.rotation.y = t * 0.2;
-    this.pillarMat.color.setScalar(gold * (0.8 + 0.2 * Math.sin(t * 2)));
+    this.pillarMat.uniforms.uStrength!.value = gold * (0.85 + 0.15 * Math.sin(t * 2));
+    this.pillarMat.uniforms.uTime!.value = t;
     this.light.position.set(gx, 1.4, gz);
     this.light.intensity = gold * 9;
   }
