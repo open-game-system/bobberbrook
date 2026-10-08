@@ -70,7 +70,11 @@ export function puffNormals(g: BufferGeometry, cx: number, cy: number, cz: numbe
     p.fromBufferAttribute(pos, i);
     n.fromBufferAttribute(nor, i);
     o.set(p.x - cx, (p.y - cy) * 1.1, p.z - cz).normalize();
-    n.lerp(o, mix).normalize();
+    // Opposed normal and direction would cancel to a zero normal (NaN shading): keep the original then.
+    const keep = n.clone();
+    n.lerp(o, mix);
+    if (n.lengthSq() < 1e-4) n.copy(keep);
+    n.normalize();
     nor.setXYZ(i, n.x, n.y, n.z);
   }
   nor.needsUpdate = true;
@@ -163,6 +167,8 @@ uniform vec3 uFocus[${MAX_FOCUS}];`,
   float inBox = smoothstep(uBox.x - 0.04, uBox.x + 0.02, sc.x) * smoothstep(uBox.z + 0.04, uBox.z - 0.02, sc.x)
     * smoothstep(uBox.y - 0.04, uBox.y + 0.02, sc.y) * smoothstep(uBox.w + 0.04, uBox.w - 0.02, sc.y);
   occ = max(occ, inBox * (1.0 - smoothstep(uNear - 3.0, uNear, vOccZ)) * 0.92);
+  // Never a trunk or canopy right against the lens.
+  occ = max(occ, 1.0 - smoothstep(5.0, 10.0, vOccZ));
   // Faded with alpha-to-coverage (multisampled, smooth) rather than a screen-door pattern.
   float occA = 1.0 - min(1.0, occ * 1.15);
   if (occA < 0.02) discard;`,

@@ -260,9 +260,11 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       if (fresh) {
         revealAt = t;
         revealArea = areaById(lake.discovery.area);
+        fx.discoverySwirl(revealArea.center.x, revealArea.center.z, revealArea.pond.r + 6);
       }
     } else if (lake && !lake.discovery && discoverySeq === -1) discoverySeq = 0;
     const revealAge = revealAt >= 0 ? t - revealAt : -1;
+    if (revealAge > 0.9 && revealAge - dt <= 0.9) fx.discoverySwirl(revealArea.center.x, revealArea.center.z, revealArea.pond.r + 3);
     forest.update(camera);
     trails.update(tod, t);
     // The found place's landmark glows through the reveal.
@@ -271,7 +273,6 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       pulse[i] = on;
     });
     areas.update(tod, camera, glowBoost, pulse, t);
-    mist.update(tod, t, veil);
     sky.mountains.position.set(camera.position.x, 0, camera.position.z);
     sky.update(tod, camera, t);
     water.update(tod, t);
@@ -326,6 +327,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       occ.uNear.value = near - 1.5;
     } else occ.uNear.value = 0;
     renderer.getDrawingBufferSize(occ.uRes.value);
+    mist.update(tod, t, veil, occ.uNear.value);
     renderer.info.reset();
     if (post) post.render();
     else renderer.render(scene, camera);

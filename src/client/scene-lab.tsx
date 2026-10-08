@@ -233,9 +233,9 @@ const SCENARIOS: Record<string, Scenario> = {
   discovery: {
     phase: 0.4,
     fishers: [
-      { seat: 2, name: "Juneau", spot: shoreIn("mistmarsh", -0.55, 1.5), at: onTrailAt(0, 0.62, 0) },
-      { seat: 0, name: "Dad", spot: shoreIn("mistmarsh", -0.3, 1.5), at: onTrailAt(0, 0.48, 1.2) },
-      { seat: 1, name: "Mom", spot: shoreIn("mistmarsh", -0.8, 1.5), at: onTrailAt(0, 0.42, -1.2) },
+      { seat: 2, name: "Juneau", spot: shoreIn("mistmarsh", -0.55, 1.5), at: onTrailAt(0, 0.22, 0) },
+      { seat: 0, name: "Dad", spot: shoreIn("mistmarsh", -0.3, 1.5), at: onTrailAt(0, 0.08, 1.2) },
+      { seat: 1, name: "Mom", spot: shoreIn("mistmarsh", -0.8, 1.5), at: onTrailAt(0, 0.02, -1.2) },
     ],
     warmUntil: () => true,
     hero: (l, now) => l.discovery !== null && now - l.discovery.at > 1300,

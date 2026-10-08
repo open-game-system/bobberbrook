@@ -18,7 +18,7 @@ export const FOREST_CLEAR: [number, number, number][] = [
   [36, 12, 10],
 ];
 
-function oakLo(variant: number): BufferGeometry {
+export function oakLo(variant: number): BufferGeometry {
   const trunk = prep(new CylinderGeometry(0.32, 0.5, 3.0, 6).translate(0, 1.5, 0));
   paint(trunk, 0x3a2c3a, 0x6a5460);
   const canopy = merge([blob(2.1, 0, 4.0, 0, 1, 7, 5), blob(1.5, 1.1, 3.6, 0.4, 2, 6, 4), blob(1.5, -1.0, 3.8, -0.4, 3, 6, 4)]);
@@ -29,7 +29,7 @@ function oakLo(variant: number): BufferGeometry {
   return merge([trunk, canopy]);
 }
 
-function pineLo(): BufferGeometry {
+export function pineLo(): BufferGeometry {
   const trunk = prep(new CylinderGeometry(0.16, 0.3, 1.6, 5).translate(0, 0.8, 0));
   paint(trunk, 0x3a2c38);
   const a = prep(new ConeGeometry(1.7, 2.8, 7).translate(0, 2.7, 0));
@@ -93,7 +93,7 @@ export function buildForest(full: boolean, treeMat: Material): Forest {
       if (FOREST_CLEAR.some(([cx, cz, r]) => Math.hypot(px - cx, pz - cz) < r)) continue;
       // A meadow south of Moonwell where the camera sits.
       const mr = Math.hypot(px, pz);
-      if (angleGap(Math.atan2(pz, px), SOUTH) < 0.75 && mr < 70 && R() < 0.85) continue;
+      if (angleGap(Math.atan2(pz, px), SOUTH) < 0.75 && mr < 75 && (mr > 62 || R() < 0.85)) continue;
       // Outside the valley proper the hills thin out (fog hides them anyway).
       const outside = px < VALLEY.x0 || px > VALLEY.x1 || pz < VALLEY.z0 || pz > VALLEY.z1;
       if (outside && R() < 0.5) continue;

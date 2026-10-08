@@ -141,6 +141,23 @@ export class Fx {
   /** Ambient: fireflies at night, mist and spray at the falls, embers from the fire. */
   private sporeAcc = 0;
 
+  /** The discovery moment: light motes swirl in from all round a place toward its middle. */
+  discoverySwirl(x: number, z: number, radius: number): void {
+    const n = this.lite ? 70 : 160;
+    for (let i = 0; i < n; i++) {
+      const a = this.r() * Math.PI * 2;
+      const rr = radius * (0.5 + this.r() * 0.6);
+      const px = x + Math.cos(a) * rr;
+      const pz = z + Math.sin(a) * rr;
+      // Mostly tangential, a little inward and up: a slow spiral.
+      const sp = 2 + this.r() * 2.5;
+      const vx = -Math.sin(a) * sp - Math.cos(a) * rr * 0.12;
+      const vz = Math.cos(a) * sp - Math.sin(a) * rr * 0.12;
+      const gold = this.r() < 0.35;
+      this.glow.emit({ x: px, y: 0.6 + this.r() * 3, z: pz, vx, vy: 0.4 + this.r() * 0.8, vz, life: 2.6 + this.r() * 1.2, size: 0.25 + this.r() * 0.25, r: gold ? 1 : 0.6, g: gold ? 0.9 : 0.9, b: gold ? 0.55 : 1, alpha: 1, drag: 0.25, shape: this.r() < 0.3 ? 1 : 0 });
+    }
+  }
+
   ambient(dt: number, tod: TodState, campfire: number, fx0 = 0, fz0 = 0): void {
     // Wisps and ground mist gather round the pond nearest the action.
     let near: Area = AREAS[0]!;
