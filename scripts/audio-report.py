@@ -5,7 +5,7 @@ import json, subprocess, sys
 import numpy as np
 
 out = sys.argv[1]
-raw = "recordings/raw"
+raw = f"{out}/raw"
 SR = 16000
 pcm = subprocess.run(["ffmpeg", "-v", "error", "-i", f"{raw}/tv-audio.webm", "-ac", "1", "-ar", str(SR), "-f", "f32le", "-"], capture_output=True).stdout
 x = np.frombuffer(pcm, dtype=np.float32)

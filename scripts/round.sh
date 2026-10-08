@@ -17,8 +17,8 @@ npx tsx scripts/phones.mts $OUT/phones > $OUT/phones.log 2>&1 || true
 # 3. The recorded session: TV | Dad's phone | Juneau's iPad with real TV audio, av-verdict.
 $RIG record --no-open --out $OUT/session.mp4 > $OUT/session.log 2>&1 || true
 mkdir -p recordings/progress && cp $OUT/session.mp4 recordings/progress/round-$N.mp4
-cp recordings/raw/marks.json $OUT/marks.json 2>/dev/null || true
+cp $OUT/raw/marks.json $OUT/marks.json 2>/dev/null || true
 ffmpeg -v error -y -i $OUT/session.mp4 -vf "fps=1/5,scale=640:-1,tile=4x6" -frames:v 1 $OUT/session-tiles.png
-ffmpeg -v error -y -i recordings/raw/tv-audio.webm -lavfi showspectrumpic=s=1600x400:legend=1 $OUT/tv-audio-spectrogram.png
+ffmpeg -v error -y -i $OUT/raw/tv-audio.webm -lavfi showspectrumpic=s=1600x400:legend=1 $OUT/tv-audio-spectrogram.png
 python3 scripts/audio-report.py $OUT > /dev/null
 ls $OUT
