@@ -85,7 +85,13 @@ export function FisherScreen({ seat, host, hosting }: { seat: number; host: bool
   // The evidence rig's bot (game-rig.config.ts) reads the lake and its seat from here.
   useEffect(() => {
     if (!new URLSearchParams(location.search).has("rig")) return;
-    Reflect.set(window, "__bb", { lake: () => latestLake.current, seat, now: () => clock.now() });
+    Reflect.set(window, "__bb", {
+      lake: () => latestLake.current,
+      seat,
+      now: () => clock.now(),
+      platforms: () => worldFor(latestLake.current.worldSeed).platformsNear({ x: 0, z: 0 }, 1),
+      place: (id: string) => worldFor(latestLake.current.worldSeed).placeById(id),
+    });
   }, [seat, clock]);
 
   const onStick = useCallback((s: Stick) => send({ type: "MOVE", x: s.x, y: s.y }), [send]);

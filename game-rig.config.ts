@@ -201,6 +201,40 @@ const config: GameRigInput = {
     for (let i = 0; i < 2; i++) {
       await Promise.all([fishOnce(rig, kid, "Juneau", true), fishOnce(rig, dad, "Dad", true)]);
     }
+    // Back to Moonwell Lake and up the zeppelin tower: everyone stands on the mooring together, and off they fly.
+    const zep = await dad.evaluate(() => {
+      const bb = Reflect.get(window, "__bb") as { platforms: () => { kind: string; at: { x: number; z: number }; toPlace: string }[] };
+      return bb.platforms().find((p) => p.kind === "zeppelin") ?? null;
+    });
+    if (zep) {
+      rig.mark("explore: back to the zeppelin tower");
+      for (const p of [...trail].reverse()) await walkTo(dad, p, 2, 15_000);
+      await walkTo(dad, { x: 18, z: 20 }, 2, 15_000);
+      await Promise.all([walkTo(dad, zep.at, 0.8, 20_000), walkTo(kid, { x: zep.at.x + 1.2, z: zep.at.z + 0.6 }, 0.8, 25_000)]);
+      rig.mark("at the zeppelin");
+      for (let i = 0; i < 80; i++) {
+        const { lake } = await me(dad);
+        if (Reflect.get(lake, "ride")) break;
+        await dad.waitForTimeout(250);
+      }
+      rig.mark("zeppelin flying");
+      for (let i = 0; i < 160; i++) {
+        const { lake } = await me(dad);
+        if (!Reflect.get(lake, "ride")) break;
+        await dad.waitForTimeout(250);
+      }
+      rig.mark("landed somewhere new");
+      await rig.wait(3000);
+      // Down to the water of the new place and fish.
+      const place = await dad.evaluate((id) => {
+        const bb = Reflect.get(window, "__bb") as { place: (id: string) => { center: { x: number; z: number } } | null };
+        return bb.place(id)?.center ?? null;
+      }, zep.toPlace);
+      if (place) {
+        await Promise.all([walkTo(dad, place, 1, 15_000), walkTo(kid, place, 1, 15_000)]);
+        await Promise.all([fishOnce(rig, kid, "Juneau", true), fishOnce(rig, dad, "Dad", true)]);
+      }
+    }
     await dad.getByRole("button", { name: "Campfire" }).click();
     rig.mark("campfire");
     await rig.wait(7000);
