@@ -200,3 +200,6 @@ button { font: inherit; color: inherit; }
 .loading-card { background: radial-gradient(circle at 50% 40%, #3b2f7a, var(--deep)); }
 .loading-fish { width: min(40vmin, 260px); animation: wiggle 1.2s ease-in-out infinite, breathe 2s ease-in-out infinite; filter: drop-shadow(0 10px 20px rgba(0,0,0,.4)); }
 .compass.family .compass-swirl { background: radial-gradient(circle, rgba(255,255,255,.45), rgba(255,255,255,0) 70%); border-color: rgba(255,255,255,.9); }
+.journal-page h3 { margin: 18px 0 6px; font-size: 20px; color: #e8eeff; }
+.journal-page.unfound h3 { color: rgba(220,200,255,.6); font-style: italic; }
+.journal-page.unfound .journal li { opacity: 0.6; }

@@ -37,7 +37,7 @@ export function HostStrip({ lake, mySeat, now, send }: { lake: Lake; mySeat: num
         </span>
         <span className="rod-next">{next !== undefined ? `${ROD_NAMES[lake.rodTier + 1]} at ${next}` : "best rod"}</span>
       </div>
-      {sheet === "journal" && <JournalSheet journal={lake.journal} onClose={() => setSheet(null)} />}
+      {sheet === "journal" && <JournalSheet journal={lake.journal} discovered={lake.discovered} onClose={() => setSheet(null)} />}
       {sheet === "fishers" && (
         <div className="sheet" role="dialog" aria-label="Fishers">
           <div className="sheet-head">
