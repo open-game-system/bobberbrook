@@ -87,3 +87,28 @@ export function PencilIcon() {
     </svg>
   );
 }
+
+/** A little sailboat (no face). */
+export function BoatIcon() {
+  return (
+    <svg viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M14 62 h72 l-12 18 h-48 z" fill="#b07a42" stroke="#5a3a22" strokeWidth="4" strokeLinejoin="round" />
+      <path d="M50 14 v48" stroke="#5a3a22" strokeWidth="5" />
+      <path d="M53 18 l26 36 h-26 z" fill="#f4e2b0" stroke="#c9b08a" strokeWidth="3" />
+      <path d="M8 86 q10 -6 20 0 t20 0 t20 0 t20 0" stroke="#7fd8ff" strokeWidth="5" fill="none" />
+    </svg>
+  );
+}
+
+/** A friendly zeppelin (no face). */
+export function ZeppelinIcon() {
+  return (
+    <svg viewBox="0 0 100 100" aria-hidden="true">
+      <ellipse cx="50" cy="38" rx="38" ry="20" fill="#e8c06a" stroke="#7a4a22" strokeWidth="4" />
+      <path d="M14 38 h72" stroke="#c9902a" strokeWidth="3" />
+      <path d="M86 38 l10 -10 v20 z" fill="#c9902a" />
+      <path d="M38 58 h24 l-4 14 h-16 z" fill="#b07a42" stroke="#5a3a22" strokeWidth="4" />
+      <path d="M40 56 l-4 -2 M60 56 l4 -2" stroke="#5a3a22" strokeWidth="3" />
+    </svg>
+  );
+}

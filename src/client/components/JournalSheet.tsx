@@ -1,11 +1,10 @@
 import type { JournalEntry } from "../../game/lake";
-import type { AreaId } from "../../game/world";
 import { journalPages } from "../journalPages";
 
 const WHEN = { any: "", day: "daytime", golden: "golden hour", night: "night" } as const;
 
 /** The family journal: every species, a silhouette until someone catches it. */
-export function JournalSheet({ journal, discovered, onClose }: { journal: Record<string, JournalEntry>; discovered: readonly AreaId[]; onClose: () => void }) {
+export function JournalSheet({ journal, discovered, worldSeed, onClose }: { journal: Record<string, JournalEntry>; discovered: readonly string[]; worldSeed: number; onClose: () => void }) {
   return (
     <div className="sheet" role="dialog" aria-label="Family journal">
       <div className="sheet-head">
@@ -14,9 +13,9 @@ export function JournalSheet({ journal, discovered, onClose }: { journal: Record
           Close
         </button>
       </div>
-      {journalPages(discovered).map((page) => (
-        <section key={page.area} className={`journal-page ${page.found ? "found" : "unfound"}`}>
-          <h3>{page.found ? page.name : "A place you haven't found yet"}</h3>
+      {journalPages(discovered, worldSeed).map((page) => (
+        <section key={page.biome} className={`journal-page ${page.found ? "found" : "unfound"}`}>
+          <h3>{page.found ? page.name : "A kind of place you haven't found yet"}</h3>
           <ul className="journal">
             {page.fish.map((f) => {
               const e = journal[f.id];

@@ -68,7 +68,7 @@ describe("coachLine", () => {
     expect(coachLine(l, 0, 7000)).not.toContain("found Mistmarsh");
   });
   it("sends the family exploring once they've caught a couple here", () => {
-    expect(coachLine({ ...family(), catchSeq: 2 }, 0, 0)).toBe("Explore! Mistmarsh is down the trail to the south-west: Golden Koi and Ember Shiners come out at golden hour.");
+    expect(coachLine({ ...family(), catchSeq: 2 }, 0, 0)).toBe("Explore! Follow a trail into the fog: every new place has its own fish. 1 place found so far.");
   });
   it("names the far place a golden swirl is in", () => {
     const l = { ...family(), swirls: [{ id: 2, area: "hollow" as const, pos: { x: 70, z: -8 }, theta: 0, golden: true, since: 0, until: 1e9, catches: 0 }] };

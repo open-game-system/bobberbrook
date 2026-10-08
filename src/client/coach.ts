@@ -1,6 +1,7 @@
 import { fishById, JOURNAL_FISH } from "../game/fish";
 import { ROD_AT, ROD_NAMES, speciesCount, todOf, type Lake } from "../game/lake";
-import { AREAS, areaAt, areaById, waterAt, type AreaId, type Water } from "../game/world";
+import { waterAt, type Water } from "../game/world";
+import { worldFor, type Biome } from "../game/regions";
 import { atLeashEnd } from "./compass";
 
 const WATER_NAME: Record<Water, string> = {
@@ -9,10 +10,14 @@ const WATER_NAME: Record<Water, string> = {
   falls: "by the waterfall",
   reeds: "by the reeds",
   shore: "along the shore",
-  marsh: "in Mistmarsh",
-  pools: "at Whisperfall Pools",
-  hollow: "in Glowshroom Hollow",
-  tarn: "at Starfall Tarn",
+  marsh: "in the marsh",
+  pools: "at the pools",
+  hollow: "in the hollow",
+  tarn: "at the tarn",
+  willow: "by the willows",
+  crystal: "by the crystals",
+  ember: "in the ember grove",
+  frost: "by the frosty shore",
 };
 
 const nameOf = (lake: Lake, seat: number) => lake.fishers.find((f) => f.seat === seat)?.name ?? ["Green", "Yellow", "Blue", "Pink"][seat] ?? "Someone";
@@ -62,7 +67,7 @@ const freshCatch: Rule = (lake, _mySeat, now) => {
 const goldenSwirl: Rule = (lake) => {
   const golden = lake.swirls.find((s) => s.golden);
   if (!golden) return null;
-  const where = golden.area === "moonwell" ? WATER_NAME[waterAt(golden.theta)] : `at ${areaById(golden.area).name}`;
+  const where = golden.area === "moonwell" ? WATER_NAME[waterAt(golden.theta)] : `at ${worldFor(lake.worldSeed).placeById(golden.area)?.name ?? "a place nearby"}`;
   return `A golden swirl ${where}! Race there, everyone!`;
 };
 
@@ -77,36 +82,68 @@ const rodTip: Rule = (lake) => {
   return next !== undefined ? `${next - lake.shells} more shells for everyone's ${ROD_NAMES[lake.rodTier + 1]} rod.` : null;
 };
 
-/** What each place is known for, and which way its trail leaves Moonwell Lake. */
-const PLACE_TIPS: Record<AreaId, { way: string; known: string }> = {
-  moonwell: { way: "back at the lake", known: "Big Bass and catfish bite off the dock." },
-  mistmarsh: { way: "down the trail to the south-west", known: "Golden Koi and Ember Shiners come out at golden hour." },
-  pools: { way: "up the trail to the north-west", known: "Rainbow Trout and Leaping Salmon jump in the falls." },
-  hollow: { way: "along the trail to the east", known: "Glowfin and Lanternfish glow there all day long." },
-  tarn: { way: "past the Pools or the Hollow, the farthest place", known: "the Moonfin rises there at night." },
+/** What each kind of place is known for. */
+const BIOME_TIPS: Record<Biome, string> = {
+  moonwell: "Big Bass and catfish bite off the dock.",
+  marsh: "Golden Koi and Ember Shiners come out at golden hour.",
+  pools: "Rainbow Trout and Leaping Salmon jump in the falls.",
+  hollow: "Glowfin and Lanternfish glow there all day long.",
+  tarn: "the Moonfin rises in a swirl at night.",
+  willow: "Dreamscale Koi drift under the willows.",
+  crystal: "Prism Bass and Geode Puffers hide by the crystals.",
+  ember: "Ember Perch and the Lanternjaw glow like coals.",
+  frost: "Aurora Char shimmer there at night.",
 };
 
 const wentAhead: Rule = (lake, mySeat) => {
   const ahead = lake.fishers.find((f) => f.seat !== mySeat && atLeashEnd(lake, f.seat, f.pos));
   if (!ahead) return null;
-  const where = areaAt(ahead.pos);
+  const where = worldFor(lake.worldSeed).areaAt(ahead.pos);
   return `${nameOf(lake, ahead.seat)} is far away${where ? ` at ${where.name}` : " on the trail"}: get back together!`;
 };
 
 const freshDiscovery: Rule = (lake, _mySeat, now) => {
   const d = lake.discovery;
   if (!d || now - d.at > 6000) return null;
-  return `${nameOf(lake, d.seat)} found ${areaById(d.area).name}! ${PLACE_TIPS[d.area].known}`;
+  const place = worldFor(lake.worldSeed).placeById(d.area);
+  return place ? `${nameOf(lake, d.seat)} found ${place.name}! ${BIOME_TIPS[place.biome]}` : null;
+};
+
+const riding: Rule = (lake) => {
+  const r = lake.ride;
+  if (!r) return null;
+  const to = worldFor(lake.worldSeed).placeById(r.toPlace)?.name ?? "somewhere new";
+  return r.kind === "zeppelin" ? `All aboard the zeppelin to ${to}! Look out over the forest.` : `All aboard the boat to ${to}! Wave at the fish.`;
+};
+
+const boardingNow: Rule = (lake) => {
+  if (!lake.boarding) return null;
+  const p = worldFor(lake.worldSeed)
+    .platformsNear(lake.fishers[0]?.pos ?? { x: 0, z: 0 }, 1)
+    .find((x) => x.id === lake.boarding?.platformId);
+  return p ? `Everyone's aboard: off to ${worldFor(lake.worldSeed).placeById(p.toPlace)?.name ?? "somewhere new"}!` : null;
+};
+
+const rideNearby: Rule = (lake, mySeat) => {
+  const me = lake.fishers.find((f) => f.seat === mySeat);
+  if (!me) return null;
+  const w = worldFor(lake.worldSeed);
+  const p = w.platformsNear(me.pos, 0).find((x) => Math.hypot(x.at.x - me.pos.x, x.at.z - me.pos.z) < 12);
+  if (!p) return null;
+  const to = w.placeById(p.toPlace)?.name ?? "somewhere far";
+  return p.kind === "zeppelin" ? `A zeppelin flies to ${to} from the tower: stand on its platform together to board.` : `A boat sails to ${to} from the dock: stand on it together to board.`;
 };
 
 const exploreTip: Rule = (lake) => {
   if (lake.catchSeq < 2) return null;
-  const next = AREAS.find((a) => !lake.discovered.includes(a.id));
-  return next ? `Explore! ${next.name} is ${PLACE_TIPS[next.id].way}: ${PLACE_TIPS[next.id].known}` : null;
+  const w = worldFor(lake.worldSeed);
+  const here = lake.fishers[0]?.pos ?? { x: 0, z: 0 };
+  const unfound = w.placesNear(here, 1).find((p) => !lake.discovered.includes(p.id));
+  return unfound ? `Explore! Follow a trail into the fog: every new place has its own fish. ${lake.discovered.length} ${lake.discovered.length === 1 ? "place" : "places"} found so far.` : null;
 };
 
 /** In priority order: what's happening to someone right now first, then news, then a tip. */
-const RULES: Rule[] = [campfireLine, myBite, theirBite, theirReel, freshCatch, wentAhead, freshDiscovery, goldenSwirl, exploreTip, timeTip, rodTip];
+const RULES: Rule[] = [campfireLine, riding, boardingNow, myBite, theirBite, theirReel, freshCatch, wentAhead, freshDiscovery, goldenSwirl, rideNearby, exploreTip, timeTip, rodTip];
 
 /**
  * The host phone's one line to read aloud. The grown-up is the coach: what's happening to the kids

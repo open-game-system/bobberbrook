@@ -49,3 +49,4 @@
 .place-dot.tarn.found { background: #e8eeff; color: #e8eeff; }
 .toast.place { border-color: #e8eeff; background: rgba(40, 30, 90, 0.82); font-size: 3.6vh; }
 .toast-kicker { font-size: 2vh; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.12em; margin-right: 0.6vw; }
+.places-icon { width: 3.4vh; height: 3.4vh; }

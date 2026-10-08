@@ -1,7 +1,7 @@
 import { CATCH_SKIP_MS, type Fisher, type Lake } from "../game/lake";
 import { fishById } from "../game/fish";
 import { thrashingAt } from "../game/reel";
-import { castFrom } from "../game/world";
+import { worldFor } from "../game/regions";
 
 /** What the one big button shows and does right now. */
 export type ButtonState =
@@ -11,7 +11,8 @@ export type ButtonState =
   | { kind: "bite" }
   | { kind: "reel"; progress: number; thrashing: boolean; holding: boolean }
   | { kind: "caught"; fishId: string; canRecast: boolean }
-  | { kind: "campfire" };
+  | { kind: "campfire" }
+  | { kind: "riding"; vehicle: "boat" | "zeppelin" };
 
 type ModeView = (lake: Lake, me: Fisher, now: number) => ButtonState;
 
@@ -23,17 +24,18 @@ function reelView(me: Fisher, now: number): ButtonState {
 }
 
 const VIEWS: Record<Fisher["mode"], ModeView> = {
-  walk: (_lake, me) => (castFrom(me.pos) ? { kind: "cast" } : { kind: "walk-to-water" }),
+  walk: (lake, me) => (worldFor(lake.worldSeed).castFrom(me.pos) ? { kind: "cast" } : { kind: "walk-to-water" }),
   cast: () => ({ kind: "waiting", nibble: false }),
   // Past the bite moment the room will say "bite" on its next tick: show it now.
   wait: (_lake, me, now) => (now >= me.biteAt ? { kind: "bite" } : { kind: "waiting", nibble: me.nibbles.some((t) => now >= t && now < t + 450) }),
   bite: (_lake, me, now) => (now < me.biteUntil ? { kind: "bite" } : { kind: "waiting", nibble: false }),
   reel: (_lake, me, now) => reelView(me, now),
-  catch: (_lake, me, now) => ({
+  catch: (lake, me, now) => ({
     kind: "caught",
     fishId: me.catch?.fishId ?? "minnow",
-    canRecast: me.catch !== null && now >= me.catch.at + CATCH_SKIP_MS && castFrom(me.pos) !== null,
+    canRecast: me.catch !== null && now >= me.catch.at + CATCH_SKIP_MS && worldFor(lake.worldSeed).castFrom(me.pos) !== null,
   }),
+  ride: (lake) => ({ kind: "riding", vehicle: lake.ride?.kind ?? "boat" }),
 };
 
 export function buttonState(lake: Lake, me: Fisher, now: number): ButtonState {
@@ -54,6 +56,8 @@ const DUE: Record<Fisher["mode"], (me: Fisher) => number | null> = {
   bite: (me) => me.biteUntil,
   reel: () => 0,
   catch: (me) => (me.catch ? me.catch.at + 3400 : null),
+  // Riding: the room owes an update at arrival (the TV's ticks bring it; nothing to nudge here).
+  ride: () => null,
 };
 
 /** Whether this screen should nudge the room's clock (a deadline it is waiting on has passed). */

@@ -3,6 +3,7 @@ import { JOURNAL_FISH } from "../../game/fish";
 import { ROD_AT, ROD_NAMES, speciesCount, type Lake } from "../../game/lake";
 import { coachLine } from "../coach";
 import { JournalSheet } from "./JournalSheet";
+import { WorldMap } from "./WorldMap";
 import { SEAT_HEX } from "./MiniMap";
 
 /**
@@ -12,7 +13,7 @@ import { SEAT_HEX } from "./MiniMap";
 type HostEvent = { type: "EASY"; seat: number; on: boolean } | { type: "CAMPFIRE"; on: boolean } | { type: "RENAME"; seat: number; name: string };
 
 export function HostStrip({ lake, mySeat, now, send }: { lake: Lake; mySeat: number; now: number; send: (e: HostEvent) => void }) {
-  const [sheet, setSheet] = useState<"journal" | "fishers" | null>(null);
+  const [sheet, setSheet] = useState<"journal" | "fishers" | "map" | null>(null);
   const next = ROD_AT[lake.rodTier + 1];
   return (
     <div className="host-strip">
@@ -22,6 +23,9 @@ export function HostStrip({ lake, mySeat, now, send }: { lake: Lake; mySeat: num
       <div className="host-buttons">
         <button type="button" onClick={() => setSheet("journal")}>
           Journal {speciesCount(lake.journal)}/{JOURNAL_FISH.length}
+        </button>
+        <button type="button" onClick={() => setSheet("map")}>
+          Map
         </button>
         <button type="button" onClick={() => setSheet("fishers")}>
           Fishers
@@ -37,7 +41,8 @@ export function HostStrip({ lake, mySeat, now, send }: { lake: Lake; mySeat: num
         </span>
         <span className="rod-next">{next !== undefined ? `${ROD_NAMES[lake.rodTier + 1]} at ${next}` : "best rod"}</span>
       </div>
-      {sheet === "journal" && <JournalSheet journal={lake.journal} discovered={lake.discovered} onClose={() => setSheet(null)} />}
+      {sheet === "map" && <WorldMap lake={lake} mySeat={mySeat} now={now} onClose={() => setSheet(null)} />}
+      {sheet === "journal" && <JournalSheet journal={lake.journal} discovered={lake.discovered} worldSeed={lake.worldSeed} onClose={() => setSheet(null)} />}
       {sheet === "fishers" && (
         <div className="sheet" role="dialog" aria-label="Fishers">
           <div className="sheet-head">

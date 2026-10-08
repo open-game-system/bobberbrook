@@ -1,23 +1,25 @@
 import { JOURNAL_FISH, type FishDef } from "../game/fish";
-import { AREAS, type AreaId, type Water } from "../game/world";
+import { worldFor, type Biome } from "../game/regions";
+import type { Water } from "../game/world";
 
-/** The waters you fish in each place (Moonwell Lake has five of its own). */
-export const PLACE_WATERS: Record<AreaId, readonly Water[]> = {
-  moonwell: ["dock", "lily", "falls", "reeds", "shore"],
-  mistmarsh: ["marsh"],
-  pools: ["pools"],
-  hollow: ["hollow"],
-  tarn: ["tarn"],
-};
+/** The journal's chapters: one per kind of place (the waters each kind of place has). */
+export const CHAPTERS: readonly { biome: Biome; name: string; waters: readonly Water[] }[] = [
+  { biome: "moonwell", name: "Moonwell Lake", waters: ["dock", "lily", "falls", "reeds", "shore"] },
+  { biome: "marsh", name: "Misty marshes", waters: ["marsh"] },
+  { biome: "pools", name: "Falls and pools", waters: ["pools"] },
+  { biome: "hollow", name: "Glowshroom hollows", waters: ["hollow"] },
+  { biome: "tarn", name: "Starfall tarns", waters: ["tarn"] },
+  { biome: "willow", name: "Willow meres", waters: ["willow"] },
+  { biome: "crystal", name: "Crystal glades", waters: ["crystal"] },
+  { biome: "ember", name: "Ember groves", waters: ["ember"] },
+  { biome: "frost", name: "Frost ponds", waters: ["frost"] },
+];
 
-export type JournalPage = { area: AreaId; name: string; found: boolean; fish: FishDef[] };
+export type JournalPage = { biome: Biome; name: string; found: boolean; fish: FishDef[] };
 
-/** The journal as a page per place: the fish that live there (a fish can live in more than one place). */
-export function journalPages(discovered: readonly AreaId[]): JournalPage[] {
-  return AREAS.map((a) => ({
-    area: a.id,
-    name: a.name,
-    found: discovered.includes(a.id),
-    fish: JOURNAL_FISH.filter((f) => f.waters.some((w) => PLACE_WATERS[a.id].includes(w))),
-  }));
+/** The journal as a chapter per kind of place; a chapter opens once the family has found such a place. */
+export function journalPages(discovered: readonly string[], worldSeed: number): JournalPage[] {
+  const w = worldFor(worldSeed);
+  const found = new Set(discovered.map((id) => w.placeById(id)?.biome).filter((b): b is Biome => b !== undefined));
+  return CHAPTERS.map((c) => ({ biome: c.biome, name: c.name, found: found.has(c.biome), fish: JOURNAL_FISH.filter((f) => f.waters.some((x) => c.waters.includes(x))) }));
 }

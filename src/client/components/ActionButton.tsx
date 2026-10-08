@@ -1,7 +1,7 @@
 import { capturePointer } from "../capture";
 import { useEffect, useRef } from "react";
 import type { ButtonState } from "../fisherUi";
-import { BobberIcon, CampfireIcon, FeetIcon, ReelIcon, RodIcon } from "./Icons";
+import { BoatIcon, BobberIcon, CampfireIcon, FeetIcon, ReelIcon, RodIcon, ZeppelinIcon } from "./Icons";
 
 /**
  * The one big right-thumb button. It shows what it will do (cast, wait, hook, reel, again) with
@@ -53,6 +53,7 @@ export function ActionButton({ state, onPress, onHold }: { state: ButtonState; o
         {state.kind === "reel" && <ReelIcon spinning={state.holding} />}
         {state.kind === "caught" && (state.canRecast ? <RodIcon /> : <img src={`/art/fish/${state.fishId}.webp`} alt="" draggable={false} />)}
         {state.kind === "campfire" && <CampfireIcon />}
+        {state.kind === "riding" && (state.vehicle === "zeppelin" ? <ZeppelinIcon /> : <BoatIcon />)}
       </span>
     </button>
   );

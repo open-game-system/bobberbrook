@@ -1,5 +1,6 @@
 import type { Fisher, Lake } from "../game/lake";
-import type { AreaId } from "../game/world";
+import { worldFor } from "../game/regions";
+
 
 /** Moments worth a sound, a voice line or an effect, found by comparing two lake states. */
 export type LakeEvent =
@@ -12,8 +13,10 @@ export type LakeEvent =
   | { kind: "upgrade"; tier: number }
   | { kind: "golden-swirl" }
   | { kind: "campfire"; on: boolean }
-  | { kind: "discovered"; seat: number; area: AreaId }
-  | { kind: "treasure"; seat: number };
+  | { kind: "discovered"; seat: number; area: string }
+  | { kind: "treasure"; seat: number }
+  | { kind: "ride"; vehicle: "boat" | "zeppelin"; to: string; toPlace: string }
+  | { kind: "arrived"; place: string };
 
 export function lakeEvents(prev: Lake | null, next: Lake): LakeEvent[] {
   if (!prev) return [];
@@ -24,6 +27,8 @@ export function lakeEvents(prev: Lake | null, next: Lake): LakeEvent[] {
   const d = next.discovery;
   if (d && d.seq !== prev.discovery?.seq) out.push({ kind: "discovered", seat: d.seat, area: d.area });
   if (next.pickup && next.pickup.seq !== prev.pickup?.seq) out.push({ kind: "treasure", seat: next.pickup.seat });
+  if (next.ride && !prev.ride) out.push({ kind: "ride", vehicle: next.ride.kind, to: worldFor(next.worldSeed).placeById(next.ride.toPlace)?.name ?? "somewhere new", toPlace: next.ride.toPlace });
+  if (!next.ride && prev.ride) out.push({ kind: "arrived", place: prev.ride.toPlace });
   return out;
 }
 

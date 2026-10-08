@@ -142,5 +142,65 @@
  {
   "id": "teach-explore",
   "text": "Follow the trail to find a new place!"
+ },
+ {
+  "id": "fish-willow-bream",
+  "text": "Willow Bream!"
+ },
+ {
+  "id": "fish-mossback-gar",
+  "text": "Mossback Gar!"
+ },
+ {
+  "id": "fish-dreamscale-koi",
+  "text": "Dreamscale Koi!"
+ },
+ {
+  "id": "fish-ember-perch",
+  "text": "Ember Perch!"
+ },
+ {
+  "id": "fish-copper-carp",
+  "text": "Copper Carp!"
+ },
+ {
+  "id": "fish-lanternjaw",
+  "text": "Lanternjaw!"
+ },
+ {
+  "id": "fish-frost-minnow",
+  "text": "Frost Minnow!"
+ },
+ {
+  "id": "fish-icefin-trout",
+  "text": "Icefin Trout!"
+ },
+ {
+  "id": "fish-aurora-char",
+  "text": "Aurora Char!"
+ },
+ {
+  "id": "fish-glass-tetra",
+  "text": "Glass Tetra!"
+ },
+ {
+  "id": "fish-prism-bass",
+  "text": "Prism Bass!"
+ },
+ {
+  "id": "fish-geode-puffer",
+  "text": "Geode Puffer!"
+ },
+ {
+  "id": "new-place",
+  "text": "A new place to explore!"
+ },
+ {
+  "id": "all-aboard",
+  "text": "All aboard! Here we go!"
+ },
+ {
+  "id": "here-we-are",
+  "text": "Here we are! Somewhere new!"
  }
 ]

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { join, newLake, type Lake } from "../game/lake";
 import { TRAILS, areaById, castRingIn, pondRadius, type AreaId } from "../game/world";
-import { compassGoal, compassTo, nextWaypoint, route, shoreFor } from "./compass";
+import { compassGoal, compassTo, shoreFor } from "./compass";
+import { nextWaypoint, route } from "../game/world";
 
 const swirl = (id: number, area: AreaId, theta: number, golden = false) => ({ id, area, pos: castRingIn(areaById(area), theta), theta, golden, since: 0, until: 1e9, catches: 0 });
 const lakeWith = (swirls: Lake["swirls"], discovered: AreaId[] = ["moonwell"]): Lake => ({ ...newLake(1, 0), swirls, discovered });
@@ -41,7 +42,7 @@ describe("the kid's compass", () => {
   });
   it("points at a swirl in this place", () => {
     const s = swirl(1, "moonwell", 1);
-    expect(compassGoal(lakeWith([s]), shore("moonwell", 0))?.at).toEqual(shoreFor(s));
+    expect(compassGoal(lakeWith([s]), shore("moonwell", 0))?.at).toEqual(shoreFor({ worldSeed: 1 }, s));
   });
   it("sends you exploring when this place has no swirl", () => {
     const g = compassGoal(lakeWith([swirl(1, "pools", 1)], ["moonwell", "pools"]), shore("moonwell", 2.6))!;
@@ -50,10 +51,11 @@ describe("the kid's compass", () => {
   });
   it("says when you've arrived at the swirl", () => {
     const s = swirl(1, "moonwell", Math.PI);
-    expect(compassTo(lakeWith([s]), shoreFor(s))?.arrived).toBe(true);
+    expect(compassTo(lakeWith([s]), shoreFor({ worldSeed: 1 }, s))?.arrived).toBe(true);
   });
-  it("is null with nothing to find", () => {
-    expect(compassTo(lakeWith([], ["moonwell", "mistmarsh", "pools", "hollow", "tarn"]), { x: 0, z: 20 })).toBeNull();
+  it("always has somewhere new to point at in the endless valley", () => {
+    const c = compassTo(lakeWith([], ["moonwell", "mistmarsh", "pools", "hollow", "tarn"]), { x: 0, z: 20 })!;
+    expect(c.explore).toBe(true);
   });
 
   it("points back to the family at the end of the leash", () => {

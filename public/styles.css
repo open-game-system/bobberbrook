@@ -207,3 +207,10 @@ button { font: inherit; color: inherit; }
 .pf-rays { position: absolute; inset: 0; border-radius: 50%; background: repeating-conic-gradient(color-mix(in oklab, var(--seat) 70%, transparent) 0 10deg, transparent 10deg 24deg); animation: spin 6s linear infinite; mask: radial-gradient(circle, #000 25%, transparent 70%); }
 .pf-star { position: relative; width: 55%; filter: drop-shadow(0 0 20px var(--seat)); animation: breathe 0.9s ease-in-out infinite; }
 @keyframes fade-late { 0%, 75% { opacity: 1; } 100% { opacity: 0; } }
+.minimap .map-sparkle { animation: glow 0.9s ease-in-out infinite alternate; }
+.minimap-btn { border: 0; padding: 0; background: none; border-radius: 50%; touch-action: manipulation; }
+.world-map { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: rgba(12, 8, 34, 0.94); animation: pop 0.3s ease-out; }
+.world-map-svg { width: min(94vw, 94vh); height: min(94vw, 94vh); }
+.minimap .fog, .world-map-svg .fog { transition: opacity 0.6s; }
+.action.riding { background: radial-gradient(circle at 40% 30%, #e8d8ff, #8a6ad0); animation: breathe 2.2s ease-in-out infinite; }
+.boarding-glow { position: fixed; inset: 0; pointer-events: none; box-shadow: inset 0 0 120px rgba(255, 220, 140, 0.7); animation: glow 0.8s ease-in-out infinite alternate; }

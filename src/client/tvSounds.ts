@@ -6,6 +6,7 @@ import { sfx } from "./audio/sfx";
 import { voice, type Line } from "./audio/voice";
 
 export type SfxId = keyof typeof sfx;
+const HOME_PLACES = new Set(["moonwell", "mistmarsh", "pools", "hollow", "tarn"]);
 type SfxOpts = { pan?: number; gain?: number; at?: number };
 
 /** One sound to play: a synth sound (panned to its fisher), a fish's name, or a voice line. */
@@ -41,7 +42,10 @@ const CUES: CueTable = {
   joined: () => [],
   hooked: () => [],
   treasure: (e, pan) => [{ kind: "sfx", id: "shell", opts: { pan: pan(e.seat) } }],
-  discovered: (e) => [{ kind: "sfx", id: "golden", opts: {} }, { kind: "line", line: `area-${e.area}` }],
+  // The home valley's places have their names spoken; a generated place gets "A new place to explore!".
+  discovered: (e) => [{ kind: "sfx", id: "golden", opts: {} }, { kind: "line", line: HOME_PLACES.has(e.area) ? `area-${e.area}` : "new-place" }],
+  ride: () => [{ kind: "sfx", id: "upgrade", opts: { gain: 0.6 } }, { kind: "line", line: "all-aboard" }],
+  arrived: () => [{ kind: "sfx", id: "golden", opts: {} }, { kind: "line", line: "here-we-are" }],
 };
 
 function cueOf<K extends LakeEvent["kind"]>(e: EventOf<K>, pan: Pan): Cue[] {

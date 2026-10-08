@@ -12,7 +12,8 @@ import { voice } from "../audio/voice";
 import { sfx } from "../audio/sfx";
 import { FISH_IDS } from "../../game/fish";
 import { useOgsTv } from "../useOgsTv";
-import { AREAS, areaById } from "../../game/world";
+import { AREAS } from "../../game/world";
+import { worldFor } from "../../game/regions";
 import { shouldTeach, teachFor, type TeachMemory } from "../teach";
 import { thrashingAt } from "../../game/reel";
 import { createServerClock } from "../serverClock";
@@ -29,7 +30,7 @@ function qrDataUrl(text: string): string {
   return qr.createDataURL(6, 2);
 }
 
-type Toast = { id: number; kind: "new" | "upgrade" | "golden" | "place"; fishId?: string; seat?: number; tier?: number; place?: string };
+type Toast = { id: number; kind: "new" | "upgrade" | "golden" | "place"; fishId?: string; seat?: number; tier?: number; place?: string; ride?: "boat" | "zeppelin" };
 
 /**
  * The TV: the 3D lake (scene/), the room's clock (TICK at 4 Hz), the world's sound, and a small HUD at
@@ -94,7 +95,8 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
       if (e.kind === "caught" && e.isNew) fresh.push({ id: ++toastId.current, kind: "new", fishId: e.fishId, seat: e.seat });
       if (e.kind === "upgrade") fresh.push({ id: ++toastId.current, kind: "upgrade", tier: e.tier });
       if (e.kind === "golden-swirl") fresh.push({ id: ++toastId.current, kind: "golden" });
-      if (e.kind === "discovered") fresh.unshift({ id: ++toastId.current, kind: "place", place: areaById(e.area).name, seat: e.seat });
+      if (e.kind === "discovered") fresh.unshift({ id: ++toastId.current, kind: "place", place: worldFor(lake.worldSeed).placeById(e.area)?.name ?? "A new place", seat: e.seat });
+      if (e.kind === "ride") fresh.unshift({ id: ++toastId.current, kind: "place", place: e.to, seat: 0, ride: e.vehicle });
     }
     if (fresh.length > 0) setToasts((t) => [...t, ...fresh].slice(-4));
   }, [lake, sound, clock]);
@@ -111,7 +113,7 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
     if (!sound) return;
     unlockAudio();
     startWorld();
-    voice.enable([...FISH_IDS.map((id) => `fish-${id}`), "new", "upgrade", "golden", "campfire", "teach-walk", "teach-bite", "teach-hold", "teach-letgo", "teach-swirl", "teach-explore", ...AREAS.map((a) => `area-${a.id}`)]);
+    voice.enable([...FISH_IDS.map((id) => `fish-${id}`), "new", "upgrade", "golden", "campfire", "teach-walk", "teach-bite", "teach-hold", "teach-letgo", "teach-swirl", "teach-explore", "new-place", "all-aboard", "here-we-are", ...AREAS.map((a) => `area-${a.id}`)]);
     const live = createLiveSounds();
     const thrashing = new Set<number>();
     const stepAt = new Map<number, number>();
@@ -169,10 +171,12 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
         </div>
       </div>
       <div className="hud hud-right">
-        <div className="hud-chip places-chip" aria-label={`${lake.discovered.length} of ${AREAS.length} places found`}>
-          {AREAS.map((a) => (
-            <span key={a.id} className={`place-dot ${a.id} ${lake.discovered.includes(a.id) ? "found" : ""}`} />
-          ))}
+        <div className="hud-chip places-chip" aria-label={`${lake.discovered.length} places found`}>
+          <svg className="places-icon" viewBox="0 0 40 40" aria-hidden="true">
+            <path d="M20 4 C11 4 6 11 6 17 C6 27 20 36 20 36 C20 36 34 27 34 17 C34 11 29 4 20 4z" fill="#c9b0ff" stroke="#fff" strokeWidth="2.5" />
+            <circle cx="20" cy="17" r="5" fill="#2a1f5a" />
+          </svg>
+          <span className="hud-count">{lake.discovered.length}</span>
         </div>
         <div className="hud-chip rod-chip" aria-label={`${ROD_NAMES[lake.rodTier]} rod`}>
           <span className="shell">
@@ -203,7 +207,7 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
             {t.kind === "golden" && <span className="toast-text">Golden swirl!</span>}
             {t.kind === "place" && (
               <span className="toast-text">
-                <span className="toast-kicker">New place</span> {t.place}
+                <span className="toast-kicker">{t.ride === "zeppelin" ? "Zeppelin to" : t.ride === "boat" ? "Boat to" : "New place"}</span> {t.place}
               </span>
             )}
           </div>

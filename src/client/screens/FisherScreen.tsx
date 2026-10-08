@@ -9,8 +9,10 @@ import { HostPanel, type Hosting } from "../components/HostPanel";
 import { HostStrip } from "../components/HostStrip";
 import { Joystick } from "../components/Joystick";
 import { MiniMap, SEAT_HEX } from "../components/MiniMap";
+import { WorldMap } from "../components/WorldMap";
 import { SwirlCompass } from "../components/SwirlCompass";
 import { PlaceFound } from "../components/PlaceFound";
+import { worldFor } from "../../game/regions";
 import { compassTo } from "../compass";
 import { positionAt } from "../fisherUi";
 import { buttonState, needsTick } from "../fisherUi";
@@ -37,6 +39,7 @@ export function FisherScreen({ seat, host, hosting }: { seat: number; host: bool
   const clock = useMemo(() => createServerClock(), []);
   clock.observe(lake.now);
   const [, setFrame] = useState(0);
+  const [mapOpen, setMapOpen] = useState(false);
   useEffect(() => {
     const id = window.setInterval(() => setFrame((n) => n + 1), FRAME_MS);
     return () => window.clearInterval(id);
@@ -100,7 +103,7 @@ export function FisherScreen({ seat, host, hosting }: { seat: number; host: bool
   return (
     <div className={`fisher ${host ? "host" : "kid"} ${state.kind}`} style={{ "--seat": color }}>
       <div className="fisher-top">
-        <MiniMap lake={lake} mySeat={seat} now={now} />
+        <MiniMap lake={lake} mySeat={seat} now={now} onOpen={() => setMapOpen(true)} />
         {host && <HostStrip lake={lake} mySeat={seat} now={now} send={send} />}
       </div>
       <div className="fisher-middle">
@@ -110,13 +113,15 @@ export function FisherScreen({ seat, host, hosting }: { seat: number; host: bool
           return c ? <SwirlCompass c={c} /> : null;
         })()}
         {me.catch && me.mode === "catch" && <CatchCard c={me.catch} words={host} />}
-        {lake.discovery && now - lake.discovery.at < 2800 && <PlaceFound area={lake.discovery.area} seq={lake.discovery.seq} />}
+        {lake.discovery && now - lake.discovery.at < 2800 && <PlaceFound biome={worldFor(lake.worldSeed).placeById(lake.discovery.area)?.biome ?? "moonwell"} seq={lake.discovery.seq} />}
       </div>
       <div className="fisher-bottom">
         <Joystick onStick={onStick} color={color} />
         <ActionButton state={state} onPress={onPress} onHold={onHold} />
       </div>
       {host && hosting && <HostPanel hosting={hosting} />}
+      {lake.boarding && !lake.ride && <div className="boarding-glow" aria-hidden="true" />}
+      {mapOpen && <WorldMap lake={lake} mySeat={seat} now={now} onClose={() => setMapOpen(false)} />}
     </div>
   );
 }
