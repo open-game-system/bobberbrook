@@ -4,7 +4,7 @@ import { thrashingAt } from "../game/reel";
 import { lakeEvents, type LakeEvent } from "./lakeEvents";
 
 /** A sound the controller plays for its own fisher. */
-export type DeviceCue = "bite" | "catch" | "junk" | "newFish" | "missed" | "cast" | "nibble" | "thrash" | "reelClick";
+export type DeviceCue = "bite" | "catch" | "junk" | "newFish" | "missed" | "cast" | "nibble" | "thrash" | "reelClick" | "place";
 
 const EVENT_CUES: Partial<Record<LakeEvent["kind"], (e: LakeEvent) => DeviceCue[]>> = {
   bite: () => ["bite"],
@@ -17,11 +17,11 @@ const EVENT_CUES: Partial<Record<LakeEvent["kind"], (e: LakeEvent) => DeviceCue[
   },
 };
 
-/** Cues for what just happened to this seat between two lake states. */
+/** Cues for what just happened to this seat between two lake states (a new place chimes on every device). */
 export function eventCues(prev: Lake | null, next: Lake, seat: number): DeviceCue[] {
-  return lakeEvents(prev, next)
-    .filter((e) => "seat" in e && e.seat === seat)
-    .flatMap((e) => EVENT_CUES[e.kind]?.(e) ?? []);
+  const events = lakeEvents(prev, next);
+  const mine = events.filter((e) => "seat" in e && e.seat === seat).flatMap((e) => EVENT_CUES[e.kind]?.(e) ?? []);
+  return events.some((e) => e.kind === "discovered") ? [...mine.filter((c) => c !== "place"), "place"] : mine;
 }
 
 /** Memory between animation ticks, so each nibble and each thrash sounds once. */

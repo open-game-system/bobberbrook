@@ -10,6 +10,7 @@ import { HostStrip } from "../components/HostStrip";
 import { Joystick } from "../components/Joystick";
 import { MiniMap, SEAT_HEX } from "../components/MiniMap";
 import { SwirlCompass } from "../components/SwirlCompass";
+import { PlaceFound } from "../components/PlaceFound";
 import { compassTo } from "../compass";
 import { positionAt } from "../fisherUi";
 import { buttonState, needsTick } from "../fisherUi";
@@ -109,6 +110,7 @@ export function FisherScreen({ seat, host, hosting }: { seat: number; host: bool
           return c ? <SwirlCompass c={c} /> : null;
         })()}
         {me.catch && me.mode === "catch" && <CatchCard c={me.catch} words={host} />}
+        {lake.discovery && now - lake.discovery.at < 2800 && <PlaceFound area={lake.discovery.area} seq={lake.discovery.seq} />}
       </div>
       <div className="fisher-bottom">
         <Joystick onStick={onStick} color={color} />

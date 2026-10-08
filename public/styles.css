@@ -203,3 +203,7 @@ button { font: inherit; color: inherit; }
 .journal-page h3 { margin: 18px 0 6px; font-size: 20px; color: #e8eeff; }
 .journal-page.unfound h3 { color: rgba(220,200,255,.6); font-style: italic; }
 .journal-page.unfound .journal li { opacity: 0.6; }
+.place-found { position: absolute; inset: -20%; display: grid; place-items: center; animation: pop 0.5s cubic-bezier(.2,1.6,.4,1), fade-late 2.8s forwards; pointer-events: none; }
+.pf-rays { position: absolute; inset: 0; border-radius: 50%; background: repeating-conic-gradient(color-mix(in oklab, var(--seat) 70%, transparent) 0 10deg, transparent 10deg 24deg); animation: spin 6s linear infinite; mask: radial-gradient(circle, #000 25%, transparent 70%); }
+.pf-star { position: relative; width: 55%; filter: drop-shadow(0 0 20px var(--seat)); animation: breathe 0.9s ease-in-out infinite; }
+@keyframes fade-late { 0%, 75% { opacity: 1; } 100% { opacity: 0; } }

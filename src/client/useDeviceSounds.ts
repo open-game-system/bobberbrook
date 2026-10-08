@@ -13,6 +13,7 @@ const PLAY: Record<DeviceCue, () => void> = {
   nibble: () => sfx.nibble(),
   thrash: () => sfx.thrash({ gain: 0.5 }),
   reelClick: () => sfx.reelClick(),
+  place: () => sfx.golden(),
 };
 
 /**

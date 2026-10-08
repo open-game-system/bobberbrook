@@ -30,6 +30,15 @@ describe("eventCues", () => {
   });
 });
 
+describe("a new place", () => {
+  it("chimes on every device, once", () => {
+    const l = shore();
+    const found = { ...l, discovered: [...l.discovered, "hollow" as const], discovery: { area: "hollow" as const, seat: 1, at: 5, seq: 1 } };
+    expect(eventCues(l, found, 0)).toEqual(["place"]);
+    expect(eventCues(l, found, 1)).toEqual(["place"]);
+  });
+});
+
 describe("liveCues", () => {
   it("is quiet with no fisher", () => {
     expect(liveCues(undefined, 0, 0, mem())).toEqual([]);
