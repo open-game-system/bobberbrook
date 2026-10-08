@@ -39,16 +39,20 @@ const tv = await (await browser.newContext({ viewport: { width: 1280, height: 72
 await tv.goto(`${BASE}/?as=tv`);
 await tv.locator(".ticket-code").waitFor();
 const code = (await tv.locator(".ticket-code").textContent())!.trim();
-async function join(name: string, w: number, h: number) {
+async function join(name: string | null, w: number, h: number) {
   const p = await (await browser.newContext({ viewport: { width: w, height: h }, hasTouch: true })).newPage();
-  await p.goto(`${BASE}/join/${code}?rig=1`);
-  await p.locator(".name-input").fill(name);
-  await p.getByRole("button", { name: "Join" }).click();
+  await p.goto(`${BASE}/join/${code}?rig=1`, { timeout: 90_000 });
+  if (name === null) await p.getByRole("button", { name: "blue hat" }).click({ force: true, timeout: 60_000 });
+  else {
+    await p.getByRole("button", { name: /Type your name/ }).click({ timeout: 60_000 });
+    await p.locator(".name-input").fill(name);
+    await p.getByRole("button", { name: "Join" }).click();
+  }
   await p.locator("button.action").waitFor();
   return p;
 }
 const dad = await join("Dad", 393, 852);
-const kid = await join("Juneau", 1080, 810);
+const kid = await join(null, 1080, 810);
 const shots: string[] = [];
 const snap = async (label: string) => {
   for (const [who, p] of [["ipad", kid], ["phone", dad]] as const) {
@@ -59,6 +63,11 @@ const snap = async (label: string) => {
 };
 await kid.waitForTimeout(800);
 await snap("1-walk");
+// The host names the kid from Fishers (his iPad joined wordlessly).
+await dad.getByRole("button", { name: "Fishers" }).click();
+await dad.locator(".rename-input").nth(1).fill("Juneau");
+await dad.locator(".rename-input").nth(1).press("Enter");
+await dad.getByRole("button", { name: "Close" }).click();
 const { swirls } = await lakeOf(kid);
 const th = swirls[0]?.theta ?? Math.PI;
 const shore = (theta: number, extra: number) => {

@@ -102,20 +102,38 @@ async function hostAndJoin(rig: PageFor): Promise<{ tv: Page; dad: Page; kid: Pa
   const { pageFor } = rig;
   const tv = await pageFor("tv");
   await tv.goto(`${rig.baseUrl}/?as=tv&record=1`);
-  await tv.locator(".ticket-code").waitFor({ timeout: 30_000 });
+  await tv.locator(".ticket-code").waitFor({ timeout: 60_000 });
   const code = ((await tv.locator(".ticket-code").textContent()) ?? "").trim();
-  const join = async (role: string, name: string) => {
+  const join = async (role: string, name: string | null) => {
     const page = await pageFor(role);
     await page.goto(`${rig.baseUrl}/join/${code}?rig=1`);
-    await page.locator(".name-input").fill(name);
-    await page.getByRole("button", { name: "Join" }).click();
+    if (name === null) {
+      // The kid taps the blue hat (no words on his iPad).
+      await page.getByRole("button", { name: "blue hat" }).click({ timeout: 60_000, force: true });
+    } else {
+      await page.getByRole("button", { name: /Type your name/ }).click({ timeout: 60_000 });
+      await page.locator(".name-input").fill(name);
+      await page.getByRole("button", { name: "Join" }).click();
+    }
     await page.locator("button.action").waitFor({ timeout: 20_000 });
     return page;
   };
   const dad = await join("dad", "Dad");
-  const kid = await join("kid", "Juneau");
+  const kid = await join("kid", null);
+  // Dad names the kid from Fishers (the iPad joined with a hat, no typing).
+  await dad.getByRole("button", { name: "Fishers" }).click({ timeout: 30_000 });
+  await dad.locator(".rename-input").nth(1).fill("Juneau");
+  await dad.locator(".rename-input").nth(1).press("Enter");
+  await dad.getByRole("button", { name: "Close" }).click();
   return { tv, dad, kid, code };
 }
+
+// One viewport per screen: the shared Mac runs several games' rigs at once, and every extra page load
+// under that load risks a 30 s goto timeout.
+const TV = { width: 1920, height: 1080 };
+const IPAD = { width: 1080, height: 810 };
+const PHONE = { width: 393, height: 852 };
+const PHONE_SE = { width: 375, height: 667 };
 
 const config: GameRigInput = {
   name: "Bobberbrook",
@@ -131,11 +149,11 @@ const config: GameRigInput = {
   maxTapsPerScreen: 6,
   holdSelector: "button.action.reel",
   screens: [
-    { name: "tv-empty-lake", role: "tv", path: "/?as=tv", checks: ["overlay", "text", "safe-area"], settleMs: 4000 },
-    { name: "phone-name", role: "dad", setup: async (rig) => { const { code } = await hostAndJoin(fromSetup(rig)); await rig.page.goto(`${rig.baseUrl}/join/${code}`); }, focal: false },
-    { name: "phone-controller", role: "dad", setup: async (rig) => void (await hostAndJoin(fromSetup(rig))), focal: false },
-    { name: "ipad-controller", role: "kid", setup: async (rig) => void (await hostAndJoin(fromSetup(rig))), focal: false },
-    { name: "tv-two-fishers", role: "tv", setup: async (rig) => void (await hostAndJoin(fromSetup(rig))), checks: ["overlay", "text", "safe-area"], settleMs: 3000 },
+    { name: "tv-empty-lake", role: "tv", path: "/?as=tv", checks: ["overlay", "text", "safe-area"], settleMs: 4000, viewports: [TV] },
+    { name: "kid-hat-picker", role: "kid", setup: async (rig) => { const tv = await rig.open("tv"); await tv.goto(`${rig.baseUrl}/?as=tv`); await tv.locator(".ticket-code").waitFor({ timeout: 60_000 }); const code = ((await tv.locator(".ticket-code").textContent()) ?? "").trim(); await rig.page.goto(`${rig.baseUrl}/join/${code}`); }, focal: false, viewports: [IPAD] },
+    { name: "phone-controller", role: "dad", setup: async (rig) => void (await hostAndJoin(fromSetup(rig))), focal: false, viewports: [PHONE, PHONE_SE] },
+    { name: "ipad-controller", role: "kid", setup: async (rig) => void (await hostAndJoin(fromSetup(rig))), focal: false, viewports: [IPAD] },
+    { name: "tv-two-fishers", role: "tv", setup: async (rig) => void (await hostAndJoin(fromSetup(rig))), checks: ["overlay", "text", "safe-area"], settleMs: 3000, viewports: [TV] },
   ],
   session: async (rig) => {
     const { tv, dad, kid } = await hostAndJoin(fromSession(rig));

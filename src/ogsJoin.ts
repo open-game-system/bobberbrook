@@ -44,6 +44,6 @@ export async function trustCouch(couch: CouchEvent, verify: (token: string) => P
 /** A valid token for this game names the seat (OGS_JOIN); anything else is an ordinary typed-name join. */
 export async function trustJoin(join: JoinEvent, verify: (token: string) => Promise<GameToken | null>): Promise<TrustedJoin> {
   const claims = join.ogsToken === undefined ? null : await verify(join.ogsToken);
-  if (!claims) return { type: "JOIN", name: join.name };
-  return { type: "OGS_JOIN", profile: { id: claims.sub, handle: claims.handle, name: claims.name, avatar: claims.avatar } };
+  if (!claims) return { type: "JOIN", name: join.name, color: join.color };
+  return { type: "OGS_JOIN", profile: { id: claims.sub, handle: claims.handle, name: claims.name, avatar: claims.avatar }, color: join.color };
 }

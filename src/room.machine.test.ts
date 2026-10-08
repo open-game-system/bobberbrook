@@ -108,4 +108,15 @@ describe("the room", () => {
     r.send("tv", { type: "OGS_COUCH", players: [{ id: "x", name: "X" }] });
     expect(r.ctx().public.couch).toEqual([{ id: "x", name: "X" }]);
   });
+
+  it("seats a device in the colour it asks for, and lets only the host rename", () => {
+    const r = room();
+    r.send("dad", { type: "JOIN", name: "Dad" });
+    r.send("kid", { type: "JOIN", color: "blue" });
+    expect(r.ctx().public.lake.fishers.map((f) => f.color)).toEqual(["green", "blue"]);
+    r.send("kid", { type: "RENAME", seat: 1, name: "Me" });
+    expect(r.ctx().public.lake.fishers[1]!.name).toBeNull();
+    r.send("dad", { type: "RENAME", seat: 1, name: "Juneau" });
+    expect(r.ctx().public.lake.fishers[1]!.name).toBe("Juneau");
+  });
 });

@@ -392,13 +392,42 @@ export function step(lake: Lake, now: number): Lake {
   return produce(lake, (d) => {
     d.now = now;
     for (const f of d.fishers) stepFisher(d, f, now);
+    keepApart(d.fishers);
     refreshSwirls(d, now);
   });
 }
 
+/** How close two fishers may stand (metres). */
+export const FISHER_SPACE = 1.1;
+
+/** Nudges any two fishers standing closer than FISHER_SPACE apart, each half the way, onto walkable ground. */
+export function keepApart(fishers: { pos: Vec; seat: number }[]): void {
+  for (let i = 0; i < fishers.length; i++)
+    for (let j = i + 1; j < fishers.length; j++) {
+      const a = fishers[i]!;
+      const b = fishers[j]!;
+      const dx = b.pos.x - a.pos.x;
+      const dz = b.pos.z - a.pos.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist >= FISHER_SPACE) continue;
+      // Exactly on top of each other: part them by seat, east–west.
+      const ux = dist > 1e-6 ? dx / dist : b.seat > a.seat ? 1 : -1;
+      const uz = dist > 1e-6 ? dz / dist : 0;
+      const push = (FISHER_SPACE - dist) / 2;
+      a.pos = advance(a.pos, { x: -ux, z: -uz }, push);
+      b.pos = advance(b.pos, { x: ux, z: uz }, push);
+    }
+}
+
 // ---------- what players do ----------
 
-export function join(lake: Lake, input: { name: string | null; ogsId: string | null }): { lake: Lake; seat: number | null } {
+/** The colour a joining device gets: the one it asked for if free, else the first free one. */
+export function colorFor(asked: SeatColor | undefined, taken: SeatColor[]): SeatColor {
+  if (asked && !taken.includes(asked)) return asked;
+  return SEAT_COLORS.find((c) => !taken.includes(c)) ?? SEAT_COLORS[0];
+}
+
+export function join(lake: Lake, input: { name: string | null; ogsId: string | null; color?: SeatColor }): { lake: Lake; seat: number | null } {
   if (input.ogsId) {
     const back = lake.fishers.find((f) => f.ogsId === input.ogsId);
     if (back) return { lake, seat: back.seat };
@@ -411,7 +440,7 @@ export function join(lake: Lake, input: { name: string | null; ogsId: string | n
     d.fishers.push({
       seat,
       name: input.name,
-      color: SEAT_COLORS[seat]!,
+      color: colorFor(input.color, d.fishers.map((f) => f.color)),
       ogsId: input.ogsId,
       easy: false,
       pos,
@@ -433,6 +462,21 @@ export function join(lake: Lake, input: { name: string | null; ogsId: string | n
     d.fishers.sort((a, b) => a.seat - b.seat);
   });
   return { lake: next, seat };
+}
+
+/** A typed name, tidied: trimmed, inner spaces collapsed, at most 14 characters; blank = null. */
+export function tidyName(raw: string | undefined): string | null {
+  const name = (raw ?? "").trim().replace(/\s+/g, " ").slice(0, 14).trim();
+  return name.length > 0 ? name : null;
+}
+
+/** The host names a fisher (kids join wordlessly). */
+export function rename(lake: Lake, seat: number, name: string): Lake {
+  if (!lake.fishers.some((f) => f.seat === seat)) return lake;
+  return produce(lake, (d) => {
+    const f = d.fishers.find((x) => x.seat === seat);
+    if (f) f.name = tidyName(name);
+  });
 }
 
 function withFisher(lake: Lake, seat: number, now: number, recipe: (d: Draft<Lake>, f: Draft<Fisher>) => void): Lake {

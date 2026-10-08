@@ -1,12 +1,7 @@
 import { assign, setup } from "xstate";
-import { action, join, loadProgress, move, newLake, reelHold, setCampfire, setEasy, step, type Lake } from "./game/lake";
+import { action, join, loadProgress, move, newLake, reelHold, rename, setCampfire, setEasy, step, tidyName, type Lake, type SeatColor } from "./game/lake";
 import type { RoomEvent, RoomInput, RoomPrivateContext, RoomServerContext } from "./room.types";
 
-/** A typed name, tidied: trimmed, inner spaces collapsed, at most 14 characters; blank = null. */
-function tidyName(raw: string | undefined): string | null {
-  const name = (raw ?? "").trim().replace(/\s+/g, " ").slice(0, 14).trim();
-  return name.length > 0 ? name : null;
-}
 
 const callerOf = (event: RoomEvent): string | null => ("caller" in event && event.caller.type === "client" ? event.caller.id : null);
 
@@ -18,11 +13,11 @@ function seatOf(context: RoomServerContext, event: RoomEvent): number | null {
 const isHost = (context: RoomServerContext, event: RoomEvent) => callerOf(event) !== null && callerOf(event) === context.server.hostId;
 
 /** Who is asking for a seat and as whom; null for the TV, a seated caller, or any other event. */
-function joinerOf(context: RoomServerContext, event: RoomEvent): { id: string; name: string | null; ogsId: string | null } | null {
+function joinerOf(context: RoomServerContext, event: RoomEvent): { id: string; name: string | null; ogsId: string | null; color?: SeatColor } | null {
   const id = callerOf(event);
   if (id === null || id === context.server.tvId || context.server.seats[id] !== undefined) return null;
-  if (event.type === "OGS_JOIN") return { id, name: tidyName(event.profile.name), ogsId: event.profile.id };
-  if (event.type === "JOIN") return { id, name: tidyName(event.name), ogsId: null };
+  if (event.type === "OGS_JOIN") return { id, name: tidyName(event.profile.name), ogsId: event.profile.id, color: event.color };
+  if (event.type === "JOIN") return { id, name: tidyName(event.name), ogsId: null, color: event.color };
   return null;
 }
 
@@ -53,7 +48,7 @@ export const roomMachine = setup({
     join: assign(({ context, event }) => {
       const who = joinerOf(context, event);
       if (who === null) return context;
-      const joined = join(step(context.public.lake, Date.now()), { name: who.name, ogsId: who.ogsId });
+      const joined = join(step(context.public.lake, Date.now()), { name: who.name, ogsId: who.ogsId, color: who.color });
       if (joined.seat === null) return context;
       const seats = seatsWith(context.server.seats, who.id, joined.seat);
       const hostId = context.server.hostId ?? who.id;
@@ -77,6 +72,10 @@ export const roomMachine = setup({
     easy: assign(({ context, event }) => {
       if (event.type !== "EASY" || !isHost(context, event)) return context;
       return withLake(context, setEasy(context.public.lake, event.seat, event.on));
+    }),
+    rename: assign(({ context, event }) => {
+      if (event.type !== "RENAME" || !isHost(context, event)) return context;
+      return withLake(context, rename(context.public.lake, event.seat, event.name));
     }),
     campfire: assign(({ context, event }) => {
       if (event.type !== "CAMPFIRE" || !isHost(context, event)) return context;
@@ -109,6 +108,7 @@ export const roomMachine = setup({
         ACTION: { actions: "action" },
         REEL: { actions: "reel" },
         EASY: { actions: "easy" },
+        RENAME: { actions: "rename" },
         CAMPFIRE: { actions: "campfire" },
         PROGRESS: { actions: "progress" },
         TICK: { actions: "tick" },

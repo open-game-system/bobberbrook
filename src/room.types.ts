@@ -14,7 +14,7 @@ export type RoomServiceEvent = z.infer<typeof RoomServiceEventSchema>;
 /** The OGS player behind a verified game token (never parsed from a client message). */
 export type OgsPlayer = { id: string; handle: string; name: string; avatar: string };
 /** A JOIN whose OGS token the Room server verified. Not in the client schema: only the server sends it. */
-export type OgsJoinEvent = { type: "OGS_JOIN"; profile: OgsPlayer };
+export type OgsJoinEvent = { type: "OGS_JOIN"; profile: OgsPlayer; color?: "green" | "yellow" | "blue" | "pink" };
 /** Who's on the OGS couch: the Room server verified the TV's game token. */
 export type OgsCouchEvent = { type: "OGS_COUCH"; players: { id: string; name: string }[] };
 
