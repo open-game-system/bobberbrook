@@ -33,46 +33,47 @@ type Key = {
   /** Disc in the sky: 0 sun, 1 moon. */
   moon: number;
   mountain: number;
+  /** Where the sun or moon disc sits in the sky (independent of the key light, so it can be in frame). */
+  discAz: number;
+  discEl: number;
+  /** Post grade gain (multiplies the final image, before tone mapping). */
+  grade: number;
 };
 
 const D = Math.PI / 180;
 
 const KEYS: Key[] = [
-  // Ashenvale family: every phase stays violet/indigo with teal water; warmth only in small accents.
-  // Morning: lavender-silver dawnlight through fog.
-  { at: 0.0, skyTop: 0x5a5aa8, skyHorizon: 0xc8b4e0, skyGlow: 0xf0c8e8, cloud: 0xe8d8f4, cloudShade: 0x8a78b8, sun: 0xe8dcff, sunI: 1.7, az: 25 * D, el: 14 * D,
-    hemiSky: 0xb0a8e8, hemiGround: 0x3a5a6a, hemiI: 1.05, fog: 0xa898d0, fogNear: 45, fogFar: 230, exposure: 1.0, stars: 0.35, glow: 0.45, mist: 0.9,
-    waterShallow: 0x58e0d8, waterDeep: 0x10708e, moon: 0, mountain: 0x8a7ab8 },
-  { at: 0.12, skyTop: 0x4c5cb0, skyHorizon: 0xc4c0ec, skyGlow: 0xf4e4ff, cloud: 0xf0eaff, cloudShade: 0x9a90c8, sun: 0xf0eaff, sunI: 2.5, az: 60 * D, el: 32 * D,
-    hemiSky: 0xc4c0f4, hemiGround: 0x4a6a80, hemiI: 1.2, fog: 0xa8a4dc, fogNear: 55, fogFar: 260, exposure: 1.0, stars: 0.3, glow: 0.35, mist: 0.6,
-    waterShallow: 0x50e6dc, waterDeep: 0x0c7894, moon: 0, mountain: 0x8480c0 },
-  { at: 0.3, skyTop: 0x4858b0, skyHorizon: 0xbcbcec, skyGlow: 0xf0e8ff, cloud: 0xf0ecff, cloudShade: 0x9890cc, sun: 0xf2eeff, sunI: 2.55, az: 100 * D, el: 44 * D,
-    hemiSky: 0xc4c0f4, hemiGround: 0x4a6a80, hemiI: 1.2, fog: 0xa4a4dc, fogNear: 55, fogFar: 260, exposure: 1.0, stars: 0.3, glow: 0.35, mist: 0.5,
-    waterShallow: 0x4ee8dc, waterDeep: 0x0a7a96, moon: 0, mountain: 0x8282c4 },
-  // Golden: rose-violet dusk with a warm rim.
-  { at: 0.41, skyTop: 0x4a3c8a, skyHorizon: 0xf0a8c0, skyGlow: 0xffb48a, cloud: 0xffc4d0, cloudShade: 0x8a5a9a, sun: 0xffb890, sunI: 2.2, az: 150 * D, el: 14 * D,
-    hemiSky: 0xe8b4e4, hemiGround: 0x4a5a7a, hemiI: 1.35, fog: 0xb88ab8, fogNear: 50, fogFar: 240, exposure: 1.02, stars: 0.4, glow: 0.6, mist: 0.55,
-    waterShallow: 0x58d8d4, waterDeep: 0x16608a, moon: 0, mountain: 0x8a6aa8 },
-  { at: 0.48, skyTop: 0x34307a, skyHorizon: 0xd88ab0, skyGlow: 0xff9a7a, cloud: 0xe8a0c0, cloudShade: 0x6a4a8a, sun: 0xffa080, sunI: 1.6, az: 168 * D, el: 6 * D,
-    hemiSky: 0xc0a0dc, hemiGround: 0x3a4868, hemiI: 1.3, fog: 0x9a78b0, fogNear: 45, fogFar: 230, exposure: 1.04, stars: 0.6, glow: 0.85, mist: 0.6,
-    waterShallow: 0x50ccd0, waterDeep: 0x14507e, moon: 0.2, mountain: 0x6a5498 },
-  // Night: deep indigo, a bright moon, glowing water and wisps.
-  { at: 0.55, skyTop: 0x161a52, skyHorizon: 0x4a3c8a, skyGlow: 0x8a7ad0, cloud: 0x6a62a8, cloudShade: 0x2a2a60, sun: 0xb8c4ff, sunI: 1.4, az: 225 * D, el: 22 * D,
-    hemiSky: 0x6a6ad0, hemiGround: 0x22305a, hemiI: 1.2, fog: 0x3a3478, fogNear: 45, fogFar: 220, exposure: 1.08, stars: 1, glow: 1, mist: 0.6,
-    waterShallow: 0x3ad8d8, waterDeep: 0x0a3a70, moon: 1, mountain: 0x3a3478 },
-  { at: 0.66, skyTop: 0x0e1244, skyHorizon: 0x2e2c78, skyGlow: 0x6a6ad0, cloud: 0x4a4a90, cloudShade: 0x1c1c50, sun: 0xc4d0ff, sunI: 1.65, az: 250 * D, el: 24 * D,
-    hemiSky: 0x5a64c8, hemiGround: 0x1c2a54, hemiI: 1.25, fog: 0x262a68, fogNear: 45, fogFar: 210, exposure: 1.1, stars: 1, glow: 1, mist: 0.55,
-    waterShallow: 0x36dcd8, waterDeep: 0x082e66, moon: 1, mountain: 0x262a68 },
-  { at: 0.8, skyTop: 0x0e1244, skyHorizon: 0x2e2c78, skyGlow: 0x6a6ad0, cloud: 0x4a4a90, cloudShade: 0x1c1c50, sun: 0xc4d0ff, sunI: 1.65, az: 285 * D, el: 22 * D,
-    hemiSky: 0x5a64c8, hemiGround: 0x1c2a54, hemiI: 1.25, fog: 0x262a68, fogNear: 45, fogFar: 210, exposure: 1.1, stars: 1, glow: 1, mist: 0.6,
-    waterShallow: 0x36dcd8, waterDeep: 0x082e66, moon: 1, mountain: 0x262a68 },
-  // Dawn: misty cyan.
-  { at: 0.9, skyTop: 0x283c84, skyHorizon: 0x7ab8d0, skyGlow: 0xa8e8f0, cloud: 0xa8c8e8, cloudShade: 0x4a5a98, sun: 0xc0e8ff, sunI: 1.3, az: 345 * D, el: 20 * D,
-    hemiSky: 0x80b0e0, hemiGround: 0x284a60, hemiI: 1.15, fog: 0x6a9ac0, fogNear: 30, fogFar: 200, exposure: 1.05, stars: 0.6, glow: 0.8, mist: 1.0,
-    waterShallow: 0x48e4dc, waterDeep: 0x0c5a84, moon: 0.6, mountain: 0x5a78a8 },
-  { at: 0.965, skyTop: 0x3a58a4, skyHorizon: 0x9ad0e0, skyGlow: 0xd8f0ff, cloud: 0xd0e4f4, cloudShade: 0x6a7ab0, sun: 0xd8f0ff, sunI: 1.5, az: 8 * D, el: 8 * D,
-    hemiSky: 0x9ac0e8, hemiGround: 0x2e5064, hemiI: 1.1, fog: 0x8ab4d4, fogNear: 30, fogFar: 210, exposure: 1.02, stars: 0.4, glow: 0.6, mist: 1.0,
-    waterShallow: 0x50e4dc, waterDeep: 0x0e6688, moon: 0, mountain: 0x7a8ab8 },
+  // Every phase stays in the Ashenvale family (violet, teal water), but each time of day has its own
+  // key light, sky and grade so a stranger can name it from one frame.
+  // Sunrise: pink-cyan haze lifting.
+  { at: 0.0, skyTop: 0x6a9ad0, skyHorizon: 0xf0c4dc, skyGlow: 0xffd8e4, cloud: 0xfff0f6, cloudShade: 0xb090c8, sun: 0xffd4c8, sunI: 2.0, az: 30 * D, el: 12 * D,
+    hemiSky: 0xd0d4f0, hemiGround: 0x4a6a5a, hemiI: 1.25, fog: 0xd0c4e0, fogNear: 30, fogFar: 220, exposure: 1.06, stars: 0.1, glow: 0.35, mist: 0.85,
+    waterShallow: 0x5ce4dc, waterDeep: 0x147494, moon: 0, mountain: 0x9a90c4, discAz: 300 * D, discEl: 6 * D, grade: 0xfff4fa },
+  // Morning: pale lilac-silver sky, soft warm low key light, light mist, readable greens.
+  { at: 0.1, skyTop: 0x8a98dc, skyHorizon: 0xe8e2f4, skyGlow: 0xfff0dc, cloud: 0xffffff, cloudShade: 0xb4acd8, sun: 0xffe6c8, sunI: 2.7, az: 55 * D, el: 24 * D,
+    hemiSky: 0xdcdaf6, hemiGround: 0x5a7c5a, hemiI: 1.35, fog: 0xd8d2ec, fogNear: 60, fogFar: 300, exposure: 1.1, stars: 0, glow: 0.12, mist: 0.35,
+    waterShallow: 0x62ecdc, waterDeep: 0x10809a, moon: 0, mountain: 0xa8a4d4, discAz: 305 * D, discEl: 28 * D, grade: 0xfffaf2 },
+  { at: 0.3, skyTop: 0x7a8ad8, skyHorizon: 0xdcd8f0, skyGlow: 0xfff0dc, cloud: 0xffffff, cloudShade: 0xaaa2d4, sun: 0xfff0dc, sunI: 2.7, az: 100 * D, el: 40 * D,
+    hemiSky: 0xd4d4f4, hemiGround: 0x567a5a, hemiI: 1.3, fog: 0xccc8ea, fogNear: 60, fogFar: 300, exposure: 1.08, stars: 0, glow: 0.15, mist: 0.3,
+    waterShallow: 0x5aeadc, waterDeep: 0x0e7e9a, moon: 0, mountain: 0xa0a0d4, discAz: 250 * D, discEl: 40 * D, grade: 0xfffaf4 },
+  // Golden hour: rose-amber key low in the west, long shadows, pink-violet clouds.
+  { at: 0.4, skyTop: 0x4a3a92, skyHorizon: 0xffa890, skyGlow: 0xffa050, cloud: 0xffb8c8, cloudShade: 0x8a4a92, sun: 0xffb07a, sunI: 3.3, az: 160 * D, el: 15 * D,
+    hemiSky: 0xf0b4cc, hemiGround: 0x5a4a5a, hemiI: 1.4, fog: 0xd08aa8, fogNear: 50, fogFar: 250, exposure: 1.18, stars: 0.1, glow: 0.5, mist: 0.45,
+    waterShallow: 0x5ad6d0, waterDeep: 0x1a5a8a, moon: 0, mountain: 0x8a5a9a, discAz: 228 * D, discEl: 5 * D, grade: 0xfff0e0 },
+  { at: 0.47, skyTop: 0x36307e, skyHorizon: 0xf08a9a, skyGlow: 0xff8a5a, cloud: 0xf0a0c4, cloudShade: 0x6a4a8a, sun: 0xff9a70, sunI: 2.8, az: 168 * D, el: 9 * D,
+    hemiSky: 0xd8a4d8, hemiGround: 0x4a4260, hemiI: 1.35, fog: 0xa878b0, fogNear: 45, fogFar: 235, exposure: 1.06, stars: 0.4, glow: 0.8, mist: 0.55,
+    waterShallow: 0x52ccd0, waterDeep: 0x16507e, moon: 0, mountain: 0x6a5498, discAz: 232 * D, discEl: 2 * D, grade: 0xffe0dc },
+  // Night: deep indigo, the big moon over the falls, glowing water, mushrooms, wisps and lanterns.
+  { at: 0.55, skyTop: 0x101452, skyHorizon: 0x3a3488, skyGlow: 0x6a6ac0, cloud: 0x6a6ab0, cloudShade: 0x262660, sun: 0xb4c4ff, sunI: 1.5, az: 225 * D, el: 26 * D,
+    hemiSky: 0x5a64d0, hemiGround: 0x1e2c5a, hemiI: 1.3, fog: 0x2e2c70, fogNear: 45, fogFar: 220, exposure: 1.32, stars: 1, glow: 1, mist: 0.55,
+    waterShallow: 0x3ae0dc, waterDeep: 0x0a3070, moon: 1, mountain: 0x302c70, discAz: 271 * D, discEl: 4.5 * D, grade: 0xe6eeff },
+  { at: 0.82, skyTop: 0x0c1048, skyHorizon: 0x302c80, skyGlow: 0x6060b8, cloud: 0x5a5aa0, cloudShade: 0x1e1e58, sun: 0xb8c8ff, sunI: 1.6, az: 290 * D, el: 26 * D,
+    hemiSky: 0x5460cc, hemiGround: 0x1c2a58, hemiI: 1.3, fog: 0x282a6c, fogNear: 45, fogFar: 215, exposure: 1.32, stars: 1, glow: 1, mist: 0.6,
+    waterShallow: 0x38e0dc, waterDeep: 0x082c6a, moon: 1, mountain: 0x2a2a6c, discAz: 273 * D, discEl: 5 * D, grade: 0xe6eeff },
+  // Dawn: pink-cyan haze, the last stars, mist on the water.
+  { at: 0.9, skyTop: 0x4a8ac8, skyHorizon: 0xf4b0cc, skyGlow: 0xffc8dc, cloud: 0xffd8ec, cloudShade: 0x7a7ab8, sun: 0xffc0d4, sunI: 1.8, az: 345 * D, el: 8 * D,
+    hemiSky: 0xa8d4f0, hemiGround: 0x3a5a6a, hemiI: 1.3, fog: 0xc8b8e0, fogNear: 34, fogFar: 200, exposure: 1.06, stars: 0.35, glow: 0.6, mist: 0.85,
+    waterShallow: 0x58e8e0, waterDeep: 0x125a88, moon: 0, mountain: 0x8a8ac0, discAz: 292 * D, discEl: 3 * D, grade: 0xfff0f8 },
 ];
 
 export type TodState = {
@@ -100,6 +101,8 @@ export type TodState = {
   waterDeep: Color;
   moon: number;
   mountain: Color;
+  discDir: Vector3;
+  grade: Color;
 };
 
 export function newTodState(): TodState {
@@ -127,6 +130,8 @@ export function newTodState(): TodState {
     waterDeep: new Color(),
     moon: 0,
     mountain: new Color(),
+    discDir: new Vector3(0, 1, 0),
+    grade: new Color(1, 1, 1),
   };
 }
 
@@ -178,5 +183,12 @@ export function sampleTod(phase: number, out: TodState): TodState {
   const az = a.az + (bAz - a.az) * t;
   const el = a.el + (b.el - a.el) * t;
   out.lightDir.set(Math.cos(az) * Math.cos(el), Math.sin(el), Math.sin(az) * Math.cos(el)).normalize();
+  mixHex(out.grade, a.grade, b.grade, t);
+  let bdAz = b.discAz;
+  while (bdAz < a.discAz - Math.PI) bdAz += Math.PI * 2;
+  while (bdAz > a.discAz + Math.PI) bdAz -= Math.PI * 2;
+  const dAz = a.discAz + (bdAz - a.discAz) * t;
+  const dEl = a.discEl + (b.discEl - a.discEl) * t;
+  out.discDir.set(Math.cos(dAz) * Math.cos(dEl), Math.sin(dEl), Math.sin(dAz) * Math.cos(dEl)).normalize();
   return out;
 }

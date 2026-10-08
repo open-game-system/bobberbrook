@@ -1,0 +1,52 @@
+{
+  "round": "r01-s1",
+  "shots": [
+    {
+      "label": "empty@0.1",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 39,
+      "programs": 39,
+      "calls": 71,
+      "triangles": 914419,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 88
+    },
+    {
+      "label": "empty@0.42",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 39,
+      "programs": 39,
+      "calls": 72,
+      "triangles": 914745,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 63
+    },
+    {
+      "label": "empty@0.65",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 39,
+      "programs": 39,
+      "calls": 72,
+      "triangles": 914745,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 44
+    },
+    {
+      "label": "empty@0.93",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 39,
+      "programs": 39,
+      "calls": 72,
+      "triangles": 914745,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 90
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (File not found)"
+  ]
+}

@@ -1,4 +1,4 @@
-import { HalfFloatType, Vector2, WebGLRenderTarget, type Camera, type Scene, type WebGLRenderer } from "three";
+import { Color, HalfFloatType, Vector2, WebGLRenderTarget, type Camera, type Scene, type WebGLRenderer } from "three";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
@@ -13,6 +13,7 @@ const GradeShader = {
     uContrast: { value: 1.06 },
     uVignette: { value: 0.28 },
     uWarm: { value: 0.04 },
+    uGain: { value: new Color(1, 1, 1) },
   },
   vertexShader: /* glsl */ `
 varying vec2 vUv;
@@ -23,12 +24,13 @@ uniform float uSat;
 uniform float uContrast;
 uniform float uVignette;
 uniform float uWarm;
+uniform vec3 uGain;
 varying vec2 vUv;
 void main() {
   vec3 c = texture2D(tDiffuse, vUv).rgb;
   // NaN / negative guard: bloom smears one bad pixel into a black blot.
   if (any(isnan(c)) || any(isinf(c))) c = vec3(0.0);
-  c = max(c, vec3(0.0));
+  c = max(c, vec3(0.0)) * uGain;
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
   c = mix(vec3(l), c, uSat);
   // Gentle S-curve around mid grey (in linear light, before tone mapping).

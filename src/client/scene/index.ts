@@ -192,6 +192,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     fog.far = tod.fogFar;
     renderer.toneMappingExposure = tod.exposure;
     scene.background = tod.skyHorizon;
+    if (post) (post.grade.uniforms.uGain!.value as Color).copy(tod.grade);
   };
 
   const serverNow = (now: number) => now + offset;

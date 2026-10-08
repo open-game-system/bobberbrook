@@ -234,9 +234,13 @@ async function main(): Promise<void> {
     if (sc.direct) lake = sc.direct(lake, now);
     if (now % 2000 < dtMs) assignTargets();
   };
+  const warmFrom = now;
   if (sc.warmUntil) {
     for (let i = 0; i < 3000 && !sc.warmUntil(lake); i++) tick(50);
   } else for (let i = 0; i < 40; i++) tick(50);
+  // The warm-up is virtual time: keep the scenario's time of day where it asked to be.
+  const warmed = now - warmFrom;
+  lake = produce(lake, (d) => { d.startedAt += warmed; });
 
   const scene = await createLakeScene(canvas, { quality: q.get("lite") ? "lite" : "full" });
   if (phaseQ !== null) window.__scene?.setPhase(phase);

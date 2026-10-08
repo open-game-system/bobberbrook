@@ -60,17 +60,19 @@ void main() {
     float band = smoothstep(0.35, 0.0, abs(d.x * 0.7 + d.z * 0.5 - 0.1)) * fbm(sp * 0.04) * 0.25;
     col += vec3(0.9, 0.95, 1.0) * (star + band * 0.6) * uStars * smoothstep(0.0, 0.2, h);
   }
-  // Sun or moon disc (no face): a soft-edged disc.
-  float disc = mix(smoothstep(0.9988, 0.9993, sd), smoothstep(0.9955, 0.9962, sd), uMoon);
-  col += vec3(0.6, 0.65, 1.0) * pow(sd, 120.0) * uMoon * 0.6;
-  vec3 discCol = mix(uSunCol * 2.2 + 0.6, vec3(0.92, 0.94, 1.0) * (0.85 + 0.15 * vn(d.xz * 400.0)), uMoon);
+  // Sun or moon disc (no face): a soft-edged disc; the moon is big, with a wide silver halo.
+  float disc = mix(smoothstep(0.9988, 0.9993, sd), smoothstep(0.9938, 0.9946, sd), uMoon);
+  col += vec3(0.5, 0.58, 1.0) * (pow(sd, 300.0) * 0.9 + pow(sd, 40.0) * 0.22) * uMoon;
+  vec2 mp = (d.xz - uSunDir.xz) * 60.0;
+  float maria = smoothstep(0.55, 0.75, vn(mp * 1.3 + 4.0)) * 0.12 + smoothstep(0.6, 0.8, vn(mp * 3.1)) * 0.06;
+  vec3 discCol = mix(uSunCol * 2.2 + 0.6, vec3(1.0, 1.0, 1.05) * (1.0 - maria * 1.4), uMoon);
   col = mix(col, discCol, disc * smoothstep(-0.02, 0.02, h));
   // Painted cumulus clouds over the horizon.
   vec2 cuv = d.xz / (h + 0.18) * 1.6 + vec2(uTime * 0.004, 0.0);
   float n = fbm(cuv);
   float n2 = fbm(cuv + uSunDir.xz * 0.09);
   float band2 = smoothstep(0.02, 0.12, h) * (1.0 - smoothstep(0.45, 0.85, h));
-  float cov = smoothstep(0.5, 0.66, n) * band2;
+  float cov = smoothstep(0.5, 0.66, n) * band2 * (1.0 - uMoon * smoothstep(0.985, 0.996, sd));
   float lit = clamp(0.55 + (n - n2) * 5.0, 0.0, 1.0);
   vec3 cc = mix(uCloudShade, uCloud, lit);
   cc += uGlow * pow(sd, 4.0) * 0.4;
@@ -128,7 +130,11 @@ function buildMountains(): BufferGeometry {
       const th = (p / peaks) * Math.PI * 2 + r() * 0.2 + layer * 0.12;
       // Leave the south open behind the camera; mountains crowd the north.
       const north = 0.5 - 0.5 * Math.sin(th);
-      const H = (25 + r() * 35) * (0.55 + 0.75 * north) * (layer === 0 ? 1 : 1.35);
+      // A low saddle due north, so the moon can rise over the falls between the peaks.
+      let gap = Math.abs(th + Math.PI / 2) % (Math.PI * 2);
+      if (gap > Math.PI) gap = Math.PI * 2 - gap;
+      const saddle = 1 - 0.8 * Math.exp(-((gap / 0.2) ** 2));
+      const H = (25 + r() * 35) * (0.55 + 0.75 * north) * (layer === 0 ? 1 : 1.35) * saddle;
       const W = 40 + r() * 40;
       const base = pos.length / 3;
       const cx = Math.cos(th) * R;
@@ -215,7 +221,7 @@ export function buildSky(): Sky {
       (u.uCloud!.value as Color).copy(tod.cloud);
       (u.uCloudShade!.value as Color).copy(tod.cloudShade);
       (u.uSunCol!.value as Color).copy(tod.sun);
-      (u.uSunDir!.value as Vector3).copy(tod.lightDir);
+      (u.uSunDir!.value as Vector3).copy(tod.discDir);
       u.uMoon!.value = tod.moon;
       u.uStars!.value = tod.stars;
       u.uTime!.value = time;

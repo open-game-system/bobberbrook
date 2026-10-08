@@ -278,6 +278,8 @@ function flowMaterial(speed: number, sheet: number): ShaderMaterial {
   });
 }
 
+const moonPath = new Color(0.75, 0.82, 1.1);
+
 export function buildWater(): Water {
   const ripples: Vector4[] = Array.from({ length: MAX_RIPPLES }, () => new Vector4(0, 0, -100, 0));
   const swirls: Vector4[] = Array.from({ length: MAX_SWIRLS }, () => new Vector4(0, 0, 0, 0));
@@ -363,8 +365,9 @@ export function buildWater(): Water {
       (u.uDeep!.value as Color).copy(tod.waterDeep);
       (u.uSkyTop!.value as Color).copy(tod.skyTop);
       (u.uSkyHorizon!.value as Color).copy(tod.skyHorizon);
-      (u.uSunDir!.value as Vector3).copy(tod.lightDir);
-      (u.uSunCol!.value as Color).copy(tod.sun).multiplyScalar(tod.sunI * 0.5 * (1 - 0.75 * tod.moon));
+      (u.uSunDir!.value as Vector3).copy(tod.discDir);
+      // Sun glints by day; a bright silver moon path at night.
+      (u.uSunCol!.value as Color).copy(tod.sun).multiplyScalar(tod.sunI * 0.12).lerp(moonPath, tod.moon);
       (u.uShoreTint!.value as Color).setRGB(0.16, 0.32, 0.2).lerp(tod.hemiGround, 0.3).multiplyScalar(0.6 + 0.4 * (1 - tod.moon));
       u.uTime!.value = time;
       u.uGlow!.value = tod.glow;

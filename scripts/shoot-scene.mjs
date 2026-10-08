@@ -28,9 +28,10 @@ const SHOTS = [
   ["night-catch", null, true],
   ["rod-upgrade", null, true],
   ["campfire", null, false],
-  ["empty", 0.2, false],
-  ["empty", 0.44, false],
-  ["empty", 0.7, false],
+  ["empty", 0.1, false],
+  ["empty", 0.42, false],
+  ["empty", 0.65, false],
+  ["empty", 0.93, false],
 ];
 const only = typeof args.only === "string" ? args.only.split(",") : null;
 const shots = SHOTS.filter(([s]) => !only || only.includes(s)).slice(0, args.quick ? 4 : undefined);

@@ -12,6 +12,9 @@ export function isView(v: string): v is ViewName {
 const EL = (28 * Math.PI) / 180;
 /** Pitch the view up a little after aiming: the lake sits low in the frame, hills and sky above. */
 const PITCH_UP = 0.08;
+/** The establishing view sits lower and looks up more, so the sky (and the moon) is in frame. */
+const EST_EL = 0.3;
+const EST_PITCH = 0.19;
 
 /** The group camera: from the south, high three-quarter, eased, yaw roughly fixed. */
 export class CameraRig {
@@ -25,6 +28,7 @@ export class CameraRig {
   private el = EL;
   private wantEl = EL;
   private catchW = 0;
+  private pitch = 0;
   private override: ViewName = "auto";
   private readonly min = new Vector3();
   private readonly max = new Vector3();
@@ -75,8 +79,8 @@ export class CameraRig {
     if (v === "establish" || (v === "auto" && this.n === 0 && !campfire)) {
       this.wantTarget.set(Math.sin(t * 0.045) * 3, 0, -2 + Math.cos(t * 0.03) * 2);
       this.wantDist = 60 + Math.sin(t * 0.05) * 3;
-      this.wantYaw = Math.sin(t * 0.035) * 0.22;
-      this.wantEl = EL - 0.06 + Math.sin(t * 0.04) * 0.04;
+      this.wantYaw = Math.sin(t * 0.035) * 0.18;
+      this.wantEl = EST_EL + Math.sin(t * 0.04) * 0.03;
       rate = 0.8;
     } else if (v === "campfire" || (v === "auto" && campfire)) {
       this.wantTarget.set(CAMPFIRE.x, 0.9, CAMPFIRE.z + 0.6);
@@ -135,6 +139,9 @@ export class CameraRig {
       this.target.z + Math.cos(this.yaw) * ce * this.dist,
     );
     cam.lookAt(this.target);
-    if (groupMode || v === "establish") cam.rotateX(PITCH_UP * (1 - this.catchW));
+    const est = v === "establish" || (v === "auto" && this.n === 0 && !campfire);
+    const wantPitch = est ? EST_PITCH : groupMode ? PITCH_UP * (1 - this.catchW) : 0;
+    this.pitch += (wantPitch - this.pitch) * k;
+    cam.rotateX(this.pitch);
   }
 }
