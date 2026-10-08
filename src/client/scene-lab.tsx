@@ -4,7 +4,7 @@
  * &phase=0..1 &seed=N &lite=1 &view=name
  */
 import { produce } from "immer";
-import { CATCH_SKIP_MS, action, join, move, newLake, reelHold, setCampfire, step, type Fisher, type Lake } from "../game/lake";
+import { CATCH_SKIP_MS, SEAT_COLORS, action, join, move, newLake, reelHold, setCampfire, step, type Fisher, type Lake } from "../game/lake";
 import { DAY_MS, DAY_START } from "../game/daycycle";
 import { fishById } from "../game/fish";
 import { thrashingAt } from "../game/reel";
@@ -213,6 +213,8 @@ async function main(): Promise<void> {
     bots.set(spec.seat, { target: { x: 0, z: 0 }, hookAt: 0, nextCastAt: 0, stick: { x: 0, y: 0 }, holding: false, reactAt: 0, wander: false });
   }
   if (sc.setup) lake = sc.setup(lake, now);
+  // ?swapColors=1: colours are chosen per device, not by seat; reverse them to prove the TV follows `color`.
+  if (q.get("swapColors")) lake = produce(lake, (d) => { for (const f of d.fishers) f.color = SEAT_COLORS[3 - f.seat]!; });
   const assignTargets = () => {
     for (const spec of sc.fishers) {
       const bot = bots.get(spec.seat);

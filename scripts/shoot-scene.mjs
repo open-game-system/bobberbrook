@@ -65,7 +65,7 @@ for (const [scenario, phase, hero] of shots) {
   await page.waitForFunction(() => window.__lab?.ready === true, null, { timeout: 60_000 });
   const before = await page.evaluate(() => window.__scene.info());
   if (hero) await page.waitForFunction(() => window.__lab?.heroReady === true, null, { timeout: 45_000 }).catch(() => errors.push(`${label}: hero moment not reached`));
-  else await page.waitForTimeout(2500);
+  else await page.waitForTimeout(6500);
   const file = join(out, `${label.replace(/[@.]/g, "_")}.png`);
   await page.screenshot({ path: file });
   files.push([label, file]);

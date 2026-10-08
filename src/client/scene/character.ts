@@ -43,6 +43,8 @@ export type FisherRig = {
   markerMat: MeshBasicMaterial;
   tag: Sprite;
   tagMat: SpriteMaterial;
+  /** The pill's width as a fraction of the tag sprite's width. */
+  tagFrac: number;
   setName(name: string | null): void;
   dispose(): void;
 };
@@ -50,6 +52,7 @@ export type FisherRig = {
 const HAIR = [0x5a3420, 0xd9a650, 0x6a3a1e, 0xa4522c];
 const TROUSERS = [0x7a6a44, 0x6a5a3a, 0x5a6a8a, 0x8a5a4a];
 const SKIN = 0xffd0ae;
+const HAT_STYLE = ["green", "yellow", "blue", "pink"];
 
 function part(g: BufferGeometry, color: number, top?: number): BufferGeometry {
   return paint(prep(g), color, top);
@@ -124,9 +127,10 @@ function rodGeometry(tier: number, seg: number): BufferGeometry {
 /** Shared materials for every fisher (compiled once). */
 export type RigMaterials = { body: MeshLambertMaterial; glowRod: MeshBasicMaterial };
 
-function tagTexture(name: string | null, color: number, canvas: HTMLCanvasElement): void {
+/** Draws the name pill; returns its width as a fraction of the canvas width. */
+function tagTexture(name: string | null, color: number, canvas: HTMLCanvasElement): number {
   const ctx = canvas.getContext("2d");
-  if (!ctx) return;
+  if (!ctx) return 1;
   const w = canvas.width;
   const h = canvas.height;
   ctx.clearRect(0, 0, w, h);
@@ -159,6 +163,7 @@ function tagTexture(name: string | null, color: number, canvas: HTMLCanvasElemen
     ctx.strokeText(label, w / 2, h / 2 + 3);
     ctx.fillText(label, w / 2, h / 2 + 3);
   }
+  return pw / w;
 }
 
 export function buildFisher(seat: number, colorName: string, mats: RigMaterials): FisherRig {
@@ -227,7 +232,9 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials)
   const shines = [1, -1].map((sx) => part(new SphereGeometry(0.011, 5, 4).translate(sx * 0.075 + 0.01, 0.225, 0.215), 0xffffff));
   const cheeks = [1, -1].map((sx) => part(new SphereGeometry(0.036, 7, 5).scale(1, 0.6, 0.4).translate(sx * 0.125, 0.15, 0.18), 0xff9a8a));
   const nose = part(new SphereGeometry(0.026, 7, 5).translate(0, 0.17, 0.22), 0xffbf9a);
-  const hat = hatGeometry(seat, color);
+  // The hat's style follows the colour the player picked (blue is always the sun hat), not the seat.
+  const style = Math.max(0, HAT_STYLE.indexOf(colorName));
+  const hat = hatGeometry(style, color);
   head.add(mesh(merge([skull, hair, ...ears, ...eyes, ...shines, ...cheeks, nose, hat])));
 
   // Rods, one per tier; the scene shows the family's current one.
@@ -275,15 +282,7 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials)
   tag.renderOrder = 30;
   tag.center.set(0.5, 0);
   let lastName: string | null | undefined;
-  const setName = (name: string | null) => {
-    if (name === lastName) return;
-    lastName = name;
-    tagTexture(name, color, canvas);
-    tex.needsUpdate = true;
-  };
-  setName(null);
-
-  return {
+  const rig = {
     root,
     body,
     head,
@@ -297,7 +296,13 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials)
     markerMat,
     tag,
     tagMat,
-    setName,
+    tagFrac: 1,
+    setName(name: string | null) {
+      if (name === lastName) return;
+      lastName = name;
+      rig.tagFrac = tagTexture(name, color, canvas);
+      tex.needsUpdate = true;
+    },
     dispose() {
       for (const g of geos) g.dispose();
       markerMat.dispose();
@@ -305,4 +310,6 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials)
       tagMat.dispose();
     },
   };
+  rig.setName(null);
+  return rig;
 }

@@ -25,7 +25,6 @@ import { merge, paint, prep } from "./geo";
 const DECK_Y = 0.42;
 const LINE_SEGS = 18;
 const LEAP_S = 0.95;
-const COLORS = ["green", "yellow", "blue", "pink"] as const;
 
 const scratch: Vec = { x: 0, z: 0 };
 const predicted: Vec = { x: 0, z: 0 };
@@ -81,7 +80,10 @@ type Pose = { legL: number; legR: number; armLx: number; armLz: number; armRx: n
 const zeroPose = (): Pose => ({ legL: 0, legR: 0, armLx: 0, armLz: 0, armRx: 0, armRz: 0, bodyY: 0, lean: 0, tilt: 0, headX: 0, bend: 0, sit: 0 });
 
 class FisherView {
-  readonly rig: FisherRig;
+  rig: FisherRig;
+  /** The colour the rig was built in: always the fisher's own `color` (chosen per device), never the seat's. */
+  private colorName = "green";
+  private parent: Group | null = null;
   readonly bobber: Mesh;
   readonly line: Mesh;
   private readonly linePos: Float32Array;
@@ -130,19 +132,19 @@ class FisherView {
   private readonly side = new Vector3();
   private readonly camDir = new Vector3();
   upgradeFlash = 0;
-  /** Extra tag height so tags of fishers standing together don't overlap. */
-  tagLift = 0;
+  /** Screen-space (NDC) sideways shift of the name tag, so close fishers' tags don't overlap. */
+  tagDx = 0;
 
   constructor(
     readonly seat: number,
-    mats: RigMaterials,
+    private readonly mats: RigMaterials,
     bobberGeo: BufferGeometry,
     bobberMat: MeshBasicMaterial | import("three").MeshLambertMaterial,
     lineMat: MeshBasicMaterial,
     cardGeo: { rays: BufferGeometry; plane: PlaneGeometry },
     private readonly textures: FishTextures,
   ) {
-    this.rig = buildFisher(seat, COLORS[seat]!, mats);
+    this.rig = buildFisher(seat, this.colorName, mats);
     this.bobber = new Mesh(bobberGeo, bobberMat);
     this.bobber.scale.setScalar(1.9);
     this.bobber.castShadow = true;
@@ -162,7 +164,24 @@ class FisherView {
   }
 
   attach(parent: Group): void {
+    this.parent = parent;
     parent.add(this.rig.root, this.bobber, this.line, this.card.group, this.rig.tag);
+  }
+
+  /** Rebuilds the rig in a new colour (shared materials, so no shader compiles). */
+  private recolor(colorName: string): void {
+    const old = this.rig;
+    this.colorName = colorName;
+    const rig = buildFisher(this.seat, colorName, this.mats);
+    rig.root.visible = old.root.visible;
+    rig.tag.visible = old.tag.visible;
+    rig.root.position.copy(old.root.position);
+    rig.root.rotation.copy(old.root.rotation);
+    rig.root.scale.copy(old.root.scale);
+    this.parent?.remove(old.root, old.tag);
+    old.dispose();
+    this.rig = rig;
+    this.parent?.add(rig.root, rig.tag);
   }
 
   /** Everything visible for the shader prewarm. */
@@ -207,6 +226,7 @@ class FisherView {
       }
       return;
     }
+    if (f.color !== this.colorName) this.recolor(f.color);
     const rig = this.rig;
     rig.setName(f.name);
     // ---- position ----
@@ -456,7 +476,7 @@ class FisherView {
     const biting = mode === "bite";
     rig.markerMat.opacity = biting ? 0.6 + 0.4 * Math.sin(t * 16) : 0.55 + 0.1 * Math.sin(t * 2);
     rig.marker.scale.setScalar(biting ? 1.25 : 1);
-    rig.tag.position.set(this.x, this.y + ((lake.campfire ? 2.7 + (this.seat % 2) * 0.6 : 3.15) + this.tagLift) * Math.min(1, this.appear * 1.4), this.z);
+    rig.tag.position.set(this.x, this.y + (lake.campfire ? 2.9 + (this.seat % 2) * 0.5 : 3.3) * Math.min(1, this.appear * 1.4), this.z);
     const tagK = this.card.group.visible ? 0 : 1;
     rig.tag.visible = tagK > 0;
     rig.tag.scale.set(0.17, 0.0374, 1);
@@ -568,6 +588,10 @@ export class FisherViews {
   private readonly lineMat: MeshBasicMaterial;
   private upgradeSeq = -1;
   private readonly bySeat: (Fisher | undefined)[] = [undefined, undefined, undefined, undefined];
+  private readonly tagBoxes = Array.from({ length: 4 }, () => ({ v: null as FisherView | null, x: 0, y: 0, hw: 0, h: 0, dx: 0 }));
+  private readonly tv = new Vector3();
+  /** The catch the camera is pushing toward (the first one, held until it ends). */
+  private focusView: FisherView | null = null;
 
   constructor(
     mats: RigMaterials,
@@ -603,21 +627,60 @@ export class FisherViews {
       }
       this.upgradeSeq = lake.upgradeSeq;
     }
-    // Stack the name tags of fishers standing close together.
-    for (let i = 0; i < 4; i++) {
-      const v = this.views[i]!;
-      let lift = 0;
-      for (let j = 0; j < i; j++) {
-        const o = this.views[j]!;
-        if (!lake?.campfire && o.present && v.present && Math.hypot(o.x - v.x, o.z - v.z) < 3.2) lift = Math.max(lift, o.tagLift + 0.75);
-      }
-      v.tagLift += (lift - v.tagLift) * Math.min(1, dt * 6);
-    }
     let ci = 0;
     for (let i = 0; i < 4; i++) {
       const f = this.bySeat[i];
       const seat = f ? campSeats[ci++ % campSeats.length] : undefined;
       if (lake) this.views[i]!.frame(f, lake, sn, t, dt, camera, this.fx, this.shadows, seat);
+    }
+    this.spreadTags(camera, dt);
+  }
+
+  /** Name tags never overlap: close fishers' tags are pushed apart sideways in screen space. */
+  private spreadTags(camera: Camera, dt: number): void {
+    const P = camera.projectionMatrix.elements;
+    const p00 = P[0]!;
+    const p11 = P[5]!;
+    const tags = this.tagBoxes;
+    let n = 0;
+    for (const v of this.views) {
+      const tag = v.rig.tag;
+      if (!v.present || !tag.visible) continue;
+      this.tv.copy(tag.position).project(camera);
+      const b = tags[n++]!;
+      b.v = v;
+      b.x = this.tv.x;
+      b.y = this.tv.y;
+      b.hw = (v.rig.tagFrac * tag.scale.x * p00) / 2 + 0.006;
+      b.h = tag.scale.y * p11 * 0.9;
+      b.dx = 0;
+    }
+    for (let it = 0; it < 8; it++) {
+      for (let i = 0; i < n; i++) {
+        for (let j = i + 1; j < n; j++) {
+          const a = tags[i]!;
+          const b = tags[j]!;
+          const ax = a.x + a.dx;
+          const bx = b.x + b.dx;
+          const ox = a.hw + b.hw - Math.abs(ax - bx);
+          const oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+          if (ox <= 0 || oy <= 0) continue;
+          const s = ax < bx || (ax === bx && a.v!.seat < b.v!.seat) ? 1 : -1;
+          a.dx -= (s * ox) / 2;
+          b.dx += (s * ox) / 2;
+        }
+      }
+    }
+    const k = damp(8, dt);
+    for (let i = 0; i < n; i++) {
+      const b = tags[i]!;
+      const v = b.v!;
+      // Keep the pill on screen.
+      const lo = -0.98 + b.hw;
+      const hi = 0.98 - b.hw;
+      const want = Math.min(hi, Math.max(lo, b.x + b.dx)) - b.x;
+      v.tagDx += (want - v.tagDx) * k;
+      v.rig.tag.center.set(0.5 - v.tagDx / Math.max(1e-6, v.rig.tag.scale.x * p00), 0);
     }
   }
 
@@ -634,18 +697,22 @@ export class FisherViews {
     for (const v of this.views) if (v.present) fn(v.x, v.y, v.z);
   }
 
-  /** The one catch happening now (null when none, or more than one at once). */
+  /** The catch the camera pushes toward: the first to start, held until it ends (null when none). */
   catchFocus(t: number, out: CatchFocus): CatchFocus | null {
-    let found: FisherView | null = null;
-    for (const v of this.views) {
-      if (v.present && v.catchStart >= 0) {
-        if (found) return null;
-        found = v;
+    const cur = this.focusView;
+    if (cur && (!cur.present || cur.catchStart < 0)) this.focusView = null;
+    if (!this.focusView) {
+      // Only a fresh catch takes the camera; one already under way when another ends does not.
+      let best: FisherView | null = null;
+      for (const v of this.views) {
+        if (v.present && v.catchStart >= 0 && t - v.catchStart < 0.4 && (!best || v.catchStart < best.catchStart)) best = v;
       }
+      this.focusView = best;
     }
+    const found = this.focusView;
     if (!found) return null;
     out.x = found.x;
-    out.y = found.y + 1.6;
+    out.y = found.y + 1.8;
     out.z = found.z;
     out.age = t - found.catchStart;
     return out;

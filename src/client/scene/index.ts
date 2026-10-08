@@ -289,7 +289,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       rig.setView(name);
       return name;
     },
-    debug: () => ({ fishers: fishers.debug(), camera: camera.position.toArray() }),
+    debug: () => ({ fishers: fishers.debug(), camera: camera.position.toArray(), rig: rig.debug() }),
     setPhase(p) {
       if (p !== null && (!Number.isFinite(p) || p < 0 || p > 1)) throw new Error(`phase must be 0..1 or null, got ${String(p)}`);
       phaseOverride = p;
