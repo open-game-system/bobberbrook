@@ -1,10 +1,10 @@
 import type { LakeEvent } from "./lakeEvents";
 
 /** The narrator's teaching lines (the kids can't read): spoken for each fisher's first few times. */
-export type TeachLine = "teach-walk" | "teach-bite" | "teach-hold" | "teach-letgo" | "teach-swirl";
+export type TeachLine = "teach-walk" | "teach-bite" | "teach-hold" | "teach-letgo" | "teach-swirl" | "teach-explore";
 
 /** How many times each line is said per fisher before the game trusts they've got it. */
-export const TEACH_TIMES: Record<TeachLine, number> = { "teach-walk": 1, "teach-bite": 2, "teach-hold": 2, "teach-letgo": 2, "teach-swirl": 1 };
+export const TEACH_TIMES: Record<TeachLine, number> = { "teach-walk": 1, "teach-bite": 2, "teach-hold": 2, "teach-letgo": 2, "teach-swirl": 1, "teach-explore": 1 };
 
 const FOR_EVENT: Partial<Record<LakeEvent["kind"], TeachLine>> = { joined: "teach-walk", bite: "teach-bite", hooked: "teach-hold" };
 

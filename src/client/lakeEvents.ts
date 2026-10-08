@@ -1,4 +1,5 @@
 import type { Fisher, Lake } from "../game/lake";
+import type { AreaId } from "../game/world";
 
 /** Moments worth a sound, a voice line or an effect, found by comparing two lake states. */
 export type LakeEvent =
@@ -10,7 +11,8 @@ export type LakeEvent =
   | { kind: "caught"; seat: number; fishId: string; isNew: boolean; golden: boolean; shells: number }
   | { kind: "upgrade"; tier: number }
   | { kind: "golden-swirl" }
-  | { kind: "campfire"; on: boolean };
+  | { kind: "campfire"; on: boolean }
+  | { kind: "discovered"; seat: number; area: AreaId };
 
 export function lakeEvents(prev: Lake | null, next: Lake): LakeEvent[] {
   if (!prev) return [];
@@ -18,6 +20,8 @@ export function lakeEvents(prev: Lake | null, next: Lake): LakeEvent[] {
   if (next.upgradeSeq > prev.upgradeSeq) out.push({ kind: "upgrade", tier: next.rodTier });
   if (newGoldenSwirl(prev, next)) out.push({ kind: "golden-swirl" });
   if (next.campfire !== prev.campfire) out.push({ kind: "campfire", on: next.campfire });
+  const d = next.discovery;
+  if (d && d.seq !== prev.discovery?.seq) out.push({ kind: "discovered", seat: d.seat, area: d.area });
   return out;
 }
 

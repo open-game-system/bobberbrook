@@ -166,8 +166,26 @@ const config: GameRigInput = {
     const shore = { x: (swirl.x / k) * (k + 5.6), z: (swirl.z / k) * (k + 5.6) };
     await Promise.all([walkTo(kid, shore, 1.2), walkTo(dad, { x: 0, z: 17 }, 0.6).then(() => walkTo(dad, { x: 0, z: 9 }, 0.6))]);
     rig.mark("at the water");
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 2; i++) {
       await Promise.all([fishOnce(rig, kid, "Juneau", i > 0), fishOnce(rig, dad, "Dad", true)]);
+    }
+    // Exploring: the family walks the trail to Mistmarsh together and fishes there.
+    rig.mark("explore: trail to Mistmarsh");
+    const trail = [
+      { x: -20, z: 12 },
+      { x: -24.9, z: 14.9 },
+      { x: -45.5, z: 28.1 },
+    ];
+    for (const p of trail) await Promise.all([walkTo(dad, p, 1.5, 15_000), walkTo(kid, { x: p.x + 1.5, z: p.z + 1 }, 1.5, 15_000)]);
+    const marsh = (theta: number) => {
+      const r = 13 + 2.2 * Math.sin(2 * theta + 1.3) + 1.6 * Math.sin(3 * theta + 0.4) + 1.0 * Math.sin(5 * theta - 0.7) + 1.2;
+      return { x: -64 + Math.cos(theta) * r, z: 40 + Math.sin(theta) * r };
+    };
+    await Promise.all([walkTo(dad, marsh(-0.6), 1, 15_000), walkTo(kid, marsh(-0.2), 1, 15_000)]);
+    rig.mark("found Mistmarsh");
+    await rig.wait(2500);
+    for (let i = 0; i < 2; i++) {
+      await Promise.all([fishOnce(rig, kid, "Juneau", true), fishOnce(rig, dad, "Dad", true)]);
     }
     await dad.getByRole("button", { name: "Campfire" }).click();
     rig.mark("campfire");

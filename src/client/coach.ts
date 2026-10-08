@@ -1,6 +1,6 @@
 import { fishById, JOURNAL_FISH } from "../game/fish";
 import { ROD_AT, ROD_NAMES, speciesCount, todOf, type Lake } from "../game/lake";
-import { waterAt, type Water } from "../game/world";
+import { AREAS, areaById, waterAt, type AreaId, type Water } from "../game/world";
 
 const WATER_NAME: Record<Water, string> = {
   dock: "off the dock",
@@ -60,7 +60,9 @@ const freshCatch: Rule = (lake, _mySeat, now) => {
 
 const goldenSwirl: Rule = (lake) => {
   const golden = lake.swirls.find((s) => s.golden);
-  return golden ? `A golden swirl ${WATER_NAME[waterAt(golden.theta)]}! Race there, everyone!` : null;
+  if (!golden) return null;
+  const where = golden.area === "moonwell" ? WATER_NAME[waterAt(golden.theta)] : `at ${areaById(golden.area).name}`;
+  return `A golden swirl ${where}! Race there, everyone!`;
 };
 
 const timeTip: Rule = (lake) => {
@@ -74,8 +76,29 @@ const rodTip: Rule = (lake) => {
   return next !== undefined ? `${next - lake.shells} more shells for everyone's ${ROD_NAMES[lake.rodTier + 1]} rod.` : null;
 };
 
+/** What each place is known for, and which way its trail leaves Moonwell Lake. */
+const PLACE_TIPS: Record<AreaId, { way: string; known: string }> = {
+  moonwell: { way: "back at the lake", known: "Big Bass and catfish bite off the dock." },
+  mistmarsh: { way: "down the trail to the south-west", known: "Golden Koi and Ember Shiners come out at golden hour." },
+  pools: { way: "up the trail to the north-west", known: "Rainbow Trout and Leaping Salmon jump in the falls." },
+  hollow: { way: "along the trail to the east", known: "Glowfin and Lanternfish glow there all day long." },
+  tarn: { way: "past the Pools or the Hollow, the farthest place", known: "the Moonfin rises there at night." },
+};
+
+const freshDiscovery: Rule = (lake, _mySeat, now) => {
+  const d = lake.discovery;
+  if (!d || now - d.at > 6000) return null;
+  return `${nameOf(lake, d.seat)} found ${areaById(d.area).name}! ${PLACE_TIPS[d.area].known}`;
+};
+
+const exploreTip: Rule = (lake) => {
+  if (lake.catchSeq < 2) return null;
+  const next = AREAS.find((a) => !lake.discovered.includes(a.id));
+  return next ? `Explore! ${next.name} is ${PLACE_TIPS[next.id].way}: ${PLACE_TIPS[next.id].known}` : null;
+};
+
 /** In priority order: what's happening to someone right now first, then news, then a tip. */
-const RULES: Rule[] = [campfireLine, myBite, theirBite, theirReel, freshCatch, goldenSwirl, timeTip, rodTip];
+const RULES: Rule[] = [campfireLine, myBite, theirBite, theirReel, freshCatch, freshDiscovery, goldenSwirl, exploreTip, timeTip, rodTip];
 
 /**
  * The host phone's one line to read aloud. The grown-up is the coach: what's happening to the kids

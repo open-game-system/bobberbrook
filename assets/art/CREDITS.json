@@ -264,5 +264,49 @@
       ]
     },
     "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "concept/areas/whisperfall-pools.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Stylized 3D game screenshot in the hand-painted fantasy MMO tradition of an enchanted night-elf twilight forest (Ashenvale-like): chunky low-poly geometry with soft bevels, hand-painted textures, violet indigo and teal palette, colossal ancient trees, glowing wisps and fireflies, soft mist, magical and gentle, safe for small children. High three-quarter camera, 16:9, no text, no UI, full bleed. A small chunky fisher in a blue bucket hat stands at the water's edge for scale. Scene: Whisperfall Pools — a series of stepped turquoise rock pools on a mossy mountainside connected by small cascading waterfalls, spray rainbows, silver birch-like trees with lavender leaves, flat stepping stones, a rope bridge over the top fall.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "concept/areas/mistmarsh.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Stylized 3D game screenshot in the hand-painted fantasy MMO tradition of an enchanted night-elf twilight forest (Ashenvale-like): chunky low-poly geometry with soft bevels, hand-painted textures, violet indigo and teal palette, colossal ancient trees, glowing wisps and fireflies, soft mist, magical and gentle, safe for small children. High three-quarter camera, 16:9, no text, no UI, full bleed. A small chunky fisher in a blue bucket hat stands at the water's edge for scale. Scene: Mistmarsh — a misty lily-pad marsh with winding wooden boardwalks on stilts, cattails and reeds, glowing pink and white water lilies, small pools between grassy hummocks, willow-like trees with hanging purple moss, warm lanterns on the boardwalk posts.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "concept/areas/glowshroom-hollow.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Stylized 3D game screenshot in the hand-painted fantasy MMO tradition of an enchanted night-elf twilight forest (Ashenvale-like): chunky low-poly geometry with soft bevels, hand-painted textures, violet indigo and teal palette, colossal ancient trees, glowing wisps and fireflies, soft mist, magical and gentle, safe for small children. High three-quarter camera, 16:9, no text, no UI, full bleed. A small chunky fisher in a blue bucket hat stands at the water's edge for scale. Scene: Glowshroom Hollow — a dark sheltered grove under huge glowing teal and violet mushrooms with caps like umbrellas, a small still pond glowing from within, bioluminescent ripples, glowing moss and spores drifting, roots arching overhead like a cave.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "concept/areas/starfall-tarn.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Stylized 3D game screenshot in the hand-painted fantasy MMO tradition of an enchanted night-elf twilight forest (Ashenvale-like): chunky low-poly geometry with soft bevels, hand-painted textures, violet indigo and teal palette, colossal ancient trees, glowing wisps and fireflies, soft mist, magical and gentle, safe for small children. High three-quarter camera, 16:9, no text, no UI, full bleed. A small chunky fisher in a blue bucket hat stands at the water's edge for scale. Scene: Starfall Tarn — a high mountain lake under a huge moon and starry indigo sky, pale crystal formations glowing blue along the shore, a ring of ancient standing stones with soft runes of light (no faces), the water mirror-still reflecting the stars, a big glowing swirl of silver fish in the middle.",
+      "references": []
+    },
+    "date": "2026-10-08"
   }
 ]

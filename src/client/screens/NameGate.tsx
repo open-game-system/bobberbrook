@@ -3,7 +3,7 @@ import { useOgsProfile } from "@open-game-system/profile-kit/react";
 import { nameGateMode } from "../nameGateMode";
 import { SEAT_COLORS, type SeatColor } from "../../game/lake";
 import { SEAT_HEX } from "../components/MiniMap";
-import { HatIcon } from "../components/Icons";
+import { HatIcon, PencilIcon } from "../components/Icons";
 
 const KEY = "bobberbrook:name";
 
@@ -34,8 +34,8 @@ export function NameGate({ onJoin, full, taken }: { onJoin: OnJoin; full: boolea
   }, [mode, onJoin]);
   if (mode.kind === "form") return <HatPicker onJoin={onJoin} full={full} taken={taken} />;
   return (
-    <div className="phone center name-gate">
-      <p className="name-joining">{mode.kind === "join" ? `Joining as ${mode.name}…` : "Joining the lake…"}</p>
+    <div className="phone center name-gate loading-card" aria-label="Joining">
+      <img src="/art/fish/golden-koi.webp" alt="" className="loading-fish" />
     </div>
   );
 }
@@ -56,8 +56,8 @@ function HatPicker({ onJoin, full, taken }: { onJoin: OnJoin; full: boolean; tak
           </button>
         ))}
       </div>
-      <button type="button" className="type-name" onClick={() => setTyping(true)}>
-        Grown-up? Type your name
+      <button type="button" className="type-name" aria-label="Type your name" onClick={() => setTyping(true)}>
+        <PencilIcon />
       </button>
     </div>
   );

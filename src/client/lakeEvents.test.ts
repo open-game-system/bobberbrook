@@ -45,4 +45,11 @@ describe("lakeEvents", () => {
     const g = { ...l, swirls: [{ id: 50, area: "moonwell" as const, pos: { x: 0, z: 0 }, theta: 0, golden: true, since: 0, until: 1e9, catches: 0 }] };
     expect(lakeEvents(l, g)).toEqual([{ kind: "golden-swirl" }]);
   });
+
+  it("sees a new place found", () => {
+    const l = shoreLake();
+    const found = { ...l, discovered: [...l.discovered, "mistmarsh" as const], discovery: { area: "mistmarsh" as const, seat: 0, at: 5, seq: 1 } };
+    expect(lakeEvents(l, found)).toEqual([{ kind: "discovered", seat: 0, area: "mistmarsh" }]);
+    expect(lakeEvents(found, found)).toEqual([]);
+  });
 });

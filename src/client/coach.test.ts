@@ -61,4 +61,17 @@ describe("coachLine", () => {
   it("points at the swirls once the best rod is in hand", () => {
     expect(coachLine({ ...family(), rodTier: 3, shells: 200 }, 0, 0)).toBe("Fish the swirls: that's where the rare fish are.");
   });
+
+  it("celebrates a newly found place with what lives there", () => {
+    const l = { ...family(), discovered: ["moonwell" as const, "mistmarsh" as const], discovery: { area: "mistmarsh" as const, seat: 1, at: 100, seq: 1 } };
+    expect(coachLine(l, 0, 200)).toBe("Juneau found Mistmarsh! Golden Koi and Ember Shiners come out at golden hour.");
+    expect(coachLine(l, 0, 7000)).not.toContain("found Mistmarsh");
+  });
+  it("sends the family exploring once they've caught a couple here", () => {
+    expect(coachLine({ ...family(), catchSeq: 2 }, 0, 0)).toBe("Explore! Mistmarsh is down the trail to the south-west: Golden Koi and Ember Shiners come out at golden hour.");
+  });
+  it("names the far place a golden swirl is in", () => {
+    const l = { ...family(), swirls: [{ id: 2, area: "hollow" as const, pos: { x: 70, z: -8 }, theta: 0, golden: true, since: 0, until: 1e9, catches: 0 }] };
+    expect(coachLine(l, 0, 0)).toBe("A golden swirl at Glowshroom Hollow! Race there, everyone!");
+  });
 });

@@ -1,3 +1,4 @@
+import type { AreaId } from "../../game/world";
 import { audio } from "./engine";
 
 /**
@@ -5,7 +6,7 @@ import { audio } from "./engine";
  * through the page's AudioContext, so the launcher's pause silences them too. One line at a time; a
  * newer line waits for the current one rather than talking over it.
  */
-export type Line = "new" | "upgrade" | "golden" | "campfire" | "teach-walk" | "teach-bite" | "teach-hold" | "teach-letgo" | "teach-swirl";
+export type Line = "new" | "upgrade" | "golden" | "campfire" | "teach-walk" | "teach-bite" | "teach-hold" | "teach-letgo" | "teach-swirl" | "teach-explore" | `area-${AreaId}`;
 
 let enabled = false;
 const cache = new Map<string, Promise<AudioBuffer | null>>();

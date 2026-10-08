@@ -50,11 +50,17 @@ describe("the sounds for each moment", () => {
 describe("panning", () => {
   const lake: Lake = join(join(newLake(1, 0), { name: "A", ogsId: null }).lake, { name: "B", ogsId: null }).lake;
   const placed = (x: number): Lake => ({ ...lake, fishers: lake.fishers.map((f) => (f.seat === 0 ? { ...f, pos: { x, z: 0 } } : f)) });
-  it("pans west left and east right, never all the way", () => {
-    expect(panFor(placed(13))(0)).toBeCloseTo(0.5, 9);
-    expect(panFor(placed(-13))(0)).toBeCloseTo(-0.5, 9);
-    expect(panFor(placed(100))(0)).toBe(0.8);
-    expect(panFor(placed(-100))(0)).toBe(-0.8);
+  /** Two fishers mirrored about x = 0, so the family's middle (the camera's view) is x = 0. */
+  const pair = (x: number): Lake => ({
+    ...lake,
+    fishers: [lake.fishers[0]!, { ...lake.fishers[0]!, seat: 1 }].map((f) => ({ ...f, pos: { x: f.seat === 0 ? x : -x, z: 0 } })),
+  });
+  it("pans each fisher by where they stand from the family's middle, never all the way", () => {
+    expect(panFor(pair(9))(0)).toBeCloseTo(0.5, 9);
+    expect(panFor(pair(9))(1)).toBeCloseTo(-0.5, 9);
+    expect(panFor(pair(100))(0)).toBe(0.8);
+    expect(panFor(pair(100))(1)).toBe(-0.8);
+    expect(panFor({ ...lake, fishers: [{ ...lake.fishers[0]!, pos: { x: 60, z: 0 } }] })(0)).toBe(0); // alone: always mid-shot
   });
   it("centres a seat nobody sits in", () => {
     expect(panFor(placed(13))(3)).toBe(0);

@@ -40,6 +40,7 @@ const CUES: CueTable = {
   campfire: (e) => (e.on ? [{ kind: "line", line: "campfire" }] : []),
   joined: () => [],
   hooked: () => [],
+  discovered: (e) => [{ kind: "sfx", id: "golden", opts: {} }, { kind: "line", line: `area-${e.area}` }],
 };
 
 function cueOf<K extends LakeEvent["kind"]>(e: EventOf<K>, pan: Pan): Cue[] {
@@ -55,8 +56,10 @@ export function cuesFor(events: LakeEvent[], pan: Pan): Cue[] {
 /** Pans a fisher's sounds to where they stand on the TV (west left, east right). */
 export function panFor(lake: Lake): Pan {
   return (seat) => {
+    // Relative to the family's middle, where the TV camera looks.
     const f = lake.fishers.find((x) => x.seat === seat);
-    return f ? Math.max(-0.8, Math.min(0.8, f.pos.x / 26)) : 0;
+    const mid = lake.fishers.reduce((a, x) => a + x.pos.x, 0) / Math.max(1, lake.fishers.length);
+    return f ? Math.max(-0.8, Math.min(0.8, (f.pos.x - mid) / 18)) : 0;
   };
 }
 

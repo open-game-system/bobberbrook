@@ -11,6 +11,7 @@ import { unlockAudio } from "../audio/engine";
 import { voice } from "../audio/voice";
 import { FISH_IDS } from "../../game/fish";
 import { useOgsTv } from "../useOgsTv";
+import { AREAS, areaById } from "../../game/world";
 import { shouldTeach, teachFor, type TeachMemory } from "../teach";
 import { thrashingAt } from "../../game/reel";
 import { createServerClock } from "../serverClock";
@@ -27,7 +28,7 @@ function qrDataUrl(text: string): string {
   return qr.createDataURL(6, 2);
 }
 
-type Toast = { id: number; kind: "new" | "upgrade" | "golden"; fishId?: string; seat?: number; tier?: number };
+type Toast = { id: number; kind: "new" | "upgrade" | "golden" | "place"; fishId?: string; seat?: number; tier?: number; place?: string };
 
 /**
  * The TV: the 3D lake (scene/), the room's clock (TICK at 4 Hz), the world's sound, and a small HUD at
@@ -83,6 +84,8 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
     if (sound) {
       playLakeEvents(lake, events);
       for (const line of teachFor(events, teachMem.current)) voice.line(line);
+      // After a few catches at home, nudge the family down a trail (once).
+      if (events.some((e) => e.kind === "caught") && lake.catchSeq >= 3 && lake.discovered.length === 1 && shouldTeach("teach-explore", "all", teachMem.current)) voice.line("teach-explore");
     }
     setTimeOfDayMood(todOf({ startedAt: lake.startedAt, now: clock.now() }));
     const fresh: Toast[] = [];
@@ -90,6 +93,7 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
       if (e.kind === "caught" && e.isNew) fresh.push({ id: ++toastId.current, kind: "new", fishId: e.fishId, seat: e.seat });
       if (e.kind === "upgrade") fresh.push({ id: ++toastId.current, kind: "upgrade", tier: e.tier });
       if (e.kind === "golden-swirl") fresh.push({ id: ++toastId.current, kind: "golden" });
+      if (e.kind === "discovered") fresh.unshift({ id: ++toastId.current, kind: "place", place: areaById(e.area).name, seat: e.seat });
     }
     if (fresh.length > 0) setToasts((t) => [...t, ...fresh].slice(-4));
   }, [lake, sound, clock]);
@@ -106,7 +110,7 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
     if (!sound) return;
     unlockAudio();
     startWorld();
-    voice.enable([...FISH_IDS.map((id) => `fish-${id}`), "new", "upgrade", "golden", "campfire", "teach-walk", "teach-bite", "teach-hold", "teach-letgo", "teach-swirl"]);
+    voice.enable([...FISH_IDS.map((id) => `fish-${id}`), "new", "upgrade", "golden", "campfire", "teach-walk", "teach-bite", "teach-hold", "teach-letgo", "teach-swirl", "teach-explore", ...AREAS.map((a) => `area-${a.id}`)]);
     const live = createLiveSounds();
     const thrashing = new Set<number>();
     let raf = 0;
@@ -153,6 +157,11 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
         </div>
       </div>
       <div className="hud hud-right">
+        <div className="hud-chip places-chip" aria-label={`${lake.discovered.length} of ${AREAS.length} places found`}>
+          {AREAS.map((a) => (
+            <span key={a.id} className={`place-dot ${a.id} ${lake.discovered.includes(a.id) ? "found" : ""}`} />
+          ))}
+        </div>
         <div className="hud-chip rod-chip" aria-label={`${ROD_NAMES[lake.rodTier]} rod`}>
           <span className="shell">
             <ShellIcon />
@@ -180,6 +189,11 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
             )}
             {t.kind === "upgrade" && <span className="toast-text">{ROD_NAMES[t.tier ?? 0]} rods for everyone!</span>}
             {t.kind === "golden" && <span className="toast-text">Golden swirl!</span>}
+            {t.kind === "place" && (
+              <span className="toast-text">
+                <span className="toast-kicker">New place</span> {t.place}
+              </span>
+            )}
           </div>
         ))}
       </div>

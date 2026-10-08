@@ -118,5 +118,29 @@
  {
   "id": "teach-swirl",
   "text": "Follow the arrow to the sparkly swirl!"
+ },
+ {
+  "id": "area-mistmarsh",
+  "text": "You found Mistmarsh!"
+ },
+ {
+  "id": "area-pools",
+  "text": "You found Whisperfall Pools!"
+ },
+ {
+  "id": "area-hollow",
+  "text": "You found Glowshroom Hollow!"
+ },
+ {
+  "id": "area-tarn",
+  "text": "You found Starfall Tarn! The Moonfin lives here."
+ },
+ {
+  "id": "area-moonwell",
+  "text": "Back to Moonwell Lake."
+ },
+ {
+  "id": "teach-explore",
+  "text": "Follow the trail to find a new place!"
  }
 ]

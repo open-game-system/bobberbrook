@@ -1,29 +1,58 @@
 import { describe, expect, it } from "vitest";
 import { newLake, type Lake } from "../game/lake";
-import { castRing, EAST, WEST } from "../game/world";
-import { compassTo, shoreFor } from "./compass";
+import { TRAILS, areaById, castRingIn, pondRadius, type AreaId } from "../game/world";
+import { compassGoal, compassTo, nextWaypoint, route, shoreFor } from "./compass";
 
-const swirl = (id: number, theta: number, golden = false) => ({ id, area: "moonwell" as const, pos: castRing(theta), theta, golden, since: 0, until: 1e9, catches: 0 });
-const lakeWith = (swirls: Lake["swirls"]): Lake => ({ ...newLake(1, 0), swirls });
+const swirl = (id: number, area: AreaId, theta: number, golden = false) => ({ id, area, pos: castRingIn(areaById(area), theta), theta, golden, since: 0, until: 1e9, catches: 0 });
+const lakeWith = (swirls: Lake["swirls"], discovered: AreaId[] = ["moonwell"]): Lake => ({ ...newLake(1, 0), swirls, discovered });
+const shore = (area: AreaId, theta: number) => {
+  const a = areaById(area);
+  const r = pondRadius(a, theta) + 1.5;
+  return { x: a.center.x + Math.cos(theta) * r, z: a.center.z + Math.sin(theta) * r };
+};
 
-describe("compassTo", () => {
-  it("points at the nearest swirl's shore", () => {
-    // Standing south of the lake: the nearer (east) swirl's shore is up and to the right.
-    const c = compassTo(lakeWith([swirl(1, WEST), swirl(2, EAST)]), { x: 10, z: 24 })!;
-    expect(c.golden).toBe(false);
-    expect(Math.cos(c.angle)).toBeGreaterThan(0);
-    expect(Math.sin(c.angle)).toBeLessThan(0);
+describe("routes along the trails", () => {
+  it("walks from the lake to the far tarn through another place", () => {
+    const r = route("moonwell", "tarn");
+    expect(r[0]).toBe("moonwell");
+    expect(r.at(-1)).toBe("tarn");
+    expect(r).toHaveLength(3);
+    expect(route("moonwell", "moonwell")).toEqual(["moonwell"]);
   });
-  it("prefers the golden swirl even when it's farther", () => {
-    const c = compassTo(lakeWith([swirl(1, EAST), swirl(2, WEST, true)]), { x: 25, z: 0 })!; // west is far left
-    expect(c.golden).toBe(true);
-    expect(Math.abs(Math.abs(c.angle) - Math.PI)).toBeLessThan(0.3);
+  it("heads for the trailhead out of this place, not straight through the forest", () => {
+    const marshTrail = TRAILS[0]!;
+    expect(nextWaypoint(shore("moonwell", 2.6), areaById("mistmarsh").center)).toEqual(marshTrail.from);
   });
-  it("says when you've arrived", () => {
-    const s = swirl(1, WEST);
-    expect(compassTo(lakeWith([s]), shoreFor(s))!.arrived).toBe(true);
+  it("walks to the far end of a trail once on it", () => {
+    const t = TRAILS[0]!;
+    const mid = { x: (t.from.x + t.to.x) / 2, z: (t.from.z + t.to.z) / 2 };
+    expect(nextWaypoint(mid, areaById("mistmarsh").center)).toEqual(t.to);
   });
-  it("is null with no swirls", () => {
-    expect(compassTo(lakeWith([]), { x: 0, z: 0 })).toBeNull();
+  it("goes straight to a target in the same place", () => {
+    const target = shore("moonwell", 1);
+    expect(nextWaypoint(shore("moonwell", 0), target)).toEqual(target);
+  });
+});
+
+describe("the kid's compass", () => {
+  it("prefers the golden swirl wherever it is", () => {
+    const g = compassGoal(lakeWith([swirl(1, "moonwell", 0), swirl(2, "mistmarsh", 1, true)], ["moonwell", "mistmarsh"]), shore("moonwell", 0))!;
+    expect(g.golden).toBe(true);
+  });
+  it("points at a swirl in this place", () => {
+    const s = swirl(1, "moonwell", 1);
+    expect(compassGoal(lakeWith([s]), shore("moonwell", 0))?.at).toEqual(shoreFor(s));
+  });
+  it("sends you exploring when this place has no swirl", () => {
+    const g = compassGoal(lakeWith([swirl(1, "pools", 1)], ["moonwell", "pools"]), shore("moonwell", 2.6))!;
+    expect(g.explore).toBe(true);
+    expect(g.at).toEqual(areaById("mistmarsh").center);
+  });
+  it("says when you've arrived at the swirl", () => {
+    const s = swirl(1, "moonwell", Math.PI);
+    expect(compassTo(lakeWith([s]), shoreFor(s))?.arrived).toBe(true);
+  });
+  it("is null with nothing to find", () => {
+    expect(compassTo(lakeWith([], ["moonwell", "mistmarsh", "pools", "hollow", "tarn"]), { x: 0, z: 20 })).toBeNull();
   });
 });

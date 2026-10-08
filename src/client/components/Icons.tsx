@@ -76,3 +76,14 @@ export function HatIcon({ color }: { color: string }) {
     </svg>
   );
 }
+
+/** For grown-ups: type a name instead of picking a hat. */
+export function PencilIcon() {
+  return (
+    <svg viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M22 78 L30 56 L66 20 L80 34 L44 70 Z" fill="#f4e2b0" stroke="rgba(0,0,0,.35)" strokeWidth="4" strokeLinejoin="round" />
+      <path d="M22 78 L30 56 L44 70 Z" fill="#7a4a22" />
+      <path d="M66 20 L80 34" stroke="#e8463a" strokeWidth="9" strokeLinecap="round" />
+    </svg>
+  );
+}

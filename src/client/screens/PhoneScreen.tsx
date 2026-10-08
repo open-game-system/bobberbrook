@@ -50,8 +50,8 @@ export function PhoneScreen() {
   if (full && !joining) return <div className="phone center"><p>Four fishers are already on the lake.</p></div>;
   if (!joining) return <NameGate full={full} onJoin={join} taken={taken} />;
   return (
-    <div className="phone center">
-      <p className="joining-dots" aria-label="Joining">…</p>
+    <div className="phone center loading-card" aria-label="Joining">
+      <img src="/art/fish/golden-koi.webp" alt="" className="loading-fish" />
     </div>
   );
 }

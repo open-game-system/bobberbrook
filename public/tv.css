@@ -39,3 +39,13 @@
 .ticket.compact img { width: 7vh; height: 7vh; }
 .ticket.compact .ticket-kicker { font-size: 1.6vh; }
 .ticket.compact .ticket-code { font-size: 3vh; }
+.places-chip { gap: 0.5vw; }
+.place-dot { width: 2.2vh; height: 2.2vh; border-radius: 50%; border: 0.3vh solid rgba(255,255,255,.55); background: rgba(255,255,255,.08); }
+.place-dot.found { border-color: #fff; box-shadow: 0 0 1vh currentColor; }
+.place-dot.moonwell.found { background: #48e0d4; color: #48e0d4; }
+.place-dot.mistmarsh.found { background: #f29ac8; color: #f29ac8; }
+.place-dot.pools.found { background: #7ff0e4; color: #7ff0e4; }
+.place-dot.hollow.found { background: #9a7aff; color: #9a7aff; }
+.place-dot.tarn.found { background: #e8eeff; color: #e8eeff; }
+.toast.place { border-color: #e8eeff; background: rgba(40, 30, 90, 0.82); font-size: 3.6vh; }
+.toast-kicker { font-size: 2vh; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.12em; margin-right: 0.6vw; }
