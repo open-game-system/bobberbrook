@@ -1,2 +1,10 @@
 node_modules
 concept/art/
+.wrangler
+.dev.vars
+public/js
+certs/
+*.pem
+recordings/
+assets-src/**/*.png
+!assets-src/fish/sheet-*.png

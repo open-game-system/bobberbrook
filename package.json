@@ -1,0 +1,49 @@
+{
+  "name": "bobberbrook",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:client": "esbuild src/client/tv.tsx src/client/join.tsx src/client/scene-lab.tsx --bundle --format=esm --target=es2020,safari15 --jsx=automatic --minify --sourcemap --outdir=public/js",
+    "dev": "wrangler dev --ip 0.0.0.0 --port 8841",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p src/client",
+    "test:seam": "vitest run --config vitest.seam.config.ts",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260927.1",
+    "@types/node": "^26.6.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/three": "^0.186.0",
+    "@types/ws": "^8.18.1",
+    "esbuild": "^0.28.2",
+    "playwright": "^1.63.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2",
+    "wrangler": "^4.141.0",
+    "ws": "^8.22.0"
+  },
+  "dependencies": {
+    "@open-game-system/cast-kit-core": "file:vendor/open-game-system-cast-kit-core-0.2.0.tgz",
+    "@open-game-system/cast-kit-react": "file:vendor/open-game-system-cast-kit-react-0.2.0.tgz",
+    "@open-game-system/profile-kit": "file:vendor/open-game-system-profile-kit-0.1.0.tgz",
+    "actor-kit": "0.52.6",
+    "immer": "^11.1.18",
+    "qrcode-generator": "^2.0.4",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "three": "^0.186.1",
+    "xstate": "^5.33.2",
+    "zod": "^3.25.76"
+  },
+  "pnpm": {
+    "overrides": {
+      "@open-game-system/cast-kit-core": "file:./vendor/open-game-system-cast-kit-core-0.2.0.tgz"
+    },
+    "patchedDependencies": {
+      "actor-kit@0.52.6": "patches/actor-kit@0.52.6.patch"
+    }
+  }
+}

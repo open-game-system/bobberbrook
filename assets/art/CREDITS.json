@@ -141,5 +141,27 @@
       "references": []
     },
     "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "assets-src/fish/sheet-a.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Hand-painted stylized game illustration in the fantasy MMO tradition: chunky rounded shapes, saturated painterly colour with visible brush strokes and painted highlights, soft rim light, clean readable silhouettes. Natural fish eyes, no cartoon faces, no smiles, no text, no letters, no labels, no numbers, no border. A sprite sheet: twelve different stylized fish, each fish side view facing right, arranged in a neat grid of 4 columns and 3 rows with generous empty space between them, every fish fully inside its own cell and not touching any other, on a fully transparent background. Row 1: a brown speckled brook trout; a green-gold perch with bold dark vertical stripes and orange fins; a round blue-and-orange bluegill sunfish; a grey-brown catfish with long whiskers. Row 2: a tiny shiny silver minnow; a golden koi with white and orange patches and flowing fins; a chunky olive-green lily carp with bronze scales; a long slim pond pike with pale spots. Row 3: a rainbow trout with a pink stripe; a leaping salmon in coral-pink and silver; a crystal char with icy pale-blue translucent glassy scales; a big dark-green largemouth bass.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "assets-src/fish/sheet-b.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Hand-painted stylized game illustration in the fantasy MMO tradition: chunky rounded shapes, saturated painterly colour with visible brush strokes and painted highlights, soft rim light, clean readable silhouettes. Natural fish eyes, no cartoon faces, no smiles, no text, no letters, no labels, no numbers, no border. A sprite sheet: nine items, each side view, arranged in a neat grid of 3 columns and 3 rows with generous empty space between them, every item fully inside its own cell and not touching any other, on a fully transparent background. Row 1: a huge ancient sturgeon with bony armored plates in grey-blue; a teal fish that glows with soft bioluminescent spots (glowfin); a small dark-blue lanternfish with a glowing yellow lure on its head. Row 2: a legendary moonfin fish, deep indigo with a silver crescent pattern and long flowing luminous fins; an ember shiner fish in sunset orange and red with glowing fin edges; a round puffy spiky bubble pufferfish in pale yellow. Row 3: an old soggy brown leather boot with a frayed lace; a little blue-and-white porcelain teapot; a small wooden treasure chest with brass corners, lid slightly open showing pearly shells. No faces on the boot, teapot or chest.",
+      "references": []
+    },
+    "date": "2026-10-08"
   }
 ]
