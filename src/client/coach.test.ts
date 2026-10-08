@@ -38,7 +38,7 @@ describe("coachLine", () => {
     expect(coachLine(l, 0, 0)).toBe("A golden swirl by the lily pads! Race there, everyone!");
   });
   it("says how far the next rod is", () => {
-    expect(coachLine(family(), 0, 0)).toBe("20 more shells for everyone's Bamboo rod.");
+    expect(coachLine(family(), 0, 0)).toBe("12 more shells for everyone's Bamboo rod.");
   });
   it("says it's campfire time", () => {
     expect(coachLine(setCampfire(family(), true, 1), 0, 2)).toContain("Campfire");

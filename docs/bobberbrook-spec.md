@@ -74,3 +74,5 @@ Mom (phone). Works with 1–4 fishers.
 - Progress lives on the host phone (localStorage), sent as `PROGRESS` on join.
 - Audio: synthesized foley and instrument; voice lines (fish names, cheers) generated once with Gemini TTS.
 - Name: Bobberbrook (working title, owner may rename).
+- Rod upgrades at 12 / 40 / 100 family shells (was 20 / 60 / 140): the first upgrade lands within a
+  few minutes of play, an early reward for the kids (2026-10-08, round 01).

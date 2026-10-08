@@ -25,7 +25,7 @@ export const GOLDEN_FIRST_MS = 150_000;
 export const GOLDEN_LIFE_MS = 50_000;
 export const GOLDEN_CATCHES = 2;
 /** Rod upgrades at these family shell totals: Willow, Bamboo, Brass, Starlight. */
-export const ROD_AT = [0, 20, 60, 140] as const;
+export const ROD_AT = [0, 12, 40, 100] as const;
 export const ROD_NAMES = ["Willow", "Bamboo", "Brass", "Starlight"] as const;
 export const MOONFIN_JOURNAL = 10;
 
