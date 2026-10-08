@@ -3,7 +3,7 @@
  * recorded session (Dad on a phone, Juneau on an iPad, the TV). Run: ~/src/skills/game-rig/bin/game-rig.mjs record
  */
 import type { Page } from "playwright";
-import type { GameRigInput, RigContext } from "../skills/game-rig/src/config.ts";
+import type { GameRigInput, RigContext, SessionRig } from "../skills/game-rig/src/config.ts";
 
 const URL_BASE = process.env.BB_URL ?? "http://127.0.0.1:8841";
 
@@ -54,7 +54,7 @@ async function press(page: Page): Promise<void> {
 }
 
 /** Casts, waits for the bite, hooks, reels (letting go when the fish thrashes if `careful`), until the catch. */
-async function fishOnce(rig: RigContext, page: Page, who: string, careful: boolean): Promise<void> {
+async function fishOnce(rig: SessionRig, page: Page, who: string, careful: boolean): Promise<void> {
   await press(page);
   rig.mark(`${who} casts`);
   const deadline = Date.now() + 25_000;
@@ -87,13 +87,25 @@ async function fishOnce(rig: RigContext, page: Page, who: string, careful: boole
   await page.waitForTimeout(3600);
 }
 
-async function hostAndJoin(rig: RigContext): Promise<{ tv: Page; dad: Page; kid: Page; code: string }> {
-  const tv = rig.pages.tv ?? (await rig.open("tv"));
+type PageFor = { baseUrl: string; pageFor: (role: string) => Promise<Page> };
+const fromSetup = (rig: RigContext): PageFor => ({ baseUrl: rig.baseUrl, pageFor: async (role) => (rig.role === role ? rig.page : rig.open(role)) });
+const fromSession = (rig: SessionRig): PageFor => ({
+  baseUrl: rig.baseUrl,
+  pageFor: async (role) => {
+    const p = rig.pages[role];
+    if (!p) throw new Error(`no ${role} page`);
+    return p;
+  },
+});
+
+async function hostAndJoin(rig: PageFor): Promise<{ tv: Page; dad: Page; kid: Page; code: string }> {
+  const { pageFor } = rig;
+  const tv = await pageFor("tv");
   await tv.goto(`${rig.baseUrl}/?as=tv&record=1`);
   await tv.locator(".ticket-code").waitFor({ timeout: 30_000 });
   const code = ((await tv.locator(".ticket-code").textContent()) ?? "").trim();
   const join = async (role: string, name: string) => {
-    const page = rig.pages[role] ?? (await rig.open(role));
+    const page = await pageFor(role);
     await page.goto(`${rig.baseUrl}/join/${code}?rig=1`);
     await page.locator(".name-input").fill(name);
     await page.getByRole("button", { name: "Join" }).click();
@@ -113,18 +125,20 @@ const config: GameRigInput = {
     dad: { kind: "phone", label: "Dad's phone" },
     kid: { kind: "tablet", label: "Juneau's iPad (5)" },
   },
+  // The scene reports its focal rect as {x, y, w, h}.
+  focal: "(() => { const r = window.__focalRect?.(); return r ? { x: r.x, y: r.y, width: r.w, height: r.h } : null; })()",
   chromeArgs: ["--use-angle=metal", "--ignore-gpu-blocklist"],
   maxTapsPerScreen: 6,
   holdSelector: "button.action.reel",
   screens: [
     { name: "tv-empty-lake", role: "tv", path: "/?as=tv", checks: ["overlay", "text", "safe-area"], settleMs: 4000 },
-    { name: "phone-name", role: "dad", setup: async (rig) => { const { code } = await hostAndJoin(rig); await rig.page.goto(`${rig.baseUrl}/join/${code}`); }, focal: false },
-    { name: "phone-controller", role: "dad", setup: async (rig) => void (await hostAndJoin(rig)), focal: false },
-    { name: "ipad-controller", role: "kid", setup: async (rig) => void (await hostAndJoin(rig)), focal: false },
-    { name: "tv-two-fishers", role: "tv", setup: async (rig) => void (await hostAndJoin(rig)), checks: ["overlay", "text", "safe-area"], settleMs: 3000 },
+    { name: "phone-name", role: "dad", setup: async (rig) => { const { code } = await hostAndJoin(fromSetup(rig)); await rig.page.goto(`${rig.baseUrl}/join/${code}`); }, focal: false },
+    { name: "phone-controller", role: "dad", setup: async (rig) => void (await hostAndJoin(fromSetup(rig))), focal: false },
+    { name: "ipad-controller", role: "kid", setup: async (rig) => void (await hostAndJoin(fromSetup(rig))), focal: false },
+    { name: "tv-two-fishers", role: "tv", setup: async (rig) => void (await hostAndJoin(fromSetup(rig))), checks: ["overlay", "text", "safe-area"], settleMs: 3000 },
   ],
   session: async (rig) => {
-    const { tv, dad, kid } = await hostAndJoin(rig);
+    const { tv, dad, kid } = await hostAndJoin(fromSession(rig));
     rig.mark("everyone in");
     await rig.wait(2500);
     // Juneau heads for the nearest swirl's shore, Dad for the end of the dock.

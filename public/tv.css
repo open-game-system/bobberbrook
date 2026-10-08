@@ -1,10 +1,10 @@
-.tv-body { background: #0b2a2e; cursor: none; }
+.tv-body { background: #17123a; cursor: none; }
 .tv { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
 .tv-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.hud { position: absolute; top: 2.2vh; display: flex; gap: 1vw; pointer-events: none; }
-.hud-left { left: 2vw; }
-.hud-right { right: 2vw; }
-.hud-chip { display: flex; align-items: center; gap: 0.8vw; padding: 0.7vh 1.1vw; border-radius: 3vh; background: rgba(8, 34, 38, 0.62); border: 0.35vh solid rgba(244, 226, 176, 0.7); box-shadow: 0 0.6vh 1.6vh rgba(0,0,0,.25); }
+.hud { position: absolute; top: 5.5vh; display: flex; gap: 1vw; pointer-events: none; }
+.hud-left { left: 5.5vw; }
+.hud-right { right: 5.5vw; }
+.hud-chip { display: flex; align-items: center; gap: 0.8vw; padding: 0.7vh 1.1vw; border-radius: 3vh; background: rgba(28, 20, 66, 0.6); border: 0.35vh solid rgba(190, 170, 255, 0.6); box-shadow: 0 0.6vh 1.6vh rgba(0,0,0,.25); }
 .journal-fish { display: flex; gap: 0.15vw; }
 .journal-fish img { width: 2.2vw; height: 2.2vh; object-fit: contain; filter: brightness(0) opacity(0.35); }
 .journal-fish img.got { filter: none; }
@@ -22,16 +22,16 @@
 .rod-tier.tier-1 { background: #9ab84a; }
 .rod-tier.tier-2 { background: radial-gradient(circle, #ffe08a, #c9a24a); }
 .rod-tier.tier-3 { background: radial-gradient(circle, #fff, #9ad6ff); box-shadow: 0 0 2vh #9ad6ff; }
-.toasts { position: absolute; top: 10vh; left: 50%; translate: -50% 0; display: grid; gap: 1vh; justify-items: center; pointer-events: none; }
-.toast { display: flex; align-items: center; gap: 1vw; padding: 0.6vh 1.6vw 0.6vh 0.8vw; border-radius: 4vh; background: rgba(8, 34, 38, 0.75); border: 0.4vh solid #ffd25a; font-size: 3.4vh; font-weight: 800; animation: toast-in 0.5s cubic-bezier(.2,1.5,.4,1), toast-out 0.5s 3.7s forwards; }
+.toasts { position: absolute; top: 13vh; left: 50%; translate: -50% 0; display: grid; gap: 1vh; justify-items: center; pointer-events: none; }
+.toast { display: flex; align-items: center; gap: 1vw; padding: 0.6vh 1.6vw 0.6vh 0.8vw; border-radius: 4vh; background: rgba(28, 20, 66, 0.78); border: 0.4vh solid #ffd25a; font-size: 3.4vh; font-weight: 800; animation: toast-in 0.5s cubic-bezier(.2,1.5,.4,1), toast-out 0.5s 3.7s forwards; }
 .toast img { height: 6vh; width: auto; }
 .toast-star { color: #ffd25a; font-size: 4vh; }
 .toast.golden { border-color: #fff2a0; background: rgba(120, 80, 10, 0.75); }
 .toast.upgrade { border-color: #9ad6ff; }
 @keyframes toast-in { from { translate: 0 -3vh; opacity: 0; scale: 0.8; } }
 @keyframes toast-out { to { opacity: 0; translate: 0 -2vh; } }
-.ticket { position: absolute; left: 2vw; bottom: 3vh; display: flex; gap: 1vw; align-items: center; padding: 1vh 1.2vw; border-radius: 2vh; background: rgba(8, 34, 38, 0.72); border: 0.35vh solid rgba(244, 226, 176, 0.7); }
+.ticket { position: absolute; left: 5.5vw; bottom: 6vh; display: flex; gap: 1vw; align-items: center; padding: 1vh 1.2vw; border-radius: 2vh; background: rgba(28, 20, 66, 0.72); border: 0.35vh solid rgba(190, 170, 255, 0.6); }
 .ticket img { width: 13vh; height: 13vh; border-radius: 1vh; image-rendering: pixelated; }
 .ticket-kicker { margin: 0; font-size: 2.4vh; opacity: 0.85; }
 .ticket-code { margin: 0; font-size: 5vh; font-weight: 800; letter-spacing: 0.1em; }
-.sound-chip { position: absolute; right: 2vw; bottom: 3vh; border: 0; border-radius: 2vh; padding: 1vh 1.6vw; font-size: 2.6vh; font-weight: 800; background: #ffd25a; color: #102426; cursor: pointer; }
+.sound-chip { position: absolute; right: 5.5vw; bottom: 6vh; border: 0; border-radius: 2vh; padding: 1vh 1.6vw; font-size: 2.6vh; font-weight: 800; background: #ffd25a; color: #102426; cursor: pointer; }

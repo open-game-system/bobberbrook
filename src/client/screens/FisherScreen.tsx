@@ -9,6 +9,9 @@ import { HostPanel, type Hosting } from "../components/HostPanel";
 import { HostStrip } from "../components/HostStrip";
 import { Joystick } from "../components/Joystick";
 import { MiniMap, SEAT_HEX } from "../components/MiniMap";
+import { SwirlCompass } from "../components/SwirlCompass";
+import { compassTo } from "../compass";
+import { positionAt } from "../fisherUi";
 import { buttonState, needsTick } from "../fisherUi";
 import { localStore, readProgress, writeProgress } from "../progressStore";
 import { createServerClock } from "../serverClock";
@@ -101,6 +104,10 @@ export function FisherScreen({ seat, host, hosting }: { seat: number; host: bool
       </div>
       <div className="fisher-middle">
         <BobberWindow state={state} />
+        {(state.kind === "walk-to-water" || state.kind === "cast") && (() => {
+          const c = compassTo(lake, positionAt(me, now));
+          return c ? <SwirlCompass c={c} /> : null;
+        })()}
         {me.catch && me.mode === "catch" && <CatchCard c={me.catch} words={host} />}
       </div>
       <div className="fisher-bottom">

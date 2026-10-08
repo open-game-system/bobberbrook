@@ -1,7 +1,9 @@
 :root {
-  --deep: #0f3b3f;
-  --lake: #1f7a86;
-  --shallow: #4fc0c4;
+  --deep: #17123a;
+  --lake: #2a7f9a;
+  --shallow: #48e0d4;
+  --violet: #7d5bd0;
+  --moon: #e8eeff;
   --wood: #7a4a22;
   --wood-light: #b07a42;
   --leaf: #5fbf4a;
@@ -19,10 +21,10 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--deep);
 #app { height: 100%; }
 button { font: inherit; color: inherit; }
 
-.phone.center { height: 100%; display: grid; place-items: center; text-align: center; padding: 24px; font-size: 22px; background: radial-gradient(circle at 50% 30%, var(--lake), var(--deep)); }
+.phone.center { height: 100%; display: grid; place-items: center; text-align: center; padding: 24px; font-size: 22px; background: radial-gradient(circle at 50% 30%, #3b2f7a, var(--deep)); }
 
 /* ---------- name gate ---------- */
-.name-card { display: grid; gap: 16px; width: min(360px, 88vw); padding: 28px; border-radius: 28px; background: rgba(10, 40, 44, 0.7); border: 4px solid var(--wood-light); }
+.name-card { display: grid; gap: 16px; width: min(360px, 88vw); padding: 28px; border-radius: 28px; background: rgba(28, 20, 66, 0.75); border: 4px solid rgba(180, 160, 255, 0.55); }
 .name-title { margin: 0; font-size: 30px; font-weight: 800; }
 .name-input { font: inherit; font-size: 26px; padding: 12px 16px; border-radius: 16px; border: 3px solid var(--wood-light); background: #fff; color: var(--ink); text-align: center; touch-action: manipulation; user-select: text; -webkit-user-select: text; }
 .btn.primary { font-size: 26px; font-weight: 800; padding: 12px; border-radius: 18px; border: 0; background: var(--sun); color: var(--ink); box-shadow: 0 6px 0 #c9902a; }
@@ -33,8 +35,9 @@ button { font: inherit; color: inherit; }
 .fisher {
   position: relative; height: 100%; overflow: hidden;
   background:
-    radial-gradient(ellipse at 50% 120%, color-mix(in oklab, var(--seat) 35%, transparent), transparent 60%),
-    radial-gradient(circle at 50% 35%, #2a8f97, var(--deep) 75%);
+    radial-gradient(ellipse at 50% 120%, color-mix(in oklab, var(--seat) 32%, transparent), transparent 60%),
+    radial-gradient(ellipse at 20% 0%, rgba(125, 91, 208, 0.55), transparent 55%),
+    radial-gradient(circle at 50% 40%, #1f6f86, #241a52 62%, var(--deep));
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 .fisher::before { content: ""; position: absolute; inset: 0; border: 8px solid var(--seat); border-radius: 0; opacity: 0.55; pointer-events: none; }
@@ -60,7 +63,7 @@ button { font: inherit; color: inherit; }
 .stick-knob svg { width: 70%; height: 70%; }
 
 /* the big button */
-.action { --size: min(40vmin, 320px); position: relative; width: var(--size); height: var(--size); border-radius: 50%; border: 8px solid #f4e2b0; background: radial-gradient(circle at 40% 30%, #6fd6dc, #1f8a96); box-shadow: 0 10px 0 #0b4d55, 0 18px 30px rgba(0,0,0,.35); touch-action: none; padding: 0; display: grid; place-items: center; transition: transform 0.08s, filter 0.2s; }
+.action { --size: min(40vmin, 320px); position: relative; width: var(--size); height: var(--size); border-radius: 50%; border: 8px solid #f4e2b0; background: radial-gradient(circle at 40% 30%, #7ff0e4, #1f9aa6); box-shadow: 0 10px 0 #0b4d5f, 0 18px 30px rgba(0,0,0,.35), 0 0 28px rgba(72,224,212,.35); touch-action: none; padding: 0; display: grid; place-items: center; transition: transform 0.08s, filter 0.2s; }
 .action:active { transform: translateY(6px); box-shadow: 0 4px 0 #0b4d55, 0 8px 16px rgba(0,0,0,.35); }
 .action-icon { width: 62%; height: 62%; display: grid; place-items: center; }
 .action-icon svg, .action-icon img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
@@ -73,7 +76,7 @@ button { font: inherit; color: inherit; }
 .action.reel { background: radial-gradient(circle at 40% 30%, #8fe07a, #3a9a3a); box-shadow: 0 10px 0 #1f5a1f; }
 .action.reel.thrash { background: radial-gradient(circle at 40% 30%, #ffb07a, #e8462a); box-shadow: 0 10px 0 #8a2410, 0 0 40px #ff7a4a; animation: shake 0.12s linear infinite; }
 .action.caught { background: radial-gradient(circle at 40% 30%, #ffe9a0, #e0a83a); }
-.action.caught.ready { background: radial-gradient(circle at 40% 30%, #6fd6dc, #1f8a96); animation: breathe 1.6s ease-in-out infinite; }
+.action.caught.ready { background: radial-gradient(circle at 40% 30%, #7ff0e4, #1f9aa6); animation: breathe 1.6s ease-in-out infinite; }
 .action.campfire { background: radial-gradient(circle at 40% 30%, #ffb07a, #a8401a); }
 .reel-ring { position: absolute; inset: -14px; width: calc(100% + 28px); height: calc(100% + 28px); pointer-events: none; }
 .spin { animation: spin 0.6s linear infinite; }
@@ -84,7 +87,7 @@ button { font: inherit; color: inherit; }
 @keyframes shake { 0% { translate: -4px 0; } 50% { translate: 4px 2px; } 100% { translate: -4px 0; } }
 
 /* bobber close-up */
-.bobber-window { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; background: radial-gradient(circle at 50% 40%, #5fd0d6, #1d7480 70%); border: 6px solid rgba(244,226,176,.7); box-shadow: inset 0 10px 30px rgba(0,0,0,.25); }
+.bobber-window { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; background: radial-gradient(circle at 50% 40%, #6ff0e0, #1f7f96 55%, #2a2366 100%); border: 6px solid rgba(244,226,176,.7); box-shadow: inset 0 10px 30px rgba(0,0,0,.25); }
 .bw-water { position: absolute; inset: 0; background: repeating-radial-gradient(circle at 50% 55%, rgba(255,255,255,.08) 0 6px, transparent 6px 22px); animation: drift 6s linear infinite; }
 @keyframes drift { to { background-position: 0 40px; } }
 .bw-ripple { position: absolute; left: 50%; top: 58%; width: 30%; height: 10%; translate: -50% -50%; border: 3px solid rgba(255,255,255,.6); border-radius: 50%; animation: ripple 2s ease-out infinite; }
@@ -118,12 +121,12 @@ button { font: inherit; color: inherit; }
 
 /* host strip */
 .host-strip { width: min(46vw, 520px); display: grid; gap: 8px; align-content: start; }
-.coach { margin: 0; padding: 12px 16px; border-radius: 18px; background: rgba(8, 34, 38, 0.78); border: 3px solid var(--wood-light); font-size: 21px; line-height: 1.2; font-weight: 700; min-height: 3.6em; }
+.coach { margin: 0; padding: 12px 16px; border-radius: 18px; background: rgba(28, 20, 66, 0.82); border: 3px solid rgba(180, 160, 255, 0.55); font-size: 21px; line-height: 1.2; font-weight: 700; min-height: 3.6em; }
 .host-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
 .host-buttons button { border: 0; border-radius: 14px; padding: 8px 14px; font-size: 17px; font-weight: 700; background: var(--wood-light); color: #fff; box-shadow: 0 4px 0 var(--wood); touch-action: manipulation; }
 .host-buttons button.on { background: var(--coral); }
 .rod-line { margin: 0; font-size: 15px; opacity: 0.9; }
-.sheet { position: fixed; inset: 6vmin; z-index: 20; border-radius: 24px; background: rgba(8, 34, 38, 0.96); border: 4px solid var(--wood-light); padding: 16px; overflow: auto; touch-action: pan-y; }
+.sheet { position: fixed; inset: 6vmin; z-index: 20; border-radius: 24px; background: rgba(24, 18, 58, 0.97); border: 4px solid rgba(180, 160, 255, 0.55); padding: 16px; overflow: auto; touch-action: pan-y; }
 .sheet-head { display: flex; justify-content: space-between; align-items: center; }
 .sheet-head h2 { margin: 0; font-size: 26px; }
 .sheet-close { border: 0; border-radius: 12px; background: var(--sun); color: var(--ink); font-weight: 800; padding: 6px 14px; }
@@ -167,3 +170,10 @@ button { font: inherit; color: inherit; }
   .stick { --size: 40vw; }
   .action { --size: 42vw; }
 }
+
+/* swirl compass (walking) */
+.compass { position: absolute; inset: 6%; display: grid; place-items: center; }
+.compass-swirl { position: absolute; width: 34%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgba(127,240,228,.55), rgba(127,240,228,0) 70%); border: 4px dashed rgba(127,240,228,.7); animation: spin 6s linear infinite; }
+.compass.golden .compass-swirl { background: radial-gradient(circle, rgba(255,210,90,.7), rgba(255,210,90,0) 70%); border-color: rgba(255,226,140,.9); }
+.compass-arrow { position: absolute; width: 100%; height: 100%; transition: transform 0.25s ease-out; filter: drop-shadow(0 6px 8px rgba(0,0,0,.35)); }
+.compass.arrived .compass-swirl { width: 70%; border-style: solid; animation: spin 3s linear infinite, breathe 1.2s ease-in-out infinite; }
