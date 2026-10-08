@@ -76,8 +76,8 @@ function bobberGeometry(): BufferGeometry {
   return merge([top, bottom, band, stick]);
 }
 
-type Pose = { legL: number; legR: number; armLx: number; armLz: number; armRx: number; armRz: number; bodyY: number; lean: number; tilt: number; headX: number; bend: number; sit: number };
-const zeroPose = (): Pose => ({ legL: 0, legR: 0, armLx: 0, armLz: 0, armRx: 0, armRz: 0, bodyY: 0, lean: 0, tilt: 0, headX: 0, bend: 0, sit: 0 });
+type Pose = { legL: number; legR: number; armLx: number; armLz: number; armRx: number; armRz: number; bodyY: number; lean: number; tilt: number; headX: number; headY: number; sq: number; bend: number; sit: number };
+const zeroPose = (): Pose => ({ legL: 0, legR: 0, armLx: 0, armLz: 0, armRx: 0, armRz: 0, bodyY: 0, lean: 0, tilt: 0, headX: 0, headY: 0, sq: 0, bend: 0, sit: 0 });
 
 class FisherView {
   rig: FisherRig;
@@ -96,6 +96,9 @@ class FisherView {
   y = 0;
   private facing = 0;
   private walkPhase = 0;
+  /** 0..1: how far the whole fisher turns to face the camera (showing off a catch). */
+  private turnToCamera = 0;
+  private turnW = 0;
   speed = 0;
   private pose = zeroPose();
   private target = zeroPose();
@@ -285,6 +288,15 @@ class FisherView {
     // Base pose: idle breathing.
     target.legL = 0; target.legR = 0; target.lean = 0; target.tilt = Math.sin(t * 1.6 + this.seat) * 0.03; target.headX = 0;
     target.armLx = -0.15; target.armLz = 0.18; target.armRx = -0.15; target.armRz = -0.18; target.bodyY = Math.sin(t * 2 + this.seat) * 0.008; target.bend = 0; target.sit = 0;
+    target.sq = Math.sin(t * 2 + this.seat) * 0.02;
+    // The face reads from the group camera: the head turns toward it (a glance back now and then).
+    const toCam = Math.atan2(camera.position.z - this.z, camera.position.x - this.x);
+    let rel = toCam - this.facing;
+    while (rel > Math.PI) rel -= Math.PI * 2;
+    while (rel < -Math.PI) rel += Math.PI * 2;
+    const glance = 0.5 + 0.5 * Math.sin(t * 0.45 + this.seat * 1.9);
+    target.headY = -Math.max(-1.1, Math.min(1.1, rel)) * (0.35 + 0.5 * glance * glance);
+    target.headX = 0.12;
     let rodVisible = true;
     let showBobber = false;
     let sag = 0.5;
@@ -295,8 +307,12 @@ class FisherView {
       const s = Math.sin(this.walkPhase);
       target.legL = s * 0.75; target.legR = -s * 0.75;
       target.armLx = -s * 0.6; target.armRx = s * 0.6 - 0.1;
-      target.bodyY = Math.abs(Math.cos(this.walkPhase)) * 0.045;
+      const hop = Math.abs(Math.cos(this.walkPhase));
+      target.bodyY = hop * 0.06;
+      // Squash at the bottom of each step, stretch at the top.
+      target.sq = (hop - 0.5) * 0.16;
       target.lean = 0.14;
+      target.headY *= 0.3;
     }
     if (lake.campfire) {
       target.sit = 1; target.legL = -1.45; target.legR = -1.45; target.armLx = -0.6; target.armRx = -0.6; target.armLz = 0.3; target.armRz = -0.3;
@@ -310,6 +326,9 @@ class FisherView {
       else target.armRx = -0.8;
       target.armLx = -0.9; target.armLz = -0.45;
       target.bend = c < 0.22 ? -0.4 : c < 0.5 ? 0.6 : 0.15;
+      target.lean = c < 0.22 ? -0.22 : c < 0.5 ? 0.26 : 0.08;
+      target.sq = c < 0.22 ? -0.06 : c < 0.5 ? 0.08 : 0;
+      target.headY *= 0.2;
       showBobber = true;
       const fl = Math.min(1, Math.max(0, (c - 0.3) / 0.7));
       this.tipWorld();
@@ -378,7 +397,8 @@ class FisherView {
       target.armRx = -1.05 + (hold ? Math.sin(t * 9) * 0.06 : 0);
       target.armLx = hold ? -1.0 + Math.sin(t * 12) * 0.35 : -0.9;
       target.armLz = -0.45;
-      target.lean = -0.18;
+      target.lean = thrash ? -0.34 + Math.sin(t * 18) * 0.05 : -0.24;
+      target.headY *= 0.25;
       target.bend = thrash ? 1.45 + Math.sin(t * 30) * 0.12 : hold ? 0.95 : 0.55;
       sag = 0;
       bob.y = thrash ? -0.12 + Math.sin(t * 26) * 0.08 : 0.02 + Math.sin(t * 5) * 0.03;
@@ -423,6 +443,7 @@ class FisherView {
         fx.leap(this.catchFromX, this.catchFromZ, t, this.catchJunk);
       }
     }
+    this.turnToCamera = 0;
     const inCatch = this.catchStart >= 0;
     if (inCatch) {
       const age = t - this.catchStart;
@@ -440,7 +461,10 @@ class FisherView {
           target.armRx = -0.8 - 2.0 * up; target.armLx = -0.8 - 2.0 * up;
           target.armRz = -0.32 * up; target.armLz = 0.32 * up;
           target.lean = -0.08 * up;
-          target.headX = -0.25 * up;
+          target.headX = -0.15 * up;
+          target.headY = 0;
+          target.sq = -0.05 * up;
+          this.turnToCamera = up;
           const hop = age > LEAP_S ? Math.max(0, Math.sin((age - LEAP_S) * 9)) * Math.max(0, 1 - (age - LEAP_S) * 0.6) : 0;
           target.bodyY = hop * 0.12;
         }
@@ -459,6 +483,8 @@ class FisherView {
     pz2.lean += (target.lean - pz2.lean) * kk;
     pz2.tilt += (target.tilt - pz2.tilt) * kk;
     pz2.headX += (target.headX - pz2.headX) * kk;
+    pz2.headY += (target.headY - pz2.headY) * damp(4, dt);
+    pz2.sq += (target.sq - pz2.sq) * kk;
     pz2.bend += (target.bend - pz2.bend) * kk;
     pz2.sit += (target.sit - pz2.sit) * kk;
     rig.legL.rotation.x = pz2.legL;
@@ -467,7 +493,13 @@ class FisherView {
     rig.armR.rotation.set(pz2.armRx, 0, pz2.armRz);
     rig.body.position.y = pz2.bodyY - pz2.sit * 0.16;
     rig.body.rotation.set(pz2.lean, 0, pz2.tilt);
-    rig.head.rotation.x = pz2.headX;
+    rig.head.rotation.set(pz2.headX, pz2.headY, 0);
+    rig.body.scale.set(1 - pz2.sq * 0.5, 1 + pz2.sq, 1 - pz2.sq * 0.5);
+    this.turnW += (this.turnToCamera - this.turnW) * damp(5, dt);
+    if (this.turnW > 0.001) {
+      const toCam = Math.atan2(camera.position.z - this.z, camera.position.x - this.x);
+      root.rotation.y = Math.PI / 2 - angleLerp(this.facing, toCam, this.turnW * 0.85);
+    }
     const tier = Math.max(0, Math.min(3, lake.rodTier));
     for (let i = 0; i < rig.rods.length; i++) rig.rods[i]!.root.visible = rodVisible && i === tier;
     const rod = rig.rods[tier]!;
@@ -476,7 +508,7 @@ class FisherView {
     const biting = mode === "bite";
     rig.markerMat.opacity = biting ? 0.6 + 0.4 * Math.sin(t * 16) : 0.55 + 0.1 * Math.sin(t * 2);
     rig.marker.scale.setScalar(biting ? 1.25 : 1);
-    rig.tag.position.set(this.x, this.y + (lake.campfire ? 2.9 + (this.seat % 2) * 0.5 : 3.3) * Math.min(1, this.appear * 1.4), this.z);
+    rig.tag.position.set(this.x, this.y + (lake.campfire ? 3.0 + (this.seat % 2) * 0.5 : 3.4) * Math.min(1, this.appear * 1.4), this.z);
     const tagK = this.card.group.visible ? 0 : 1;
     rig.tag.visible = tagK > 0;
     rig.tag.scale.set(0.17, 0.0374, 1);

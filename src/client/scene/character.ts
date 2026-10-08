@@ -23,7 +23,7 @@ import { merge, paint, prep } from "./geo";
 import { SEAT_HEX } from "./types";
 
 /** World scale of a fisher (model is built ~1 unit tall). */
-export const FISHER_SCALE = 2.0;
+export const FISHER_SCALE = 2.2;
 export const ROD_SEGMENTS = 4;
 const ROD_LEN = 1.75;
 
@@ -72,17 +72,17 @@ function hatGeometry(seat: number, color: number): BufferGeometry {
   } else if (seat === 1) {
     // Rain hat: a dome and a brim longer at the back.
     parts.push(part(new SphereGeometry(0.215, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.85, 1).translate(0, 0.28, -0.01), color, light));
-    parts.push(part(new CylinderGeometry(0.22, 0.33, 0.08, 16, 1, true).scale(1, 1, 1.12).translate(0, 0.25, -0.04), dark, color));
+    parts.push(part(new CylinderGeometry(0.22, 0.29, 0.08, 16, 1, true).scale(1, 1, 1.1).translate(0, 0.25, -0.04), dark, color));
     parts.push(part(new CylinderGeometry(0.02, 0.02, 0.02, 6).translate(0, 0.47, 0), dark));
   } else if (seat === 2) {
     // Wide sun hat with a band (the blue one; Juneau's in the concept art).
     parts.push(part(new CylinderGeometry(0.16, 0.2, 0.17, 14).translate(0, 0.38, 0), color, light));
-    parts.push(part(new CylinderGeometry(0.2, 0.4, 0.05, 18).translate(0, 0.29, 0), dark, color));
+    parts.push(part(new CylinderGeometry(0.2, 0.32, 0.05, 18).translate(0, 0.29, 0), dark, color));
     parts.push(part(new TorusGeometry(0.195, 0.026, 5, 16).rotateX(Math.PI / 2).translate(0, 0.32, 0), 0x1f3a7a));
   } else {
     // Flower hat.
     parts.push(part(new SphereGeometry(0.2, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.9, 1).translate(0, 0.29, 0), color, light));
-    parts.push(part(new CylinderGeometry(0.21, 0.34, 0.05, 18).translate(0, 0.28, 0), dark, color));
+    parts.push(part(new CylinderGeometry(0.21, 0.3, 0.05, 18).translate(0, 0.28, 0), dark, color));
     parts.push(part(new TorusGeometry(0.2, 0.024, 5, 16).rotateX(Math.PI / 2).translate(0, 0.31, 0), 0xffffff));
     for (let i = 0; i < 5; i++) {
       const a = (i / 5) * Math.PI * 2;
@@ -182,60 +182,71 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials)
   const body = new Group();
   root.add(body);
 
-  // Legs (pivot at the hip).
+  // A chunky, rounded little fisher (~1 unit tall before scaling): boots, a bean body, stubby arms
+  // and a big round head (≈45 % of the height) with a simple friendly face.
+  const shade = (hex: number, k: number) => new Color(hex).multiplyScalar(k).getHex();
+  const lighten = (hex: number, k: number) => new Color(hex).lerp(new Color(0xffffff), k).getHex();
+
+  // Legs (pivot at the hip): short trousers and big round boots.
   const mkLeg = (sx: number) => {
     const pivot = new Group();
-    pivot.position.set(sx * 0.085, 0.3, 0);
-    const leg = part(new CylinderGeometry(0.068, 0.062, 0.2, 8).translate(0, -0.1, 0), TROUSERS[seat]!);
-    const cuff = part(new CylinderGeometry(0.075, 0.075, 0.04, 8).translate(0, -0.19, 0), 0xe8dcc0);
-    const boot = part(new SphereGeometry(0.085, 9, 6).scale(1, 0.75, 1.35).translate(0, -0.25, 0.03), 0x6a4024, 0x8a5a34);
-    pivot.add(mesh(merge([leg, cuff, boot])));
+    pivot.position.set(sx * 0.085, 0.2, 0);
+    const leg = part(new CylinderGeometry(0.062, 0.058, 0.12, 9).translate(0, -0.06, 0), TROUSERS[seat]!);
+    const boot = part(new SphereGeometry(0.078, 12, 8).scale(1, 0.72, 1.3).translate(0, -0.145, 0.025), 0x5a3420, 0x8a5634);
+    const sole = part(new CylinderGeometry(0.075, 0.08, 0.025, 12).scale(1, 1, 1.3).translate(0, -0.19, 0.025), 0x3a2418);
+    pivot.add(mesh(merge([leg, boot, sole])));
     body.add(pivot);
     return pivot;
   };
   const legL = mkLeg(1);
   const legR = mkLeg(-1);
 
-  // Torso: vest in the seat colour over a cream shirt, belt, backpack with a bedroll.
-  const torso = part(new SphereGeometry(0.2, 14, 10).scale(1, 1.08, 0.86).translate(0, 0.49, 0), vest.clone().multiplyScalar(0.85).getHex(), vest.getHex());
-  const shirt = part(new SphereGeometry(0.12, 10, 6).scale(1, 0.6, 0.9).translate(0, 0.63, 0.04), 0xf4ead2);
-  const belt = part(new TorusGeometry(0.175, 0.03, 6, 18).rotateX(Math.PI / 2).translate(0, 0.37, 0), 0x5a3a22);
-  const buckle = part(new BoxGeometry(0.06, 0.05, 0.02).translate(0, 0.37, 0.19), 0xe8c050);
-  const pack = part(new BoxGeometry(0.26, 0.26, 0.12).translate(0, 0.5, -0.19), 0x8a5a32, 0xa8703e);
-  const roll = part(new CylinderGeometry(0.06, 0.06, 0.3, 10).rotateZ(Math.PI / 2).translate(0, 0.66, -0.2), 0xd8c49a);
-  body.add(mesh(merge([torso, shirt, belt, buckle, pack, roll])));
+  // Body: a rounded bean in the fisher's colour, cream collar, belt, a little backpack.
+  const torso = part(new SphereGeometry(0.205, 18, 12).scale(1, 1.08, 0.92).translate(0, 0.36, 0), shade(vest.getHex(), 0.78), lighten(vest.getHex(), 0.12));
+  const tummy = part(new SphereGeometry(0.13, 12, 8).scale(1, 1.05, 0.5).translate(0, 0.33, 0.13), lighten(vest.getHex(), 0.35));
+  const collar = part(new TorusGeometry(0.11, 0.035, 6, 16).rotateX(Math.PI / 2).translate(0, 0.555, 0.01), 0xf4ead2);
+  const belt = part(new TorusGeometry(0.19, 0.026, 6, 20).rotateX(Math.PI / 2).scale(1, 1, 0.93).translate(0, 0.25, 0), 0x5a3a22);
+  const buckle = part(new BoxGeometry(0.06, 0.05, 0.025).translate(0, 0.25, 0.185), 0xe8c050);
+  const pack = part(new SphereGeometry(0.13, 10, 8).scale(1, 1.05, 0.62).translate(0, 0.4, -0.18), 0x8a5a32, 0xb07a48);
+  const roll = part(new CylinderGeometry(0.05, 0.05, 0.26, 10).rotateZ(Math.PI / 2).translate(0, 0.54, -0.18), 0xd8c49a);
+  body.add(mesh(merge([torso, tummy, collar, belt, buckle, pack, roll])));
 
-  // Arms (pivot at the shoulder; hang along -y).
+  // Arms (pivot at the shoulder; hang along -y): stubby sleeves and round mittens.
   const mkArm = (sx: number) => {
     const pivot = new Group();
-    pivot.position.set(sx * 0.2, 0.6, 0);
-    const sleeve = part(new CylinderGeometry(0.058, 0.05, 0.2, 8).translate(0, -0.1, 0), 0xf4ead2);
-    const hand = part(new SphereGeometry(0.055, 8, 6).translate(0, -0.23, 0), SKIN);
-    pivot.add(mesh(merge([sleeve, hand])));
+    pivot.position.set(sx * 0.195, 0.49, 0);
+    const sleeve = part(new CylinderGeometry(0.056, 0.05, 0.15, 9).translate(0, -0.07, 0), shade(vest.getHex(), 0.9));
+    const shoulder = part(new SphereGeometry(0.058, 9, 6), shade(vest.getHex(), 0.95));
+    const hand = part(new SphereGeometry(0.058, 10, 7).translate(0, -0.18, 0), SKIN);
+    pivot.add(mesh(merge([shoulder, sleeve, hand])));
     body.add(pivot);
     return pivot;
   };
   const armL = mkArm(1);
   const armR = mkArm(-1);
   const hand = new Object3D();
-  hand.position.set(0, -0.23, 0.0);
+  hand.position.set(0, -0.18, 0.0);
   armR.add(hand);
 
-  // Head: big and round, a simple face, hair, the seat's hat.
+  // Head: big and round, a simple friendly face (two eyes with shines, rosy cheeks, a small smile), hair, the hat.
   const head = new Group();
-  head.position.set(0, 0.66, 0);
+  head.position.set(0, 0.56, 0);
   body.add(head);
-  const skull = part(new SphereGeometry(0.22, 16, 12).translate(0, 0.2, 0), SKIN);
-  const hair = part(new SphereGeometry(0.228, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.62).rotateX(-0.55).translate(0, 0.21, -0.02), HAIR[seat]!);
-  const ears = [1, -1].map((sx) => part(new SphereGeometry(0.045, 6, 5).scale(0.6, 1, 1).translate(sx * 0.215, 0.19, 0), SKIN));
-  const eyes = [1, -1].map((sx) => part(new SphereGeometry(0.03, 8, 6).scale(1, 1.3, 0.55).translate(sx * 0.075, 0.21, 0.2), 0x2a1a14));
-  const shines = [1, -1].map((sx) => part(new SphereGeometry(0.011, 5, 4).translate(sx * 0.075 + 0.01, 0.225, 0.215), 0xffffff));
-  const cheeks = [1, -1].map((sx) => part(new SphereGeometry(0.036, 7, 5).scale(1, 0.6, 0.4).translate(sx * 0.125, 0.15, 0.18), 0xff9a8a));
-  const nose = part(new SphereGeometry(0.026, 7, 5).translate(0, 0.17, 0.22), 0xffbf9a);
-  // The hat's style follows the colour the player picked (blue is always the sun hat), not the seat.
+  const HR = 0.25;
+  const skull = part(new SphereGeometry(HR, 22, 16).translate(0, 0.24, 0), SKIN, lighten(SKIN, 0.1));
+  const hair = part(new SphereGeometry(HR + 0.012, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.6).rotateX(-0.75).translate(0, 0.25, -0.02), HAIR[seat]!);
+  const fringe = part(new SphereGeometry(0.1, 10, 6).scale(1.6, 0.5, 0.8).translate(0, 0.42, 0.15), HAIR[seat]!);
+  const ears = [1, -1].map((sx) => part(new SphereGeometry(0.05, 8, 6).scale(0.55, 1, 0.9).translate(sx * HR, 0.22, 0), SKIN));
+  const eyes = [1, -1].map((sx) => part(new SphereGeometry(0.038, 10, 8).scale(0.85, 1.2, 0.45).translate(sx * 0.088, 0.255, 0.226), 0x24160f));
+  const shines = [1, -1].map((sx) => part(new SphereGeometry(0.013, 6, 4).translate(sx * 0.088 + 0.012, 0.272, 0.244), 0xffffff));
+  const cheeks = [1, -1].map((sx) => part(new SphereGeometry(0.042, 9, 6).scale(1, 0.62, 0.35).translate(sx * 0.145, 0.185, 0.2), 0xff8a86));
+  const smile = part(new TorusGeometry(0.045, 0.012, 5, 12, Math.PI).rotateZ(Math.PI).rotateX(-0.35).translate(0, 0.18, 0.236), 0x8a3a2a);
+  const nose = part(new SphereGeometry(0.024, 8, 6).translate(0, 0.215, 0.25), 0xffb896);
+  // The hat style follows the colour the player picked (blue is always the sun hat), not the seat.
   const style = Math.max(0, HAT_STYLE.indexOf(colorName));
-  const hat = hatGeometry(style, color);
-  head.add(mesh(merge([skull, hair, ...ears, ...eyes, ...shines, ...cheeks, nose, hat])));
+  // Scaled up for the bigger head and tipped back so the brim never hides the face.
+  const hat = hatGeometry(style, color).scale(1.16, 1.16, 1.16).translate(0, 0.0, 0).rotateX(-0.28).translate(0, 0.03, -0.02);
+  head.add(mesh(merge([skull, hair, fringe, ...ears, ...eyes, ...shines, ...cheeks, smile, nose, hat])));
 
   // Rods, one per tier; the scene shows the family's current one.
   const rods: RodRig[] = [];

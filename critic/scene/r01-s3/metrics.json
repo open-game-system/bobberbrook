@@ -1,0 +1,137 @@
+{
+  "round": "r01-s3",
+  "shots": [
+    {
+      "label": "morning",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 39,
+      "programs": 39,
+      "calls": 119,
+      "triangles": 933867,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 132
+    },
+    {
+      "label": "morning@0.97",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 39,
+      "programs": 39,
+      "calls": 120,
+      "triangles": 934193,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 103
+    },
+    {
+      "label": "four-reel",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 39,
+      "programs": 39,
+      "calls": 144,
+      "triangles": 947727,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 115
+    },
+    {
+      "label": "golden-swirl",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 39,
+      "programs": 39,
+      "calls": 120,
+      "triangles": 933893,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 83
+    },
+    {
+      "label": "night-catch",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 39,
+      "programs": 39,
+      "calls": 108,
+      "triangles": 931881,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 93
+    },
+    {
+      "label": "rod-upgrade",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 39,
+      "programs": 39,
+      "calls": 102,
+      "triangles": 931637,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 122
+    },
+    {
+      "label": "campfire",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 39,
+      "programs": 39,
+      "calls": 124,
+      "triangles": 936843,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 54
+    },
+    {
+      "label": "empty@0.1",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 39,
+      "programs": 39,
+      "calls": 71,
+      "triangles": 914419,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 90
+    },
+    {
+      "label": "empty@0.42",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 39,
+      "programs": 39,
+      "calls": 72,
+      "triangles": 914745,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 64
+    },
+    {
+      "label": "empty@0.65",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 39,
+      "programs": 39,
+      "calls": 72,
+      "triangles": 914745,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 46
+    },
+    {
+      "label": "empty@0.93",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 39,
+      "programs": 39,
+      "calls": 72,
+      "triangles": 914745,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 93
+    }
+  ],
+  "soak": {
+    "programsBefore": 39,
+    "programsAfter": 39,
+    "p50": 4.800000190734863,
+    "p95": 7.300000190734863,
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+    "frames": 3297
+  },
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (File not found)"
+  ]
+}
