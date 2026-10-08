@@ -1,0 +1,49 @@
+{
+  "round": "10",
+  "shots": [
+    {
+      "label": "four-reel",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 26,
+      "programs": 26,
+      "calls": 98,
+      "triangles": 329690,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 120
+    },
+    {
+      "label": "golden-swirl",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 26,
+      "programs": 26,
+      "calls": 64,
+      "triangles": 320660,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 62
+    },
+    {
+      "label": "night-catch",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 26,
+      "programs": 26,
+      "calls": 62,
+      "triangles": 320436,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 78
+    }
+  ],
+  "soak": {
+    "programsBefore": 26,
+    "programsAfter": 26,
+    "p50": 2,
+    "p95": 3.5999999046325684,
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+    "frames": 9240
+  },
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (File not found)"
+  ]
+}

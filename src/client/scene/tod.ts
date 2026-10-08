@@ -51,10 +51,10 @@ const KEYS: Key[] = [
     waterShallow: 0x4ee8dc, waterDeep: 0x0a7a96, moon: 0, mountain: 0x8282c4 },
   // Golden: rose-violet dusk with a warm rim.
   { at: 0.41, skyTop: 0x4a3c8a, skyHorizon: 0xf0a8c0, skyGlow: 0xffb48a, cloud: 0xffc4d0, cloudShade: 0x8a5a9a, sun: 0xffb890, sunI: 2.2, az: 150 * D, el: 14 * D,
-    hemiSky: 0xc8a0d8, hemiGround: 0x3a4a68, hemiI: 1.0, fog: 0xb88ab8, fogNear: 50, fogFar: 240, exposure: 1.02, stars: 0.4, glow: 0.6, mist: 0.55,
+    hemiSky: 0xe8b4e4, hemiGround: 0x4a5a7a, hemiI: 1.35, fog: 0xb88ab8, fogNear: 50, fogFar: 240, exposure: 1.02, stars: 0.4, glow: 0.6, mist: 0.55,
     waterShallow: 0x58d8d4, waterDeep: 0x16608a, moon: 0, mountain: 0x8a6aa8 },
   { at: 0.48, skyTop: 0x34307a, skyHorizon: 0xd88ab0, skyGlow: 0xff9a7a, cloud: 0xe8a0c0, cloudShade: 0x6a4a8a, sun: 0xffa080, sunI: 1.6, az: 168 * D, el: 6 * D,
-    hemiSky: 0xa088c8, hemiGround: 0x2e3a5a, hemiI: 1.0, fog: 0x9a78b0, fogNear: 45, fogFar: 230, exposure: 1.04, stars: 0.6, glow: 0.85, mist: 0.6,
+    hemiSky: 0xc0a0dc, hemiGround: 0x3a4868, hemiI: 1.3, fog: 0x9a78b0, fogNear: 45, fogFar: 230, exposure: 1.04, stars: 0.6, glow: 0.85, mist: 0.6,
     waterShallow: 0x50ccd0, waterDeep: 0x14507e, moon: 0.2, mountain: 0x6a5498 },
   // Night: deep indigo, a bright moon, glowing water and wisps.
   { at: 0.55, skyTop: 0x161a52, skyHorizon: 0x4a3c8a, skyGlow: 0x8a7ad0, cloud: 0x6a62a8, cloudShade: 0x2a2a60, sun: 0xb8c4ff, sunI: 1.4, az: 225 * D, el: 22 * D,
