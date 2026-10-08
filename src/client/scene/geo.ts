@@ -147,7 +147,7 @@ uniform vec3 uFocus[${MAX_FOCUS}];`,
     ivec2 q = ivec2(mod(gl_FragCoord.xy, 4.0));
     int k = q.x + q.y * 4;
     float bayer[16] = float[16](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
-    if ((bayer[k] + 0.5) / 16.0 < min(1.0, occ * 1.15) * 0.82) discard;
+    if ((bayer[k] + 0.5) / 16.0 < min(1.0, occ * 1.4)) discard;
   }`,
       );
   };

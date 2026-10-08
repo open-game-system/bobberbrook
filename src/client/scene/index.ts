@@ -29,6 +29,7 @@ import { buildGround } from "./terrain";
 import { newTodState, sampleTod } from "./tod";
 import type { LakeScene, SceneQuality } from "./types";
 import { buildWater } from "./water";
+import { buildRays } from "./rays";
 
 export type { LakeScene, SceneQuality } from "./types";
 
@@ -137,6 +138,8 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   const treeMat = occluderMaterial(occ);
   const props = buildProps(opts.quality, sway, treeMat);
   scene.add(props.group);
+  const rays = buildRays();
+  if (full) scene.add(rays.mesh);
   const parts = makeParticles();
   scene.add(parts.water.points, parts.glow.points);
   const fx = new Fx(parts.water, parts.glow, water, !full);
@@ -201,6 +204,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     applyTod(phase);
     sky.update(tod, camera, t);
     water.update(tod, t);
+    rays.update(tod, t);
     props.update(tod, t, lake?.campfire ? 1 : 0);
     shadows.begin();
     swirls.frame(lake, sn, t, dt, tod.glow);
@@ -347,6 +351,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       ground.dispose();
       groundMat.dispose();
       water.dispose();
+      rays.dispose();
       props.dispose();
       sway.dispose();
       treeMat.dispose();
