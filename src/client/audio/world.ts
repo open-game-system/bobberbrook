@@ -256,7 +256,8 @@ export function startWorld(): void {
   water = startWater(ctx, out);
   night = startNight(ctx, out);
   musicBus = ctx.createGain();
-  musicBus.gain.value = 1.0;
+  // The bed sits under the effects but must read as music between catches (round 01: too faint).
+  musicBus.gain.value = 2.2;
   const delay = ctx.createDelay();
   delay.delayTime.value = BEAT * 0.75;
   const fb = ctx.createGain();

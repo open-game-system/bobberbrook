@@ -30,6 +30,9 @@ Read, in /Users/jonathanmumm/src/bobberbrook:
     detector, want ≈ 0) and tv-audio-spectrogram.png. The audio is synthesized in the browser (water,
     birds, crickets, harp/choir music, sound effects) plus a narrator (pre-generated voice clips: fish
     names and cheers).
+- The recording Mac is shared with other projects' rigs (load average often 100+). Thin full-band
+  vertical lines in the spectrogram and brief stalls can be buffer underruns from that load, not the
+  game's sound design: say which you think it is. Check the spectrogram before calling the audio "dead".
 - The bot plays like a family but is not a real child: it walks straight to the water and presses on
   time. Judge the game, not the bot's choices.
 
