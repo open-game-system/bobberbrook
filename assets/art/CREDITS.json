@@ -207,5 +207,62 @@
       "references": []
     },
     "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "concept/ashenvale/ref-day.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Stylized 3D game screenshot in the hand-painted fantasy MMO tradition of an enchanted night-elf twilight forest: chunky low-poly geometry with soft bevels, hand-painted textures with visible brush strokes, violet indigo and teal palette, colossal ancient trees with flared roots and huge purple and teal canopies, layered glowing mist, drifting glowing wisps and fireflies, soft bloom, magical and gentle, safe for small children, simple enough for a web game. In-engine look, 16:9, high three-quarter camera. No text, no letters, no UI, no watermark, full bleed. Scene: a round forest lake at lavender twilight, the water softly glowing teal like a moonwell, a wooden dock at the bottom of the frame with a small cyan lantern, a waterfall from a mossy cliff on the far side, lily pads with glowing white flowers on the left, reeds and glowing blue mushrooms on the right, curved purple-roofed wooden elven cottages with soft white lamps among the giant trees, two small chunky fishers (green hat and blue bucket hat) casting from the dock, a sparkling swirl of fish in the water, god rays through the canopy.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "concept/ashenvale/ref-night.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Stylized 3D game screenshot in the hand-painted fantasy MMO tradition of an enchanted night-elf twilight forest: chunky low-poly geometry with soft bevels, hand-painted textures with visible brush strokes, violet indigo and teal palette, colossal ancient trees with flared roots and huge purple and teal canopies, layered glowing mist, drifting glowing wisps and fireflies, soft bloom, magical and gentle, safe for small children, simple enough for a web game. In-engine look, 16:9, high three-quarter camera. No text, no letters, no UI, no watermark, full bleed. Scene: the same forest lake at night under a big bright moon, deep indigo sky with stars, the lake glowing cyan from within, glowing teal fish shadows circling in a swirl, fireflies and violet wisps over the water, a campfire on the shore with warm light, giant ancient trees silhouetted with glowing purple leaves, four small chunky fishers in green, yellow, blue and pink hats around the shore.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "assets-src/kit-ashenvale/icon.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Hand-painted stylized fantasy-MMO game art of an enchanted night-elf twilight forest: chunky rounded shapes, violet indigo and teal palette, colossal ancient trees with purple and teal canopies, glowing moonwell-teal water, soft mist, drifting glowing wisps and fireflies, visible brush strokes, gentle and magical, safe for small children. No faces on objects. Square app icon, full bleed, no text: a big red-and-white fishing bobber floating on glowing teal moonlit water with ring ripples, a little glowing teal fish leaping beside it with a sparkling splash, a lily pad with a glowing white flower, violet twilight sky with wisps behind, simple bold readable shape at small size.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "assets-src/kit-ashenvale/cover.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Hand-painted stylized fantasy-MMO game art of an enchanted night-elf twilight forest: chunky rounded shapes, violet indigo and teal palette, colossal ancient trees with purple and teal canopies, glowing moonwell-teal water, soft mist, drifting glowing wisps and fireflies, visible brush strokes, gentle and magical, safe for small children. No faces on objects. Portrait game cover, 2:3 aspect ratio: at the top the title 'Bobberbrook' in big chunky rounded hand-lettered wooden-sign letters in warm honey and teal, a red-and-white bobber dotting the first 'o'. Below, an enchanted twilight forest lake: a little boy in a blue bucket hat and his dad in a green hat fishing from a wooden dock with a cyan lantern, a glowing teal fish leaping out of a sparkling swirl, giant ancient trees with purple canopies, a big moon, fireflies and wisps. Only the one word of text.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "assets-src/kit-ashenvale/hero-clean.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Hand-painted stylized fantasy-MMO game art of an enchanted night-elf twilight forest: chunky rounded shapes, violet indigo and teal palette, colossal ancient trees with purple and teal canopies, glowing moonwell-teal water, soft mist, drifting glowing wisps and fireflies, visible brush strokes, gentle and magical, safe for small children. No faces on objects. Game key art, 16:9 widescreen, full bleed, no text, no letters, no logo, no UI: a round forest lake at lavender twilight seen from a high three-quarter camera, the water glowing teal, a wooden dock with a small cyan lantern reaching into the water from the bottom of the frame, a waterfall from a mossy cliff on the far side, lily pads with glowing white flowers on the left, reeds and glowing blue mushrooms on the right, curved purple-roofed elven cottages among giant trees, a swirling glowing school of fish in the middle of the lake, two small chunky fishers (a dad in a green hat and a 5-year-old boy in a blue bucket hat) casting from the dock with red and white bobbers.",
+      "references": [
+        "concept/ashenvale/ref-day.png"
+      ]
+    },
+    "date": "2026-10-08"
   }
 ]

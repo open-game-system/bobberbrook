@@ -42,3 +42,8 @@
 {"date":"2026-10-08T18:56:04.185Z","project":"bobberbrook","service":"codex","unit":"codex_images","amount":1,"estimated":false,"label":"codex image_generation","files":["assets-src/kit/logo.png"],"usd":0}
 {"date":"2026-10-08T18:56:07.394Z","project":"bobberbrook","service":"codex","unit":"codex_images","amount":1,"estimated":false,"label":"codex image_generation","files":["assets-src/kit/cover.png"],"usd":0}
 {"date":"2026-10-08T18:56:14.682Z","project":"bobberbrook","service":"codex","unit":"codex_images","amount":1,"estimated":false,"label":"codex image_generation","files":["assets-src/kit/hero-clean.png"],"usd":0}
+{"date":"2026-10-08T19:28:37.294Z","project":"bobberbrook","service":"codex","unit":"codex_images","amount":1,"estimated":false,"label":"codex image_generation","files":["concept/ashenvale/ref-day.png"],"usd":0}
+{"date":"2026-10-08T19:28:42.537Z","project":"bobberbrook","service":"codex","unit":"codex_images","amount":1,"estimated":false,"label":"codex image_generation","files":["concept/ashenvale/ref-night.png"],"usd":0}
+{"date":"2026-10-08T19:31:31.422Z","project":"bobberbrook","service":"codex","unit":"codex_images","amount":1,"estimated":false,"label":"codex image_generation","files":["assets-src/kit-ashenvale/icon.png"],"usd":0}
+{"date":"2026-10-08T19:31:51.986Z","project":"bobberbrook","service":"codex","unit":"codex_images","amount":1,"estimated":false,"label":"codex image_generation","files":["assets-src/kit-ashenvale/cover.png"],"usd":0}
+{"date":"2026-10-08T19:31:58.211Z","project":"bobberbrook","service":"codex","unit":"codex_images","amount":1,"estimated":false,"label":"codex image_generation","files":["assets-src/kit-ashenvale/hero-clean.png"],"usd":0}

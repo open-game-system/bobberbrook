@@ -10,3 +10,8 @@ assets-src/**/*.png
 !assets-src/fish/sheet-*.png
 wrangler.nobuild.toml
 coverage/
+critic/rounds/*/session.mp4
+critic/rounds/*/raw/
+critic/rounds/*/check/*/
+critic/scene/*/*.png
+!critic/scene/*/sheet.png
