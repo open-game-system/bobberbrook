@@ -99,3 +99,18 @@ describe("exploring", () => {
     expect(progressOf(l).discovered).toEqual(["moonwell", "hollow"]);
   });
 });
+
+describe("walking around trees", () => {
+  it("steers round a tree in the way instead of getting stuck on it", () => {
+    // The oak at (-15, 21) sits on the straight line from (-9, 24) to (-20, 19).
+    let p = { x: -9.1, z: 24.3 };
+    for (let i = 0; i < 80; i++) {
+      const dx = -20 - p.x;
+      const dz = 19 - p.z;
+      const d = Math.hypot(dx, dz);
+      if (d < 1) break;
+      p = advance(p, { x: (dx / d) * 5, z: (dz / d) * 5 }, 0.15);
+    }
+    expect(Math.hypot(p.x + 20, p.z - 19)).toBeLessThan(1.5);
+  });
+});

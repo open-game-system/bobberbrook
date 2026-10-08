@@ -80,7 +80,21 @@ export function walkable(p: Vec): boolean {
   return onDock(p) || onLand(p);
 }
 
-/** Moves a fisher by a velocity for dt seconds, sliding along the shore and around obstacles. */
+/** Headings to try when the way ahead is blocked, nearest first (radians). */
+const STEER = [0, 0.5, -0.5, 1.0, -1.0, 1.4, -1.4];
+
+/** Open ground except for a tree or rock standing there. */
+function hitsObstacle(p: Vec): boolean {
+  return !OBSTACLES.every((o) => Math.hypot(p.x - o.x, p.z - o.z) >= o.r + 0.5);
+}
+
+function turned(v: Vec, a: number): Vec {
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  return { x: v.x * c - v.z * s, z: v.x * s + v.z * c };
+}
+
+/** Moves a fisher by a velocity for dt seconds, steering round trees and rocks and sliding along the shore. */
 export function advance(pos: Vec, vel: Vec, dt: number): Vec {
   if (dt <= 0 || (vel.x === 0 && vel.z === 0)) return pos;
   let p = pos;
@@ -88,12 +102,10 @@ export function advance(pos: Vec, vel: Vec, dt: number): Vec {
   while (left > 1e-9) {
     const h = Math.min(STEP_S, left);
     left -= h;
-    const tries: Vec[] = [
-      { x: p.x + vel.x * h, z: p.z + vel.z * h },
-      { x: p.x + vel.x * h, z: p.z },
-      { x: p.x, z: p.z + vel.z * h },
-    ];
-    const next = tries.find(walkable);
+    // Straight on; a tree or rock in the way: veer round it; the shore: slide along it on one axis.
+    const ahead = { x: p.x + vel.x * h, z: p.z + vel.z * h };
+    const heads = walkable(ahead) ? [vel] : hitsObstacle(ahead) ? STEER.map((a) => turned(vel, a)) : [{ x: vel.x, z: 0 }, { x: 0, z: vel.z }];
+    const next = heads.map((v) => ({ x: p.x + v.x * h, z: p.z + v.z * h })).find(walkable);
     if (!next) break;
     p = next;
   }
