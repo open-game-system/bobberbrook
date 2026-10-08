@@ -1,0 +1,32 @@
+FAIL tv-empty-lake @ 1920x1080
+     - overlay_covers_focal selector="div.tv > div.ticket:nth-of-type(4)" text="" overlapPx=2190
+FAIL tv-empty-lake @ 1280x720
+     - overlay_covers_focal selector="div.tv > div.ticket:nth-of-type(4)" text="" overlapPx=729
+FAIL phone-name @ 393x852
+     - screen_error message="locator.waitFor: Timeout 20000ms exceeded."
+FAIL phone-name @ 375x667
+     - screen_error message="page.goto: Timeout 30000ms exceeded."
+FAIL phone-name @ 393x659
+     - screen_error message="page.goto: Timeout 30000ms exceeded."
+FAIL phone-name @ 852x393
+     - screen_error message="page.goto: Timeout 30000ms exceeded."
+FAIL phone-controller @ 393x852
+     - screen_error message="page.goto: Timeout 30000ms exceeded."
+FAIL phone-controller @ 375x667
+     - screen_error message="page.goto: Timeout 30000ms exceeded."
+FAIL phone-controller @ 393x659
+     - screen_error message="page.goto: Timeout 30000ms exceeded."
+FAIL phone-controller @ 852x393
+     - screen_error message="page.goto: Timeout 30000ms exceeded."
+FAIL ipad-controller @ 1080x810
+     - screen_error message="page.goto: Timeout 30000ms exceeded."
+FAIL ipad-controller @ 1024x768
+     - screen_error message="page.goto: Timeout 30000ms exceeded."
+FAIL ipad-controller @ 1366x1024
+     - screen_error message="page.goto: Timeout 30000ms exceeded."
+FAIL tv-two-fishers @ 1920x1080
+     - screen_error message="page.goto: Timeout 30000ms exceeded."
+FAIL tv-two-fishers @ 1280x720
+     - screen_error message="page.goto: Timeout 30000ms exceeded."
+
+15 screen×viewport shots, 15 findings → critic/rounds/00/check/report.json, critic/rounds/00/check/sheet.png

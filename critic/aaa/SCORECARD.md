@@ -30,3 +30,4 @@ against the references, never against the previous round. Stop when every row â‰
 
 | Round | Art | Env | Water | Chars | Light | Camera | Catch | Feel | Kid UX | Phone UI | Progress | Audio | Onboard | Perf | Min | Changed |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 00 | 5 | 5 | 6 | 4 | 4 | 4 | 5 | 5 | 3 | 5 | 5 | 4 | 5 | 7 | 3 | Baseline (Ashenvale pivot): kid iPad name form (veto), fishers stacked on dock, static camera, one twilight look for all times of day, loud clicky catch stings; rig: marks vs mp4 length, check screens timed out |

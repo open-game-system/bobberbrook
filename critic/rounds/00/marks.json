@@ -1,0 +1,104 @@
+{
+  "videos": [
+    {
+      "role": "tv",
+      "path": "/Users/jonathanmumm/src/bobberbrook/recordings/raw/page@703f40be13830fbb97148d2931fe02be.webm",
+      "startedAt": 1791488760677,
+      "label": "TV"
+    },
+    {
+      "role": "dad",
+      "path": "/Users/jonathanmumm/src/bobberbrook/recordings/raw/page@ccf7dc75d51460fbf7574921a1f13b50.webm",
+      "startedAt": 1791488762138,
+      "label": "Dad's phone"
+    },
+    {
+      "role": "kid",
+      "path": "/Users/jonathanmumm/src/bobberbrook/recordings/raw/page@b85ae3a7504e1c382868bb031c6bbcbf.webm",
+      "startedAt": 1791488763095,
+      "label": "Juneau's iPad (5)"
+    }
+  ],
+  "audio": {
+    "path": "recordings/raw/tv-audio.webm",
+    "startedAt": 1791488766799.7
+  },
+  "marks": [
+    {
+      "label": "everyone in",
+      "t": 10.3
+    },
+    {
+      "label": "at the water",
+      "t": 66
+    },
+    {
+      "label": "Dad casts",
+      "t": 67.2
+    },
+    {
+      "label": "Juneau casts",
+      "t": 67.3
+    },
+    {
+      "label": "Juneau hooks",
+      "t": 74.3
+    },
+    {
+      "label": "Juneau catch",
+      "t": 80.9
+    },
+    {
+      "label": "Dad catch",
+      "t": 92.6
+    },
+    {
+      "label": "Juneau casts",
+      "t": 96.4
+    },
+    {
+      "label": "Dad casts",
+      "t": 96.4
+    },
+    {
+      "label": "Juneau hooks",
+      "t": 101.7
+    },
+    {
+      "label": "Juneau catch",
+      "t": 101.9
+    },
+    {
+      "label": "Dad catch",
+      "t": 121.8
+    },
+    {
+      "label": "Juneau casts",
+      "t": 125.6
+    },
+    {
+      "label": "Dad casts",
+      "t": 125.7
+    },
+    {
+      "label": "Juneau hooks",
+      "t": 132
+    },
+    {
+      "label": "Juneau catch",
+      "t": 138.2
+    },
+    {
+      "label": "Dad catch",
+      "t": 151
+    },
+    {
+      "label": "campfire",
+      "t": 156.7
+    },
+    {
+      "label": "back to fishing",
+      "t": 165.8
+    }
+  ]
+}

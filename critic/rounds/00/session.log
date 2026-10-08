@@ -1,0 +1,292 @@
+[2.9s] everyone in
+[17.5s] at the water
+[17.5s] Juneau casts
+[17.5s] Dad casts
+[22.2s] Juneau hooks
+[22.8s] Dad hooks
+[26.7s] Dad catch
+[40.8s] Juneau catch
+[44.4s] Juneau casts
+[44.4s] Dad casts
+[50.5s] Juneau hooks
+[51.2s] Dad hooks
+[54.1s] Juneau catch
+[54.7s] Dad catch
+[58.4s] Juneau casts
+[58.4s] Dad casts
+[65.1s] Dad hooks
+[65.8s] Juneau hooks
+[69.3s] Dad catch
+[69.4s] Juneau catch
+[73.1s] campfire
+[80.1s] back to fishing
+{
+  "out": "critic/rounds/00/session.mp4",
+  "panels": [
+    "tv",
+    "dad",
+    "kid"
+  ],
+  "pass": true,
+  "failures": [],
+  "warnings": [
+    {
+      "code": "camera_jerk",
+      "at": "1.67s",
+      "t": 1.666667,
+      "ratio": 9.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "1.80s",
+      "t": 1.8,
+      "ratio": 17.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "1.87s",
+      "t": 1.866667,
+      "ratio": 12.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "2.40s",
+      "t": 2.4,
+      "ratio": 13.8
+    },
+    {
+      "code": "camera_jerk",
+      "at": "2.60s",
+      "t": 2.6,
+      "ratio": 10.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "2.67s",
+      "t": 2.666667,
+      "ratio": 31.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "17.57s",
+      "t": 17.566667,
+      "ratio": 11.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "26.37s",
+      "t": 26.366667,
+      "ratio": 10.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "26.47s",
+      "t": 26.466667,
+      "ratio": 9.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "26.60s",
+      "t": 26.6,
+      "ratio": 19.2
+    },
+    {
+      "code": "camera_jerk",
+      "at": "26.67s",
+      "t": 26.666667,
+      "ratio": 10.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "26.77s",
+      "t": 26.766667,
+      "ratio": 12.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "26.97s",
+      "t": 26.966667,
+      "ratio": 10.8
+    },
+    {
+      "code": "camera_jerk",
+      "at": "29.00s",
+      "t": 29,
+      "ratio": 9.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "29.13s",
+      "t": 29.133333,
+      "ratio": 10.8
+    },
+    {
+      "code": "camera_jerk",
+      "at": "29.37s",
+      "t": 29.366667,
+      "ratio": 9.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "40.70s",
+      "t": 40.7,
+      "ratio": 9.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "40.77s",
+      "t": 40.766667,
+      "ratio": 12.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "40.90s",
+      "t": 40.9,
+      "ratio": 11.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "40.97s",
+      "t": 40.966667,
+      "ratio": 10.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "41.10s",
+      "t": 41.1,
+      "ratio": 9.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "43.30s",
+      "t": 43.3,
+      "ratio": 9.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "43.40s",
+      "t": 43.4,
+      "ratio": 9.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "43.50s",
+      "t": 43.5,
+      "ratio": 9.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "44.37s",
+      "t": 44.366667,
+      "ratio": 9.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "53.90s",
+      "t": 53.9,
+      "ratio": 12.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "53.97s",
+      "t": 53.966667,
+      "ratio": 9.2
+    },
+    {
+      "code": "camera_jerk",
+      "at": "54.10s",
+      "t": 54.1,
+      "ratio": 10.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "54.17s",
+      "t": 54.166667,
+      "ratio": 10.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "54.30s",
+      "t": 54.3,
+      "ratio": 9.8
+    },
+    {
+      "code": "camera_jerk",
+      "at": "54.47s",
+      "t": 54.466667,
+      "ratio": 11.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "54.57s",
+      "t": 54.566667,
+      "ratio": 10.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "72.77s",
+      "t": 72.766667,
+      "ratio": 25.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "73.47s",
+      "t": 73.466667,
+      "ratio": 13.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "74.10s",
+      "t": 74.1,
+      "ratio": 10.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "74.17s",
+      "t": 74.166667,
+      "ratio": 9.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "79.77s",
+      "t": 79.766667,
+      "ratio": 13.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "79.87s",
+      "t": 79.866667,
+      "ratio": 18.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "80.17s",
+      "t": 80.166667,
+      "ratio": 20.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "81.07s",
+      "t": 81.066667,
+      "ratio": 9.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "81.17s",
+      "t": 81.166667,
+      "ratio": 11.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "81.27s",
+      "t": 81.266667,
+      "ratio": 10.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "81.37s",
+      "t": 81.366667,
+      "ratio": 9.4
+    }
+  ]
+}

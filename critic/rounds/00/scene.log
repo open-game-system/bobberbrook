@@ -1,0 +1,15 @@
+morning {"label":"morning","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":39,"programs":39,"calls":122,"triangles":927491,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":104}
+morning@0.97 {"label":"morning@0.97","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":39,"programs":39,"calls":123,"triangles":927787,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":92}
+four-reel {"label":"four-reel","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":39,"programs":39,"calls":165,"triangles":938425,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":110}
+golden-swirl {"label":"golden-swirl","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":39,"programs":39,"calls":119,"triangles":926179,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":66}
+night-catch {"label":"night-catch","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":39,"programs":39,"calls":116,"triangles":925267,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":74}
+rod-upgrade {"label":"rod-upgrade","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":39,"programs":39,"calls":110,"triangles":925101,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":106}
+campfire {"label":"campfire","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":39,"programs":39,"calls":125,"triangles":923275,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":46}
+empty@0.2 {"label":"empty@0.2","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":39,"programs":39,"calls":75,"triangles":914475,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":78}
+empty@0.44 {"label":"empty@0.44","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":39,"programs":39,"calls":76,"triangles":914801,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":59}
+empty@0.7 {"label":"empty@0.7","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":39,"programs":39,"calls":76,"triangles":914801,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":45}
+soak {"programsBefore":39,"programsAfter":39,"p50":4.400000095367432,"p95":6.5,"renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","frames":5228}
+sheet: critic/scene/r00/sheet.png
+errors: [
+  'Failed to load resource: the server responded with a status of 404 (Not Found)'
+]
