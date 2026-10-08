@@ -9,11 +9,18 @@ export const note = (i: number) => PENTA[((i % 5) + 5) % 5]! * 2 ** Math.floor(i
 
 type Opts = { gain?: number; pan?: number; at?: number };
 
+/** Effects sit about 8 dB under where they were (round 00: catch stings jumped ~17 dB over the bed). */
+let SFX_TRIM = 0.4;
+/** A controller's own effects play close to the ear, alone: it sets a louder trim. */
+export function setSfxTrim(trim: number): void {
+  SFX_TRIM = trim;
+}
+
 function chain(gain: number, pan: number): { ctx: AudioContext; node: AudioNode; t: number } | null {
   const a = audio();
   if (!a) return null;
   const g = a.ctx.createGain();
-  g.gain.value = gain;
+  g.gain.value = gain * SFX_TRIM;
   const p = a.ctx.createStereoPanner();
   p.pan.value = pan;
   g.connect(p).connect(a.out);
@@ -30,7 +37,7 @@ function tone(freq: number, dur: number, opts: Opts & { type?: OscillatorType; a
   if (opts.bend) o.frequency.exponentialRampToValueAtTime(Math.max(30, freq * opts.bend), t + dur);
   const e = c.ctx.createGain();
   e.gain.setValueAtTime(0.0001, t);
-  e.gain.exponentialRampToValueAtTime(1, t + (opts.attack ?? 0.008));
+  e.gain.exponentialRampToValueAtTime(1, t + (opts.attack ?? 0.02));
   e.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   o.connect(e).connect(c.node);
   o.start(t);
@@ -59,7 +66,8 @@ function whoosh(dur: number, from: number, to: number, opts: Opts & { q?: number
   f.frequency.exponentialRampToValueAtTime(to, t + dur);
   const e = c.ctx.createGain();
   e.gain.setValueAtTime(0.0001, t);
-  e.gain.exponentialRampToValueAtTime(1, t + Math.min(0.03, dur / 4));
+  // A soft attack: an instant noise edge reads as a harsh click.
+  e.gain.exponentialRampToValueAtTime(1, t + Math.min(0.07, dur / 3));
   e.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   src.connect(f).connect(e).connect(c.node);
   src.start(t, Math.random());

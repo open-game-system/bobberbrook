@@ -18,6 +18,8 @@ const nameOf = (lake: Lake, seat: number) => lake.fishers.find((f) => f.seat ===
  */
 export function coachLine(lake: Lake, mySeat: number, now: number): string {
   if (lake.campfire) return "Campfire time. Tell each other about your best catch!";
+  const mine = lake.fishers.find((f) => f.seat === mySeat);
+  if (mine?.mode === "bite" && !mine.easy) return "Your bobber dipped: tap now!";
   const others = lake.fishers.filter((f) => f.seat !== mySeat);
   const bite = others.find((f) => f.mode === "bite" && !f.easy);
   if (bite) return `${nameOf(lake, bite.seat)} has a bite! Tell them: tap now!`;

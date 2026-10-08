@@ -9,7 +9,15 @@ export const ProgressSchema = z.object({ journal: z.record(z.string().max(40), J
 
 export const RoomClientEventSchema = z.discriminatedUnion("type", [
   // Any phone. ogsToken: the OGS app's game token; the Room server verifies it before the machine sees the join.
-  z.object({ type: z.literal("JOIN"), name: z.string().max(60).optional(), ogsToken: z.string().max(8192).optional() }),
+  // color: this device's remembered (or just picked) fisher colour.
+  z.object({
+    type: z.literal("JOIN"),
+    name: z.string().max(60).optional(),
+    ogsToken: z.string().max(8192).optional(),
+    color: z.enum(["green", "yellow", "blue", "pink"]).optional(),
+  }),
+  // Host: name a fisher (the kids join wordlessly).
+  z.object({ type: z.literal("RENAME"), seat: z.number().int().min(0).max(3), name: z.string().max(60) }),
   z.object({ type: z.literal("MOVE"), x: Stick, y: Stick }),
   z.object({ type: z.literal("ACTION") }),
   z.object({ type: z.literal("REEL"), holding: z.boolean() }),

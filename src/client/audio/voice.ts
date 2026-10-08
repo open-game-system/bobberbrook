@@ -35,7 +35,7 @@ async function play(id: string, delay = 0): Promise<void> {
   const src = a.ctx.createBufferSource();
   src.buffer = buf;
   const g = a.ctx.createGain();
-  g.gain.value = 1.1;
+  g.gain.value = 0.62;
   src.connect(g).connect(a.out);
   src.start(start);
   busyUntil = start + buf.duration + 0.15;

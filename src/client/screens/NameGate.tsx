@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useOgsProfile } from "@open-game-system/profile-kit/react";
 import { nameGateMode } from "../nameGateMode";
+import { SEAT_COLORS, type SeatColor } from "../../game/lake";
+import { SEAT_HEX } from "../components/MiniMap";
+import { HatIcon } from "../components/Icons";
 
 const KEY = "bobberbrook:name";
 
@@ -12,7 +15,7 @@ function remembered(): string {
   }
 }
 
-type OnJoin = (name: string, ogsToken?: string) => void;
+type OnJoin = (name: string, ogsToken?: string, color?: SeatColor) => void;
 
 /**
  * Before a phone or iPad joins: whose device is this? In the OGS app the device already knows (its
@@ -20,7 +23,7 @@ type OnJoin = (name: string, ogsToken?: string) => void;
  * browser a name is required (the grown-up types it for the kids), remembered on this device for
  * next time, and shown on every screen.
  */
-export function NameGate({ onJoin, full }: { onJoin: OnJoin; full: boolean }) {
+export function NameGate({ onJoin, full, taken }: { onJoin: OnJoin; full: boolean; taken: SeatColor[] }) {
   const mode = nameGateMode(useOgsProfile());
   // Join once per seat: a refreshed token (the app renews it) must not join again.
   const sent = useRef(false);
@@ -29,10 +32,33 @@ export function NameGate({ onJoin, full }: { onJoin: OnJoin; full: boolean }) {
     sent.current = true;
     onJoin(mode.name, mode.ogsToken);
   }, [mode, onJoin]);
-  if (mode.kind === "form") return <NameForm onJoin={onJoin} full={full} />;
+  if (mode.kind === "form") return <HatPicker onJoin={onJoin} full={full} taken={taken} />;
   return (
     <div className="phone center name-gate">
       <p className="name-joining">{mode.kind === "join" ? `Joining as ${mode.name}…` : "Joining the lake…"}</p>
+    </div>
+  );
+}
+
+/**
+ * In a plain browser: no words for a kid. Four big hats; tap yours and you're fishing. A grown-up can
+ * type a name instead (the small button), or the host names the kids later from Fishers.
+ */
+function HatPicker({ onJoin, full, taken }: { onJoin: OnJoin; full: boolean; taken: SeatColor[] }) {
+  const [typing, setTyping] = useState(false);
+  if (typing) return <NameForm onJoin={onJoin} full={full} />;
+  return (
+    <div className="phone center hat-picker">
+      <div className="hats" role="group" aria-label="Pick your hat">
+        {SEAT_COLORS.map((c) => (
+          <button key={c} type="button" className="hat-btn" style={{ "--seat": SEAT_HEX[c] }} disabled={taken.includes(c)} aria-label={`${c} hat`} onClick={() => onJoin("", undefined, c)}>
+            <HatIcon color={SEAT_HEX[c]} />
+          </button>
+        ))}
+      </div>
+      <button type="button" className="type-name" onClick={() => setTyping(true)}>
+        Grown-up? Type your name
+      </button>
     </div>
   );
 }

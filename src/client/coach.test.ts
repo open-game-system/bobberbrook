@@ -14,6 +14,9 @@ const withMode = (l: Lake, seat: number, patch: Partial<Lake["fishers"][number]>
 });
 
 describe("coachLine", () => {
+  it("tells the host about their own bite first", () => {
+    expect(coachLine(withMode(withMode(family(), 0, { mode: "bite" }), 1, { mode: "bite" }), 0, 10)).toBe("Your bobber dipped: tap now!");
+  });
   it("calls out the kid's bite first", () => {
     expect(coachLine(withMode(family(), 1, { mode: "bite" }), 0, 10)).toBe("Juneau has a bite! Tell them: tap now!");
   });

@@ -45,7 +45,7 @@ function noiseSource(ctx: AudioContext, seconds: number, brown: boolean): AudioB
 
 function startWater(ctx: AudioContext, out: AudioNode): Layer {
   const gain = ctx.createGain();
-  gain.gain.value = 0.22;
+  gain.gain.value = 0.32;
   const lap = noiseSource(ctx, 6, true);
   const lp = ctx.createBiquadFilter();
   lp.type = "lowpass";
@@ -256,7 +256,7 @@ export function startWorld(): void {
   water = startWater(ctx, out);
   night = startNight(ctx, out);
   musicBus = ctx.createGain();
-  musicBus.gain.value = 0.55;
+  musicBus.gain.value = 1.0;
   const delay = ctx.createDelay();
   delay.delayTime.value = BEAT * 0.75;
   const fb = ctx.createGain();

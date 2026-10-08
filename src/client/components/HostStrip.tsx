@@ -28,9 +28,13 @@ export function HostStrip({ lake, mySeat, now, send }: { lake: Lake; mySeat: num
           {lake.campfire ? "Back to fishing" : "Campfire"}
         </button>
       </div>
-      <p className="rod-line">
-        {ROD_NAMES[lake.rodTier]} rod{next !== undefined ? ` · ${lake.shells}/${next} shells to ${ROD_NAMES[lake.rodTier + 1]}` : " · the best rod"}
-      </p>
+      <div className="rod-line">
+        <span className="rod-name">{ROD_NAMES[lake.rodTier]} rod</span>
+        <span className="rod-bar">
+          <span style={{ width: `${next === undefined ? 100 : Math.round(((lake.shells - (ROD_AT[lake.rodTier] ?? 0)) / (next - (ROD_AT[lake.rodTier] ?? 0))) * 100)}%` }} />
+        </span>
+        <span className="rod-next">{next !== undefined ? `${ROD_NAMES[lake.rodTier + 1]} at ${next}` : "best rod"}</span>
+      </div>
       {sheet === "journal" && <JournalSheet journal={lake.journal} onClose={() => setSheet(null)} />}
       {sheet === "fishers" && (
         <div className="sheet" role="dialog" aria-label="Fishers">

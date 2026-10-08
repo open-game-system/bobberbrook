@@ -6,6 +6,9 @@ import { useKidLock } from "../kidLock";
 import type { Hosting } from "../components/HostPanel";
 import { FisherScreen } from "./FisherScreen";
 import { NameGate } from "./NameGate";
+import { localStore, } from "../progressStore";
+import { readColor, writeColor } from "../colorPref";
+import type { SeatColor } from "../../game/lake";
 
 const TOKEN = /^[0-9a-f-]{36}$/;
 
@@ -31,10 +34,13 @@ export function PhoneScreen() {
     window.addEventListener("pointerdown", unlock);
     return () => window.removeEventListener("pointerdown", unlock);
   }, []);
+  const taken = RoomContext.useSelector((s) => s.public.lake.fishers.map((f) => f.color));
   const join = useCallback(
-    (name: string, ogsToken?: string) => {
-      setJoining(name);
-      send({ type: "JOIN", name, ogsToken });
+    (name: string, ogsToken?: string, picked?: SeatColor) => {
+      const color = picked ?? readColor(localStore()) ?? undefined;
+      if (picked) writeColor(localStore(), picked);
+      setJoining(name || "fisher");
+      send({ type: "JOIN", name: name || undefined, ogsToken, color });
     },
     [send],
   );
@@ -42,10 +48,10 @@ export function PhoneScreen() {
   if (priv.role === "fisher" && priv.seat !== undefined) return <FisherScreen seat={priv.seat} host={priv.host === true} hosting={hosting} />;
   if (priv.role === "tv") return <div className="phone center"><p>This screen is the TV.</p></div>;
   if (full && !joining) return <div className="phone center"><p>Four fishers are already on the lake.</p></div>;
-  if (!joining) return <NameGate full={full} onJoin={join} />;
+  if (!joining) return <NameGate full={full} onJoin={join} taken={taken} />;
   return (
     <div className="phone center">
-      <p>Joining as {joining}…</p>
+      <p className="joining-dots" aria-label="Joining">…</p>
     </div>
   );
 }

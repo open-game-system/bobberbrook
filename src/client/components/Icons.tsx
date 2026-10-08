@@ -63,3 +63,16 @@ export function ShellIcon() {
     </svg>
   );
 }
+
+/** A little fishing hat in a seat colour (the kid's join button). No face. */
+export function HatIcon({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 100 100" aria-hidden="true">
+      <ellipse cx="50" cy="66" rx="44" ry="14" fill={color} stroke="rgba(0,0,0,.25)" strokeWidth="3" />
+      <path d="M24 64 Q26 26 50 24 Q74 26 76 64 Z" fill={color} stroke="rgba(0,0,0,.25)" strokeWidth="3" />
+      <path d="M26 56 Q50 64 74 56" stroke="rgba(255,255,255,.75)" strokeWidth="6" fill="none" />
+      <path d="M70 36 q14 -10 18 -24" stroke="#f4e2b0" strokeWidth="4" fill="none" strokeLinecap="round" />
+      <circle cx="88" cy="12" r="5" fill="#e8463a" />
+    </svg>
+  );
+}

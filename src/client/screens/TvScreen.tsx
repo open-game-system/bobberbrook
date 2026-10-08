@@ -85,11 +85,16 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
       if (e.kind === "upgrade") fresh.push({ id: ++toastId.current, kind: "upgrade", tier: e.tier });
       if (e.kind === "golden-swirl") fresh.push({ id: ++toastId.current, kind: "golden" });
     }
-    if (fresh.length > 0) {
-      setToasts((t) => [...t, ...fresh].slice(-3));
-      for (const f of fresh) window.setTimeout(() => setToasts((t) => t.filter((x) => x.id !== f.id)), 4200);
-    }
+    if (fresh.length > 0) setToasts((t) => [...t, ...fresh].slice(-4));
   }, [lake, sound, clock]);
+
+  // One banner at a time: the first in the queue shows for 3.2 s, then the next.
+  const showing = toasts[0];
+  useEffect(() => {
+    if (!showing) return;
+    const id = window.setTimeout(() => setToasts((t) => t.slice(1)), 3200);
+    return () => window.clearTimeout(id);
+  }, [showing]);
 
   useEffect(() => {
     if (!sound) return;
@@ -120,9 +125,11 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
         <div className="hud-chip journal-chip" aria-label={`Journal ${species} of ${JOURNAL_FISH.length}`}>
           <span className={`tod-icon ${tod}`} aria-hidden="true" />
           <span className="journal-fish">
-            {JOURNAL_FISH.map((f) => (
-              <img key={f.id} src={`/art/fish/${f.id}.webp`} alt="" className={(lake.journal[f.id]?.count ?? 0) > 0 ? "got" : ""} />
-            ))}
+            {JOURNAL_FISH.filter((f) => (lake.journal[f.id]?.count ?? 0) > 0)
+              .slice(-5)
+              .map((f) => (
+                <img key={f.id} src={`/art/fish/${f.id}.webp`} alt="" className="got" />
+              ))}
           </span>
           <span className="hud-count">
             {species}/{JOURNAL_FISH.length}
@@ -141,7 +148,7 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
         </div>
       </div>
       <div className="toasts">
-        {toasts.map((t) => (
+        {toasts.slice(0, 1).map((t) => (
           <div key={t.id} className={`toast ${t.kind}`}>
             {t.kind === "new" && t.fishId && (
               <>
