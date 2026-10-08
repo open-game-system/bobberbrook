@@ -105,7 +105,7 @@ export function FisherScreen({ seat, host, hosting }: { seat: number; host: bool
       <div className="fisher-middle">
         <BobberWindow state={state} />
         {(state.kind === "walk-to-water" || state.kind === "cast") && (() => {
-          const c = compassTo(lake, positionAt(me, now));
+          const c = compassTo(lake, positionAt(me, now), seat);
           return c ? <SwirlCompass c={c} /> : null;
         })()}
         {me.catch && me.mode === "catch" && <CatchCard c={me.catch} words={host} />}

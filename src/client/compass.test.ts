@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newLake, type Lake } from "../game/lake";
+import { join, newLake, type Lake } from "../game/lake";
 import { TRAILS, areaById, castRingIn, pondRadius, type AreaId } from "../game/world";
 import { compassGoal, compassTo, nextWaypoint, route, shoreFor } from "./compass";
 
@@ -54,5 +54,14 @@ describe("the kid's compass", () => {
   });
   it("is null with nothing to find", () => {
     expect(compassTo(lakeWith([], ["moonwell", "mistmarsh", "pools", "hollow", "tarn"]), { x: 0, z: 20 })).toBeNull();
+  });
+
+  it("points back to the family at the end of the leash", () => {
+    const base = join(join(newLake(1, 0), { name: "A", ogsId: null }).lake, { name: "B", ogsId: null }).lake;
+    const l = { ...base, fishers: base.fishers.map((f) => ({ ...f, pos: f.seat === 0 ? { x: 0, z: 20 } : { x: -29, z: 20 } })) };
+    const c = compassTo(l, { x: -29, z: 20 }, 1)!;
+    expect(c.family).toBe(true);
+    expect(Math.cos(c.angle)).toBeGreaterThan(0.9);
+    expect(compassTo(l, { x: -10, z: 20 }, 1)?.family).toBeUndefined();
   });
 });

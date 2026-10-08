@@ -1,4 +1,4 @@
-import type { Lake, Swirl } from "../game/lake";
+import { LEASH, type Lake, type Swirl } from "../game/lake";
 import { AREAS, SHORE_REACH, TRAILS, areaAt, areaById, pondRadius, type AreaId, type Vec } from "../game/world";
 
 /** Where to stand to cast straight into a swirl: on the shore just behind it. */
@@ -8,7 +8,20 @@ export function shoreFor(s: Pick<Swirl, "theta" | "area">): Vec {
   return { x: a.center.x + Math.cos(s.theta) * r, z: a.center.z + Math.sin(s.theta) * r };
 }
 
-export type Compass = { angle: number; distance: number; golden: boolean; explore: boolean; arrived: boolean };
+export type Compass = { angle: number; distance: number; golden: boolean; explore: boolean; family?: boolean; arrived: boolean };
+
+/** The middle of everyone else (null when fishing alone). */
+export function familyMiddle(lake: Lake, mySeat: number): Vec | null {
+  const others = lake.fishers.filter((f) => f.seat !== mySeat);
+  if (others.length === 0) return null;
+  return { x: others.reduce((a, f) => a + f.pos.x, 0) / others.length, z: others.reduce((a, f) => a + f.pos.z, 0) / others.length };
+}
+
+/** At the end of the family's leash: this fisher can't go further until the others catch up. */
+export function atLeashEnd(lake: Lake, mySeat: number, from: Vec): boolean {
+  const mid = familyMiddle(lake, mySeat);
+  return mid !== null && dist(mid, from) >= LEASH - 1.5;
+}
 
 const dist = (a: Vec, b: Vec) => Math.hypot(a.x - b.x, a.z - b.z);
 
@@ -81,7 +94,12 @@ export function compassGoal(lake: Lake, from: Vec): { at: Vec; golden: boolean; 
 }
 
 /** The compass arrow (screen angle: 0 = right, π/2 = down, the minimap's north-up frame). */
-export function compassTo(lake: Lake, from: Vec): Compass | null {
+export function compassTo(lake: Lake, from: Vec, mySeat?: number): Compass | null {
+  const mid = mySeat === undefined ? null : familyMiddle(lake, mySeat);
+  if (mySeat !== undefined && mid && atLeashEnd(lake, mySeat, from)) {
+    // Gone too far ahead: point back to the family (they're on their way).
+    return { angle: Math.atan2(mid.z - from.z, mid.x - from.x), distance: dist(mid, from), golden: false, explore: false, family: true, arrived: false };
+  }
   const goal = compassGoal(lake, from);
   if (!goal) return null;
   const way = nextWaypoint(from, goal.at);

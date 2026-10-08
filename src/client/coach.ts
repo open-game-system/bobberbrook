@@ -1,6 +1,7 @@
 import { fishById, JOURNAL_FISH } from "../game/fish";
 import { ROD_AT, ROD_NAMES, speciesCount, todOf, type Lake } from "../game/lake";
-import { AREAS, areaById, waterAt, type AreaId, type Water } from "../game/world";
+import { AREAS, areaAt, areaById, waterAt, type AreaId, type Water } from "../game/world";
+import { atLeashEnd } from "./compass";
 
 const WATER_NAME: Record<Water, string> = {
   dock: "off the dock",
@@ -85,6 +86,13 @@ const PLACE_TIPS: Record<AreaId, { way: string; known: string }> = {
   tarn: { way: "past the Pools or the Hollow, the farthest place", known: "the Moonfin rises there at night." },
 };
 
+const wentAhead: Rule = (lake, mySeat) => {
+  const ahead = lake.fishers.find((f) => f.seat !== mySeat && atLeashEnd(lake, f.seat, f.pos));
+  if (!ahead) return null;
+  const where = areaAt(ahead.pos);
+  return `${nameOf(lake, ahead.seat)} went ahead${where ? ` to ${where.name}` : " up the trail"}: catch up!`;
+};
+
 const freshDiscovery: Rule = (lake, _mySeat, now) => {
   const d = lake.discovery;
   if (!d || now - d.at > 6000) return null;
@@ -98,7 +106,7 @@ const exploreTip: Rule = (lake) => {
 };
 
 /** In priority order: what's happening to someone right now first, then news, then a tip. */
-const RULES: Rule[] = [campfireLine, myBite, theirBite, theirReel, freshCatch, freshDiscovery, goldenSwirl, exploreTip, timeTip, rodTip];
+const RULES: Rule[] = [campfireLine, myBite, theirBite, theirReel, freshCatch, wentAhead, freshDiscovery, goldenSwirl, exploreTip, timeTip, rodTip];
 
 /**
  * The host phone's one line to read aloud. The grown-up is the coach: what's happening to the kids
