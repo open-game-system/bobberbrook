@@ -119,8 +119,8 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   sun.shadow.camera.far = 220;
   sun.shadow.bias = -0.0006;
   sun.shadow.normalBias = 0.04;
-  sun.shadow.radius = 3;
-  sun.shadow.intensity = 0.72;
+  sun.shadow.radius = 5;
+  sun.shadow.intensity = 0.5;
   scene.add(sun, sun.target);
   const hemi = new HemisphereLight(0xffffff, 0x556644, 1);
   scene.add(hemi);

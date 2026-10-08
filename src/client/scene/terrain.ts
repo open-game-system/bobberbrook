@@ -46,10 +46,10 @@ export function heightAt(x: number, z: number): number {
 export type Ground = { mesh: Mesh; dispose(): void };
 
 const C = (hex: number) => new Color(hex);
-const GRASS_A = C(0x3a7c6c);
-const GRASS_B = C(0x5aa082);
+const GRASS_A = C(0x40885a);
+const GRASS_B = C(0x68ac74);
 const GRASS_C = C(0x9a90d8);
-const GRASS_FAR = C(0x2c4a66);
+const GRASS_FAR = C(0x365a66);
 const SAND = C(0xb8acc4);
 const WET = C(0x6a6a88);
 const BED = C(0x8ab8b0);

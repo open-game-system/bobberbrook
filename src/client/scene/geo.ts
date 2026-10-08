@@ -142,15 +142,16 @@ uniform vec3 uFocus[${MAX_FOCUS}];`,
     float d = length(vOccW - (uCam + ab * t));
     occ = max(occ, (1.0 - smoothstep(3.0, 5.5, d)) * step(0.03, t) * (1.0 - smoothstep(0.86, 0.93, t)));
   }
-  if (occ > 0.0) {
-    // 4x4 Bayer: an even screen-door, not noise.
-    ivec2 q = ivec2(mod(gl_FragCoord.xy, 4.0));
-    int k = q.x + q.y * 4;
-    float bayer[16] = float[16](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
-    if ((bayer[k] + 0.5) / 16.0 < min(1.0, occ * 1.4)) discard;
-  }`,
-      );
+  // Faded with alpha-to-coverage (multisampled, smooth) rather than a screen-door pattern.
+  float occA = 1.0 - min(1.0, occ * 1.15);
+  if (occA < 0.02) discard;`,
+      )
+      .replace(
+        "#include <alphatest_fragment>",
+        `#include <alphatest_fragment>
+  diffuseColor.a *= occA;`,      );
   };
+  m.alphaToCoverage = true;
   m.customProgramCacheKey = () => "bobber-occluder";
   return m;
 }

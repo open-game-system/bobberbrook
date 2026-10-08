@@ -20,6 +20,8 @@ import {
   BoxGeometry,
   TorusGeometry,
   TubeGeometry,
+  LatheGeometry,
+  Vector2,
   Vector3,
   type Material,
 } from "three";
@@ -169,6 +171,43 @@ function mushroomGeometry(): BufferGeometry {
   return merge([stem, cap, small, sstem]);
 }
 
+/** A fern: arching fronds from a centre (sways with the grass). */
+function fernGeometry(): BufferGeometry {
+  const parts: BufferGeometry[] = [];
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2 + i * 0.3;
+    const len = 0.55 + ((i * 5) % 3) * 0.12;
+    const g = new SphereGeometry(1, 6, 4);
+    g.scale(0.09, 0.02, len / 2);
+    g.translate(0, 0, len / 2);
+    g.rotateX(-0.75);
+    g.rotateY(a);
+    g.translate(0, 0.05, 0);
+    const p = prep(g);
+    paint(p, 0x245a4a, 0x6ab88a);
+    parts.push(p);
+  }
+  const m = merge(parts);
+  // Normals up so fronds light like the ground.
+  const nor = m.getAttribute("normal");
+  for (let i = 0; i < nor.count; i++) nor.setXYZ(i, 0, 1, 0);
+  return m;
+}
+
+/** A glowing bellflower stalk: little hanging bells (lit by the instance colour). */
+function bellGeometry(): BufferGeometry {
+  const stem = prep(new CylinderGeometry(0.012, 0.016, 0.5, 4).translate(0, 0.25, 0));
+  paint(stem, 0x2a4a5a);
+  const parts: BufferGeometry[] = [stem];
+  for (let i = 0; i < 3; i++) {
+    const a = i * 2.1;
+    const b = prep(new ConeGeometry(0.06, 0.09, 7, 1, true).translate(Math.cos(a) * 0.06, 0.36 + i * 0.07, Math.sin(a) * 0.06));
+    paint(b, 0xffffff, 0xe0f0ff);
+    parts.push(b);
+  }
+  return merge(parts);
+}
+
 function pineGeometry(): BufferGeometry {
   const trunk = prep(new CylinderGeometry(0.16, 0.3, 1.6, 7).translate(0, 0.8, 0));
   paint(trunk, 0x3a2c38, 0x5a4652);
@@ -197,6 +236,20 @@ function rockGeometry(seed: number): BufferGeometry {
   paint(p, 0x5a5468, 0x9a94ac, (pp, n, c) => {
     c.multiplyScalar(0.88 + 0.22 * vnoise(pp.x * 3 + seed, pp.z * 3, 2));
     if (n.y > 0.55) c.lerp(new Color(0x3e8a6c), Math.min(1, (n.y - 0.55) * 2.2) * 0.8);
+  });
+  return p;
+}
+
+/** Faceted cliff stone: flat-shaded planes, dark violet-grey with strata and mossy tops. */
+function cliffRockGeometry(seed: number): BufferGeometry {
+  const g = new SphereGeometry(1, 7, 5);
+  g.scale(1, 0.95, 0.8);
+  jitter(g, 0.4, seed);
+  const p = prep(g);
+  p.computeVertexNormals();
+  paint(p, 0x3e3a54, 0x7a7494, (pp, n, c) => {
+    c.multiplyScalar(0.82 + 0.18 * Math.abs(Math.sin(pp.y * 5.5 + pp.x * 0.8)));
+    if (n.y > 0.6) c.lerp(new Color(0x3e8a6a), Math.min(1, (n.y - 0.6) * 2.5) * 0.85);
   });
   return p;
 }
@@ -334,41 +387,61 @@ function roofGeometry(w: number, d: number, h: number): BufferGeometry {
   return g;
 }
 
+/** A round night-elf cottage: cream walls with dark beams, a swept concave purple roof with an upturned eave. */
 function cottageGeometry(seed: number): { body: BufferGeometry; windows: BufferGeometry } {
   const r = rng(seed);
-  const w = 3 + r() * 1.2;
-  const d = 2.4 + r() * 0.6;
-  const h = 1.9 + r() * 0.6;
-  const walls = prep(new BoxGeometry(w, h, d).translate(0, h / 2, 0));
-  paint(walls, 0xd8c8a0, 0xf4e8c8);
+  const R = 1.5 + r() * 0.4;
+  const h = 1.9 + r() * 0.5;
+  const walls = prep(new CylinderGeometry(R * 0.96, R, h, 14).translate(0, h / 2, 0));
+  paint(walls, 0xcab8a4, 0xf0e2cc, (p, _n, c) => c.multiplyScalar(0.9 + 0.1 * vnoise(p.x * 3, p.y * 3, 2)));
   const beams: BufferGeometry[] = [];
-  for (const sx of [-1, 1]) {
-    for (const sz of [-1, 1]) {
-      const b = prep(new BoxGeometry(0.16, h, 0.16).translate((sx * w) / 2, h / 2, (sz * d) / 2));
-      paint(b, 0x5a3a24);
-      beams.push(b);
-    }
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2 + 0.2;
+    const g = prep(new BoxGeometry(0.14, h, 0.1).translate(0, h / 2, R + 0.02).rotateY(a));
+    paint(g, 0x4a3226, 0x6a4632);
+    beams.push(g);
   }
-  const roofCols = [0x6a4aa8, 0x7a52b8, 0x5a4a9a, 0x8a5ac0];
-  const roof = prep(roofGeometry(w + 0.6, d + 0.7, 1.4 + r() * 0.4).translate(0, h, 0));
-  paint(roof, roofCols[Math.floor(r() * roofCols.length)]!, 0xffffff, (_p, _n, c) => c.multiplyScalar(0.85));
-  const chim = prep(new BoxGeometry(0.4, 1.2, 0.4).translate(w * 0.25, h + 1.0, -d * 0.15));
-  paint(chim, 0x8a7a6a);
-  const door = prep(new BoxGeometry(0.6, 1.1, 0.06).translate(-w * 0.2, 0.55, d / 2 + 0.03));
-  paint(door, 0x6a4022);
+  const band = prep(new TorusGeometry(R * 0.99, 0.07, 5, 18).rotateX(Math.PI / 2).translate(0, h * 0.98, 0));
+  paint(band, 0x4a3226);
+  const base = prep(new CylinderGeometry(R + 0.12, R + 0.2, 0.3, 14).translate(0, 0.15, 0));
+  paint(base, 0x6a6280, 0x8a84a0);
+  // Swept roof: concave profile from a flared, upturned eave to a tall point.
+  const roofH = 2.8 + r() * 0.8;
+  const eave = R + 0.95;
+  const prof: Vector2[] = [new Vector2(eave + 0.15, 0.32), new Vector2(eave, 0.0)];
+  for (let i = 1; i <= 12; i++) {
+    const t = i / 12;
+    prof.push(new Vector2(Math.max(0.02, eave * Math.pow(1 - t, 2.1)), roofH * t));
+  }
+  const roofG = new LatheGeometry(prof.reverse(), 16);
+  const roof = prep(roofG.translate(0, h - 0.05, 0));
+  const roofCols = [0x5a3ea8, 0x6a48b8, 0x4e3a9a, 0x7650c0];
+  const rc = roofCols[Math.floor(r() * roofCols.length)]!;
+  paint(roof, rc, 0xa88ae8, (p, _n, c) => c.multiplyScalar(0.82 + 0.16 * Math.abs(Math.sin((p.y - h) * 7.5))));
+  const tip = prep(new ConeGeometry(0.08, 0.7, 6).translate(0, h + roofH + 0.25, 0));
+  paint(tip, 0xd8c070);
+  // Door: an arched dark-wood door with a lamp-lit frame.
+  const door = prep(new BoxGeometry(0.62, 0.95, 0.12).translate(0, 0.62, R - 0.02));
+  const arch = prep(new CylinderGeometry(0.31, 0.31, 0.12, 12, 1, false, 0, Math.PI).rotateX(Math.PI / 2).rotateZ(Math.PI / 2).translate(0, 1.09, R - 0.02));
+  paint(door, 0x4a2c4a, 0x6a3c5a);
+  paint(arch, 0x6a3c5a);
   const wins: BufferGeometry[] = [];
-  for (const wx of [w * 0.18, w * 0.36]) {
-    const g = prep(new BoxGeometry(0.42, 0.5, 0.05).translate(wx - w * 0.02, h * 0.55, d / 2 + 0.03));
+  for (const a of [-0.75, 0.75, 2.2, -2.2]) {
+    const g = prep(new CylinderGeometry(0.22, 0.22, 0.08, 12).rotateX(Math.PI / 2).scale(1, 1.35, 1).translate(0, h * 0.58, R + 0.01).rotateY(a));
     paint(g, 0xffffff);
     wins.push(g);
   }
-  const side = prep(new BoxGeometry(0.05, 0.5, 0.42).translate(w / 2 + 0.03, h * 0.55, 0));
-  paint(side, 0xffffff);
-  wins.push(side);
-  return { body: merge([walls, ...beams, roof, chim, door]), windows: merge(wins) };
+  // A small round attic window high in the roof.
+  wins.push(paint(prep(new CylinderGeometry(0.16, 0.16, 0.08, 10).rotateX(Math.PI / 2).translate(0, h + 0.75, eave * 0.62)), 0xffffff));
+  return { body: merge([walls, ...beams, band, base, roof, tip, door, arch]), windows: merge(wins) };
 }
 
 // ---------- the set ----------
+
+/** Far-shore cottages and the woods kept clear around them. */
+const COTTAGE_CLEAR: [number, number][] = [
+  [Math.cos(-2.32) * 36, Math.sin(-2.32) * 36], [Math.cos(-0.82) * 36, Math.sin(-0.82) * 36], [-11, -38], [12, -40], [-30, -22],
+];
 
 export type Props = {
   group: Group;
@@ -418,6 +491,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     if (Math.abs(x) < 4.5 && z < 0 && z > FALLS.topZ - 14) continue; // the falls and its stream
     if (Math.hypot(x - CAMPFIRE.x, z - CAMPFIRE.z) < 5) continue;
     if (Math.abs(x - 34) < 9 && Math.abs(z - 14) < 9) continue; // the cottages
+    if (COTTAGE_CLEAR.some(([cx, cz]) => Math.hypot(x - cx, z - cz) < 7)) continue;
     const dens = fbm(x * 0.04, z * 0.04, 3, 77);
     if (dens < 0.42 && R() < 0.7) continue;
     const y = heightAt(x, z) - 0.15;
@@ -462,6 +536,22 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     const big = z < FALLS.footZ + 0.5;
     rocks.push({ x, y: heightAt(x, z) - 0.1, z, s: big ? 1.0 + R() * 1.1 : 0.35 + R() * 0.5, ry: R() * 6, sy: big ? 1.3 : 1 });
   }
+  const cliff: Inst[] = [];
+  // A real rock cliff behind the waterfall: tall stacked boulders either side of the falls and behind its lip.
+  for (let i = 0; i < 34; i++) {
+    const side = i % 2 === 0 ? -1 : 1;
+    const row = Math.floor(i / 2) % 3;
+    const x = side * (2.0 + R() * 7.5 + row * 0.8);
+    const z = FALLS.footZ - 0.6 - row * 2.2 - R() * 1.2;
+    const s2 = 1.7 + R() * 1.6;
+    cliff.push({ x, y: heightAt(x, z) - 0.6 - row * 0.3, z, s: s2, ry: R() * 6, sy: 1.5 + R() * 0.7, tint: tint(0.85, 1.1) });
+  }
+  for (let i = 0; i < 8; i++) {
+    const x = (i - 3.5) * 2.6 + (R() - 0.5);
+    const z = FALLS.topZ - 2.5 - R() * 2;
+    if (Math.abs(x) < 1.8) continue;
+    cliff.push({ x, y: heightAt(x, z) - 0.8, z, s: 2.2 + R() * 1.2, ry: R() * 6, sy: 1.6, tint: tint(0.8, 1.0) });
+  }
   for (let i = 0; i < 10; i++) {
     const a = (i / 10) * Math.PI * 2;
     const x = CAMPFIRE.x + Math.cos(a) * 0.72;
@@ -469,6 +559,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     rocks.push({ x, y: heightAt(x, z) + 0.02, z, s: 0.17 + R() * 0.05, ry: R() * 6, tint: new Color(0.85, 0.85, 0.85) });
   }
   add(instanced(rockGeometry(3), mat, rocks, true)).name = "rocks";
+  add(instanced(cliffRockGeometry(5), mat, cliff, true)).name = "cliff";
 
   // --- bushes ---
   const bushes: Inst[] = [];
@@ -602,6 +693,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
 
   // --- glowing mushrooms along the shore and round the giants ---
   const shrooms: Inst[] = [];
+  const shroomsNear: Inst[] = [];
   const shroomCols = [new Color(0.5, 1.6, 2.2), new Color(0.9, 0.8, 2.4), new Color(0.4, 2.0, 1.8), new Color(1.6, 0.9, 2.2)];
   for (let i = 0; i < (full ? 110 : 60); i++) {
     const th = R() * Math.PI * 2;
@@ -620,9 +712,33 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     const z = gt.z + Math.sin(a) * rr;
     shrooms.push({ x, y: heightAt(x, z) - 0.02, z, s: 1.5 + R() * 1.8, ry: R() * 6, tint: shroomCols[Math.floor(R() * shroomCols.length)]! });
   }
+  // The near grass (the camera's foreground): clusters of glowing mushrooms, ferns and bellflowers.
+  const ferns: Inst[] = [];
+  const bells: Inst[] = [];
+  const bellCols = [new Color(0.55, 1.5, 2.0), new Color(1.3, 0.8, 2.2), new Color(0.6, 2.0, 1.6), new Color(1.8, 0.9, 1.9)];
+  for (let i = 0; i < 1400 && ferns.length < (full ? 220 : 110); i++) {
+    const th = SOUTH + (R() - 0.5) * 3.4;
+    const edge = lakeRadius(th);
+    const d = 1.2 + R() * 22;
+    const r = edge + d;
+    const x = Math.cos(th) * r;
+    const z = Math.sin(th) * r;
+    if (Math.abs(d - PATH_D) < 1.0) continue;
+    if (Math.abs(x) <= DOCK.halfWidth + 0.8 && z > DOCK.tipZ && z < DOCK.rootZ + 1.5) continue;
+    if (Math.hypot(x - CAMPFIRE.x, z - CAMPFIRE.z) < 3.2) continue;
+    const cl = vnoise(x * 0.22, z * 0.22, 63);
+    if (cl < 0.5) continue;
+    const y = heightAt(x, z) - 0.03;
+    if (R() < 0.55) ferns.push({ x, y, z, s: 0.8 + R() * 0.9, ry: R() * 6, tint: tint(0.8, 1.15) });
+    else if (R() < 0.6) bells.push({ x, y, z, s: 0.9 + R() * 0.8, ry: R() * 6, tint: bellCols[Math.floor(R() * bellCols.length)]! });
+    else shroomsNear.push({ x, y: y + 0.01, z, s: 1.0 + R() * 1.4, ry: R() * 6 });
+  }
+  add(instanced(fernGeometry(), swayMat, ferns, false)).name = "ferns";
   const shroomMat = new MeshBasicMaterial({ vertexColors: true });
   disposables.push(shroomMat);
+  for (const it of shroomsNear) shrooms.push({ ...it, tint: shroomCols[Math.floor(R() * shroomCols.length)]! });
   add(instanced(mushroomGeometry(), shroomMat, shrooms, false)).name = "mushrooms";
+  add(instanced(bellGeometry(), shroomMat, bells, false)).name = "bellflowers";
 
   // --- little amber lanterns along the path (warm accents) ---
   const lamps: Inst[] = [];
@@ -750,14 +866,18 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   // --- cottages on the east-south-east hill + two behind the falls ---
   const winParts: BufferGeometry[] = [];
   const bodyParts: BufferGeometry[] = [];
-  const spots: [number, number, number][] = [
-    [34, 9, 0], [38, 15, 1], [31, 18, 2], [41, 6, 3], [36, 22, 4], [-9, -35, 5], [11, -37, 6], [-30, -22, 7],
+  const spots: [number, number, number, number][] = [
+    [34, 9, 0, 1.1], [38, 15, 1, 1.0], [31, 18, 2, 1.0], [41, 6, 3, 1.0],
+    // The far shore: big and close, framing the falls.
+    [Math.cos(-2.32) * 36, Math.sin(-2.32) * 36, 4, 1.45], [Math.cos(-0.82) * 36, Math.sin(-0.82) * 36, 5, 1.45],
+    [-11, -38, 6, 1.2], [12, -40, 7, 1.2], [-30, -22, 8, 1.1],
   ];
-  for (const [x, z, s] of spots) {
+  for (const [x, z, s, k] of spots) {
     const { body, windows } = cottageGeometry(s + 10);
     const face = Math.atan2(-x, -z); // front (+z local) toward the lake
-    const y = heightAt(x, z) - 0.1;
+    const y = heightAt(x, z) - 0.15;
     for (const g of [body, windows]) {
+      g.scale(k, k, k);
       g.rotateY(face);
       g.translate(x, y, z);
     }
@@ -768,7 +888,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   village.name = "village";
   village.castShadow = true;
   village.receiveShadow = true;
-  const windowMat = new MeshBasicMaterial({ vertexColors: true, color: 0x6a7a8a });
+  const windowMat = new MeshBasicMaterial({ vertexColors: true, color: 0x8ab8c8 });
   disposables.push(windowMat);
   add(new Mesh(merge(winParts), windowMat)).name = "windows";
 
@@ -866,8 +986,9 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
 
   const winCol = windowMat.color;
   const shroomCol = shroomMat.color;
-  const day = new Color(1.1, 0.75, 0.45);
-  const night = new Color(2.6, 1.6, 0.8);
+  // Soft cyan-white elven lamps.
+  const day = new Color(0.75, 0.95, 1.05);
+  const night = new Color(1.5, 2.4, 2.7);
   return {
     group,
     lanternLight,
