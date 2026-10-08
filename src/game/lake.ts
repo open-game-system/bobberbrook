@@ -3,7 +3,7 @@ import { dayPhase, timeOfDay, type TimeOfDay } from "./daycycle";
 import { FISH, JOURNAL_FISH, SHELLS, bitesNow, fishById, type FishDef, type Rarity } from "./fish";
 import { between, pickWeighted, rand } from "./rng";
 import { REEL_START, integrateReel, type Reel } from "./reel";
-import { WALK_SPEED, advance, angleGap, areaAt, areaById, castFrom, castRingIn, distance, spawnPoint, type AreaId, type Vec, type Water } from "./world";
+import { WALK_SPEED, advance, angleGap, areaAt, areaById, castFrom, castRingIn, distance, navNext, spawnPoint, type AreaId, type Vec, type Water } from "./world";
 
 /** Everything on the lake that changes with time. The room keeps one of these; every screen sees it. */
 export const MAX_FISHERS = 4;
@@ -43,6 +43,10 @@ export type Fisher = {
   vel: Vec;
   /** When pos was last brought up to date. */
   movedAt: number;
+  /** When this fisher last touched the stick or the button (an idle fisher tags along after FOLLOW_AFTER_MS). */
+  lastInputAt: number;
+  /** Walking over to the family by itself. */
+  following: boolean;
   facing: number;
   mode: Mode;
   bobber: Vec | null;
@@ -199,6 +203,33 @@ function discover(d: Draft<Lake>, now: number): void {
     d.discovered.push(area.id);
     d.discovery = { area: area.id, seat: f.seat, at: now, seq: (d.discovery?.seq ?? 0) + 1 };
     spawnSwirl(d, now, false, area.id);
+  }
+}
+
+/** An idle fisher left far behind walks over to the family by itself (a toddler needn't steer the whole trail). */
+export const FOLLOW_AFTER_MS = 6000;
+export const FOLLOW_FAR = 9;
+export const FOLLOW_NEAR = 4;
+const FOLLOW_SPEED = WALK_SPEED * 0.85;
+
+type Tagger = Pick<Fisher, "pos" | "vel" | "mode" | "lastInputAt" | "following" | "movedAt">;
+
+/** Steers each idle, walking fisher toward the nearest other fisher, by trail and round the ponds, and stops them close by. */
+export function tagAlong(fishers: Tagger[], now: number): void {
+  for (const f of fishers) {
+    const others = fishers.filter((o) => o !== f);
+    if (others.length === 0 || f.mode !== "walk" || now - f.lastInputAt < FOLLOW_AFTER_MS) continue;
+    const near = others.reduce((b, o) => (distance(o.pos, f.pos) < distance(b.pos, f.pos) ? o : b));
+    const gap = distance(near.pos, f.pos);
+    if (gap <= FOLLOW_NEAR || (!f.following && gap <= FOLLOW_FAR)) {
+      if (f.following) f.vel = { x: 0, z: 0 };
+      f.following = false;
+      continue;
+    }
+    const way = navNext(f.pos, near.pos);
+    const d = distance(way, f.pos) || 1;
+    f.following = true;
+    f.vel = { x: ((way.x - f.pos.x) / d) * FOLLOW_SPEED, z: ((way.z - f.pos.z) / d) * FOLLOW_SPEED };
   }
 }
 
@@ -434,13 +465,14 @@ export function step(lake: Lake, now: number): Lake {
     for (const f of d.fishers) stepFisher(d, f, now);
     keepApart(d.fishers);
     leash(d.fishers);
+    tagAlong(d.fishers, now);
     discover(d, now);
     refreshSwirls(d, now);
   });
 }
 
 /** How close two fishers may stand (metres). */
-export const FISHER_SPACE = 1.1;
+export const FISHER_SPACE = 1.8;
 
 /** Nudges any two fishers standing closer than FISHER_SPACE apart, each half the way, onto walkable ground. */
 export function keepApart(fishers: { pos: Vec; seat: number }[]): void {
@@ -488,6 +520,8 @@ export function join(lake: Lake, input: { name: string | null; ogsId: string | n
       pos,
       vel: { x: 0, z: 0 },
       movedAt: d.now,
+      lastInputAt: d.now,
+      following: false,
       facing: -Math.PI / 2,
       mode: "walk",
       bobber: null,
@@ -534,6 +568,8 @@ function withFisher(lake: Lake, seat: number, now: number, recipe: (d: Draft<Lak
 export function move(lake: Lake, seat: number, stick: { x: number; y: number }, now: number): Lake {
   return withFisher(lake, seat, now, (_d, f) => {
     const vel = stickVelocity(stick);
+    f.lastInputAt = now;
+    f.following = false;
     if (heldStill(f, now)) {
       f.vel = { x: 0, z: 0 };
       return;
@@ -564,6 +600,11 @@ export function heldStill(f: Pick<Fisher, "mode" | "catch">, now: number): boole
 /** The one big button: cast at the water's edge, hook on a bite, skip a shown catch. */
 export function action(lake: Lake, seat: number, now: number): Lake {
   return withFisher(lake, seat, now, (d, f) => {
+    f.lastInputAt = now;
+    if (f.following) {
+      f.following = false;
+      f.vel = { x: 0, z: 0 };
+    }
     if (f.mode === "bite") {
       hook(d, f, now);
       return;

@@ -50,6 +50,8 @@ export const FisherSchema = z.object({
   pos: VecSchema,
   vel: VecSchema,
   movedAt: z.number(),
+  lastInputAt: z.number(),
+  following: z.boolean(),
   facing: z.number(),
   mode: z.enum(["walk", "cast", "wait", "bite", "reel", "catch"]),
   bobber: VecSchema.nullable(),

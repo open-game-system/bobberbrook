@@ -75,9 +75,9 @@ describe("coachLine", () => {
     expect(coachLine(l, 0, 0)).toBe("A golden swirl at Glowshroom Hollow! Race there, everyone!");
   });
 
-  it("tells Dad when the kid ran ahead to the end of the leash", () => {
+  it("tells Dad when the family has split as far as the leash lets it", () => {
     const l = family();
     const ahead = { ...l, fishers: l.fishers.map((f) => ({ ...f, pos: f.seat === 0 ? { x: 0, z: 20 } : { x: -29.5, z: 20 } })) };
-    expect(coachLine(ahead, 0, 0)).toBe("Juneau went ahead up the trail: catch up!");
+    expect(coachLine(ahead, 0, 0)).toBe("Juneau is far away on the trail: get back together!");
   });
 });

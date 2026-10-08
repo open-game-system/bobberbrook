@@ -1,5 +1,6 @@
 import { LEASH, type Lake, type Swirl } from "../game/lake";
-import { AREAS, SHORE_REACH, TRAILS, areaAt, areaById, pondRadius, type AreaId, type Vec } from "../game/world";
+import { AREAS, SHORE_REACH, areaAt, areaById, navNext, pondRadius, type AreaId, type Vec } from "../game/world";
+export { nextWaypoint, route } from "../game/world";
 
 /** Where to stand to cast straight into a swirl: on the shore just behind it. */
 export function shoreFor(s: Pick<Swirl, "theta" | "area">): Vec {
@@ -24,58 +25,6 @@ export function atLeashEnd(lake: Lake, mySeat: number, from: Vec): boolean {
 }
 
 const dist = (a: Vec, b: Vec) => Math.hypot(a.x - b.x, a.z - b.z);
-
-/** The places to walk through, by trail, from one place to another (breadth-first over the trails). */
-export function route(from: AreaId, to: AreaId): AreaId[] {
-  const prev = new Map<AreaId, AreaId>();
-  const queue: AreaId[] = [from];
-  const seen = new Set<AreaId>([from]);
-  while (queue.length > 0) {
-    const at = queue.shift()!;
-    if (at === to) break;
-    for (const t of TRAILS) {
-      const next = t.joins[0] === at ? t.joins[1] : t.joins[1] === at ? t.joins[0] : null;
-      if (next && !seen.has(next)) {
-        seen.add(next);
-        prev.set(next, at);
-        queue.push(next);
-      }
-    }
-  }
-  const path: AreaId[] = [to];
-  while (path[0] !== from) {
-    const p = prev.get(path[0]!);
-    if (!p) return [];
-    path.unshift(p);
-  }
-  return path;
-}
-
-/** The next point to walk to on the way from `here` to a target in another place: the trailhead out of this place. */
-export function nextWaypoint(here: Vec, target: Vec): Vec {
-  const fromArea = areaAt(here);
-  const toArea = areaAt(target);
-  if (!toArea || fromArea?.id === toArea.id) return target;
-  if (!fromArea) {
-    // On a trail: walk to the end that leads toward the target.
-    const t = TRAILS.find((tr) => onTrailNear(here, tr));
-    if (!t) return target;
-    return dist(t.from, target) < dist(t.to, target) ? t.from : t.to;
-  }
-  const path = route(fromArea.id, toArea.id);
-  const step = path[1];
-  if (!step) return target;
-  const trail = TRAILS.find((tr) => tr.joins.includes(fromArea.id) && tr.joins.includes(step));
-  if (!trail) return target;
-  return dist(trail.from, fromArea.center) < dist(trail.to, fromArea.center) ? trail.from : trail.to;
-}
-
-function onTrailNear(p: Vec, t: (typeof TRAILS)[number]): boolean {
-  const dx = t.to.x - t.from.x;
-  const dz = t.to.z - t.from.z;
-  const k = Math.max(0, Math.min(1, ((p.x - t.from.x) * dx + (p.z - t.from.z) * dz) / (dx * dx + dz * dz)));
-  return Math.hypot(p.x - (t.from.x + k * dx), p.z - (t.from.z + k * dz)) <= 4;
-}
 
 /** What the kid should walk toward: a golden swirl, else a swirl here, else the nearest place not found yet, else the nearest swirl. */
 export function compassGoal(lake: Lake, from: Vec): { at: Vec; golden: boolean; explore: boolean } | null {
@@ -102,7 +51,7 @@ export function compassTo(lake: Lake, from: Vec, mySeat?: number): Compass | nul
   }
   const goal = compassGoal(lake, from);
   if (!goal) return null;
-  const way = nextWaypoint(from, goal.at);
+  const way = navNext(from, goal.at);
   const dx = way.x - from.x;
   const dz = way.z - from.z;
   const distance = Math.hypot(goal.at.x - from.x, goal.at.z - from.z);

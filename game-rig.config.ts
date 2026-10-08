@@ -83,7 +83,8 @@ async function fishOnce(rig: SessionRig, page: Page, who: string, careful: boole
     await page.waitForTimeout(100);
   }
   if (holding) await btn.dispatchEvent("pointerup");
-  rig.mark(`${who} catch`);
+  if ((await me(page)).f.mode === "catch") rig.mark(`${who} catch`);
+  else rig.mark(`${who} no catch (cast failed or line still out)`);
   await page.waitForTimeout(3600);
 }
 
@@ -180,14 +181,23 @@ const config: GameRigInput = {
       { x: -35, z: 21.5 },
       { x: -45.5, z: 28.1 },
     ];
-    for (const p of trail) await Promise.all([walkTo(dad, p, 1.8, 15_000), walkTo(kid, { x: p.x + 1.5, z: p.z + 1.5 }, 1.8, 15_000)]);
+    // Dad walks the trail; Juneau lets go of his stick and tags along by himself (auto-follow).
+    for (const p of trail) await walkTo(dad, p, 1.8, 15_000);
     const marsh = (theta: number) => {
       const r = 13 + 2.2 * Math.sin(2 * theta + 1.3) + 1.6 * Math.sin(3 * theta + 0.4) + 1.0 * Math.sin(5 * theta - 0.7) + 1.2;
       return { x: -64 + Math.cos(theta) * r, z: 40 + Math.sin(theta) * r };
     };
-    await Promise.all([walkTo(dad, marsh(-0.6), 1, 15_000), walkTo(kid, marsh(-0.2), 1, 15_000)]);
+    await walkTo(dad, marsh(-0.6), 1, 15_000);
     rig.mark("found Mistmarsh");
-    await rig.wait(2500);
+    // Wait for Juneau to arrive, then he steps up to the water beside Dad.
+    for (let i = 0; i < 60; i++) {
+      const { lake } = await me(dad);
+      const [a, b] = lake.fishers;
+      if (a && b && Math.hypot(a.pos.x - b.pos.x, a.pos.z - b.pos.z) < 6) break;
+      await dad.waitForTimeout(500);
+    }
+    rig.mark("Juneau tagged along");
+    await walkTo(kid, marsh(-0.25), 1, 15_000);
     for (let i = 0; i < 2; i++) {
       await Promise.all([fishOnce(rig, kid, "Juneau", true), fishOnce(rig, dad, "Dad", true)]);
     }

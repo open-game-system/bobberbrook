@@ -255,3 +255,88 @@ export function pondOutline(a: Area, points = 72): Vec[] {
     return { x: a.center.x + Math.cos(theta) * r, z: a.center.z + Math.sin(theta) * r };
   });
 }
+
+// ---------- getting somewhere: round ponds, along trails ----------
+
+/** Whether the straight walk from a to b crosses any pond. */
+export function crossesWater(a: Vec, b: Vec): boolean {
+  const n = Math.max(2, Math.ceil(distance(a, b) / 1.5));
+  for (let i = 1; i < n; i++) {
+    const p = { x: a.x + ((b.x - a.x) * i) / n, z: a.z + ((b.z - a.z) * i) / n };
+    if (AREAS.some((ar) => inPond(ar, p, 1.2))) return true;
+  }
+  return false;
+}
+
+/** The next point to head for on the way from `from` to `to` inside one place: straight, or round the pond's rim the short way. */
+export function roundThePond(from: Vec, to: Vec): Vec {
+  if (!crossesWater(from, to)) return to;
+  const a = areaAt(from) ?? AREAS.find((ar) => inPond(ar, to, 6)) ?? AREAS[0]!;
+  const me = polarIn(a, from);
+  const goal = polarIn(a, to);
+  let gap = goal.theta - me.theta;
+  while (gap > Math.PI) gap -= 2 * Math.PI;
+  while (gap < -Math.PI) gap += 2 * Math.PI;
+  const theta = me.theta + Math.sign(gap || 1) * Math.min(Math.abs(gap), 0.22);
+  const r = pondRadius(a, theta) + 3.2;
+  return { x: a.center.x + Math.cos(theta) * r, z: a.center.z + Math.sin(theta) * r };
+}
+
+/** The places to walk through, by trail, from one place to another (breadth-first over the trails). */
+export function route(from: AreaId, to: AreaId): AreaId[] {
+  const prev = new Map<AreaId, AreaId>();
+  const queue: AreaId[] = [from];
+  const seen = new Set<AreaId>([from]);
+  while (queue.length > 0) {
+    const at = queue.shift()!;
+    if (at === to) break;
+    for (const t of TRAILS) {
+      const next = t.joins[0] === at ? t.joins[1] : t.joins[1] === at ? t.joins[0] : null;
+      if (next && !seen.has(next)) {
+        seen.add(next);
+        prev.set(next, at);
+        queue.push(next);
+      }
+    }
+  }
+  const path: AreaId[] = [to];
+  while (path[0] !== from) {
+    const p = prev.get(path[0]!);
+    if (!p) return [];
+    path.unshift(p);
+  }
+  return path;
+}
+
+/** The next point to walk to on the way from `here` to a target in another place: the trailhead out of this place. */
+export function nextWaypoint(here: Vec, target: Vec): Vec {
+  const fromArea = areaAt(here);
+  const toArea = areaAt(target);
+  if (!toArea || fromArea?.id === toArea.id) return target;
+  if (!fromArea) {
+    // On a trail: walk to the end that leads toward the target.
+    const t = TRAILS.find((tr) => onTrailNear(here, tr));
+    if (!t) return target;
+    return distance(t.from, target) < distance(t.to, target) ? t.from : t.to;
+  }
+  const path = route(fromArea.id, toArea.id);
+  const step = path[1];
+  if (!step) return target;
+  const trail = TRAILS.find((tr) => tr.joins.includes(fromArea.id) && tr.joins.includes(step));
+  if (!trail) return target;
+  return distance(trail.from, fromArea.center) < distance(trail.to, fromArea.center) ? trail.from : trail.to;
+}
+
+function onTrailNear(p: Vec, t: (typeof TRAILS)[number]): boolean {
+  const dx = t.to.x - t.from.x;
+  const dz = t.to.z - t.from.z;
+  const k = Math.max(0, Math.min(1, ((p.x - t.from.x) * dx + (p.z - t.from.z) * dz) / (dx * dx + dz * dz)));
+  return Math.hypot(p.x - (t.from.x + k * dx), p.z - (t.from.z + k * dz)) <= 4;
+}
+
+
+/** The next point to head for, anywhere in the valley: along the trails between places, round a pond within one. */
+export function navNext(from: Vec, to: Vec): Vec {
+  const way = nextWaypoint(from, to);
+  return roundThePond(from, way);
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { AREAS, TRAILS, advance, areaAt, areaById, castFrom, castRingIn, inPond, onLand, pondOutline, pondRadius, walkable } from "./world";
-import { LEASH, join, leash, loadProgress, move, newLake, progressOf, step, type Lake } from "./lake";
+import { AREAS, TRAILS, advance, areaAt, areaById, castFrom, castRingIn, crossesWater, inPond, onLand, pondOutline, pondRadius, roundThePond, walkable } from "./world";
+import { FOLLOW_AFTER_MS, FOLLOW_NEAR, LEASH, action, join, leash, loadProgress, move, newLake, progressOf, step, type Lake } from "./lake";
 
 /** A point on a place's shore, just out of the water, at an angle. */
 const shore = (id: Parameters<typeof areaById>[0], theta: number) => {
@@ -112,5 +112,54 @@ describe("walking around trees", () => {
       p = advance(p, { x: (dx / d) * 5, z: (dz / d) * 5 }, 0.15);
     }
     expect(Math.hypot(p.x + 20, p.z - 19)).toBeLessThan(1.5);
+  });
+});
+
+describe("finding the way round a pond", () => {
+  it("goes straight when no water is in the way", () => {
+    expect(crossesWater({ x: 0, z: 20 }, { x: 5, z: 22 })).toBe(false);
+    expect(roundThePond({ x: 0, z: 20 }, { x: 5, z: 22 })).toEqual({ x: 5, z: 22 });
+  });
+  it("heads round the rim when the lake is in the way, and gets there", () => {
+    const from = shore("moonwell", Math.PI); // west shore
+    const to = shore("moonwell", 0); // east shore, across the lake
+    expect(crossesWater(from, to)).toBe(true);
+    let p = from;
+    for (let i = 0; i < 600 && Math.hypot(p.x - to.x, p.z - to.z) > 1; i++) {
+      const w = roundThePond(p, to);
+      const d = Math.hypot(w.x - p.x, w.z - p.z) || 1;
+      p = advance(p, { x: ((w.x - p.x) / d) * 5, z: ((w.z - p.z) / d) * 5 }, 0.1);
+    }
+    expect(Math.hypot(p.x - to.x, p.z - to.z)).toBeLessThan(1.5);
+  });
+});
+
+describe("tagging along", () => {
+  const T0 = 1000;
+  function apart(): Lake {
+    let l = join(join(newLake(4, T0), { name: "Dad", ogsId: null }).lake, { name: "Kid", ogsId: null }).lake;
+    return { ...l, fishers: l.fishers.map((f) => ({ ...f, pos: f.seat === 0 ? shore("moonwell", 2.6) : shore("moonwell", 0.2) })) };
+  }
+  it("walks an idle fisher over to the family after a while", () => {
+    let l = apart();
+    const start = l.fishers[1]!.pos;
+    l = step(l, T0 + FOLLOW_AFTER_MS - 100);
+    expect(l.fishers[1]!.vel).toEqual({ x: 0, z: 0 });
+    for (let t = T0 + FOLLOW_AFTER_MS; t < T0 + FOLLOW_AFTER_MS + 30_000; t += 250) l = step(l, t);
+    const [dad, kid] = l.fishers;
+    expect(Math.hypot(kid!.pos.x - dad!.pos.x, kid!.pos.z - dad!.pos.z)).toBeLessThan(FOLLOW_NEAR + 1.5);
+    expect(kid!.pos).not.toEqual(start);
+    expect(kid!.vel).toEqual({ x: 0, z: 0 });
+  });
+  it("never moves someone who is using their stick, or fishing", () => {
+    let l = apart();
+    l = move(l, 1, { x: 0, y: 0 }, T0 + 5000); // touched the stick: idle clock restarts
+    l = step(l, T0 + 5000 + FOLLOW_AFTER_MS - 100);
+    expect(l.fishers[1]!.vel).toEqual({ x: 0, z: 0 });
+    let f = apart();
+    f = action(f, 1, T0);
+    f = step(f, T0 + FOLLOW_AFTER_MS + 2000);
+    expect(f.fishers[1]!.mode).not.toBe("walk");
+    expect(f.fishers[1]!.vel).toEqual({ x: 0, z: 0 });
   });
 });

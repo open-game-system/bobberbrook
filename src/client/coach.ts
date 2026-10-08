@@ -90,7 +90,7 @@ const wentAhead: Rule = (lake, mySeat) => {
   const ahead = lake.fishers.find((f) => f.seat !== mySeat && atLeashEnd(lake, f.seat, f.pos));
   if (!ahead) return null;
   const where = areaAt(ahead.pos);
-  return `${nameOf(lake, ahead.seat)} went ahead${where ? ` to ${where.name}` : " up the trail"}: catch up!`;
+  return `${nameOf(lake, ahead.seat)} is far away${where ? ` at ${where.name}` : " on the trail"}: get back together!`;
 };
 
 const freshDiscovery: Rule = (lake, _mySeat, now) => {
