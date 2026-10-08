@@ -184,7 +184,7 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
         ))}
       </div>
       {joinUi === "ticket" && (
-        <div className="ticket">
+        <div className={`ticket ${lake.fishers.length > 0 ? "compact" : ""}`}>
           <img src={qr} alt="" />
           <div>
             <p className="ticket-kicker">Scan to fish</p>
