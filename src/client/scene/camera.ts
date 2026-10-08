@@ -76,6 +76,8 @@ export class CameraRig {
   private override: ViewName = "auto";
   /** The closest the group framing comes (further out when framing one place of a split family, so the place reads). */
   minDist = MIN_DIST;
+  /** The place the establishing view looks over (where the family last was; Moonwell at first). */
+  readonly anchor = new Vector3();
   private readonly pts: Vector3[] = Array.from({ length: MAX_POINTS }, () => new Vector3());
   private n = 0;
   private first = true;
@@ -210,7 +212,7 @@ export class CameraRig {
       }
     } else this.haveCentre = false;
     if (est) {
-      this.wantTarget.set(Math.sin(t * 0.045) * 3, 0, -2 + Math.cos(t * 0.03) * 2);
+      this.wantTarget.set(this.anchor.x + Math.sin(t * 0.045) * 3, 0, this.anchor.z - 2 + Math.cos(t * 0.03) * 2);
       this.wantDist = 60 + Math.sin(t * 0.05) * 3;
       this.wantYaw = Math.sin(t * 0.035) * 0.18;
       this.wantEl = EST_EL + Math.sin(t * 0.04) * 0.03;
@@ -264,6 +266,8 @@ export class CameraRig {
       this.wantDist += (Math.max(this.wantDist * 1.25, 44) - this.wantDist) * w;
       this.wantEl += (0.62 - this.wantEl) * w;
     }
+    // A jump across the world (a new scene, a far place): cut there instead of flying over it.
+    if (!this.first && Math.hypot(this.wantTarget.x - this.target.x, this.wantTarget.z - this.target.z) > 150) this.first = true;
     const wantPitch = est ? EST_PITCH : groupMode ? PITCH_UP * (1 - this.catchW * 0.6) * (1 - this.revealW * 0.5) : 0;
     if (this.first) {
       // Start on an establishing view over wherever the family is; it eases in from there.
@@ -271,7 +275,7 @@ export class CameraRig {
       this.startT = t;
       const startEst = groupMode || est;
       if (startEst && this.n > 0 && !est) this.target.set(this.wantTarget.x, 0, this.wantTarget.z - 2);
-      else if (startEst) this.target.set(0, 0, -2);
+      else if (startEst) this.target.set(this.anchor.x, 0, this.anchor.z - 2);
       else this.target.copy(this.wantTarget);
       this.goalTarget.copy(this.target);
       this.dist = this.goalDist = startEst ? 60 : this.wantDist;

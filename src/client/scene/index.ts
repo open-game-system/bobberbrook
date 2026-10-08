@@ -30,7 +30,7 @@ import { buildPost, type Post } from "./post";
 import { buildProps } from "./props";
 import { buildSky } from "./sky";
 import { SwirlViews } from "./swirls";
-import { buildGround } from "./terrain";
+import { buildGroundStream } from "./terrain";
 import { newTodState, sampleTod } from "./tod";
 import type { LakeScene, SceneQuality } from "./types";
 import { buildWater } from "./water";
@@ -44,9 +44,10 @@ import { buildMist } from "./mist";
 import { Splashes } from "./splash";
 import { SplitFocus, type Member } from "./split";
 import { EdgeMarkers, type Marker } from "./markers";
-import { AREAS, areaAt, areaById } from "../../game/world";
-import { AREA_INDEX } from "./valley";
 import { DoubleSide } from "three";
+import type { Place } from "../../game/regions";
+import { createJobs } from "./stream";
+import { activeWorld, placesWithin, setWorld, trailsWithin } from "./worldQuery";
 
 export type { LakeScene, SceneQuality } from "./types";
 
@@ -152,10 +153,11 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   const sway = swayMaterial(time);
   const sky = buildSky();
   scene.add(sky.dome, sky.mountains);
+  const jobs = createJobs();
   const groundMat = new MeshLambertMaterial({ vertexColors: true });
-  const ground = buildGround(groundMat, full ? 0.6 : 1.1);
-  scene.add(ground.group);
   const water = buildWater();
+  const ground = buildGroundStream(groundMat, water.sea, jobs, full);
+  scene.add(ground.group);
   scene.add(...water.ponds, water.brook, water.falls);
   const occ = {
     uCam: { value: new Vector3() },
@@ -169,21 +171,24 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   scene.add(props.group);
   const painted = paintedMaterial();
   const paintedDouble = paintedMaterial({ side: DoubleSide });
-  const forest = buildForest(full, treeMat);
+  const forest = buildForest(full, treeMat, jobs);
   scene.add(forest.group);
-  const trails = buildTrails(full, painted);
+  const trails = buildTrails(full, painted, jobs);
   scene.add(trails.group);
-  const areas = buildAreaDressing(full, { painted, paintedDouble, sway, tree: treeMat });
+  const areas = buildAreaDressing(full, { painted, paintedDouble, sway, tree: treeMat }, jobs);
   scene.add(areas.group);
   const mood = new Mood();
   const mist = buildMist(full);
   scene.add(mist.mesh);
-  const glowBoost = new Float32Array(AREAS.length);
-  const pulse = new Float32Array(AREAS.length);
-  const veil = new Float32Array(AREAS.length).fill(1);
+  /** Each nearby place's veil (1 = not found yet), eased. */
+  const veil = new Map<string, number>();
+  const veilOf = (id: string) => veil.get(id) ?? 1;
+  let nearPlaces: Place[] = [];
+  let nearX = 1e9;
+  let nearZ = 1e9;
   let discoverySeq = -1;
   let revealAt = -1;
-  let revealArea = AREAS[0]!;
+  let revealArea: Place = activeWorld().placeAt({ i: 0, j: 0 })!;
   let trailW = 0;
   let veilInit = false;
   const rays = buildRays();
@@ -233,6 +238,8 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   let haveOffset = false;
   let phaseOverride: number | null = null;
   const frameMs = new Float32Array(FRAME_SAMPLES);
+  /** Streaming work per frame (ms): keeps a frame from hitching while new ground is built. */
+  const streamBudget = 3;
   let frameN = 0;
   let last = performance.now();
   const t0 = last;
@@ -265,40 +272,70 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
 
   const serverNow = (now: number) => now + offset;
 
+  /** Streams the world round the focus: plans chunks, then builds within the frame's budget. */
+  const stream = (fx: number, fz: number, budgetMs: number) => {
+    // A cut across the world (or a new world): build the new surroundings at once.
+    if (Math.hypot(fx - nearX, fz - nearZ) > 120) budgetMs = Infinity;
+    if (Math.hypot(fx - nearX, fz - nearZ) > 4) {
+      nearX = fx;
+      nearZ = fz;
+      nearPlaces = placesWithin(fx, fz, 2).sort((a, b) => Math.hypot(a.center.x - fx, a.center.z - fz) - Math.hypot(b.center.x - fx, b.center.z - fz));
+      water.assign(nearPlaces);
+      mist.assign(nearPlaces.slice(0, 9), trailsWithin(fx, fz, 2));
+    }
+    ground.update(fx, fz);
+    if (budgetMs === Infinity) {
+      forest.update(camera, fx, fz);
+      trails.update(tod, 0, fx, fz);
+      areas.update(tod, camera, 0, fx, fz, () => 0, () => 0);
+    }
+    jobs.run(budgetMs);
+  };
+
   const frame = (now: number, dt: number) => {
     const t = (now - t0) / 1000;
+    if (lake && setWorld(lake.worldSeed)) {
+      // A different family's world: start the streams again.
+      jobs.clear();
+      ground.reset();
+      forest.reset();
+      trails.reset();
+      areas.reset();
+      mood.reset();
+      veil.clear();
+      nearX = 1e9;
+    }
     time.value = t;
     const sn = serverNow(now);
     const phase = phaseOverride ?? (lake ? dayPhase(lake.startedAt, sn) : 0.15);
     mood.follow(rig.focus.x, rig.focus.z, dt);
     applyTod(phase);
     // Places nobody has found yet stay veiled; a new find lifts its veil and plays the reveal.
-    AREAS.forEach((a, i) => {
+    for (const a of nearPlaces) {
       const found = !lake || lake.discovered.includes(a.id);
-      veil[i] = veilInit ? Math.max(0, Math.min(1, veil[i]! + (found ? -dt / 2.2 : dt / 2.2))) : found ? 0 : 1;
-      water.setVeil(i, veil[i]!);
-      glowBoost[i] = mood.glowOf(a.id);
-    });
+      const was = veil.get(a.id);
+      const v = veilInit && was !== undefined ? Math.max(0, Math.min(1, was + (found ? -dt / 2.2 : dt / 2.2))) : found ? 0 : 1;
+      veil.set(a.id, v);
+      water.setVeil(a.id, v);
+    }
     if (lake) veilInit = true;
     if (lake?.discovery && lake.discovery.seq !== discoverySeq) {
       const fresh = discoverySeq !== -1 || sn - lake.discovery.at < 4000;
       discoverySeq = lake.discovery.seq;
       if (fresh) {
         revealAt = t;
-        revealArea = areaById(lake.discovery.area);
+        revealArea = activeWorld().placeById(lake.discovery.area) ?? revealArea;
         fx.discoverySwirl(revealArea.center.x, revealArea.center.z, revealArea.pond.r + 6);
       }
     } else if (lake && !lake.discovery && discoverySeq === -1) discoverySeq = 0;
     const revealAge = revealAt >= 0 ? t - revealAt : -1;
     if (revealAge > 0.9 && revealAge - dt <= 0.9) fx.discoverySwirl(revealArea.center.x, revealArea.center.z, revealArea.pond.r + 3);
-    forest.update(camera);
-    trails.update(tod, t);
+    forest.update(camera, rig.focus.x, rig.focus.z);
+    trails.update(tod, t, rig.focus.x, rig.focus.z);
     // The found place's landmark glows through the reveal.
-    AREAS.forEach((a, i) => {
-      const on = revealAge >= 0 && a.id === revealArea.id ? Math.max(0, Math.min(1, revealAge / 0.6, (5 - revealAge) / 1.5)) : 0;
-      pulse[i] = on;
-    });
-    areas.update(tod, camera, glowBoost, pulse, t);
+    const pulseOf = (id: string) => (revealAge >= 0 && id === revealArea.id ? Math.max(0, Math.min(1, revealAge / 0.6, (5 - revealAge) / 1.5)) : 0);
+    areas.update(tod, camera, t, rig.focus.x, rig.focus.z, (p) => mood.glowOf(p), pulseOf);
+    props.group.visible = Math.hypot(rig.focus.x, rig.focus.z) < 320;
     sky.mountains.position.set(camera.position.x, 0, camera.position.z);
     sky.update(tod, camera, t);
     water.update(tod, t);
@@ -318,7 +355,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       const f = lake?.fishers.find((ff) => ff.seat === seat);
       const m = f?.mode;
       const activity = m === "bite" || m === "reel" || m === "catch" ? "hot" : m === "cast" || m === "wait" ? "line" : "idle";
-      members.push({ seat, x, z, activity, inputAt: (f?.lastInputAt ?? 0) / 1000, place: areaAt({ x, z })?.id ?? null });
+      members.push({ seat, x, z, activity, inputAt: (f?.lastInputAt ?? 0) / 1000, place: activeWorld().areaAt({ x, z })?.id ?? null });
     });
     const sp = splitFocus.update(members, sn / 1000);
     framed = sp.framed;
@@ -335,7 +372,9 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     let gx = 0;
     let gz = 0;
     fishers.forEachSeat((seat, x, _y, z) => { if (framed.has(seat)) { gx += x; gz += z; n++; } });
-    const onTrail = n > 0 && areaAt({ x: gx / n, z: gz / n }) === null ? 1 : 0;
+    const here = n > 0 ? activeWorld().areaAt({ x: gx / n, z: gz / n }) : null;
+    const onTrail = n > 0 && here === null ? 1 : 0;
+    if (here) rig.anchor.set(here.center.x, 0, here.center.z);
     trailW += (onTrail - trailW) * Math.min(1, dt * 1.5);
     const reveal = revealAge >= 0 && revealAge < 3.5 ? { x: revealArea.center.x, z: revealArea.center.z, age: revealAge } : null;
     rig.update(t, dt, lake?.campfire ?? false, cf, trailW, reveal);
@@ -375,7 +414,8 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       occ.uNear.value = near - 1.5;
     } else occ.uNear.value = 0;
     occ.uVP.value.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
-    mist.update(tod, t, veil, occ.uNear.value);
+    mist.update(tod, t, veilOf, occ.uNear.value);
+    stream(rig.focus.x, rig.focus.z, streamBudget);
     renderer.info.reset();
     if (post) post.render();
     else renderer.render(scene, camera);
@@ -398,6 +438,12 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   rig.update(0, 0, false, null);
   camera.updateMatrixWorld();
   applyTod(0.15);
+  // Build the world round the start before the first frame (a loading pause, not a hitch).
+  stream(rig.focus.x, rig.focus.z, Infinity);
+  forest.update(camera, rig.focus.x, rig.focus.z);
+  trails.update(tod, 0, rig.focus.x, rig.focus.z);
+  areas.update(tod, camera, 0, rig.focus.x, rig.focus.z, () => 0, () => 0);
+  stream(rig.focus.x, rig.focus.z, Infinity);
   const prevTarget = renderer.getRenderTarget();
   if (post) renderer.setRenderTarget(post.target);
   await renderer.compileAsync(scene, camera);
@@ -438,7 +484,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       rig.setView(name);
       return name;
     },
-    debug: () => ({ split: { framed: [...framed], markers: markers.debug() }, fishers: fishers.debug(), camera: camera.position.toArray(), rig: rig.debug(), trees: forest.count, veil: Array.from(veil), mood: mood.debug() }),
+    debug: () => ({ split: { framed: [...framed], markers: markers.debug() }, fishers: fishers.debug(), camera: camera.position.toArray(), rig: rig.debug(), trees: forest.count, chunks: ground.count(), jobs: jobs.pending(), world: activeWorld().seed, near: nearPlaces.map((p) => `${p.id}:${p.biome}`), veil: Object.fromEntries(veil), mood: mood.debug() }),
     pick(x, y) {
       const rc = new Raycaster();
       rc.setFromCamera(new Vector2(x * 2 - 1, 1 - y * 2), camera);
@@ -514,6 +560,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       disposed = true;
       cancelAnimationFrame(raf);
       sky.dispose();
+      jobs.clear();
       ground.dispose();
       forest.dispose();
       trails.dispose();

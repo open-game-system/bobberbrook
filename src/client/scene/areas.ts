@@ -1,10 +1,14 @@
-import { Color, Group, MeshBasicMaterial, MeshLambertMaterial, type Camera, type Material } from "three";
-import { AREAS, pondRadius, type Area, type AreaId } from "../../game/world";
+import { Color, Group, InstancedMesh, MeshBasicMaterial, MeshLambertMaterial, type Camera, type Material } from "three";
+import { pondRadius, type Area } from "../../game/world";
+import type { Biome, Place } from "../../game/regions";
 import { bellGeometry, fernGeometry, flowerGeometry, instanced, lilyGeometry, lupineGeometry, mushroomGeometry, padGeometry, reedGeometry, rockGeometry, tuftGeometry, type Inst } from "./kit";
 import { rng, vnoise } from "./noise";
 import { heightAt, trailWear } from "./terrain";
 import type { TodState } from "./tod";
-import { buildLandmark, type Landmark } from "./landmarks";
+import { buildLandmark, type Landmark, type LandmarkStyle } from "./landmarks";
+import { placeHash } from "./valley";
+import { placesWithin } from "./worldQuery";
+import type { Jobs } from "./stream";
 
 /**
  * The area kit: every far place's shore and clearing dressed from the same parts (rocks, reeds, lily
@@ -29,8 +33,8 @@ type Recipe = {
   bell: number;
 };
 
-const RECIPES: Record<Exclude<AreaId, "moonwell">, Recipe> = {
-  mistmarsh: {
+const RECIPES: Record<Exclude<Biome, "moonwell">, Recipe> = {
+  marsh: {
     flowers: [0xc9a6ff, 0x9a7aff, 0xff9ee0, 0xffffff], shrooms: [new Color(0.9, 0.8, 2.4), new Color(1.6, 0.9, 2.2)],
     grass: 1.1, flower: 0.6, fern: 0.6, reed: 2.4, pad: 2.6, lily: 1.8, shroom: 0.5, rock: 0.5, bell: 0.6,
   },
@@ -46,19 +50,48 @@ const RECIPES: Record<Exclude<AreaId, "moonwell">, Recipe> = {
     flowers: [0xb8c8ff, 0xffffff, 0x9a8aff], shrooms: [new Color(0.7, 1.2, 2.4)],
     grass: 0.9, flower: 0.6, fern: 0.4, reed: 0.5, pad: 0.4, lily: 0.3, shroom: 0.3, rock: 1.8, bell: 0.7,
   },
+  willow: {
+    flowers: [0xe8d0ff, 0xffffff, 0xc9a6ff, 0xffd0f0], shrooms: [new Color(1.4, 1.0, 2.4), new Color(1.8, 1.2, 2.2)],
+    grass: 1.2, flower: 0.9, fern: 0.8, reed: 1.6, pad: 2.0, lily: 2.2, shroom: 0.4, rock: 0.6, bell: 0.8,
+  },
+  crystal: {
+    flowers: [0xc8f0ff, 0xffffff, 0xb0c8ff], shrooms: [new Color(0.7, 1.8, 2.4), new Color(1.6, 1.4, 2.4)],
+    grass: 0.8, flower: 0.6, fern: 0.4, reed: 0.3, pad: 0.3, lily: 0.2, shroom: 0.8, rock: 2.4, bell: 1.2,
+  },
+  ember: {
+    flowers: [0xffc070, 0xff9a60, 0xffe0a0, 0xd8a0ff], shrooms: [new Color(2.4, 1.3, 0.5), new Color(2.2, 1.0, 0.6)],
+    grass: 1.0, flower: 1.2, fern: 1.4, reed: 0.5, pad: 0.6, lily: 0.4, shroom: 1.2, rock: 1.0, bell: 0.5,
+  },
+  frost: {
+    flowers: [0xffffff, 0xd8e8ff, 0xb8c8ff], shrooms: [new Color(0.8, 1.4, 2.4)],
+    grass: 0.6, flower: 0.4, fern: 0.2, reed: 0.4, pad: 0.1, lily: 0, shroom: 0.2, rock: 2.0, bell: 0.4,
+  },
+};
+
+/** Which set-piece builder dresses a biome (home places use their own). */
+const STYLE: Record<Exclude<Biome, "moonwell">, LandmarkStyle> = {
+  marsh: "mistmarsh", pools: "pools", hollow: "hollow", tarn: "tarn", willow: "mistmarsh", crystal: "tarn", ember: "hollow", frost: "tarn",
 };
 
 export type AreaDressing = {
   group: Group;
-  byArea: Map<AreaId, Group>;
-  update(tod: TodState, camera: Camera, glowBoost: Float32Array, pulse: Float32Array, time: number): void;
+  /** Plans the places round the focus; glowOf/pulseOf give each place's extra glow and reveal pulse. */
+  update(tod: TodState, camera: Camera, time: number, fx: number, fz: number, glowOf: (p: Place) => number, pulseOf: (id: string) => number): void;
+  has(id: string): boolean;
+  reset(): void;
   dispose(): void;
 };
 
 const SHOW_DIST = 150;
+/** Places are dressed within this distance of the focus, and dropped past KEEP_DIST. */
+const BUILD_DIST = 200;
+const KEEP_DIST = 260;
 
-function dress(a: Area, r: Recipe, full: boolean, m: AreaMats, glow: MeshBasicMaterial, lilyMat: Material): Group {
+function* dress(a: Area, r0: Recipe, full: boolean, m: AreaMats, glow: MeshBasicMaterial, lilyMat: Material, key: string, home: boolean): Generator<void, Group> {
   const R = rng(a.center.x * 13 + a.center.z * 7 + 99);
+  // Each generated place leans its recipe its own way (more ferns here, more rocks there).
+  const v = (salt: number) => (home ? 1 : 0.6 + 0.8 * placeHash(key, salt));
+  const r: Recipe = { ...r0, grass: r0.grass * v(11), flower: r0.flower * v(12), fern: r0.fern * v(13), reed: r0.reed * v(14), pad: r0.pad * v(15), lily: r0.lily * v(16), shroom: r0.shroom * v(17), rock: r0.rock * v(18), bell: r0.bell * v(19) };
   const g = new Group();
   g.name = `area-${a.id}`;
   const q = full ? 1 : 0.45;
@@ -89,6 +122,7 @@ function dress(a: Area, r: Recipe, full: boolean, m: AreaMats, glow: MeshBasicMa
     if (vnoise(p.x * 0.15, p.z * 0.15, 5) < 0.35 && R() < 0.6) continue;
     tufts.push({ x: p.x, y: heightAt(p.x, p.z) - 0.03, z: p.z, s: 0.8 + R() * 0.9, ry: R() * 6, tint: new Color(1, 1, 1).multiplyScalar(0.8 + R() * 0.35) });
   }
+  yield;
   for (let i = 0; i < n(500 * r.flower); i++) {
     const p = land(1.0, 22);
     if (trailWear(p.x, p.z) > 0.3 || vnoise(p.x * 0.18, p.z * 0.18, 31) < 0.5) continue;
@@ -104,6 +138,7 @@ function dress(a: Area, r: Recipe, full: boolean, m: AreaMats, glow: MeshBasicMa
     if (trailWear(p.x, p.z) > 0.2) continue;
     lupines.push({ x: p.x, y: heightAt(p.x, p.z) - 0.03, z: p.z, s: 0.9 + R() * 0.7, ry: R() * 6, tint: pick(flowerCols) });
   }
+  yield;
   for (let i = 0; i < n(90 * r.shroom); i++) {
     const p = land(0.4, 26);
     if (trailWear(p.x, p.z) > 0.4 || vnoise(p.x * 0.3, p.z * 0.3, 55) < 0.4) continue;
@@ -114,6 +149,7 @@ function dress(a: Area, r: Recipe, full: boolean, m: AreaMats, glow: MeshBasicMa
     if (trailWear(p.x, p.z) > 0.4) continue;
     bells.push({ x: p.x, y: heightAt(p.x, p.z) - 0.02, z: p.z, s: 0.9 + R() * 0.8, ry: R() * 6, tint: pick(r.shrooms) });
   }
+  yield;
   for (let i = 0; i < Math.round(30 * r.rock); i++) {
     const th = R() * Math.PI * 2;
     const rr = pondRadius(a, th) - 0.8 + R() * 1.8;
@@ -141,6 +177,7 @@ function dress(a: Area, r: Recipe, full: boolean, m: AreaMats, glow: MeshBasicMa
     pads.push({ x, y: 0.025, z, s, ry: R() * 6, tint: new Color(1, 1, 1).multiplyScalar(0.85 + R() * 0.25) });
     if (R() < 0.3 * r.lily) lilies.push({ x: x + 0.1, y: 0.03, z: z - 0.05, s: 1.0 + R() * 0.7, ry: R() * 6 });
   }
+  yield;
   const add = (list: Inst[], geo: Parameters<typeof instanced>[0], mat: Material, shadows: boolean, name: string) => {
     if (list.length === 0) {
       geo.dispose();
@@ -164,47 +201,97 @@ function dress(a: Area, r: Recipe, full: boolean, m: AreaMats, glow: MeshBasicMa
   return g;
 }
 
-export function buildAreaDressing(full: boolean, m: AreaMats): AreaDressing {
+type Live = { place: Place; g: Group | null; lm: Landmark | null; glow: MeshBasicMaterial; alive: boolean };
+
+export function buildAreaDressing(full: boolean, m: AreaMats, jobs: Jobs): AreaDressing {
   const group = new Group();
   group.name = "areas";
-  const byArea = new Map<AreaId, Group>();
-  const glows: MeshBasicMaterial[] = [];
-  const landmarks = new Map<AreaId, Landmark>();
   // Water lilies glow softly pink at dusk and night (the marsh's signature).
   const lilyMat = new MeshLambertMaterial({ vertexColors: true });
-  for (const a of AREAS) {
-    if (a.id === "moonwell") continue;
-    const glow = new MeshBasicMaterial({ vertexColors: true });
-    glows.push(glow);
-    const g = dress(a, RECIPES[a.id], full, m, glow, lilyMat);
-    const lm = buildLandmark(a.id, full, m.painted, m.tree);
+  const live = new Map<string, Live>();
+  let lastX = 1e9;
+  let lastZ = 1e9;
+
+  function* build(l: Live): Generator<void, void> {
+    const a = l.place;
+    const recipe = RECIPES[a.biome === "moonwell" ? "tarn" : a.biome];
+    const g: Group = yield* dress(a, recipe, full, m, l.glow, lilyMat, a.key, a.home);
+    yield;
+    const style: LandmarkStyle = a.home ? (a.id as LandmarkStyle) : STYLE[a.biome === "moonwell" ? "tarn" : a.biome];
+    const lm = buildLandmark(a, style, a.home ? 0 : Math.floor(placeHash(a.key, 5) * 1000), full, m.painted, m.tree);
+    if (!l.alive) {
+      disposeGroup(g);
+      lm.dispose();
+      return;
+    }
     g.add(lm.group);
-    landmarks.set(a.id, lm);
-    byArea.set(a.id, g);
+    l.g = g;
+    l.lm = lm;
     group.add(g);
   }
+
+  function disposeGroup(g: Group): void {
+    g.traverse((o) => {
+      if (o instanceof InstancedMesh) {
+        o.geometry.dispose();
+        o.dispose();
+      }
+    });
+  }
+
+  function drop(l: Live): void {
+    l.alive = false;
+    if (l.g) {
+      group.remove(l.g);
+      if (l.lm) l.g.remove(l.lm.group);
+      disposeGroup(l.g);
+    }
+    l.lm?.dispose();
+    l.glow.dispose();
+    l.g = null;
+    l.lm = null;
+  }
+
   return {
     group,
-    byArea,
-    update(tod, camera, glowBoost, pulse, time) {
+    has: (id) => live.get(id)?.g != null,
+    update(tod, camera, time, fx, fz, glowOf, pulseOf) {
       lilyMat.emissive.setRGB(0.9, 0.35, 0.7).multiplyScalar(0.15 + 0.6 * tod.glow);
-      let i = 0;
-      for (const a of AREAS) {
-        if (a.id === "moonwell") continue;
-        const g = byArea.get(a.id);
-        if (g) g.visible = Math.hypot(camera.position.x - a.center.x, camera.position.z - a.center.z) < SHOW_DIST + a.clearing;
-        const k = AREAS.indexOf(a);
-        if (g?.visible) landmarks.get(a.id)?.update(tod, time, pulse[k] ?? 0);
-        glows[i]!.color.setScalar(0.3 + 0.75 * Math.min(1, tod.glow + (glowBoost[k] ?? 0)));
-        i++;
+      if (Math.hypot(fx - lastX, fz - lastZ) > 6) {
+        lastX = fx;
+        lastZ = fz;
+        for (const p of placesWithin(fx, fz, 3)) {
+          if (p.id === "moonwell") continue;
+          const d = Math.hypot(p.center.x - fx, p.center.z - fz) - p.pond.r - p.clearing;
+          if (d > BUILD_DIST || live.has(p.id)) continue;
+          const l: Live = { place: p, g: null, lm: null, glow: new MeshBasicMaterial({ vertexColors: true }), alive: true };
+          live.set(p.id, l);
+          jobs.add(Math.max(0, d) + 2, build(l));
+        }
+        for (const [id, l] of live) {
+          const d = Math.hypot(l.place.center.x - fx, l.place.center.z - fz) - l.place.pond.r - l.place.clearing;
+          if (d > KEEP_DIST) {
+            drop(l);
+            live.delete(id);
+          }
+        }
+      }
+      for (const l of live.values()) {
+        const a = l.place;
+        if (!l.g) continue;
+        l.g.visible = Math.hypot(camera.position.x - a.center.x, camera.position.z - a.center.z) < SHOW_DIST + a.clearing + 40;
+        if (l.g.visible) l.lm?.update(tod, time, pulseOf(a.id));
+        l.glow.color.setScalar(0.3 + 0.75 * Math.min(1, tod.glow + glowOf(a)));
       }
     },
+    reset() {
+      for (const l of live.values()) drop(l);
+      live.clear();
+      lastX = 1e9;
+    },
     dispose() {
-      group.traverse((o) => {
-        if ("geometry" in o && o.geometry && typeof o.geometry === "object" && "dispose" in o.geometry && typeof o.geometry.dispose === "function") o.geometry.dispose();
-      });
-      for (const gl of glows) gl.dispose();
-      for (const lm of landmarks.values()) lm.dispose();
+      for (const l of live.values()) drop(l);
+      live.clear();
       lilyMat.dispose();
     },
   };

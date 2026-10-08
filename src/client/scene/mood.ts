@@ -1,6 +1,6 @@
 import { Color } from "three";
-import { AREAS, type AreaId } from "../../game/world";
-import { AREA_INDEX, LOOKS, areaWeights } from "./valley";
+import type { Place } from "../../game/regions";
+import { lookOf, placeWeights, type Weighted } from "./valley";
 import type { TodState } from "./tod";
 
 /**
@@ -8,37 +8,52 @@ import type { TodState } from "./tod";
  * key and fill light, glow and grade blend smoothly toward the place it is over.
  */
 export class Mood {
-  private readonly want = new Float32Array(AREAS.length);
-  readonly w = new Float32Array(AREAS.length);
+  /** Eased weight per nearby place (by id); the rest of the weight is the plain forest (Moonwell's look). */
+  private readonly w = new Map<string, { place: Place; w: number }>();
+  private readonly want: Weighted[] = [];
   private first = true;
   private readonly c = new Color();
 
   follow(x: number, z: number, dt: number): void {
-    areaWeights(x, z, this.want);
+    const n = placeWeights(x, z, this.want);
     const k = this.first ? 1 : Math.min(1, dt * 0.9);
     this.first = false;
-    for (let i = 0; i < this.w.length; i++) this.w[i]! += (this.want[i]! - this.w[i]!) * k;
+    for (const e of this.w.values()) e.w += (0 - e.w) * k;
+    for (let i = 0; i < n; i++) {
+      const { place, w } = this.want[i]!;
+      const e = this.w.get(place.id);
+      if (e) e.w += w * k;
+      else this.w.set(place.id, { place, w: w * k });
+    }
+    for (const [id, e] of this.w) if (e.w < 1e-4) this.w.delete(id);
   }
 
   /** Extra glow (mushrooms, lilies) a place keeps whatever the time of day. */
-  glowOf(id: AreaId): number {
-    return LOOKS[id].glowAdd;
+  glowOf(p: Place): number {
+    return lookOf(p).glowAdd;
+  }
+
+  reset(): void {
+    this.w.clear();
+    this.first = true;
   }
 
   apply(tod: TodState): void {
     let fogK = 0;
-    let fogScale = 0;
-    let sunK = 0;
-    let hemiK = 0;
+    let rest = 1;
+    for (const e of this.w.values()) rest -= e.w;
+    rest = Math.max(0, rest);
+    let fogScale = rest;
+    let sunK = rest;
+    let hemiK = rest;
     let glow = 0;
     let mist = 0;
-    let exp = 0;
+    let exp = rest;
     const fog = this.c.setRGB(0, 0, 0);
     let fogW = 0;
-    for (const a of AREAS) {
-      const w = this.w[AREA_INDEX[a.id]]!;
+    for (const { place, w } of this.w.values()) {
       if (w <= 0) continue;
-      const L = LOOKS[a.id];
+      const L = lookOf(place);
       fogScale += L.fogScale * w;
       sunK += L.sunK * w;
       hemiK += L.hemiK * w;
@@ -50,10 +65,8 @@ export class Mood {
         fog.r += L.fog.r * w; fog.g += L.fog.g * w; fog.b += L.fog.b * w;
         fogW += w;
       }
-      if (a.id !== "moonwell") {
-        tod.hemiSky.lerp(this.tint(tod.hemiSky, L.hemiSky), w * 0.5);
-        tod.grade.multiply(this.c2.setRGB(1, 1, 1).lerp(L.grade, w));
-      }
+      tod.hemiSky.lerp(this.tint(tod.hemiSky, L.hemiSky), w * 0.5);
+      tod.grade.multiply(this.c2.setRGB(1, 1, 1).lerp(L.grade, w));
     }
     if (fogW > 0) {
       fog.multiplyScalar(1 / fogW);
@@ -80,7 +93,7 @@ export class Mood {
     return this.c3.copy(hue).multiplyScalar(lum / Math.max(0.02, hl));
   }
 
-  debug(): number[] {
-    return Array.from(this.w);
+  debug(): Record<string, number> {
+    return Object.fromEntries([...this.w].map(([id, e]) => [id, Math.round(e.w * 100) / 100]));
   }
 }

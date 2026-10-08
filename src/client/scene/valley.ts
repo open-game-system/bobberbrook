@@ -1,15 +1,14 @@
 import { Color } from "three";
-import { AREAS, NORTH, TRAILS, TRAIL_HALF_WIDTH, angleGap, outerRadius, pondRadius, segmentDistance, type Area, type AreaId } from "../../game/world";
+import { NORTH, TRAIL_HALF_WIDTH, angleGap, pondRadius, segmentDistance, type AreaId } from "../../game/world";
+import type { Biome, Place } from "../../game/regions";
 import { smoothstep } from "./noise";
+import { clearingEdge, placesAround, trailsAround, type SceneTrail } from "./worldQuery";
 
 /**
  * The valley as the scene sees it: how far a point is from open ground (clearings and trails), which
  * pond it is nearest, and how much each place "owns" it (for its sub-palette). Shared by the terrain,
  * the forest, the dressing and the mood blending, so they all agree with world.ts walkability.
  */
-
-/** The ground mesh and forest cover this rectangle (metres). */
-export const VALLEY = { x0: -125, x1: 125, z0: -135, z1: 95 } as const;
 
 export const AREA_INDEX: Record<AreaId, number> = { moonwell: 0, mistmarsh: 1, pools: 2, hollow: 3, tarn: 4 };
 
@@ -22,27 +21,22 @@ function cliffFactor(theta: number): number {
   return Math.max(0, 1 - angleGap(theta, NORTH) / 0.75);
 }
 
-export type OpenInfo = { o: number; cliff: number; trail: number; trailIndex: number; along: number };
+export type OpenInfo = { o: number; cliff: number; trail: number; along: number; path: SceneTrail | null };
 
-/** The clearing edge's signed distance for one place (negative inside its clearing). */
-export function clearingEdge(a: Area, x: number, z: number): number {
-  const dx = x - a.center.x;
-  const dz = z - a.center.z;
-  const r = Math.hypot(dx, dz);
-  if (a.id === "moonwell") return r - outerRadius(Math.atan2(dz, dx));
-  return r - (a.pond.r + a.clearing);
-}
+export const newOpenInfo = (): OpenInfo => ({ o: 0, cliff: 0, trail: 0, along: 0, path: null });
+
+const PT = { x: 0, z: 0 };
 
 /**
  * Signed distance (metres) from open ground: negative inside a clearing or on a trail, positive in the
- * forest. Also the cliff factor (Moonwell's falls cliff) and the nearest trail (index, distance from its
- * centre line, distance along it).
+ * forest. Also the cliff factor (Moonwell's falls cliff) and the nearest trail (it, distance from its
+ * centre line, distance along it). Works anywhere in the endless world (places and trails near the point).
  */
 export function openAt(x: number, z: number, out: OpenInfo): OpenInfo {
   let o = Infinity;
   let moon = Infinity;
   let cliff = 0;
-  for (const a of AREAS) {
+  for (const a of placesAround(x, z)) {
     const e = clearingEdge(a, x, z);
     if (a.id === "moonwell") {
       moon = e;
@@ -51,39 +45,44 @@ export function openAt(x: number, z: number, out: OpenInfo): OpenInfo {
     o = o === Infinity ? e : smin(o, e, 5);
   }
   let best = Infinity;
-  let bi = -1;
   let along = 0;
-  TRAILS.forEach((t, i) => {
-    const d = segmentDistance({ x, z }, t.from, t.to);
+  let path: SceneTrail | null = null;
+  PT.x = x;
+  PT.z = z;
+  for (const t of trailsAround(x, z)) {
+    const d = segmentDistance(PT, t.from, t.to);
     if (d < best) {
       best = d;
-      bi = i;
-      const dx = t.to.x - t.from.x;
-      const dz = t.to.z - t.from.z;
-      along = ((x - t.from.x) * dx + (z - t.from.z) * dz) / Math.hypot(dx, dz);
+      path = t;
+      along = (x - t.from.x) * t.ux + (z - t.from.z) * t.uz;
     }
-  });
-  o = smin(o, best - TRAIL_HALF_WIDTH, 5);
+  }
+  if (o === Infinity) o = 200;
+  if (best < Infinity) o = smin(o, best - TRAIL_HALF_WIDTH, 5);
   out.o = o;
-  out.cliff = cliff * Math.max(0, Math.min(1, 1 - (moon - o) / 4));
+  out.cliff = moon === Infinity ? 0 : cliff * Math.max(0, Math.min(1, 1 - (moon - o) / 4));
   out.trail = best;
-  out.trailIndex = bi;
   out.along = along;
+  out.path = path;
   return out;
 }
 
 /** True when a point is at least `margin` metres outside every trail. */
 export function clearOfTrails(x: number, z: number, margin: number): boolean {
-  const p = { x, z };
-  return TRAILS.every((t) => segmentDistance(p, t.from, t.to) > TRAIL_HALF_WIDTH + margin);
+  PT.x = x;
+  PT.z = z;
+  return trailsAround(x, z).every((t) => segmentDistance(PT, t.from, t.to) > TRAIL_HALF_WIDTH + margin);
 }
 
-export type PondInfo = { d: number; area: Area; theta: number };
+export type PondInfo = { d: number; area: Place | null; theta: number };
+
+export const newPondInfo = (): PondInfo => ({ d: 0, area: null, theta: 0 });
 
 /** Distance outside the nearest pond's edge (negative in the water). */
 export function pondAt(x: number, z: number, out: PondInfo): PondInfo {
   let d = Infinity;
-  for (const a of AREAS) {
+  out.area = null;
+  for (const a of placesAround(x, z)) {
     const dx = x - a.center.x;
     const dz = z - a.center.z;
     const r = Math.hypot(dx, dz);
@@ -96,23 +95,32 @@ export function pondAt(x: number, z: number, out: PondInfo): PondInfo {
       out.theta = th;
     }
   }
-  out.d = d;
+  out.d = d === Infinity ? 999 : d;
   return out;
 }
 
-/** How much each place owns a point (0..1 each; Moonwell is the baseline, so its weight is the rest). */
-export function areaWeights(x: number, z: number, out: Float32Array): Float32Array {
+export type Weighted = { place: Place; w: number };
+
+/**
+ * How much each nearby place owns a point (0..1 each; the rest is the plain forest baseline, which is
+ * Moonwell's neutral look). Fills `out` and returns how many entries it wrote.
+ */
+export function placeWeights(x: number, z: number, out: Weighted[]): number {
+  let n = 0;
   let sum = 0;
-  for (let i = 1; i < AREAS.length; i++) {
-    const a = AREAS[i]!;
+  for (const a of placesAround(x, z)) {
+    if (a.id === "moonwell") continue;
     const R = a.pond.r + a.clearing;
     const w = 1 - smoothstep(R * 0.7, R + 30, Math.hypot(x - a.center.x, z - a.center.z));
-    out[i] = w;
+    if (w <= 0) continue;
+    const slot = out[n] ?? (out[n] = { place: a, w: 0 });
+    slot.place = a;
+    slot.w = w;
     sum += w;
+    n++;
   }
-  if (sum > 1) for (let i = 1; i < AREAS.length; i++) out[i]! /= sum;
-  out[0] = Math.max(0, 1 - Math.min(1, sum));
-  return out;
+  if (sum > 1) for (let i = 0; i < n; i++) out[i]!.w /= sum;
+  return n;
 }
 
 /** A place's own look within Ashenvale: ground, canopy, water, light and air. */
@@ -177,6 +185,84 @@ export const LOOKS: Record<AreaId, AreaLook> = {
   },
 };
 
-export function lookOf(id: AreaId): AreaLook {
-  return LOOKS[id];
+const B = (h: number) => new Color(h);
+
+/** The four new biomes' looks (no concept art: from the brief), still in Ashenvale's twilight family. */
+const BIOME_LOOKS: Record<"willow" | "crystal" | "ember" | "frost", AreaLook> = {
+  // Weeping willows, hanging purple moss, pearly water.
+  willow: {
+    grassA: B(0x3e7a6a), grassB: B(0x6aa88a), grassC: B(0xb898e0),
+    canopy: [B(0xd8b0ff), B(0xc8a0f0), B(0xe8c8ff)],
+    waterShallow: B(0xf0e8ff), waterDeep: B(0xc8b8f0), calm: 0.7,
+    fog: B(0xd8c8f0), fogK: 0.45, fogScale: 0.8, sunK: 1.0, hemiK: 1.1, hemiSky: B(0xe8d8ff), glowAdd: 0.15, mistAdd: 0.35, exposureK: 1.05, grade: B(0xfaf4ff),
+  },
+  // Pale glowing crystal clusters, prism light.
+  crystal: {
+    grassA: B(0x3a6a7a), grassB: B(0x5a9aa0), grassC: B(0xa0c0ff),
+    canopy: [B(0xb0d0ff), B(0xc0b8ff), B(0xa8f0f0)],
+    waterShallow: B(0xc0ffff), waterDeep: B(0x90a8ff), calm: 0.6,
+    fog: B(0xa8c0f0), fogK: 0.45, fogScale: 0.85, sunK: 0.95, hemiK: 1.05, hemiSky: B(0xd0e0ff), glowAdd: 0.45, mistAdd: 0.2, exposureK: 1.04, grade: B(0xf0f6ff),
+  },
+  // Amber and copper autumn canopy, warm lanterns: twilight, not summer.
+  ember: {
+    grassA: B(0x5a6a4a), grassB: B(0x8a8a5a), grassC: B(0xc08a6a),
+    canopy: [B(0xffb070), B(0xff9a60), B(0xffc890)],
+    waterShallow: B(0xffe8c8), waterDeep: B(0xc890a0), calm: 0.4,
+    fog: B(0xe0a890), fogK: 0.45, fogScale: 0.85, sunK: 1.05, hemiK: 1.0, hemiSky: B(0xffd8c0), glowAdd: 0.3, mistAdd: 0.15, exposureK: 1.03, grade: B(0xfff2e8),
+  },
+  // Snowy pines, frosted grass, pale blue ice edge.
+  frost: {
+    grassA: B(0x9ab0c8), grassB: B(0xc8d8e8), grassC: B(0xb0b8f0),
+    canopy: [B(0xd0e0ff), B(0xc0d0f0), B(0xe0e8ff)],
+    waterShallow: B(0xd8f8ff), waterDeep: B(0x8098e0), calm: 0.85,
+    fog: B(0xc8d8f8), fogK: 0.5, fogScale: 0.8, sunK: 1.0, hemiK: 1.1, hemiSky: B(0xe0ecff), glowAdd: 0.2, mistAdd: 0.25, exposureK: 1.0, grade: B(0xf2f6ff),
+  },
+};
+
+const HOME_OF: Record<"marsh" | "pools" | "hollow" | "tarn", AreaId> = { marsh: "mistmarsh", pools: "pools", hollow: "hollow", tarn: "tarn" };
+
+export function biomeLook(b: Biome): AreaLook {
+  if (b === "moonwell") return LOOKS.moonwell;
+  if (b === "willow" || b === "crystal" || b === "ember" || b === "frost") return BIOME_LOOKS[b];
+  return LOOKS[HOME_OF[b]];
+}
+
+/** A cheap hash of a place key in [0, 1) per salt. */
+export function placeHash(key: string, salt: number): number {
+  let h = 2166136261 ^ salt;
+  for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 16777619);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+const lookCache = new Map<string, AreaLook>();
+const hsl = { h: 0, s: 0, l: 0 };
+
+function vary(c: Color, dh: number, dl: number): Color {
+  const o = c.clone();
+  o.getHSL(hsl);
+  o.setHSL((hsl.h + dh + 1) % 1, hsl.s, Math.max(0, Math.min(1, hsl.l * (1 + dl))));
+  return o;
+}
+
+/** A place's look: the home valley's hand-tuned ones, else its biome's with a seeded sub-palette. */
+export function lookOf(p: Place): AreaLook {
+  if (p.home) return LOOKS[p.id];
+  const hit = lookCache.get(p.key);
+  if (hit) return hit;
+  const base = biomeLook(p.biome);
+  const dh = (placeHash(p.key, 1) - 0.5) * 0.08;
+  const dl = (placeHash(p.key, 2) - 0.5) * 0.18;
+  const dc = (placeHash(p.key, 3) - 0.5) * 0.12;
+  const look: AreaLook = {
+    ...base,
+    grassA: vary(base.grassA, dh, dl),
+    grassB: vary(base.grassB, dh * 0.7, dl),
+    grassC: vary(base.grassC, dh * 1.5, dl * 0.5),
+    canopy: base.canopy.map((c, i) => vary(c, dc + (i - 1) * 0.02, dl * 0.5)),
+    waterShallow: vary(base.waterShallow, dh * 0.6, 0),
+    waterDeep: vary(base.waterDeep, dh, 0),
+  };
+  lookCache.set(p.key, look);
+  return look;
 }

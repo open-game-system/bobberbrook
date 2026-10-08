@@ -22,7 +22,7 @@ import {
   type Material,
   type ShaderMaterial as SM,
 } from "three";
-import { areaById, pondRadius, type Area, type AreaId } from "../../game/world";
+import { pondRadius, type Area, type AreaId } from "../../game/world";
 import { cliffRockGeometry, instanced, rockGeometry, type Inst } from "./kit";
 import { jitter, merge, paint, prep, puffNormals } from "./geo";
 import { rng, vnoise } from "./noise";
@@ -134,13 +134,13 @@ function lanternPost(h: number): { wood: BufferGeometry; glass: BufferGeometry }
 
 export type Landmark = { group: Group; update(tod: TodState, time: number, pulse: number): void; dispose(): void };
 
-type Ctx = { a: Area; wood: BufferGeometry[]; glow: BufferGeometry[]; full: boolean; group: Group; painted: Material; tree: Material; extra: { dispose(): void }[]; flows: SM[] };
+type Ctx = { a: Area; seed: number; wood: BufferGeometry[]; glow: BufferGeometry[]; full: boolean; group: Group; painted: Material; tree: Material; extra: { dispose(): void }[]; flows: SM[] };
 
 // ---------- Mistmarsh ----------
 
 function mistmarsh(c: Ctx): void {
   const { a } = c;
-  const R = rng(51);
+  const R = rng(51 + c.seed);
   // Weeping willows framing the marsh (trunks just outside the clearing; curtains over it).
   const willows: Inst[] = [];
   for (const th of [-2.75, -1.95, -1.05, -0.2, 2.55, 3.05]) {
@@ -299,7 +299,7 @@ function giantMushroom(seed: number, h: number, capR: number, hue: number): { st
 
 function hollow(c: Ctx): void {
   const { a } = c;
-  const R = rng(73);
+  const R = rng(73 + c.seed);
   // Giant glowing mushrooms just outside the clearing, caps arching over it (teal and violet).
   const spots: [number, number, number, number][] = [
     [-2.75, 11, 5.5, 0.5], [-1.3, 9, 6.0, 0.48], [-0.75, 8, 4.6, 0.75], [-0.05, 12, 5.2, 0.5], [0.55, 9, 4.0, 0.76], [2.45, 12, 5.0, 0.76], [2.0, 8, 3.8, 0.52], [-2.25, 7, 4.2, 0.74],
@@ -314,6 +314,8 @@ function hollow(c: Ctx): void {
   });
   // Great roots arching overhead between the giants.
   for (const [t0, t1, hh] of [[-2.2, -1.5, 7], [-0.9, -0.15, 6], [1.9, 2.6, 5.5]] as [number, number, number][]) {
+    // Generated hollows keep the camera's (south) side open.
+    if (c.seed !== 0 && Math.sin((t0 + t1) / 2) > 0.2) continue;
     const r0 = a.pond.r + a.clearing + 1;
     const p0 = atR(a, t0, r0);
     const p1 = atR(a, t1, r0);
@@ -350,7 +352,7 @@ function hollow(c: Ctx): void {
 
 function pools(c: Ctx): void {
   const { a } = c;
-  const R = rng(91);
+  const R = rng(91 + c.seed);
   const water = flowMaterial(3.6, 1);
   c.flows.push(water);
   c.extra.push(water);
@@ -448,7 +450,7 @@ function pools(c: Ctx): void {
 
 function tarn(c: Ctx): void {
   const { a } = c;
-  const R = rng(17);
+  const R = rng(17 + c.seed);
   // Standing stones in a ring, each on a little islet just off the shore; soft light runes face the water.
   const stones: BufferGeometry[] = [];
   for (let i = 0; i < 11; i++) {
@@ -511,11 +513,13 @@ const GLOW_BASE: Record<Exclude<AreaId, "moonwell">, [number, number]> = {
   tarn: [0.9, 1.9],
 };
 
-export function buildLandmark(id: Exclude<AreaId, "moonwell">, full: boolean, painted: Material, tree: Material): Landmark {
-  const a = areaById(id);
+export type LandmarkStyle = Exclude<AreaId, "moonwell">;
+
+export function buildLandmark(a: Area, style: LandmarkStyle, seed: number, full: boolean, painted: Material, tree: Material): Landmark {
+  const id = style;
   const group = new Group();
-  group.name = `landmark-${id}`;
-  const c: Ctx = { a, wood: [], glow: [], full, group, painted, tree, extra: [], flows: [] };
+  group.name = `landmark-${a.id}`;
+  const c: Ctx = { a, seed, wood: [], glow: [], full, group, painted, tree, extra: [], flows: [] };
   BUILDERS[id](c);
   const glowMat = new MeshBasicMaterial({ vertexColors: true });
   if (c.wood.length) {

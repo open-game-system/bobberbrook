@@ -1,5 +1,7 @@
 import { Color, InstancedBufferAttribute, InstancedMesh, Matrix4, PlaneGeometry, ShaderMaterial, UniformsLib, UniformsUtils } from "three";
-import { AREAS, TRAILS, pondRadius, type AreaId } from "../../game/world";
+import { pondRadius } from "../../game/world";
+import type { Place } from "../../game/regions";
+import type { SceneTrail } from "./worldQuery";
 import { rng } from "./noise";
 import type { TodState } from "./tod";
 
@@ -63,47 +65,20 @@ void main() {
   #include <fog_fragment>
 }`;
 
-type Card = { area: AreaId; kind: "marsh" | "veil" | "glow"; base: number };
+type Card = { area: string; kind: "marsh" | "veil" | "glow"; base: number };
+
+const CAP = 720;
 
 export type Mist = {
   mesh: InstancedMesh;
-  update(tod: TodState, time: number, veil: Float32Array, near: number): void;
+  /** Lays the cards out over these places (and the glows at their trail ends). */
+  assign(places: readonly Place[], trails: readonly SceneTrail[]): void;
+  update(tod: TodState, time: number, veilOf: (id: string) => number, near: number): void;
   dispose(): void;
 };
 
 export function buildMist(full: boolean): Mist {
-  const R = rng(808);
   const cards: Card[] = [];
-  const mats: Matrix4[] = [];
-  const add = (area: AreaId, kind: Card["kind"], x: number, y: number, z: number, s: number, base: number) => {
-    cards.push({ area, kind, base });
-    mats.push(new Matrix4().makeScale(s, s, s).setPosition(x, y, z));
-  };
-  for (const a of AREAS) {
-    if (a.id === "moonwell") continue;
-    // Low mist lying on the marsh water.
-    if (a.id === "mistmarsh") {
-      for (let i = 0; i < (full ? 16 : 9); i++) {
-        const th = R() * Math.PI * 2;
-        const r = pondRadius(a, th) * Math.sqrt(R()) * 0.95;
-        add(a.id, "marsh", a.center.x + Math.cos(th) * r, 0.7, a.center.z + Math.sin(th) * r, 7 + R() * 5, 0.22);
-      }
-    }
-    // The veil: a thick bank of mist over the whole clearing.
-    const R0 = a.pond.r + a.clearing;
-    for (let i = 0; i < (full ? 22 : 12); i++) {
-      const th = R() * Math.PI * 2;
-      const r = R0 * Math.sqrt(R()) * 1.05;
-      add(a.id, "veil", a.center.x + Math.cos(th) * r, 1.5 + R() * 4, a.center.z + Math.sin(th) * r, 12 + R() * 8, 0.85);
-    }
-  }
-  // At each trail's end into a hidden place: a soft glow in the mist, to walk toward.
-  for (const t of TRAILS) {
-    for (const [end, id] of [[t.from, t.joins[0]], [t.to, t.joins[1]]] as const) {
-      if (id === "moonwell") continue;
-      for (let k = 0; k < 3; k++) add(id, "glow", end.x + (R() - 0.5) * 3, 1.6 + k * 1.1, end.z + (R() - 0.5) * 3, 5 + k * 2.5, 0.55 - k * 0.12);
-    }
-  }
   const geo = new PlaneGeometry(1, 1);
   const mat = new ShaderMaterial({
     vertexShader: VERT,
@@ -113,31 +88,76 @@ export function buildMist(full: boolean): Mist {
     fog: true,
     uniforms: UniformsUtils.merge([UniformsLib.fog, { uTime: { value: 0 }, uNear: { value: 0 } }]),
   });
-  const mesh = new InstancedMesh(geo, mat, cards.length);
-  mats.forEach((m, i) => mesh.setMatrixAt(i, m));
-  const alpha = new InstancedBufferAttribute(new Float32Array(cards.length), 1);
-  const seed = new InstancedBufferAttribute(new Float32Array(cards.map(() => R())), 1);
-  const color = new InstancedBufferAttribute(new Float32Array(cards.length * 3), 3);
+  const mesh = new InstancedMesh(geo, mat, CAP);
+  const alpha = new InstancedBufferAttribute(new Float32Array(CAP), 1);
+  const seedR = rng(808);
+  const seed = new InstancedBufferAttribute(new Float32Array(Array.from({ length: CAP }, () => seedR())), 1);
+  const color = new InstancedBufferAttribute(new Float32Array(CAP * 3), 3);
   geo.setAttribute("aAlpha", alpha);
   geo.setAttribute("aSeed", seed);
   geo.setAttribute("aColor", color);
   mesh.frustumCulled = false;
   mesh.renderOrder = 6;
   mesh.name = "mist";
-  const idx = new Map(AREAS.map((a, i) => [a.id, i]));
+  mesh.count = 0;
+  const m4 = new Matrix4();
   const veilCol = new Color();
   const glowCol = new Color();
   const marshCol = new Color();
+  let sig = "";
   return {
     mesh,
-    update(tod, time, veil, near) {
+    assign(places, trails) {
+      const next = places.map((p) => p.id).join(";");
+      if (next === sig) return;
+      sig = next;
+      cards.length = 0;
+      const add = (area: string, kind: Card["kind"], x: number, y: number, z: number, s: number, base: number) => {
+        if (cards.length >= CAP) return;
+        m4.makeScale(s, s, s).setPosition(x, y, z);
+        mesh.setMatrixAt(cards.length, m4);
+        cards.push({ area, kind, base });
+      };
+      const ids = new Set(places.map((p) => p.id));
+      for (const a of places) {
+        if (a.id === "moonwell") continue;
+        const R = rng(Math.floor(a.center.x * 31 + a.center.z * 17) + 808);
+        // Low mist lying on the marsh water.
+        if (a.biome === "marsh" || a.biome === "willow") {
+          for (let i = 0; i < (full ? 16 : 9); i++) {
+            const th = R() * Math.PI * 2;
+            const r = pondRadius(a, th) * Math.sqrt(R()) * 0.95;
+            add(a.id, "marsh", a.center.x + Math.cos(th) * r, 0.7, a.center.z + Math.sin(th) * r, 7 + R() * 5, a.biome === "willow" ? 0.16 : 0.22);
+          }
+        }
+        // The veil: a thick bank of mist over the whole clearing.
+        const R0 = a.pond.r + a.clearing;
+        for (let i = 0; i < (full ? 22 : 12); i++) {
+          const th = R() * Math.PI * 2;
+          const r = R0 * Math.sqrt(R()) * 1.05;
+          add(a.id, "veil", a.center.x + Math.cos(th) * r, 1.5 + R() * 4, a.center.z + Math.sin(th) * r, 12 + R() * 8, 0.85);
+        }
+      }
+      // At each trail's end into a hidden place: a soft glow in the mist, to walk toward.
+      const R = rng(909);
+      for (const t of trails) {
+        for (const [end, id] of [[t.from, t.a], [t.to, t.b]] as const) {
+          const place = places.find((p) => p.key === id);
+          if (!place || place.id === "moonwell" || !ids.has(place.id)) continue;
+          for (let k = 0; k < 3; k++) add(place.id, "glow", end.x + (R() - 0.5) * 3, 1.6 + k * 1.1, end.z + (R() - 0.5) * 3, 5 + k * 2.5, 0.55 - k * 0.12);
+        }
+      }
+      mesh.count = cards.length;
+      mesh.instanceMatrix.needsUpdate = true;
+    },
+    update(tod, time, veilOf, near) {
       mat.uniforms.uTime!.value = time;
       mat.uniforms.uNear!.value = near;
       veilCol.copy(tod.fog).lerp(tod.hemiSky, 0.35).multiplyScalar(0.95);
       glowCol.setRGB(0.75, 0.7, 1.0).lerp(tod.hemiSky, 0.2).multiplyScalar(1.2 + 0.8 * tod.glow);
       marshCol.copy(tod.fog).lerp(new Color(1, 1, 1), 0.35);
       cards.forEach((c, i) => {
-        const v = veil[idx.get(c.area) ?? 0] ?? 0;
+        const v = veilOf(c.area);
         let a = 0;
         let col = veilCol;
         if (c.kind === "marsh") {

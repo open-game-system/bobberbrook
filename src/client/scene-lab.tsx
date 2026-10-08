@@ -1,14 +1,16 @@
 /**
  * Scene lab: the TV scene full-window, driven by a local simulation with the real lake rules and
  * simple bots. ?scenario=morning|four-reel|golden-swirl|night-catch|rod-upgrade|campfire|empty|
- * moonwell|mistmarsh|pools|hollow|tarn|trail|discovery|night-tarn &phase=0..1 &seed=N &lite=1 &view=name
+ * moonwell|mistmarsh|pools|hollow|tarn|trail|discovery|night-tarn|far-place|biome-<biome>|boat-ride|
+ * zeppelin-ride|boarding|fog &phase=0..1 &seed=N &world=N (world seed, default 7) &lite=1 &view=name
  */
 import { produce } from "immer";
 import { CATCH_SKIP_MS, SEAT_COLORS, action, join, move, newLake, reelHold, setCampfire, step, type Fisher, type Lake } from "../game/lake";
 import { DAY_MS, DAY_START } from "../game/daycycle";
 import { fishById } from "../game/fish";
 import { thrashingAt } from "../game/reel";
-import { AREAS, DOCK, TRAILS, areaAt, areaById, castFrom, castRing, castRingIn, distance, lakeRadius, pondRadius, type AreaId, type Vec } from "../game/world";
+import { AREAS, DOCK, TRAILS, areaAt, areaById, castRing, castRingIn, distance, lakeRadius, pondRadius, type AreaId, type Vec } from "../game/world";
+import { worldFor, type Biome, type Place, type Platform } from "../game/regions";
 import { createLakeScene } from "./scene";
 
 type Bot = { target: Vec; hookAt: number; nextCastAt: number; stick: { x: number; y: number }; holding: boolean; reactAt: number; wander: boolean };
@@ -83,6 +85,92 @@ function forceSwirl(lake: Lake, theta: number, golden: boolean, now: number): La
 
 const inCatch = (lake: Lake, now: number, min: number, max: number) =>
   lake.fishers.some((f) => f.mode === "catch" && f.catch !== null && now - f.catch.at >= min && now - f.catch.at <= max);
+
+// ---- the endless world (?world=N) ----
+const WORLD_SEED = Number(new URLSearchParams(location.search).get("world") ?? "7");
+const W = worldFor(WORLD_SEED);
+const castFrom = (p: Vec) => W.castFrom(p);
+/** A spot on any place's shore, `out` metres from the water. */
+const shoreOf = (p: Place, theta: number, out = 1.3): Vec => {
+  const r = pondRadius(p, theta) + out;
+  return { x: p.center.x + Math.cos(theta) * r, z: p.center.z + Math.sin(theta) * r };
+};
+/** The nearest generated place of a biome (or at a ring). */
+function findPlace(test: (p: Place) => boolean): Place {
+  for (let ring = 1; ring < 9; ring++) {
+    const hit = W.placesNear({ x: 0, z: 0 }, ring).filter((p) => !p.home && p.ring === ring && test(p));
+    if (hit.length) return hit.sort((a, b) => a.key.localeCompare(b.key))[0]!;
+  }
+  throw new Error("no such place in this world");
+}
+function findPlatform(kind: "boat" | "zeppelin"): Platform {
+  for (let ring = 0; ring < 9; ring++) {
+    const hit = W.platformsNear({ x: 0, z: 0 }, ring).filter((p) => p.kind === kind);
+    if (hit.length) return hit[0]!;
+  }
+  throw new Error(`no ${kind} in this world`);
+}
+/** The family fishing at a generated place (found, its fog lifted). */
+function atPlace(p: Place, phase: number): Scenario {
+  return {
+    phase,
+    fishers: [
+      { seat: 0, name: "Dad", spot: shoreOf(p, 1.9), at: shoreOf(p, 1.9, 2.5) },
+      { seat: 2, name: "Juneau", spot: shoreOf(p, 1.3), at: shoreOf(p, 1.3, 2.5) },
+      { seat: 3, name: "Sis", spot: shoreOf(p, 0.7), easy: true, at: shoreOf(p, 0.7, 2.5) },
+    ],
+    setup: (l) => produce(l, (d) => { d.discovered = ["moonwell", p.id]; }),
+    hero: calm,
+  };
+}
+/** The family gathered at a dock or mooring: boards after BOARD_MS, then rides. */
+function atPlatform(pl: Platform, phase: number, until: (l: Lake) => boolean, hero: Scenario["hero"]): Scenario {
+  const dx = pl.to.x - pl.at.x;
+  const dz = pl.to.z - pl.at.z;
+  const len = Math.hypot(dx, dz) || 1;
+  const near = (k: number, side: number): Vec => ({ x: pl.at.x - (dx / len) * (0.6 + k) - (dz / len) * side, z: pl.at.z - (dz / len) * (0.6 + k) + (dx / len) * side });
+  return {
+    phase,
+    fishers: [
+      { seat: 0, name: "Dad", spot: near(0.4, 1.1), at: near(0.4, 1.1) },
+      { seat: 1, name: "Mom", spot: near(0.4, -1.1), at: near(0.4, -1.1) },
+      { seat: 2, name: "Juneau", spot: near(1.6, 0.5), at: near(1.6, 0.5) },
+      { seat: 3, name: "Sis", spot: near(1.6, -0.6), easy: true, at: near(1.6, -0.6) },
+    ],
+    setup: (l) => produce(l, (d) => { d.discovered = ["moonwell", pl.place, pl.toPlace]; }),
+    warmUntil: until,
+    hero,
+  };
+}
+const BIOME_SCENES = Object.fromEntries(
+  (["marsh", "pools", "hollow", "tarn", "willow", "crystal", "ember", "frost"] as const).map((b: Exclude<Biome, "moonwell">) => [`biome-${b}`, () => atPlace(findPlace((p) => p.biome === b), 0.3)]),
+);
+const rideK = (l: Lake) => (l.ride ? (l.now - l.ride.departAt) / (l.ride.arriveAt - l.ride.departAt) : 0);
+const LAZY: Record<string, () => Scenario> = {
+  ...BIOME_SCENES,
+  "far-place": () => atPlace(findPlace((p) => p.ring === 4), 0.32),
+  "boat-ride": () => atPlatform(findPlatform("boat"), 0.3, (l) => l.ride !== null && rideK(l) > 0.35, (l, now, s) => now - s > 2500 && l.ride !== null),
+  "zeppelin-ride": () => atPlatform(findPlatform("zeppelin"), 0.36, (l) => l.ride !== null && rideK(l) > 0.4, (l, now, s) => now - s > 2500 && l.ride !== null),
+  boarding: () => atPlatform(findPlatform("boat"), 0.4, (l) => l.boarding !== null, (l, now, s) => now - s > 1200 && l.boarding !== null),
+  // The edge of what the family has explored: they came down the trail south of Moonwell Lake.
+  fog: () => {
+    const p = W.placeAt({ i: 0, j: 1 }) ?? findPlace(() => true);
+    const t = W.trailsNear(p.center, 1).find((tr) => tr.a === p.key || tr.b === p.key);
+    const end = t ? (t.a === p.key ? t.from : t.to) : p.center;
+    const toward = shoreOf(p, -Math.PI / 2, 2);
+    const mid: Vec = { x: end.x * 0.7 + toward.x * 0.3, z: end.z * 0.7 + toward.z * 0.3 };
+    return {
+      phase: 0.34,
+      fishers: [
+        { seat: 0, name: "Dad", spot: toward, at: { x: mid.x + 1, z: mid.z } },
+        { seat: 2, name: "Juneau", spot: toward, at: { x: mid.x - 1, z: mid.z + 0.5 } },
+      ],
+      setup: (l) => produce(l, (d) => { d.discovered = ["moonwell", p.id]; }),
+      warmUntil: () => true,
+      hero: (_l, now, s) => now - s > 3500,
+    };
+  },
+};
 
 const SCENARIOS: Record<string, Scenario> = {
   morning: {
@@ -353,8 +441,8 @@ function botStep(lake: Lake, f: Fisher, bot: Bot, now: number): Lake {
 async function main(): Promise<void> {
   const q = new URLSearchParams(location.search);
   const name = q.get("scenario") ?? "morning";
-  const sc = SCENARIOS[name];
-  if (!sc) throw new Error(`unknown scenario ${name}; try ${Object.keys(SCENARIOS).join(", ")}`);
+  const sc = SCENARIOS[name] ?? LAZY[name]?.();
+  if (!sc) throw new Error(`unknown scenario ${name}; try ${[...Object.keys(SCENARIOS), ...Object.keys(LAZY)].join(", ")}`);
   const seed = Number(q.get("seed") ?? "7");
   const forceFish = q.get("fish");
   const phaseQ = q.get("phase");
@@ -368,6 +456,7 @@ async function main(): Promise<void> {
   let now = 1_000_000;
   const startedAt = now - (((phase - DAY_START) % 1) + 1) % 1 * DAY_MS;
   let lake = newLake(seed, startedAt);
+  lake = produce(lake, (d) => { d.worldSeed = WORLD_SEED; });
   lake = step(lake, now);
   const bots = new Map<number, Bot>();
   for (const spec of sc.fishers) {
@@ -450,6 +539,7 @@ async function main(): Promise<void> {
     pump();
   }));
   void distance;
+  void areaAt;
 }
 
 main().catch((e: unknown) => {

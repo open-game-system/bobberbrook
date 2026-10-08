@@ -11,8 +11,9 @@ import {
   Vector3,
   Vector4,
 } from "three";
-import { AREAS, pondRadius, type Area } from "../../game/world";
-import { LOOKS } from "./valley";
+import { pondRadius, type Area } from "../../game/world";
+import type { Place } from "../../game/regions";
+import { lookOf } from "./valley";
 import type { TodState } from "./tod";
 import { FALLS, heightAt } from "./terrain";
 
@@ -217,23 +218,114 @@ void main() {
   #include <fog_fragment>
 }`;
 
+/** Ponds drawn at once: the nearest places to the action get a slot (the shader count stays flat). */
+export const POND_SLOTS = 6;
+
+const SEA_VERT = /* glsl */ `
+#include <fog_pars_vertex>
+attribute vec2 aSea;
+uniform float uTime;
+varying vec3 vWorld;
+varying vec2 vSea;
+void main() {
+  vSea = aSea;
+  vec4 wp = modelMatrix * vec4(position, 1.0);
+  // A gentle swell, calm at the shore.
+  float k = smoothstep(0.0, 2.5, aSea.x);
+  wp.y += (sin(wp.x * 0.09 + uTime * 0.6) * 0.5 + sin(wp.z * 0.07 - uTime * 0.45) * 0.5) * 0.22 * k;
+  vWorld = wp.xyz;
+  vec4 mvPosition = viewMatrix * wp;
+  gl_Position = projectionMatrix * mvPosition;
+  #include <fog_vertex>
+}`;
+
+const SEA_FRAG = /* glsl */ `
+#include <fog_pars_fragment>
+uniform vec3 uShallow;
+uniform vec3 uSkyTop;
+uniform vec3 uSkyHorizon;
+uniform vec3 uSunDir;
+uniform vec3 uSunCol;
+uniform float uTime;
+uniform float uGlow;
+uniform float uStars;
+uniform vec4 uRipples[${MAX_RIPPLES}];
+varying vec3 vWorld;
+varying vec2 vSea;
+${NOISE_GLSL}
+void main() {
+  vec2 p = vWorld.xz;
+  float depth = vSea.x;
+  vec2 g = vec2(0.0);
+  g += vec2(0.8, 0.6) * cos(dot(p, vec2(0.8, 0.6)) * 0.35 + uTime * 0.9) * 0.08;
+  g += vec2(-0.5, 0.86) * cos(dot(p, vec2(-0.5, 0.86)) * 0.7 + uTime * 1.2) * 0.05;
+  g += vec2(0.2, -0.98) * cos(dot(p, vec2(0.2, -0.98)) * 1.9 + uTime * 1.9) * 0.03;
+  float n1 = vn(p * 0.5 + uTime * 0.1);
+  float n2 = vn(p * 0.5 + vec2(0.37, 0.0) + uTime * 0.1);
+  float n3 = vn(p * 0.5 + vec2(0.0, 0.37) + uTime * 0.1);
+  g += vec2(n2 - n1, n3 - n1) * 0.3;
+  for (int i = 0; i < ${MAX_RIPPLES}; i++) {
+    vec4 rp = uRipples[i];
+    float age = uTime - rp.z;
+    if (rp.w <= 0.0 || age < 0.0 || age > 3.0) continue;
+    vec2 dv = p - rp.xy;
+    float dist = length(dv) + 1e-4;
+    float x = (dist - age * (1.1 + rp.w * 0.5)) * 4.0;
+    g += (dv / dist) * sin(x * 2.4) * exp(-x * x) * rp.w * exp(-age * 1.5) * 0.9;
+  }
+  vec3 N = normalize(vec3(-g.x, 1.0, -g.y));
+  vec3 V = normalize(cameraPosition - vWorld);
+  float cosT = clamp(dot(N, V), 0.0, 1.0);
+  float fres = 0.04 + 0.96 * pow(1.0 - cosT, 5.0);
+  float dz = smoothstep(0.2, 3.2, depth + (vn(p * 0.06) - 0.5) * 1.2);
+  vec3 shallow = mix(uShallow, vec3(0.75, 1.0, 0.95), 0.25);
+  vec3 deepC = vec3(0.12, 0.2, 0.42) * (0.55 + 0.45 * length(uShallow));
+  vec3 base = mix(shallow * 1.05, deepC, dz);
+  float c1 = vn(p * 0.9 + vec2(uTime * 0.2, -uTime * 0.15));
+  float c2 = vn(p * 1.2 - vec2(uTime * 0.18, uTime * 0.22));
+  base += vec3(0.7, 1.0, 0.9) * pow(1.0 - abs(c1 - c2), 8.0) * (1.0 - dz) * 0.2;
+  base += shallow * (0.3 + 0.7 * uGlow) * 0.06;
+  vec3 R = reflect(-V, N);
+  vec3 sky = mix(uSkyHorizon, uSkyTop, smoothstep(0.0, 0.6, R.y));
+  if (uStars > 0.01 && R.y > 0.0) {
+    vec2 sp = R.xz / (R.y + 0.35) * 90.0;
+    float rr = h21(floor(sp));
+    sky += vec3(0.9, 0.95, 1.0) * step(0.96, rr) * smoothstep(0.2, 0.0, length(fract(sp) - 0.5)) * uStars * 0.6;
+  }
+  vec3 col = mix(base, sky, fres * 0.75);
+  vec3 H = normalize(uSunDir + V);
+  col += uSunCol * (pow(max(dot(N, H), 0.0), 180.0) * 2.4 + pow(max(dot(N, H), 0.0), 30.0) * 0.1) * smoothstep(-0.05, 0.15, uSunDir.y);
+  // Soft lapping foam along the coast.
+  float lap = sin(uTime * 1.1 + vSea.y * 1.4 + vn(p * 0.4) * 5.0) * 0.18;
+  float foam = smoothstep(0.45, 0.0, depth + lap - (vn(p * 1.5 + uTime * 0.15) - 0.5) * 0.3);
+  col = mix(col, vec3(0.97, 1.0, 1.0) * (0.85 + 0.15 * uGlow), clamp(foam, 0.0, 1.0) * 0.85);
+  float alpha = mix(0.7, 0.97, smoothstep(0.0, 2.0, depth));
+  alpha = max(alpha, foam);
+  gl_FragColor = vec4(max(col, vec3(0.0)), alpha);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+  #include <fog_fragment>
+}`;
+
 export type Water = {
-  /** Moonwell Lake's water (the first pond). */
-  lake: Mesh;
-  /** Every place's pond, in AREAS order. */
+  /** The pond slots (reassigned to the nearest places as the family travels). */
   ponds: Mesh[];
+  /** The open sea's material (every sea chunk shares it). */
+  sea: ShaderMaterial;
+  /** Gives the slots to these places (nearest first; at most POND_SLOTS). */
+  assign(places: readonly Place[]): void;
   brook: Mesh;
   falls: Mesh;
   /** Add a ring ripple at (x, z) at time t (seconds). strength ≈ 0.3 nibble, 0.6 plop, 1.0+ splash. */
   ripple(x: number, z: number, t: number, strength: number): void;
   setSwirl(i: number, x: number, z: number, alpha: number, golden: number): void;
   /** 1 = an undiscovered place, veiled; 0 = found. */
-  setVeil(areaIndex: number, v: number): void;
+  setVeil(placeId: string, v: number): void;
   update(tod: TodState, time: number): void;
   dispose(): void;
 };
 
-function pondGeometry(a: Area): BufferGeometry {
+function pondGeometry(a: Place | Area): BufferGeometry {
   const big = a.pond.r > 15;
   const cols = big ? 160 : 112;
   const rows = big ? 34 : 24;
@@ -338,9 +430,9 @@ export function buildWater(): Water {
     uRipples: { value: ripples },
     uSwirls: { value: swirls },
   };
-  const pondMats: ShaderMaterial[] = [];
-  const ponds: Mesh[] = AREAS.map((a) => {
-    const look = LOOKS[a.id];
+  type Slot = { mesh: Mesh; mat: ShaderMaterial; id: string | null };
+  const slots: Slot[] = [];
+  for (let i = 0; i < POND_SLOTS; i++) {
     const m = new ShaderMaterial({
       vertexShader: LAKE_VERT,
       fragmentShader: LAKE_FRAG,
@@ -350,23 +442,47 @@ export function buildWater(): Water {
       uniforms: UniformsUtils.merge([UniformsLib.fog]),
     });
     Object.assign(m.uniforms, common, {
-      uCenter: { value: new Vector2(a.center.x, a.center.z) },
-      uPond: { value: new Vector4(a.pond.r, a.pond.bumps[0], a.pond.bumps[1], a.pond.bumps[2]) },
-      uPhase: { value: new Vector3(a.pond.phases[0], a.pond.phases[1], a.pond.phases[2]) },
-      uTintS: { value: look.waterShallow.clone() },
-      uTintD: { value: look.waterDeep.clone() },
-      uCalm: { value: look.calm },
+      uCenter: { value: new Vector2(0, 0) },
+      uPond: { value: new Vector4(1, 0, 0, 0) },
+      uPhase: { value: new Vector3() },
+      uTintS: { value: new Color(1, 1, 1) },
+      uTintD: { value: new Color(1, 1, 1) },
+      uCalm: { value: 0 },
       uVeil: { value: 0 },
-      // Only Moonwell has the falls; elsewhere the foam patch is parked far away.
-      uFallsFoot: { value: a.id === "moonwell" ? new Vector2(0, -(FALLS.edge - 0.4)) : new Vector2(9999, 9999) },
+      uFallsFoot: { value: new Vector2(9999, 9999) },
     });
-    pondMats.push(m);
-    const mesh = new Mesh(pondGeometry(a), m);
-    mesh.name = `pond-${a.id}`;
+    const mesh = new Mesh(new BufferGeometry(), m);
+    mesh.name = `pond-slot-${i}`;
     mesh.renderOrder = 1;
-    return mesh;
+    mesh.visible = false;
+    slots.push({ mesh, mat: m, id: null });
+  }
+  const give = (slot: Slot, a: Place) => {
+    const look = lookOf(a);
+    const u = slot.mat.uniforms;
+    (u.uCenter!.value as Vector2).set(a.center.x, a.center.z);
+    (u.uPond!.value as Vector4).set(a.pond.r, a.pond.bumps[0], a.pond.bumps[1], a.pond.bumps[2]);
+    (u.uPhase!.value as Vector3).set(a.pond.phases[0], a.pond.phases[1], a.pond.phases[2]);
+    (u.uTintS!.value as Color).copy(look.waterShallow);
+    (u.uTintD!.value as Color).copy(look.waterDeep);
+    u.uCalm!.value = look.calm;
+    // Only Moonwell has the falls; elsewhere the foam patch is parked far away.
+    (u.uFallsFoot!.value as Vector2).set(a.id === "moonwell" ? 0 : 9999, a.id === "moonwell" ? -(FALLS.edge - 0.4) : 9999);
+    slot.mesh.geometry.dispose();
+    slot.mesh.geometry = pondGeometry(a);
+    slot.mesh.name = `pond-${a.id}`;
+    slot.mesh.visible = true;
+    slot.id = a.id;
+  };
+  const seaMat = new ShaderMaterial({
+    vertexShader: SEA_VERT,
+    fragmentShader: SEA_FRAG,
+    transparent: true,
+    depthWrite: true,
+    fog: true,
+    uniforms: UniformsUtils.merge([UniformsLib.fog]),
   });
-  const lake = ponds[0]!;
+  Object.assign(seaMat.uniforms, common);
 
   // The brook from the foot of the falls to the lake.
   const pts: { x: number; y: number; z: number; w: number }[] = [];
@@ -399,8 +515,22 @@ export function buildWater(): Water {
 
   const u = common;
   return {
-    lake,
-    ponds,
+    ponds: slots.map((sl) => sl.mesh),
+    sea: seaMat,
+    assign(places) {
+      const want = places.slice(0, POND_SLOTS);
+      const ids = new Set<string>(want.map((p) => p.id));
+      const free = slots.filter((sl) => sl.id === null || !ids.has(sl.id));
+      for (const sl of free) {
+        sl.id = null;
+        sl.mesh.visible = false;
+      }
+      for (const p of want) {
+        if (slots.some((sl) => sl.id === p.id)) continue;
+        const sl = free.shift();
+        if (sl) give(sl, p);
+      }
+    },
     brook,
     falls,
     ripple(x, z, t, strength) {
@@ -412,9 +542,9 @@ export function buildWater(): Water {
       const s = swirls[i];
       if (s) s.set(x, z, alpha, golden);
     },
-    setVeil(i, v) {
-      const m = pondMats[i];
-      if (m) m.uniforms.uVeil!.value = v;
+    setVeil(id, v) {
+      const sl = slots.find((x) => x.id === id);
+      if (sl) sl.mat.uniforms.uVeil!.value = v;
     },
     update(tod, time) {
       u.uShallow.value.copy(tod.waterShallow);
@@ -436,8 +566,11 @@ export function buildWater(): Water {
       }
     },
     dispose() {
-      for (const p of ponds) p.geometry.dispose();
-      for (const m of pondMats) m.dispose();
+      for (const sl of slots) {
+        sl.mesh.geometry.dispose();
+        sl.mat.dispose();
+      }
+      seaMat.dispose();
       brookGeo.dispose();
       brookMat.dispose();
       fallsGeo.dispose();

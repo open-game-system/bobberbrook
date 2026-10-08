@@ -15,7 +15,8 @@ import {
 import { CAST_FLIGHT_MS, CATCH_SHOW_MS, type Fisher, type Lake } from "../../game/lake";
 import { REEL_START, thrashingAt } from "../../game/reel";
 import { fishById } from "../../game/fish";
-import { onDock, walkable, type Vec } from "../../game/world";
+import { onDock, type Vec } from "../../game/world";
+import { activeWorld } from "./worldQuery";
 import { FISHER_SCALE, ROD_SEGMENTS, buildFisher, type FisherRig, type RigMaterials } from "./character";
 import { CatchCard, lightPillar, type FishShadows, type FishTextures } from "./fishviz";
 import type { Fx } from "./fx";
@@ -39,7 +40,15 @@ function predict(f: Fisher, serverNow: number, out: Vec): void {
   let z = f.pos.z;
   const vx = f.vel.x;
   const vz = f.vel.z;
+  if ((vx !== 0 || vz !== 0) && f.mode === "ride") {
+    // Riding: the boat or zeppelin glides on in a straight line.
+    const left = Math.min(1.2, Math.max(0, (serverNow - f.movedAt) / 1000));
+    out.x = x + vx * left;
+    out.z = z + vz * left;
+    return;
+  }
   if (vx !== 0 || vz !== 0) {
+    const walkable = (p: Vec) => activeWorld().walkable(p);
     let left = Math.min(1.2, Math.max(0, (serverNow - f.movedAt) / 1000));
     while (left > 1e-9) {
       const h = Math.min(0.05, left);
