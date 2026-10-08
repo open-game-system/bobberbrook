@@ -1,3 +1,4 @@
+import { capturePointer } from "../capture";
 import { useEffect, useRef, useState } from "react";
 import { quantizeStick, sameStick, type Stick } from "../stick";
 
@@ -49,7 +50,7 @@ export function Joystick({ onStick, color }: { onStick: (s: Stick) => void; colo
       style={{ "--seat": color }}
       onPointerDown={(e) => {
         pointer.current = e.pointerId;
-        e.currentTarget.setPointerCapture(e.pointerId);
+        capturePointer(e.currentTarget, e.pointerId);
         update(e.clientX, e.clientY);
       }}
       onPointerMove={(e) => {

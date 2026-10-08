@@ -111,7 +111,7 @@ export default {
     // OGS names the couch's room (ogsRoom): this device joins it rather than making a new one.
     const couchRoom = url.pathname === "/" || url.pathname === "/host" ? ogsRoomJoinPath(url) : null;
     if (couchRoom) return Response.redirect(new URL(couchRoom, url).toString(), 302);
-    if (url.pathname === "/") return Response.redirect(new URL(`/tv/${newRoomCode()}`, url).toString(), 302);
+    if (url.pathname === "/") return Response.redirect(new URL(`/tv/${newRoomCode()}${url.search}`, url).toString(), 302);
     if (head === "api") return actorKitRouter(req, env, ctx);
     if (url.pathname === "/host") return hostRoom(req, env);
     if (url.pathname === "/ws-probe") return wsProbe(req);

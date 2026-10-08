@@ -89,7 +89,7 @@ async function fishOnce(rig: RigContext, page: Page, who: string, careful: boole
 
 async function hostAndJoin(rig: RigContext): Promise<{ tv: Page; dad: Page; kid: Page; code: string }> {
   const tv = rig.pages.tv ?? (await rig.open("tv"));
-  await tv.goto(`${rig.baseUrl}/?as=tv`);
+  await tv.goto(`${rig.baseUrl}/?as=tv&record=1`);
   await tv.locator(".ticket-code").waitFor({ timeout: 30_000 });
   const code = ((await tv.locator(".ticket-code").textContent()) ?? "").trim();
   const join = async (role: string, name: string) => {

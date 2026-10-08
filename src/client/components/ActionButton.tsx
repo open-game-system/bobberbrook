@@ -1,3 +1,4 @@
+import { capturePointer } from "../capture";
 import { useEffect, useRef } from "react";
 import type { ButtonState } from "../fisherUi";
 import { BobberIcon, CampfireIcon, FeetIcon, ReelIcon, RodIcon } from "./Icons";
@@ -31,7 +32,7 @@ export function ActionButton({ state, onPress, onHold }: { state: ButtonState; o
       className={`action ${state.kind} ${state.kind === "reel" && state.thrashing ? "thrash" : ""} ${state.kind === "waiting" && state.nibble ? "nibble" : ""} ${state.kind === "caught" && state.canRecast ? "ready" : ""}`}
       style={{ "--progress": progress }}
       onPointerDown={(e) => {
-        e.currentTarget.setPointerCapture(e.pointerId);
+        capturePointer(e.currentTarget, e.pointerId);
         down();
       }}
       onPointerUp={up}
