@@ -1,0 +1,145 @@
+[
+  {
+    "files": [
+      "concept/art/02-catch-moment.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Hand-painted stylized 3D game screenshot, classic high-fantasy MMO look: chunky exaggerated proportions, oversized rounded foliage, saturated painterly textures with visible brush strokes baked into the colour, soft warm rim light, simple low-poly-friendly silhouettes, cozy, inviting, safe for small children. Rendered in-engine, cinematic third-person camera, 16:9 widescreen. No text, no letters, no logos, no UI, no watermark, full bleed, no border. Scene: over-the-shoulder third-person view of a small chunky stylized boy adventurer in a yellow rain hat casting a fishing rod into a turquoise forest pool below a waterfall. A big splash and a sparkling arc of water where a glowing rainbow-scaled fish leaps out of the water on the line. Lily pads, reeds, glowing blue flowers, light shafts through giant trees. Exciting catch moment, joyful energy.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "concept/art/01-key-art.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Hand-painted stylized 3D game screenshot, classic high-fantasy MMO look: chunky exaggerated proportions, oversized rounded foliage, saturated painterly textures with visible brush strokes baked into the colour, soft warm rim light, simple low-poly-friendly silhouettes, cozy, inviting, safe for small children. Rendered in-engine, cinematic third-person camera, 16:9 widescreen. No text, no letters, no logos, no UI, no watermark, full bleed, no border. Scene: a family of four chunky stylized adventurers (a dad, a mom, a 5-year-old boy and a toddler girl, cute big-headed proportions, colourful fishing outfits with hats and vests) fishing together from a wooden dock on a sparkling lake at golden hour. Giant painted oak trees, a mossy stone bridge, a little lantern-lit fishing village with crooked roofs across the water, distant purple mountains, fireflies starting to glow. Their bobbers float in the water with soft ripples. Warm, peaceful, a world you want to explore.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "concept/art/06-zone-grotto.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Stylized 3D game screenshot in the hand-painted fantasy MMO tradition: chunky low-poly geometry with soft bevels, oversized rounded trees and rocks, hand-painted diffuse textures with visible brush strokes and painted-in highlights, minimal specular, soft baked lighting, big readable shapes and saturated warm-cool colour, simple enough for a web game. Cozy, inviting, safe for small children. In-engine look, not a movie render, 16:9 widescreen. No text, no letters, no logos, no UI, no watermark, full bleed, no border. Scene: Glowshroom Grotto zone: a magical cave with a still underground lake, giant softly glowing teal and violet mushrooms, glowing moss, a beam of moonlight through a hole in the ceiling, gentle bioluminescent ripples, floating sparkles, a wooden plank walkway with a lantern. Magical but gentle and not scary.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "concept/art/04-zone-lagoon.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Stylized 3D game screenshot in the hand-painted fantasy MMO tradition: chunky low-poly geometry with soft bevels, oversized rounded trees and rocks, hand-painted diffuse textures with visible brush strokes and painted-in highlights, minimal specular, soft baked lighting, big readable shapes and saturated warm-cool colour, simple enough for a web game. Cozy, inviting, safe for small children. In-engine look, not a movie render, 16:9 widescreen. No text, no letters, no logos, no UI, no watermark, full bleed, no border. Scene: Coral Lagoon zone: a sunny tropical island cove with turquoise shallow water, chunky palm trees, giant pink shells, a sandy spit with a little hammock and tiki-torch posts, colourful painted coral visible under clear water, small fish shadows, a stylized adventurer fishing from a rock. Bright midday.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "concept/art/05-zone-frost.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Stylized 3D game screenshot in the hand-painted fantasy MMO tradition: chunky low-poly geometry with soft bevels, oversized rounded trees and rocks, hand-painted diffuse textures with visible brush strokes and painted-in highlights, minimal specular, soft baked lighting, big readable shapes and saturated warm-cool colour, simple enough for a web game. Cozy, inviting, safe for small children. In-engine look, not a movie render, 16:9 widescreen. No text, no letters, no logos, no UI, no watermark, full bleed, no border. Scene: Frostpeak Pond zone: a snowy mountain basin with a frozen lake, round ice-fishing holes with little cozy tents and a warm campfire, chunky snow-capped pines, an aurora in a deep blue twilight sky, a stylized bundled-up child adventurer in a red scarf sitting on a bucket fishing through the ice.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "concept/art/03-hub-harbor.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Stylized 3D game screenshot in the hand-painted fantasy MMO tradition: chunky low-poly geometry with soft bevels, oversized rounded trees and rocks, hand-painted diffuse textures with visible brush strokes and painted-in highlights, minimal specular, soft baked lighting, big readable shapes and saturated warm-cool colour, simple enough for a web game. Cozy, inviting, safe for small children. In-engine look, not a movie render, 16:9 widescreen. No text, no letters, no logos, no UI, no watermark, full bleed, no border. Scene: a cozy lakeside fishing village hub seen from a high third-person camera: a round cobbled plaza with a big fishing-guild lodge topped by a giant wooden fish weathervane, a bait-and-tackle stall with striped awning, a big wooden trophy board with painted fish silhouettes, hanging lanterns, flower boxes, docks with little rowboats, a few chunky villagers. Mid-morning sun, mountains behind.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "concept/art/09-fish-collection.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Stylized 3D game screenshot in the hand-painted fantasy MMO tradition: chunky low-poly geometry with soft bevels, oversized rounded trees and rocks, hand-painted diffuse textures with visible brush strokes and painted-in highlights, minimal specular, soft baked lighting, big readable shapes and saturated warm-cool colour, simple enough for a web game. Cozy, inviting, safe for small children. In-engine look, not a movie render, 16:9 widescreen. No text, no letters, no logos, no UI, no watermark, full bleed, no border. Scene: a museum-style specimen display: twelve stylized painted fish arranged in a neat 4x3 grid on a plain warm parchment-coloured background, each different: a common brown trout, a stripy perch, a spotted catfish with whiskers, a puffy blowfish, a rainbow trout, a silver ice fish, a glowing teal cave fish, a pink coral fish, a cloud-white sky fish with wing-like fins, a golden koi, a crystal-scaled fish, and a big legendary moon-fish that glows. Natural fish eyes, no cartoon faces, no smiles.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "concept/art/10-gear-progression.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Stylized 3D game screenshot in the hand-painted fantasy MMO tradition: chunky low-poly geometry with soft bevels, oversized rounded trees and rocks, hand-painted diffuse textures with visible brush strokes and painted-in highlights, minimal specular, soft baked lighting, big readable shapes and saturated warm-cool colour, simple enough for a web game. Cozy, inviting, safe for small children. In-engine look, not a movie render, 16:9 widescreen. No text, no letters, no logos, no UI, no watermark, full bleed, no border. Scene: a prop sheet on a plain soft background: a row of five fishing rods getting fancier left to right (a simple stick-and-string branch, a bamboo rod, a polished wooden rod with brass reel, a crystal rod, a glowing starlight rod), and below them a row of six bobbers and lures (red-and-white bobber, a feather lure, a leaf boat bobber, a glowing mushroom bobber, a snowflake lure, a golden star bobber). No faces on any object.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "concept/art/07-zone-sky.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Stylized 3D game screenshot in the hand-painted fantasy MMO tradition: chunky low-poly geometry with soft bevels, oversized rounded trees and rocks, hand-painted diffuse textures with visible brush strokes and painted-in highlights, minimal specular, soft baked lighting, big readable shapes and saturated warm-cool colour, simple enough for a web game. Cozy, inviting, safe for small children. In-engine look, not a movie render, 16:9 widescreen. No text, no letters, no logos, no UI, no watermark, full bleed, no border. Scene: Skyfall Isles zone: floating grassy islands in a bright sky with waterfalls pouring off their edges into clouds, ponds on each island connected by rope bridges, chunky windmills, giant puffy clouds, a stylized adventurer fishing off the edge of an island into a cloud-pool. Late afternoon.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "concept/art/08-characters.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Stylized 3D game screenshot in the hand-painted fantasy MMO tradition: chunky low-poly geometry with soft bevels, oversized rounded trees and rocks, hand-painted diffuse textures with visible brush strokes and painted-in highlights, minimal specular, soft baked lighting, big readable shapes and saturated warm-cool colour, simple enough for a web game. Cozy, inviting, safe for small children. In-engine look, not a movie render, 16:9 widescreen. No text, no letters, no logos, no UI, no watermark, full bleed, no border. Scene: character select lineup on a plain soft gradient background: four chunky big-headed stylized fishing adventurers standing side by side facing camera, a dad, a mom, a 5-year-old boy, and a toddler girl, each in a distinct colourful outfit (vests, rain hats, wader boots, bandanas), each holding a different fishing rod, friendly smiles, simple hands, full body, evenly spaced.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "concept/art/11-mount-boat.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Stylized 3D game screenshot in the hand-painted fantasy MMO tradition: chunky low-poly geometry with soft bevels, oversized rounded trees and rocks, hand-painted diffuse textures with visible brush strokes and painted-in highlights, minimal specular, soft baked lighting, big readable shapes and saturated warm-cool colour, simple enough for a web game. Cozy, inviting, safe for small children. In-engine look, not a movie render, 16:9 widescreen. No text, no letters, no logos, no UI, no watermark, full bleed, no border. Scene: a family of four chunky stylized adventurers riding across a sparkling lake in a round wooden boat towed by a giant friendly sea turtle mount with a mossy shell and a little saddle. Other small boats and a lighthouse in the distance. Joyful sunny day.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "concept/art/12-campfire-cooking.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Stylized 3D game screenshot in the hand-painted fantasy MMO tradition: chunky low-poly geometry with soft bevels, oversized rounded trees and rocks, hand-painted diffuse textures with visible brush strokes and painted-in highlights, minimal specular, soft baked lighting, big readable shapes and saturated warm-cool colour, simple enough for a web game. Cozy, inviting, safe for small children. In-engine look, not a movie render, 16:9 widescreen. No text, no letters, no logos, no UI, no watermark, full bleed, no border. Scene: night by a lakeside campfire: four chunky stylized adventurers (dad, mom, boy, toddler girl) sitting on logs grilling fish skewers over the fire, a small cooking pot bubbling, a tackle box and a bucket of fish, fireflies, string lights between trees, stars reflected in the calm lake. Warm and sleepy.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "concept/art/13-group-pool.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "Stylized 3D game screenshot in the hand-painted fantasy MMO tradition: chunky low-poly geometry with soft bevels, oversized rounded trees and rocks, hand-painted diffuse textures with visible brush strokes and painted-in highlights, minimal specular, soft baked lighting, big readable shapes and saturated warm-cool colour, simple enough for a web game. Cozy, inviting, safe for small children. In-engine look, not a movie render, 16:9 widescreen. No text, no letters, no logos, no UI, no watermark, full bleed, no border. Scene: high three-quarter group camera like a couch co-op game: four chunky stylized adventurers (dad in green hat, mom in yellow hat, a boy in a blue hat, a toddler girl in a pink hat) standing around the edges of a bend in a sunny forest river, all casting toward one swirling sparkling school of fish churning the water in a circle, four bobbers floating in the swirl with small splashes, a fallen log bridge, giant rounded trees, wildflowers. Plenty of open space in the centre of the frame.",
+      "references": []
+    },
+    "date": "2026-10-08"
+  }
+]

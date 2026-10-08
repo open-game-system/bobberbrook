@@ -1,0 +1,241 @@
+<title>Bobberbrook Concept</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Figtree:wght@400;500;700&display=swap">
+<style>
+/* Layout: a dusk-lake journal. Full-width painted plates alternate with narrow reading columns; one committed dark look. */
+:root{
+  --lake:#0f1f26; --deep:#0a161b; --reed:#1b3138;
+  --parchment:#efe3c8; --mist:#a9bfc0; --lantern:#f2b54a; --koi:#e8734f;
+  --display:"Young Serif", Georgia, "Times New Roman", serif;
+  --body:"Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--lake);color:var(--parchment);font:16px/1.6 var(--body);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:20px;padding-block:0 64px}
+h1,h2,h3{font-family:var(--display);font-weight:400;text-wrap:balance;margin:0}
+h1{font-size:clamp(2.6rem,7vw,5rem);line-height:1;letter-spacing:-.01em}
+h2{font-size:clamp(1.7rem,3.6vw,2.4rem);line-height:1.1}
+h3{font-size:1.25rem;line-height:1.2}
+p{margin:0}
+.eyebrow{font:700 .74rem/1 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--lantern)}
+.muted{color:var(--mist)}
+img{display:block;width:100%;height:auto;border-radius:6px}
+figure{margin:0}
+figcaption{font-size:.85rem;color:var(--mist);margin-top:8px}
+
+.hero{position:relative;margin-inline:-20px}
+.hero img{border-radius:0;max-height:78vh;object-fit:cover}
+.hero .shade{position:absolute;inset:auto 0 0 0;padding:120px 20px 28px;background:linear-gradient(to top,var(--lake) 18%,transparent)}
+.hero .shade>div{max-width:1180px;margin:0 auto;display:grid;gap:12px}
+.hero p.lede{max-width:56ch;font-size:1.12rem}
+
+section{display:grid;gap:22px;margin-top:72px}
+.col{max-width:68ch;display:grid;gap:14px}
+.split{display:grid;grid-template-columns:1.25fr 1fr;gap:32px;align-items:center}
+.split>*{min-width:0}
+@media (max-width:820px){.split{grid-template-columns:1fr}}
+
+.names{display:flex;flex-wrap:wrap;gap:10px}
+.names span{border:1px solid var(--reed);background:var(--deep);padding:6px 12px;border-radius:999px;font-family:var(--display)}
+.names span.pick{border-color:var(--lantern);color:var(--lantern)}
+
+/* device roles */
+.devices{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media (max-width:900px){.devices{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:480px){.devices{grid-template-columns:1fr}}
+.dev{background:var(--deep);border:1px solid var(--reed);border-radius:10px;padding:16px;display:grid;gap:8px;align-content:start;min-width:0}
+.dev .who{font:700 .74rem/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--mist)}
+.screen{aspect-ratio:16/10;max-width:100%;border-radius:6px;background:var(--reed);position:relative;overflow:hidden}
+.screen.tall{aspect-ratio:4/3}
+.screen.phone{aspect-ratio:9/16;max-height:170px;justify-self:center;width:auto}
+.screen img{width:100%;height:100%;object-fit:cover;border-radius:0}
+.thumb{position:absolute;bottom:8px;width:26px;height:26px;border-radius:50%;border:2px solid var(--parchment);background:rgba(15,31,38,.55)}
+.thumb.l{left:8px}.thumb.r{right:8px;width:34px;height:34px;background:var(--koi);border-color:var(--koi)}
+.thumb.big{right:50%;transform:translateX(50%);width:44px;height:44px;background:var(--lantern);border-color:var(--lantern)}
+
+/* loop */
+.loop{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:14px;counter-reset:step}
+@media (max-width:820px){.loop{grid-template-columns:1fr}}
+.loop li{counter-increment:step;border-top:2px solid var(--reed);padding-top:12px;display:grid;gap:6px}
+.loop li::before{content:counter(step);font-family:var(--display);color:var(--lantern);font-size:1.4rem}
+
+/* zones */
+.zones{display:grid;grid-template-columns:repeat(2,1fr);gap:22px}
+@media (max-width:700px){.zones{grid-template-columns:1fr}}
+.zone{display:grid;gap:10px;min-width:0}
+.zone .meta{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}
+.tag{font-size:.78rem;color:var(--lake);background:var(--lantern);padding:2px 8px;border-radius:4px;font-weight:700;white-space:nowrap}
+.tag.cool{background:var(--mist)}
+
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+@media (max-width:700px){.pair{grid-template-columns:1fr}}
+.pair>*{min-width:0}
+
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+.tablebox{overflow-x:auto}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--reed);vertical-align:top}
+th{font:700 .74rem/1.2 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--mist)}
+td:first-child{font-family:var(--display);white-space:nowrap}
+
+.decide{display:grid;gap:12px}
+.decide div{background:var(--deep);border-left:3px solid var(--koi);padding:14px 16px;border-radius:0 8px 8px 0;display:grid;gap:4px}
+a{color:var(--lantern)}
+:focus-visible{outline:2px solid var(--lantern);outline-offset:2px}
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <img src="img/01-key-art.jpg" alt="A family of four fishing from a dock at sunset beside a lantern-lit village">
+    <div class="shade"><div>
+      <span class="eyebrow">OGS family game · concept sketch</span>
+      <h1>Bobberbrook</h1>
+      <p class="lede">A cozy 3D fishing world for the whole couch. Each of you runs your own little adventurer through a hand-painted land, finds the sparkling fishing spots, and brings the catch home to one shared trophy wall. No combat, no losing, no rush.</p>
+      <div class="names" aria-label="Working title options"><span class="pick">Bobberbrook</span><span>Lantern Lake</span><span>Tidewhistle</span></div>
+    </div></div>
+  </header>
+
+  <section>
+    <div class="col">
+      <span class="eyebrow">The feeling</span>
+      <h2>Classic fantasy-MMO wandering, shrunk to a family-sized world</h2>
+      <p>The WoW part is the sense of place: chunky hand-painted zones with their own weather and music, a hub town you return to, a fishing journal to fill, gear that gets visibly fancier, and a rare glowing fish everyone talks about. The cozy part is that nothing can go wrong. A missed bite is just a splash and a giggle, and a 3-year-old catches fish too.</p>
+    </div>
+    <figure>
+      <img src="img/13-group-pool.jpg" alt="Four adventurers around a swirling school of fish in a forest river">
+      <figcaption>What the TV shows most of the time: one group camera, everyone casting into the same swirling fish pool.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="col">
+      <span class="eyebrow">One cast, four rods</span>
+      <h2>Who sees what</h2>
+      <p class="muted">The proposal. The biggest open question is whether each iPad renders its own 3D view (more WoW, more GPU) or stays a controller pointed at the TV. See "Decisions" below.</p>
+    </div>
+    <div class="devices">
+      <div class="dev">
+        <span class="who">TV · cast from Dad's phone</span>
+        <div class="screen"><img src="img/13-group-pool.jpg" alt=""></div>
+        <h3>The shared world</h3>
+        <p class="muted">Group camera that frames all four players, zooms in for big catches, and shows the trophy wall back in town. Nothing ever covers the middle.</p>
+      </div>
+      <div class="dev">
+        <span class="who">Juneau's iPad</span>
+        <div class="screen tall"><img src="img/02-catch-moment.jpg" alt=""><span class="thumb l"></span><span class="thumb r"></span></div>
+        <h3>His own adventurer</h3>
+        <p class="muted">Over-the-shoulder view. Left thumb walks, right thumb casts and reels. Picture icons for his bag and journal, no reading needed.</p>
+      </div>
+      <div class="dev">
+        <span class="who">Little sister's iPad</span>
+        <div class="screen tall"><img src="img/04-zone-lagoon.jpg" alt=""><span class="thumb big"></span></div>
+        <h3>Buddy mode</h3>
+        <p class="muted">Her character follows a grown-up automatically. One big button: tap to cast, tap the splash to catch. She can't miss, and her fish count like everyone's.</p>
+      </div>
+      <div class="dev">
+        <span class="who">Grown-ups' phones</span>
+        <div class="screen phone"><img src="img/08-characters.jpg" alt=""></div>
+        <h3>Same game, smaller</h3>
+        <p class="muted">Full controls, plus the "lead" role: pick where the family goes next, choose the campfire recipe, end the session.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="split">
+    <figure><img src="img/02-catch-moment.jpg" alt="A boy in a yellow hat hooking a leaping rainbow fish below a waterfall"></figure>
+    <div class="col">
+      <span class="eyebrow">The 20-second loop</span>
+      <h2>Cast, wait, splash, catch</h2>
+      <ol class="loop">
+        <li><b>Find a spot</b><span class="muted">Sparkling swirls of fish drift around each zone, like WoW's fishing pools.</span></li>
+        <li><b>Cast</b><span class="muted">Hold to aim the arc, let go. The bobber plops in with a satisfying sound.</span></li>
+        <li><b>Wait for the dip</b><span class="muted">Little nibbles, then a big splash. Tap on the splash.</span></li>
+        <li><b>Reel</b><span class="muted">A short tug-of-war: hold when the fish tires, ease off when it pulls. Toddler mode skips it.</span></li>
+        <li><b>The reveal</b><span class="muted">The fish leaps out, the TV cuts in close, its name is spoken aloud.</span></li>
+        <li><b>Journal it</b><span class="muted">New fish fill a page in the family journal. Old boots and teapots happen too, for giggles.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section>
+    <div class="col">
+      <span class="eyebrow">Places to fish</span>
+      <h2>Five zones, each with its own trick</h2>
+      <p class="muted">Every zone changes how fishing works a little, so the loop stays fresh. New zones open as the family journal fills, never by grinding levels.</p>
+    </div>
+    <div class="zones">
+      <figure class="zone"><img src="img/03-hub-harbor.jpg" alt="Lakeside village plaza with a fishing lodge and docks">
+        <div class="meta"><h3>Bobberbrook Harbor</h3><span class="tag cool">Hub town</span></div>
+        <figcaption>Trophy wall, tackle shop, the fishing lodge where quests come from, and the dock where boats and mounts leave from.</figcaption></figure>
+      <figure class="zone"><img src="img/04-zone-lagoon.jpg" alt="Tropical turquoise cove with coral and palms">
+        <div class="meta"><h3>Coral Lagoon</h3><span class="tag">Start here</span></div>
+        <figcaption>Water so clear you can see the fish. Pick which one you want and drop the bait in front of it.</figcaption></figure>
+      <figure class="zone"><img src="img/05-zone-frost.jpg" alt="Snowy frozen lake with ice-fishing holes under an aurora">
+        <div class="meta"><h3>Frostpeak Pond</h3><span class="tag">8 fish in journal</span></div>
+        <figcaption>Drill your own hole in the ice. Warm up at the campfire. Silver ice fish come out when the aurora does.</figcaption></figure>
+      <figure class="zone"><img src="img/06-zone-grotto.jpg" alt="Cave lake lit by glowing mushrooms">
+        <div class="meta"><h3>Glowshroom Grotto</h3><span class="tag">16 fish</span></div>
+        <figcaption>Dark water. A glowing mushroom lure lights the fish up as they swim toward it.</figcaption></figure>
+      <figure class="zone"><img src="img/07-zone-sky.jpg" alt="Floating islands with waterfalls and rope bridges">
+        <div class="meta"><h3>Skyfall Isles</h3><span class="tag">24 fish</span></div>
+        <figcaption>Fish leap between cloud pools. Cast into the cloud where the next one will land.</figcaption></figure>
+      <figure class="zone"><img src="img/11-mount-boat.jpg" alt="Family in a round boat towed by a giant sea turtle">
+        <div class="meta"><h3>The deep lake</h3><span class="tag">Turtle mount</span></div>
+        <figcaption>Catch the family a giant turtle and it tows your boat out to deep water, where the legendary moon-fish lives.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="col">
+      <span class="eyebrow">Progression</span>
+      <h2>Four ways to grow, none of them a grind</h2>
+    </div>
+    <div class="pair">
+      <figure><img src="img/09-fish-collection.jpg" alt="Twelve painted fish from common to legendary">
+        <figcaption><b>The fish journal.</b> About 40 fish across five zones, from common trout to the glowing moon-fish. Shared by the family, with each catcher's name next to the fish they found first.</figcaption></figure>
+      <figure><img src="img/10-gear-progression.jpg" alt="Five fishing rods and six bobbers from a stick to a starlight rod">
+        <figcaption><b>Rods and bobbers.</b> Stick, bamboo, brass, crystal, starlight. Better rods make bigger fish bite, and each bobber suits one zone. Paid for in shells from catches.</figcaption></figure>
+      <figure><img src="img/08-characters.jpg" alt="Dad, mom, a boy and a toddler girl in fishing outfits">
+        <figcaption><b>Your adventurer.</b> Hats, vests, boots and colours to unlock. Each OGS profile keeps its own look.</figcaption></figure>
+      <figure><img src="img/12-campfire-cooking.jpg" alt="Family grilling fish around a campfire at night">
+        <figcaption><b>The campfire feast.</b> Each session ends at the fire. The family cooks a recipe from what everyone caught, and the dish gives a gentle bonus next time (a "lucky" bobber, a faster swim).</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="col">
+      <span class="eyebrow">Borrowed from the MMO</span>
+      <h2>What we take and what we leave</h2>
+    </div>
+    <div class="tablebox"><table>
+      <thead><tr><th>Idea</th><th>Bobberbrook version</th></tr></thead>
+      <tbody>
+        <tr><td>Fishing pools</td><td>Swirling schools of fish that drift to a new spot after a few catches, so everyone keeps moving.</td></tr>
+        <tr><td>Bobber splash</td><td>The heart of the game. Big, readable, the TV zooms on it.</td></tr>
+        <tr><td>Zones and a capital</td><td>Five painted zones and a hub harbor with the trophy wall.</td></tr>
+        <tr><td>Rare spawns</td><td>One legendary per zone, only at certain times: night, aurora, rain. Fun to plan a trip around.</td></tr>
+        <tr><td>Fishing derby</td><td>A weekend event on the TV: who brings back the biggest fish in five minutes. Everyone gets a ribbon.</td></tr>
+        <tr><td>Mounts</td><td>Rare catches unlock rides: the sea turtle, a big otter, a cloud manta for the sky isles.</td></tr>
+        <tr><td>Achievements</td><td>Journal stickers instead of points. Titles like "Ice Hole Champion".</td></tr>
+        <tr><td>Left out</td><td>Combat, death, levels, inventory juggling, chat, anything a 3-year-old can fail.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="col">
+      <span class="eyebrow">Before we build</span>
+      <h2>Decisions for you</h2>
+    </div>
+    <div class="decide">
+      <div><b>Where the 3D renders.</b><span class="muted">Recommendation: each iPad and phone renders its own Three.js view of a world synced through one Durable Object, and the TV page renders the group camera on the cast stream. The cheaper option is TV-only 3D with devices as controllers, which is less like running around in WoW.</span></div>
+      <div><b>Free roam or zone hops.</b><span class="muted">Recommendation: each zone is one small open map you run around freely, and you travel between zones from the harbor dock. Keeps the TV camera able to frame four players.</span></div>
+      <div><b>The name.</b><span class="muted">Bobberbrook, Lantern Lake or Tidewhistle.</span></div>
+      <div><b>First playable.</b><span class="muted">Recommendation: Coral Lagoon alone, the cast and splash loop, 10 fish, the journal, toddler buddy mode, on the TV and both iPads. Everything else after the kids have played it.</span></div>
+    </div>
+  </section>
+
+  <section class="col">
+    <p class="muted">13 concept images made with Codex image generation on the ChatGPT plan, no paid services. Style: chunky low-poly shapes with hand-painted textures, which is buildable in Three.js. The key art and the catch moment came from the first, more cinematic prompt; the rest use the tighter in-engine prompt that the game would follow.</p>
+  </section>
+</div>
