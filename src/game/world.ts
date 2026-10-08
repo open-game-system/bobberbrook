@@ -1,11 +1,13 @@
 /**
- * Bobberbrook Lake's geometry, shared by the room (who can walk and cast where) and the TV scene (what
- * is drawn where), so the two always agree. Metres; x east, z south; the lake is centred on the origin.
+ * The valley's geometry, shared by the room (who can walk and cast where) and the TV scene (what is
+ * drawn where), so the two always agree. Metres; x east, z south. Moonwell Lake, where everyone starts,
+ * is centred on the origin; four more places to fish lie up forest trails (AREAS, TRAILS).
  */
 export type Vec = { x: number; z: number };
-export type Water = "dock" | "lily" | "falls" | "reeds" | "shore";
+/** Moonwell Lake's own waters (dock, lily pads, below the falls, reeds, open shore), then one per far area. */
+export type Water = "dock" | "lily" | "falls" | "reeds" | "shore" | "marsh" | "pools" | "hollow" | "tarn";
 
-export const WALK_SPEED = 4.2;
+export const WALK_SPEED = 5;
 /** How far from the water's edge a fisher can still cast. */
 export const SHORE_REACH = 2.6;
 /** How far out from the edge the bobber lands. */
@@ -67,9 +69,10 @@ export function onDock(p: Vec): boolean {
   return Math.abs(p.x) <= DOCK.halfWidth && p.z >= DOCK.tipZ && p.z <= DOCK.rootZ;
 }
 
+/** On solid ground: in a clearing or on a trail, out of every pond, clear of trees and rocks. */
 export function onLand(p: Vec): boolean {
-  const { r, theta } = polar(p);
-  if (r < lakeRadius(theta) + EDGE_MARGIN || r > outerRadius(theta)) return false;
+  if (AREAS.some((a) => inPond(a, p, EDGE_MARGIN))) return false;
+  if (!AREAS.some((a) => inClearing(a, p)) && !onTrail(p)) return false;
   return OBSTACLES.every((o) => Math.hypot(p.x - o.x, p.z - o.z) >= o.r + 0.5);
 }
 
@@ -104,11 +107,13 @@ export function castFrom(p: Vec): { bobber: Vec; water: Water } | null {
     return { bobber: { x: p.x * 0.4, z: DOCK.tipZ - CAST_DISTANCE }, water: "dock" };
   }
   if (!onLand(p)) return null;
-  const { r, theta } = polar(p);
-  const edge = lakeRadius(theta);
-  if (r - edge > SHORE_REACH) return null;
-  const out = edge - CAST_DISTANCE;
-  return { bobber: { x: Math.cos(theta) * out, z: Math.sin(theta) * out }, water: waterAt(theta) };
+  for (const a of AREAS) {
+    const { r, theta } = polarIn(a, p);
+    const edge = pondRadius(a, theta);
+    if (r - edge > SHORE_REACH) continue;
+    return { bobber: castRingIn(a, theta), water: a.id === "moonwell" ? waterAt(theta) : a.water };
+  }
+  return null;
 }
 
 /** The kind of water at an angle around the lake (the dock is its own, cast from the dock). */
@@ -141,4 +146,100 @@ export function lakeOutline(points = 96): Vec[] {
 
 export function distance(a: Vec, b: Vec): number {
   return Math.hypot(a.x - b.x, a.z - b.z);
+}
+
+// ---------- the valley: five places to fish, joined by forest trails ----------
+
+export type AreaId = "moonwell" | "mistmarsh" | "pools" | "hollow" | "tarn";
+
+export type Area = {
+  id: AreaId;
+  name: string;
+  center: Vec;
+  /** The pond's wobbly edge: base radius plus three sine bumps (amplitude, phase) at 2, 3 and 5 lobes. */
+  pond: { r: number; bumps: readonly [number, number, number]; phases: readonly [number, number, number] };
+  /** How far the walkable clearing reaches beyond the pond's base radius. */
+  clearing: number;
+  water: Water;
+};
+
+// Stryker disable all: layout data; walking, casting and discovery over it are tested.
+export const AREAS: readonly Area[] = [
+  { id: "moonwell", name: "Moonwell Lake", center: { x: 0, z: 0 }, pond: { r: 17, bumps: [2.4, 1.4, 0.8], phases: [0.6, -1.1, 2.0] }, clearing: 15, water: "shore" },
+  { id: "mistmarsh", name: "Mistmarsh", center: { x: -64, z: 40 }, pond: { r: 13, bumps: [2.2, 1.6, 1.0], phases: [1.3, 0.4, -0.7] }, clearing: 11, water: "marsh" },
+  { id: "pools", name: "Whisperfall Pools", center: { x: -6, z: -72 }, pond: { r: 10, bumps: [1.6, 1.0, 0.6], phases: [-0.4, 2.2, 0.9] }, clearing: 11, water: "pools" },
+  { id: "hollow", name: "Glowshroom Hollow", center: { x: 70, z: -8 }, pond: { r: 11, bumps: [1.8, 1.2, 0.7], phases: [2.6, -0.3, 1.4] }, clearing: 10, water: "hollow" },
+  { id: "tarn", name: "Starfall Tarn", center: { x: 52, z: -80 }, pond: { r: 13, bumps: [2.0, 1.1, 0.9], phases: [0.2, 1.7, -1.5] }, clearing: 11, water: "tarn" },
+];
+
+/** Forest trails between places (segments, half-width TRAIL_HALF_WIDTH). */
+export const TRAIL_HALF_WIDTH = 2.8;
+export const TRAILS: readonly { from: Vec; to: Vec; joins: readonly [AreaId, AreaId] }[] = [
+  { from: { x: -24.9, z: 14.9 }, to: { x: -45.5, z: 28.1 }, joins: ["moonwell", "mistmarsh"] },
+  { from: { x: -22.3, z: -18.5 }, to: { x: -11.5, z: -53.8 }, joins: ["moonwell", "pools"] },
+  { from: { x: 28.9, z: -2.9 }, to: { x: 51.1, z: -5.7 }, joins: ["moonwell", "hollow"] },
+  { from: { x: 13, z: -74.6 }, to: { x: 32.2, z: -77.3 }, joins: ["pools", "tarn"] },
+  { from: { x: 65.4, z: -26.4 }, to: { x: 56.9, z: -60.6 }, joins: ["hollow", "tarn"] },
+];
+// Stryker restore all
+
+const AREA_BY_ID = new Map(AREAS.map((a) => [a.id, a]));
+export function areaById(id: AreaId): Area {
+  const a = AREA_BY_ID.get(id);
+  if (!a) throw new Error(`no area ${id}`);
+  return a;
+}
+
+export function polarIn(a: Area, p: Vec): { r: number; theta: number } {
+  return polar({ x: p.x - a.center.x, z: p.z - a.center.z });
+}
+
+/** A pond's edge at an angle around its centre (Moonwell's is lakeRadius). */
+export function pondRadius(a: Area, theta: number): number {
+  const { r, bumps, phases } = a.pond;
+  return r + bumps[0] * Math.sin(2 * theta + phases[0]) + bumps[1] * Math.sin(3 * theta + phases[1]) + bumps[2] * Math.sin(5 * theta + phases[2]);
+}
+
+export function inPond(a: Area, p: Vec, margin = 0): boolean {
+  const { r, theta } = polarIn(a, p);
+  return r < pondRadius(a, theta) + margin;
+}
+
+/** The walkable clearing around a pond (Moonwell's is hemmed in by the falls cliff: outerRadius). */
+export function inClearing(a: Area, p: Vec): boolean {
+  const { r, theta } = polarIn(a, p);
+  return r <= (a.id === "moonwell" ? outerRadius(theta) : a.pond.r + a.clearing);
+}
+
+/** Distance from a point to a segment. */
+export function segmentDistance(p: Vec, a: Vec, b: Vec): number {
+  const dx = b.x - a.x;
+  const dz = b.z - a.z;
+  const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.z - a.z) * dz) / (dx * dx + dz * dz)));
+  return Math.hypot(p.x - (a.x + t * dx), p.z - (a.z + t * dz));
+}
+
+export function onTrail(p: Vec): boolean {
+  return TRAILS.some((t) => segmentDistance(p, t.from, t.to) <= TRAIL_HALF_WIDTH);
+}
+
+/** The place a point is in (its clearing), or null on a trail between places. */
+export function areaAt(p: Vec): Area | null {
+  return AREAS.find((a) => inClearing(a, p)) ?? null;
+}
+
+/** Where a straight cast from the shore at an angle lands in a pond (swirls float on this ring). */
+export function castRingIn(a: Area, theta: number): Vec {
+  const edge = pondRadius(a, theta);
+  const r = edge - Math.min(CAST_DISTANCE, edge * 0.45);
+  return { x: a.center.x + Math.cos(theta) * r, z: a.center.z + Math.sin(theta) * r };
+}
+
+/** A pond's outline as a polygon (mini-maps, the scene's shoreline). */
+export function pondOutline(a: Area, points = 72): Vec[] {
+  return Array.from({ length: points }, (_, i) => {
+    const theta = (i / points) * 2 * Math.PI;
+    const r = pondRadius(a, theta);
+    return { x: a.center.x + Math.cos(theta) * r, z: a.center.z + Math.sin(theta) * r };
+  });
 }

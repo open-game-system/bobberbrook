@@ -3,7 +3,7 @@ import { newLake, type Lake } from "../game/lake";
 import { castRing, EAST, WEST } from "../game/world";
 import { compassTo, shoreFor } from "./compass";
 
-const swirl = (id: number, theta: number, golden = false) => ({ id, pos: castRing(theta), theta, golden, since: 0, until: 1e9, catches: 0 });
+const swirl = (id: number, theta: number, golden = false) => ({ id, area: "moonwell" as const, pos: castRing(theta), theta, golden, since: 0, until: 1e9, catches: 0 });
 const lakeWith = (swirls: Lake["swirls"]): Lake => ({ ...newLake(1, 0), swirls });
 
 describe("compassTo", () => {

@@ -48,7 +48,7 @@ describe("the lake's moments", () => {
     ]);
   });
   it("ignores a new plain swirl and a golden one that was already there", () => {
-    const golden = { id: 9, pos: { x: 0, z: 0 }, theta: 0, golden: true, since: 0, until: 1, catches: 0 };
+    const golden = { id: 9, area: "moonwell" as const, pos: { x: 0, z: 0 }, theta: 0, golden: true, since: 0, until: 1, catches: 0 };
     expect(lakeEvents(lake, { ...lake, swirls: [...lake.swirls, { ...golden, id: 10, golden: false }] })).toEqual([]);
     const withGolden = { ...lake, swirls: [golden] };
     expect(lakeEvents(withGolden, { ...withGolden, swirls: [{ ...golden }] })).toEqual([]);

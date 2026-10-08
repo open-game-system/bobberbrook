@@ -3,7 +3,7 @@ import { dayPhase, timeOfDay, type TimeOfDay } from "./daycycle";
 import { FISH, JOURNAL_FISH, SHELLS, bitesNow, fishById, type FishDef, type Rarity } from "./fish";
 import { between, pickWeighted, rand } from "./rng";
 import { REEL_START, integrateReel, type Reel } from "./reel";
-import { WALK_SPEED, advance, angleGap, castFrom, castRing, distance, spawnPoint, type Vec, type Water } from "./world";
+import { WALK_SPEED, advance, angleGap, areaAt, areaById, castFrom, castRingIn, distance, spawnPoint, type AreaId, type Vec, type Water } from "./world";
 
 /** Everything on the lake that changes with time. The room keeps one of these; every screen sees it. */
 export const MAX_FISHERS = 4;
@@ -27,7 +27,7 @@ export const GOLDEN_CATCHES = 2;
 /** Rod upgrades at these family shell totals: Willow, Bamboo, Brass, Starlight. */
 export const ROD_AT = [0, 12, 40, 100] as const;
 export const ROD_NAMES = ["Willow", "Bamboo", "Brass", "Starlight"] as const;
-export const MOONFIN_JOURNAL = 10;
+export const MOONFIN_JOURNAL = 8;
 
 export type Mode = "walk" | "cast" | "wait" | "bite" | "reel" | "catch";
 
@@ -57,7 +57,10 @@ export type Fisher = {
   missSeq: number;
 };
 
-export type Swirl = { id: number; pos: Vec; theta: number; golden: boolean; since: number; until: number; catches: number };
+export type Swirl = { id: number; area: AreaId; pos: Vec; theta: number; golden: boolean; since: number; until: number; catches: number };
+
+/** The last newly found place (the TV and narrator celebrate it). */
+export type Discovery = { area: AreaId; seat: number; at: number; seq: number };
 
 export type JournalEntry = { count: number; bestCm: number; firstBy: string | null };
 
@@ -80,6 +83,9 @@ export type Lake = {
   catchSeq: number;
   campfire: boolean;
   progressLoaded: boolean;
+  /** Places the family has found this room (Moonwell Lake from the start). */
+  discovered: AreaId[];
+  discovery: Discovery | null;
 };
 
 export function newLake(seed: number, now: number): Lake {
@@ -100,10 +106,12 @@ export function newLake(seed: number, now: number): Lake {
     catchSeq: 0,
     campfire: false,
     progressLoaded: false,
+    discovered: ["moonwell"],
+    discovery: null,
   };
   return produce(lake, (d) => {
-    spawnSwirl(d, now, false);
-    spawnSwirl(d, now, false);
+    spawnSwirl(d, now, false, "moonwell");
+    spawnSwirl(d, now, false, "moonwell");
   });
 }
 
@@ -134,8 +142,8 @@ export function speciesCount(journal: Record<string, JournalEntry>): number {
 
 // ---------- swirls ----------
 
-function spawnSwirl(d: Draft<Lake>, now: number, golden: boolean): void {
-  const others = d.swirls.map((s) => s.theta);
+function spawnSwirl(d: Draft<Lake>, now: number, golden: boolean, area: AreaId): void {
+  const others = d.swirls.filter((s) => s.area === area).map((s) => s.theta);
   let theta = 0;
   for (let i = 0; i < 12; i++) {
     theta = roll(d) * 2 * Math.PI;
@@ -144,7 +152,8 @@ function spawnSwirl(d: Draft<Lake>, now: number, golden: boolean): void {
   d.swirlSeq += 1;
   d.swirls.push({
     id: d.swirlSeq,
-    pos: castRing(theta),
+    area,
+    pos: castRingIn(areaById(area), theta),
     theta,
     golden,
     since: now,
@@ -163,7 +172,7 @@ function refreshSwirls(d: Draft<Lake>, now: number): void {
   if (spent.length === 0 && now < d.nextGoldenAt) return;
   const gone = new Set(spent.map((s) => s.id));
   d.swirls = d.swirls.filter((s) => !gone.has(s.id));
-  for (const s of spent) if (!s.golden) spawnSwirl(d, now, false);
+  for (const s of spent) if (!s.golden) spawnSwirl(d, now, false, s.area);
   if (now >= d.nextGoldenAt) bringGolden(d, now);
   freeFishers(d, gone);
 }
@@ -175,7 +184,38 @@ function freeFishers(d: Draft<Lake>, gone: ReadonlySet<number>): void {
 
 function bringGolden(d: Draft<Lake>, now: number): void {
   d.nextGoldenAt = now + GOLDEN_EVERY_MS;
-  if (!d.swirls.some((s) => s.golden)) spawnSwirl(d, now, true);
+  if (d.swirls.some((s) => s.golden)) return;
+  // The golden swirl shows up somewhere the family has been, more often away from home.
+  const away = d.discovered.filter((a) => a !== "moonwell");
+  const places = away.length > 0 && roll(d) < 0.75 ? away : d.discovered;
+  spawnSwirl(d, now, true, places[Math.floor(roll(d) * places.length)] ?? "moonwell");
+}
+
+/** Whoever walks into a place nobody has found yet discovers it: a celebration and a swirl there. */
+function discover(d: Draft<Lake>, now: number): void {
+  for (const f of d.fishers) {
+    const area = areaAt(f.pos);
+    if (!area || d.discovered.includes(area.id)) continue;
+    d.discovered.push(area.id);
+    d.discovery = { area: area.id, seat: f.seat, at: now, seq: (d.discovery?.seq ?? 0) + 1 };
+    spawnSwirl(d, now, false, area.id);
+  }
+}
+
+/** How far a fisher may wander from the rest of the family (the TV keeps everyone in one shot). */
+export const LEASH = 30;
+
+/** Pulls any fisher who strayed past LEASH from the others' middle back toward them. */
+export function leash(fishers: { pos: Vec }[]): void {
+  if (fishers.length < 2) return;
+  for (const f of fishers) {
+    const others = fishers.filter((o) => o !== f);
+    const cx = others.reduce((a, o) => a + o.pos.x, 0) / others.length;
+    const cz = others.reduce((a, o) => a + o.pos.z, 0) / others.length;
+    const dist = Math.hypot(f.pos.x - cx, f.pos.z - cz);
+    if (dist <= LEASH) continue;
+    f.pos = advance(f.pos, { x: (cx - f.pos.x) / dist, z: (cz - f.pos.z) / dist }, dist - LEASH);
+  }
 }
 
 function swirlOf(d: Draft<Lake>, f: Draft<Fisher>): Draft<Swirl> | undefined {
@@ -209,7 +249,7 @@ function junkRoll(water: Water, r: () => number): FishDef | undefined {
 
 /** The Moonfin can rise from a swirl at night once the journal is full enough. */
 function moonfinRises(ctx: BiteContext): boolean {
-  return ctx.swirl !== "none" && ctx.tod === "night" && ctx.species >= MOONFIN_JOURNAL;
+  return ctx.water === "tarn" && ctx.swirl !== "none" && ctx.tod === "night" && ctx.species >= MOONFIN_JOURNAL;
 }
 
 /** The journal fish that bite here now (only rare ones in a golden swirl, when there are any). */
@@ -393,6 +433,8 @@ export function step(lake: Lake, now: number): Lake {
     d.now = now;
     for (const f of d.fishers) stepFisher(d, f, now);
     keepApart(d.fishers);
+    leash(d.fishers);
+    discover(d, now);
     refreshSwirls(d, now);
   });
 }

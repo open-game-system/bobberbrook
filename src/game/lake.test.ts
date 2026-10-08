@@ -5,7 +5,7 @@ import {
   type Lake,
 } from "./lake";
 import { fishById } from "./fish";
-import { DOCK, WEST, castRing, lakeRadius } from "./world";
+import { DOCK, WALK_SPEED, WEST, castRing, lakeRadius } from "./world";
 
 const T0 = 1_000_000;
 
@@ -69,7 +69,7 @@ describe("walking", () => {
   it("caps a diagonal stick at full speed", () => {
     let lake = lakeWith(1);
     lake = move(lake, 0, { x: 1, y: 1 }, T0);
-    expect(Math.hypot(fisher(lake).vel.x, fisher(lake).vel.z)).toBeCloseTo(4.2, 5);
+    expect(Math.hypot(fisher(lake).vel.x, fisher(lake).vel.z)).toBeCloseTo(WALK_SPEED, 5);
   });
   it("ignores a tiny wobble of the stick", () => {
     const lake = move(lakeWith(1), 0, { x: 0.1, y: 0 }, T0);
@@ -193,7 +193,7 @@ describe("swirls", () => {
     let lake = lakeWith(1);
     const r = lakeRadius(WEST) + 1;
     lake = { ...lake, fishers: lake.fishers.map((f) => ({ ...f, pos: { x: -r, z: 0 } })) };
-    lake = { ...lake, swirls: [{ id: 99, pos: castRing(WEST), theta: WEST, golden: false, since: T0, until: T0 + 1e6, catches: 0 }] };
+    lake = { ...lake, swirls: [{ id: 99, area: "moonwell", pos: castRing(WEST), theta: WEST, golden: false, since: T0, until: T0 + 1e6, catches: 0 }] };
     lake = action(lake, 0, T0);
     expect(fisher(lake).swirlId).toBe(99);
     lake = step(lake, T0 + CAST_FLIGHT_MS);
@@ -202,7 +202,7 @@ describe("swirls", () => {
 
   it("moves on after enough catches", () => {
     let lake = lakeWith(1);
-    lake = { ...lake, swirls: [{ id: 99, pos: castRing(WEST), theta: WEST, golden: false, since: T0, until: T0 + 1e6, catches: SWIRL_CATCHES }] };
+    lake = { ...lake, swirls: [{ id: 99, area: "moonwell", pos: castRing(WEST), theta: WEST, golden: false, since: T0, until: T0 + 1e6, catches: SWIRL_CATCHES }] };
     lake = step(lake, T0 + 10);
     expect(lake.swirls.map((s) => s.id)).not.toContain(99);
     expect(lake.swirls).toHaveLength(1);
@@ -235,8 +235,9 @@ describe("what bites", () => {
     expect(chooseCatch({ ...base, water: "shore", swirl: "plain" }, seq(0.5, 0.01, 0.0)).rarity).not.toBe("junk");
   });
   it("raises the Moonfin from a night swirl once the journal is full enough", () => {
-    expect(chooseCatch({ ...base, swirl: "plain", tod: "night", species: 10 }, seq(0.5, 0.1)).id).toBe("moonfin");
-    expect(chooseCatch({ ...base, swirl: "plain", tod: "night", species: 9 }, seq(0.5, 0.1)).id).not.toBe("moonfin");
+    expect(chooseCatch({ ...base, water: "tarn", swirl: "plain", tod: "night", species: 8 }, seq(0.5, 0.1)).id).toBe("moonfin");
+    expect(chooseCatch({ ...base, swirl: "plain", tod: "night", species: 18 }, seq(0.5, 0.1)).id).not.toBe("moonfin");
+    expect(chooseCatch({ ...base, water: "tarn", swirl: "plain", tod: "night", species: 7 }, seq(0.5, 0.1)).id).not.toBe("moonfin");
     expect(chooseCatch({ ...base, swirl: "none", tod: "night", species: 12 }, seq(0.5, 0.5, 0.1)).id).not.toBe("moonfin");
   });
   it("gives only rare fish in a golden swirl", () => {
@@ -244,7 +245,7 @@ describe("what bites", () => {
   });
   it("lets golden-hour fish bite at golden hour", () => {
     const ids = new Set<string>();
-    for (let i = 0; i < 300; i++) ids.add(chooseCatch({ ...base, tod: "golden" }, seq(0.5, 0.5, (i * 0.137) % 1)).id);
+    for (let i = 0; i < 300; i++) ids.add(chooseCatch({ ...base, water: "marsh", tod: "golden" }, seq(0.5, 0.5, (i * 0.137) % 1)).id);
     expect(ids.has("golden-koi")).toBe(true);
   });
 });

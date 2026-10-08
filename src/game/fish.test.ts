@@ -19,6 +19,7 @@ describe("the fish", () => {
     expect(at("perch")).toEqual(["morning", "golden", "night", "dawn"]);
     expect(at("rainbow-trout")).toEqual(["morning", "golden", "dawn"]);
     expect(at("golden-koi")).toEqual(["golden"]);
-    expect(at("glowfin")).toEqual(["night"]);
+    expect(at("moonfin")).toEqual(["night"]);
+    expect(at("glowfin")).toEqual(["morning", "golden", "night", "dawn"]); // always glowing in the Hollow
   });
 });

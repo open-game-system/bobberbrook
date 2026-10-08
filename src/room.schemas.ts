@@ -34,7 +34,8 @@ export const RoomClientEventSchema = z.discriminatedUnion("type", [
 export const RoomServiceEventSchema = z.discriminatedUnion("type", [z.object({ type: z.literal("NOOP") })]);
 
 const VecSchema = z.object({ x: z.number(), z: z.number() });
-const WaterSchema = z.enum(["dock", "lily", "falls", "reeds", "shore"]);
+const AreaIdSchema = z.enum(["moonwell", "mistmarsh", "pools", "hollow", "tarn"]);
+const WaterSchema = z.enum(["dock", "lily", "falls", "reeds", "shore", "marsh", "pools", "hollow", "tarn"]);
 
 export const FisherSchema = z.object({
   seat: z.number(),
@@ -69,7 +70,7 @@ export const LakeSchema = z.object({
   startedAt: z.number(),
   now: z.number(),
   fishers: z.array(FisherSchema),
-  swirls: z.array(z.object({ id: z.number(), pos: VecSchema, theta: z.number(), golden: z.boolean(), since: z.number(), until: z.number(), catches: z.number() })),
+  swirls: z.array(z.object({ id: z.number(), area: AreaIdSchema, pos: VecSchema, theta: z.number(), golden: z.boolean(), since: z.number(), until: z.number(), catches: z.number() })),
   swirlSeq: z.number(),
   nextGoldenAt: z.number(),
   journal: z.record(z.string(), JournalEntrySchema),
@@ -80,6 +81,8 @@ export const LakeSchema = z.object({
   catchSeq: z.number(),
   campfire: z.boolean(),
   progressLoaded: z.boolean(),
+  discovered: z.array(AreaIdSchema),
+  discovery: z.object({ area: AreaIdSchema, seat: z.number(), at: z.number(), seq: z.number() }).nullable(),
 });
 
 export const RoomPublicContextSchema = z.object({

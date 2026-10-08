@@ -13,7 +13,7 @@ const T0 = 1_000_000;
 const fisher = (lake: Lake, seat = 0) => lake.fishers.find((f) => f.seat === seat)!;
 const fish = (id: string): FishDef => fishById(id)!;
 const shown = (at: number): Catch => ({ fishId: "perch", cm: 20, shells: 1, isNew: false, golden: false, at, seq: 1 });
-const swirl = (over: Partial<Swirl> = {}): Swirl => ({ id: 99, pos: castRing(WEST), theta: WEST, golden: false, since: T0, until: T0 + 1e6, catches: 0, ...over });
+const swirl = (over: Partial<Swirl> = {}): Swirl => ({ id: 99, area: "moonwell", pos: castRing(WEST), theta: WEST, golden: false, since: T0, until: T0 + 1e6, catches: 0, ...over });
 
 function lakeWith(n: number, seed = 7): Lake {
   let lake = newLake(seed, T0);
@@ -126,13 +126,15 @@ describe("what bites, in detail", () => {
   });
   it("pools the fish of this water and time, never the legendary one", () => {
     const pool = biterPool({ water: "lily", tod: "night", swirl: "plain" }).map((f) => f.id);
-    expect(pool).toContain("glowfin");
+    expect(pool).toContain("lily-carp");
+    expect(pool).not.toContain("glowfin");
     expect(pool).not.toContain("moonfin");
     expect(pool).not.toContain("salmon");
     expect(pool).not.toContain("golden-koi");
   });
   it("pools only rares in a golden swirl", () => {
-    expect(biterPool({ water: "lily", tod: "golden", swirl: "golden" }).map((f) => f.id)).toEqual(["golden-koi", "ember-shiner", "puffer"]);
+    expect(biterPool({ water: "marsh", tod: "golden", swirl: "golden" }).map((f) => f.id)).toEqual(["golden-koi", "ember-shiner", "puffer"]);
+    expect(biterPool({ water: "lily", tod: "golden", swirl: "golden" }).map((f) => f.id)).toEqual(["puffer"]);
     expect(biterPool({ water: "reeds", tod: "morning", swirl: "golden" }).map((f) => f.id)).toEqual(["puffer"]);
   });
   it("finds treasure more often in a golden swirl", () => {
@@ -153,7 +155,7 @@ describe("what bites, in detail", () => {
     expect(chooseCatch({ ...ctx, water: "falls" }, rolls(0.5, 0.5)).rarity).not.toBe("junk");
   });
   it("raises the Moonfin only below the 0.3 roll", () => {
-    const night = { ...ctx, swirl: "plain" as const, tod: "night" as const, species: 10 };
+    const night = { ...ctx, water: "tarn" as const, swirl: "plain" as const, tod: "night" as const, species: 8 };
     const rolls = (...xs: number[]) => {
       let i = 0;
       return () => xs[i++ % xs.length]!;

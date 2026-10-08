@@ -42,7 +42,7 @@ describe("lakeEvents", () => {
   it("sees the campfire and a new golden swirl", () => {
     const l = shoreLake();
     expect(lakeEvents(l, setCampfire(l, true, T0 + 1))).toEqual([{ kind: "campfire", on: true }]);
-    const g = { ...l, swirls: [{ id: 50, pos: { x: 0, z: 0 }, theta: 0, golden: true, since: 0, until: 1e9, catches: 0 }] };
+    const g = { ...l, swirls: [{ id: 50, area: "moonwell" as const, pos: { x: 0, z: 0 }, theta: 0, golden: true, since: 0, until: 1e9, catches: 0 }] };
     expect(lakeEvents(l, g)).toEqual([{ kind: "golden-swirl" }]);
   });
 });

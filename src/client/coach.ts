@@ -8,6 +8,10 @@ const WATER_NAME: Record<Water, string> = {
   falls: "by the waterfall",
   reeds: "by the reeds",
   shore: "along the shore",
+  marsh: "in Mistmarsh",
+  pools: "at Whisperfall Pools",
+  hollow: "in Glowshroom Hollow",
+  tarn: "at Starfall Tarn",
 };
 
 const nameOf = (lake: Lake, seat: number) => lake.fishers.find((f) => f.seat === seat)?.name ?? ["Green", "Yellow", "Blue", "Pink"][seat] ?? "Someone";

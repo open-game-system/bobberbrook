@@ -3,7 +3,7 @@ import { createActor } from "xstate";
 import { roomMachine } from "./room.machine";
 import { LakeSchema } from "./room.schemas";
 import type { RoomEvent } from "./room.types";
-import { lakeRadius, WEST } from "./game/world";
+import { WALK_SPEED, lakeRadius, WEST } from "./game/world";
 
 const env = {} as never;
 const storage = {} as never;
@@ -81,7 +81,7 @@ describe("the room", () => {
     const dz = target.z - p.z;
     const len = Math.hypot(dx, dz);
     r.send("dad", { type: "MOVE", x: dx / len, y: -dz / len });
-    vi.advanceTimersByTime((len / 4.2) * 1000);
+    vi.advanceTimersByTime((len / WALK_SPEED) * 1000);
     r.send("dad", { type: "MOVE", x: 0, y: 0 });
     r.send("dad", { type: "ACTION" });
     expect(r.ctx().public.lake.fishers[0]!.mode).toBe("cast");

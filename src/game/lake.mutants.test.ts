@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { CAST_FLIGHT_MS, RESCUE_REEL_MS, action, chooseCatch, join, move, newLake, reelHold, setCampfire, setEasy, step, type Fisher, type Lake, type Swirl } from "./lake";
 import { fishById } from "./fish";
 import { DAY_MS } from "./daycycle";
-import { EAST, WEST, angleGap, castRing, lakeRadius } from "./world";
+import { EAST, WALK_SPEED, WEST, angleGap, castRing, lakeRadius } from "./world";
 
 const T0 = 1_000_000;
 const fisher = (lake: Lake, seat = 0) => lake.fishers.find((f) => f.seat === seat)!;
-const swirl = (over: Partial<Swirl> = {}): Swirl => ({ id: 99, pos: castRing(WEST), theta: WEST, golden: false, since: T0, until: T0 + 1e6, catches: 0, ...over });
+const swirl = (over: Partial<Swirl> = {}): Swirl => ({ id: 99, area: "moonwell", pos: castRing(WEST), theta: WEST, golden: false, since: T0, until: T0 + 1e6, catches: 0, ...over });
 
 function lakeWith(n: number, seed = 7): Lake {
   let lake = newLake(seed, T0);
@@ -71,15 +71,16 @@ describe("what a hook brings up", () => {
     const ids = new Set(Array.from({ length: 40 }, (_, s) => hookOne(lakeWith(1, s + 1)).fishId));
     expect(ids.size).toBeGreaterThanOrEqual(3);
   });
-  it("brings up night fish at night only", () => {
+  it("keeps the glowing fish up in the Hollow and the Tarn, not at Moonwell Lake by day or night", () => {
     const night = (s: number) => {
       const l = lakeWith(1, s + 1);
       return { ...l, startedAt: T0 - 0.5 * DAY_MS };
     };
     const atNight = Array.from({ length: 80 }, (_, s) => hookOne(night(s)).fishId);
     const byDay = Array.from({ length: 80 }, (_, s) => hookOne(lakeWith(1, s + 1)).fishId);
-    expect(atNight).toContain("glowfin");
+    expect(atNight).not.toContain("glowfin");
     expect(byDay).not.toContain("glowfin");
+    expect(new Set(atNight).size).toBeGreaterThanOrEqual(3);
   });
   it("brings up junk now and then outside swirls", () => {
     const ids = Array.from({ length: 300 }, (_, s) => hookOne(lakeWith(1, s + 1), Math.PI / 4).fishId);
@@ -139,7 +140,7 @@ describe("swirls, in detail", () => {
     expect(apart).toBeGreaterThanOrEqual(54);
   });
   it("frees only the fishers of a swirl that ran out", () => {
-    let lake = onShore(lakeWith(2), WEST, [swirl(), swirl({ id: 7, pos: castRing(EAST), theta: EAST, until: T0 + 10 })]);
+    let lake = onShore(lakeWith(2), WEST, [swirl(), swirl({ id: 7, area: "moonwell", pos: castRing(EAST), theta: EAST, until: T0 + 10 })]);
     lake = action(lake, 0, T0);
     lake = step(lake, T0 + 10);
     expect(fisher(lake).swirlId).toBe(99);
@@ -154,7 +155,7 @@ describe("players, in detail", () => {
     const lake = move(lakeWith(2), 1, { x: 1, y: 0 }, T0);
     expect(fisher(lake, 0).vel).toEqual({ x: 0, z: 0 });
     const x = fisher(lake, 1).pos.x;
-    expect(fisher(step(lake, T0 + 500), 1).pos.x).toBeCloseTo(x + 2.1, 6);
+    expect(fisher(step(lake, T0 + 500), 1).pos.x).toBeCloseTo(x + WALK_SPEED * 0.5, 6);
   });
   it("faces the bobber when casting from anywhere round the lake", () => {
     const theta = 0.9;
