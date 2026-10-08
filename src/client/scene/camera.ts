@@ -16,7 +16,7 @@ const S = { x: 0, v: 0 };
 export type Reveal = { x: number; z: number; age: number };
 const REVEAL_S = 2.6;
 
-export const VIEWS = ["auto", "group", "establish", "campfire", "dock", "falls", "lily", "reeds", "overview", "top"] as const;
+export const VIEWS = ["auto", "group", "wide", "establish", "campfire", "dock", "falls", "lily", "reeds", "overview", "top"] as const;
 export type ViewName = (typeof VIEWS)[number];
 
 export function isView(v: string): v is ViewName {
@@ -226,6 +226,11 @@ export class CameraRig {
       rate = 1.1;
     } else if (groupMode) {
       this.fitGroup();
+    } else if (v === "wide" && this.n > 0) {
+      // High and far over the family: the lie of the land round them (the fog's edge, the sea).
+      this.fitGroup();
+      this.wantDist = Math.max(this.wantDist, 95);
+      this.wantEl = 0.72;
     } else {
       const R = (th: number, k: number) => lakeRadius(th) * k;
       switch (v) {

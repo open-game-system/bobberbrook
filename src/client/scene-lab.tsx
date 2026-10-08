@@ -152,24 +152,16 @@ const LAZY: Record<string, () => Scenario> = {
   "boat-ride": () => atPlatform(findPlatform("boat"), 0.3, (l) => l.ride !== null && rideK(l) > 0.35, (l, now, s) => now - s > 2500 && l.ride !== null),
   "zeppelin-ride": () => atPlatform(findPlatform("zeppelin"), 0.36, (l) => l.ride !== null && rideK(l) > 0.4, (l, now, s) => now - s > 2500 && l.ride !== null),
   boarding: () => atPlatform(findPlatform("boat"), 0.4, (l) => l.boarding !== null, (l, now, s) => now - s > 1200 && l.boarding !== null),
-  // The edge of what the family has explored: they came down the trail south of Moonwell Lake.
-  fog: () => {
-    const p = W.placeAt({ i: 0, j: 1 }) ?? findPlace(() => true);
-    const t = W.trailsNear(p.center, 1).find((tr) => tr.a === p.key || tr.b === p.key);
-    const end = t ? (t.a === p.key ? t.from : t.to) : p.center;
-    const toward = shoreOf(p, -Math.PI / 2, 2);
-    const mid: Vec = { x: end.x * 0.7 + toward.x * 0.3, z: end.z * 0.7 + toward.z * 0.3 };
-    return {
-      phase: 0.34,
-      fishers: [
-        { seat: 0, name: "Dad", spot: toward, at: { x: mid.x + 1, z: mid.z } },
-        { seat: 2, name: "Juneau", spot: toward, at: { x: mid.x - 1, z: mid.z + 0.5 } },
-      ],
-      setup: (l) => produce(l, (d) => { d.discovered = ["moonwell", p.id]; }),
-      warmUntil: () => true,
-      hero: (_l, now, s) => now - s > 3500,
-    };
-  },
+  // The edge of what the family has explored: up the trail from Moonwell Lake toward the pools (not found yet).
+  fog: () => ({
+    phase: 0.34,
+    fishers: [
+      { seat: 0, name: "Dad", spot: onTrailAt(1, 0.42, 1), at: onTrailAt(1, 0.3, 1) },
+      { seat: 2, name: "Juneau", spot: onTrailAt(1, 0.45, -0.8), at: onTrailAt(1, 0.33, -0.8) },
+    ],
+    warmUntil: () => true,
+    hero: (_l, now, s) => now - s > 4000,
+  }),
 };
 
 const SCENARIOS: Record<string, Scenario> = {

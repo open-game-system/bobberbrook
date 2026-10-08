@@ -47,6 +47,7 @@ import { EdgeMarkers, type Marker } from "./markers";
 import { DoubleSide } from "three";
 import type { Place } from "../../game/regions";
 import { createJobs } from "./stream";
+import { buildFogOfWar } from "./fow";
 import { activeWorld, placesWithin, setWorld, trailsWithin } from "./worldQuery";
 
 export type { LakeScene, SceneQuality } from "./types";
@@ -180,6 +181,8 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   const mood = new Mood();
   const mist = buildMist(full);
   scene.add(mist.mesh);
+  const fow = buildFogOfWar(jobs);
+  scene.add(fow.mesh);
   /** Each nearby place's veil (1 = not found yet), eased. */
   const veil = new Map<string, number>();
   const veilOf = (id: string) => veil.get(id) ?? 1;
@@ -303,6 +306,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       areas.reset();
       mood.reset();
       veil.clear();
+      fow.reset();
       nearX = 1e9;
     }
     time.value = t;
@@ -415,6 +419,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     } else occ.uNear.value = 0;
     occ.uVP.value.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     mist.update(tod, t, veilOf, occ.uNear.value);
+    fow.update(tod, t, dt, rig.focus.x, rig.focus.z, lake ? lake.revealed : null, lake ? lake.discovered : []);
     stream(rig.focus.x, rig.focus.z, streamBudget);
     renderer.info.reset();
     if (post) post.render();
@@ -484,7 +489,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       rig.setView(name);
       return name;
     },
-    debug: () => ({ split: { framed: [...framed], markers: markers.debug() }, fishers: fishers.debug(), camera: camera.position.toArray(), rig: rig.debug(), trees: forest.count, chunks: ground.count(), jobs: jobs.pending(), world: activeWorld().seed, near: nearPlaces.map((p) => `${p.id}:${p.biome}`), veil: Object.fromEntries(veil), mood: mood.debug() }),
+    debug: () => ({ split: { framed: [...framed], markers: markers.debug() }, fishers: fishers.debug(), camera: camera.position.toArray(), rig: rig.debug(), trees: forest.count, chunks: ground.count(), jobs: jobs.pending(), world: activeWorld().seed, fow: { on: fow.mesh.visible, ...fow.stats(), map: Array.from({ length: 11 }, (_, j) => Array.from({ length: 11 }, (_, i) => fow.veilAt(rig.focus.x + (i - 5) * 24, rig.focus.z + (j - 5) * 24)).join('')).join('/'), ahead: [fow.veilAt(rig.focus.x, rig.focus.z), fow.veilAt(rig.focus.x + 100, rig.focus.z), fow.veilAt(rig.focus.x - 100, rig.focus.z - 100)] }, near: nearPlaces.map((p) => `${p.id}:${p.biome}`), veil: Object.fromEntries(veil), mood: mood.debug() }),
     pick(x, y) {
       const rc = new Raycaster();
       rc.setFromCamera(new Vector2(x * 2 - 1, 1 - y * 2), camera);
@@ -566,6 +571,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       trails.dispose();
       areas.dispose();
       mist.dispose();
+      fow.dispose();
       markers.dispose();
       splashes.dispose();
       painted.dispose();
