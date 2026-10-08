@@ -98,5 +98,25 @@
  {
   "id": "campfire",
   "text": "Campfire time."
+ },
+ {
+  "id": "teach-walk",
+  "text": "Walk to the water, then cast your line!"
+ },
+ {
+  "id": "teach-bite",
+  "text": "Something's biting! Tap!"
+ },
+ {
+  "id": "teach-hold",
+  "text": "Hold the button to reel it in!"
+ },
+ {
+  "id": "teach-letgo",
+  "text": "It's splashing! Let go!"
+ },
+ {
+  "id": "teach-swirl",
+  "text": "Follow the arrow to the sparkly swirl!"
  }
 ]

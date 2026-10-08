@@ -11,6 +11,8 @@ import { unlockAudio } from "../audio/engine";
 import { voice } from "../audio/voice";
 import { FISH_IDS } from "../../game/fish";
 import { useOgsTv } from "../useOgsTv";
+import { shouldTeach, teachFor, type TeachMemory } from "../teach";
+import { thrashingAt } from "../../game/reel";
 import { createServerClock } from "../serverClock";
 import { SEAT_HEX } from "../components/MiniMap";
 import { ShellIcon } from "../components/Icons";
@@ -46,6 +48,7 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
   const [sound, setSound] = useState(autoSound);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toastId = useRef(0);
+  const teachMem = useRef<TeachMemory>(new Map());
 
   useEffect(() => {
     const id = window.setInterval(() => send({ type: "TICK" }), TICK_MS);
@@ -77,7 +80,10 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
     scene.current?.update(lake, performance.now());
     const events = lakeEvents(prev.current, lake);
     prev.current = lake;
-    if (sound) playLakeEvents(lake, events);
+    if (sound) {
+      playLakeEvents(lake, events);
+      for (const line of teachFor(events, teachMem.current)) voice.line(line);
+    }
     setTimeOfDayMood(todOf({ startedAt: lake.startedAt, now: clock.now() }));
     const fresh: Toast[] = [];
     for (const e of events) {
@@ -100,11 +106,21 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
     if (!sound) return;
     unlockAudio();
     startWorld();
-    voice.enable([...FISH_IDS.map((id) => `fish-${id}`), "new", "upgrade", "golden", "campfire"]);
+    voice.enable([...FISH_IDS.map((id) => `fish-${id}`), "new", "upgrade", "golden", "campfire", "teach-walk", "teach-bite", "teach-hold", "teach-letgo", "teach-swirl"]);
     const live = createLiveSounds();
+    const thrashing = new Set<number>();
     let raf = 0;
     const loop = () => {
-      live(latest.current, clock.now());
+      const now = clock.now();
+      live(latest.current, now);
+      // "It's splashing! Let go!": each fisher's first two thrashes.
+      for (const f of latest.current.fishers) {
+        const def = f.reel ? fishById(f.reel.fishId) : undefined;
+        const on = f.mode === "reel" && !f.easy && f.reel !== null && def !== undefined && thrashingAt(def.fight, f.reel, now);
+        if (on && !thrashing.has(f.seat) && shouldTeach("teach-letgo", f.seat, teachMem.current)) voice.line("teach-letgo");
+        if (on) thrashing.add(f.seat);
+        else thrashing.delete(f.seat);
+      }
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
