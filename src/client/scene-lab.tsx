@@ -51,6 +51,8 @@ const onTrailAt = (i: number, t: number, lat = 0): Vec => {
   const len = Math.hypot(dx, dz);
   return { x: tr.from.x + dx * t - (dz / len) * lat, z: tr.from.z + dz * t + (dx / len) * lat };
 };
+/** A calm moment to show a place: a while in, nobody holding up a catch. */
+const calm = (l: Lake, now: number, s: number) => now - s > 5000 && !l.fishers.some((f) => f.mode === "catch");
 const centroid = (l: Lake): Vec => {
   const n = Math.max(1, l.fishers.length);
   return { x: l.fishers.reduce((s, f) => s + f.pos.x, 0) / n, z: l.fishers.reduce((s, f) => s + f.pos.z, 0) / n };
@@ -161,7 +163,7 @@ const SCENARIOS: Record<string, Scenario> = {
       { seat: 2, name: "Juneau", spot: DOCK_SPOT },
     ],
     setup: discoverAll,
-    hero: (_l, now, s) => now - s > 5000,
+    hero: calm,
   },
   mistmarsh: {
     phase: 0.44,
@@ -171,7 +173,7 @@ const SCENARIOS: Record<string, Scenario> = {
       { seat: 3, name: "Sis", spot: shoreIn("mistmarsh", 1.7), easy: true, at: shoreIn("mistmarsh", 1.7, 2) },
     ],
     setup: both(discoverOnly(["mistmarsh"]), swirlIn("mistmarsh", 0.6, false)),
-    hero: (_l, now, s) => now - s > 5000,
+    hero: calm,
   },
   pools: {
     phase: 0.24,
@@ -180,7 +182,7 @@ const SCENARIOS: Record<string, Scenario> = {
       { seat: 2, name: "Juneau", spot: shoreIn("pools", 1.4), at: shoreIn("pools", 1.4, 2) },
     ],
     setup: both(discoverOnly(["pools"]), swirlIn("pools", 0.9, false)),
-    hero: (_l, now, s) => now - s > 5000,
+    hero: calm,
   },
   hollow: {
     phase: 0.3,
@@ -190,7 +192,7 @@ const SCENARIOS: Record<string, Scenario> = {
       { seat: 3, name: "Sis", spot: shoreIn("hollow", 0.5), easy: true, at: shoreIn("hollow", 0.5, 2) },
     ],
     setup: both(discoverOnly(["hollow"]), swirlIn("hollow", 1.4, false)),
-    hero: (_l, now, s) => now - s > 5000,
+    hero: calm,
   },
   tarn: {
     phase: 0.12,
@@ -201,7 +203,7 @@ const SCENARIOS: Record<string, Scenario> = {
       { seat: 3, name: "Sis", spot: shoreIn("tarn", 2.6), easy: true, at: shoreIn("tarn", 2.6, 2) },
     ],
     setup: both(discoverAll, swirlIn("tarn", 1.3, false)),
-    hero: (_l, now, s) => now - s > 5000,
+    hero: calm,
   },
   // The family walking the trail from Moonwell Lake toward Mistmarsh (not found yet: it glows ahead).
   trail: {
@@ -214,6 +216,18 @@ const SCENARIOS: Record<string, Scenario> = {
     ],
     warmUntil: () => true,
     hero: (l, now, s) => now - s > 3500 && areaAt(centroid(l)) === null && centroid(l).x < -38,
+  },
+  // The family strung out along the trail: one at the lake, one mid-trail, one at the marsh's edge.
+  spread: {
+    phase: 0.3,
+    fishers: [
+      { seat: 0, name: "Dad", spot: onTrailAt(0, -0.3), at: onTrailAt(0, -0.3) },
+      { seat: 2, name: "Juneau", spot: onTrailAt(0, 0.5), at: onTrailAt(0, 0.5) },
+      { seat: 1, name: "Mom", spot: onTrailAt(0, 1.05), at: onTrailAt(0, 1.05) },
+    ],
+    setup: discoverOnly(["mistmarsh"]),
+    warmUntil: () => true,
+    hero: (_l, now, s) => now - s > 4500,
   },
   // Juneau walks out of the trees into Mistmarsh: the discovery moment.
   discovery: {

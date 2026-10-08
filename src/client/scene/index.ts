@@ -10,7 +10,9 @@ import {
   PCFShadowMap,
   Scene,
   SRGBColorSpace,
+  Vector2,
   Vector3,
+  Vector4,
   WebGLRenderer,
 } from "three";
 import { dayPhase } from "../../game/daycycle";
@@ -35,6 +37,7 @@ import { buildTrails } from "./trails";
 import { buildAreaDressing } from "./areas";
 import { paintedMaterial } from "./geo";
 import { Mood } from "./mood";
+import { buildMist } from "./mist";
 import { AREAS, areaAt, areaById } from "../../game/world";
 import { AREA_INDEX } from "./valley";
 import { DoubleSide } from "three";
@@ -142,7 +145,13 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   scene.add(ground.group);
   const water = buildWater();
   scene.add(...water.ponds, water.brook, water.falls);
-  const occ = { uCam: { value: new Vector3() }, uFocus: { value: Array.from({ length: MAX_FOCUS }, () => new Vector3(0, -100, 0)) } };
+  const occ = {
+    uCam: { value: new Vector3() },
+    uFocus: { value: Array.from({ length: MAX_FOCUS }, () => new Vector3(0, -100, 0)) },
+    uBox: { value: new Vector4(0, 0, 0, 0) },
+    uNear: { value: 0 },
+    uRes: { value: new Vector2(1, 1) },
+  };
   const treeMat = occluderMaterial(occ);
   const props = buildProps(opts.quality, sway, treeMat);
   scene.add(props.group);
@@ -155,7 +164,10 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   const areas = buildAreaDressing(full, { painted, paintedDouble, sway, tree: treeMat });
   scene.add(areas.group);
   const mood = new Mood();
+  const mist = buildMist(full);
+  scene.add(mist.mesh);
   const glowBoost = new Float32Array(AREAS.length);
+  const pulse = new Float32Array(AREAS.length);
   const veil = new Float32Array(AREAS.length).fill(1);
   let discoverySeq = -1;
   let revealAt = -1;
@@ -200,6 +212,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   const t0 = last;
   let raf = 0;
   let disposed = false;
+  const tmpO = new Vector3();
   const catchBuf: CatchFocus = { x: 0, y: 0, z: 0, age: 0 };
 
   const applyTod = (phase: number) => {
@@ -252,7 +265,13 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     const revealAge = revealAt >= 0 ? t - revealAt : -1;
     forest.update(camera);
     trails.update(tod, t);
-    areas.update(tod, camera, glowBoost);
+    // The found place's landmark glows through the reveal.
+    AREAS.forEach((a, i) => {
+      const on = revealAge >= 0 && a.id === revealArea.id ? Math.max(0, Math.min(1, revealAge / 0.6, (5 - revealAge) / 1.5)) : 0;
+      pulse[i] = on;
+    });
+    areas.update(tod, camera, glowBoost, pulse, t);
+    mist.update(tod, t, veil);
     sky.mountains.position.set(camera.position.x, 0, camera.position.z);
     sky.update(tod, camera, t);
     water.update(tod, t);
@@ -287,6 +306,26 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       if (fi < MAX_FOCUS) foc[fi++]!.set(x, y + 1, z);
     });
     while (fi < MAX_FOCUS) foc[fi++]!.set(0, -100, 0);
+    // The action's screen box and how far away its nearest fisher is (see occluderMaterial).
+    camera.updateMatrixWorld();
+    let bx0 = 1, by0 = 1, bx1 = 0, by1 = 0, near = Infinity;
+    const boxPt = (x: number, y: number, z: number) => {
+      tmpO.set(x, y, z).applyMatrix4(camera.matrixWorldInverse);
+      near = Math.min(near, -tmpO.z);
+      tmpO.applyMatrix4(camera.projectionMatrix);
+      const sx = tmpO.x * 0.5 + 0.5;
+      const sy = tmpO.y * 0.5 + 0.5;
+      bx0 = Math.min(bx0, sx); bx1 = Math.max(bx1, sx); by0 = Math.min(by0, sy); by1 = Math.max(by1, sy);
+    };
+    fishers.forEachFisher((x, y, z) => {
+      boxPt(x, y, z);
+      boxPt(x, y + 3.2, z);
+    });
+    if (near < Infinity) {
+      occ.uBox.value.set(bx0, by0, bx1, by1);
+      occ.uNear.value = near - 1.5;
+    } else occ.uNear.value = 0;
+    renderer.getDrawingBufferSize(occ.uRes.value);
     renderer.info.reset();
     if (post) post.render();
     else renderer.render(scene, camera);
@@ -412,6 +451,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       forest.dispose();
       trails.dispose();
       areas.dispose();
+      mist.dispose();
       painted.dispose();
       paintedDouble.dispose();
       groundMat.dispose();

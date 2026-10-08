@@ -21,12 +21,13 @@ mkdirSync(out, { recursive: true });
 
 // scenario, phase (null = scenario default), wait for the hero moment?
 const SHOTS = [
-  ["moonwell", null, false],
-  ["mistmarsh", null, false],
-  ["hollow", null, false],
-  ["pools", null, false],
-  ["tarn", null, false],
+  ["moonwell", null, true],
+  ["mistmarsh", null, true],
+  ["hollow", null, true],
+  ["pools", null, true],
+  ["tarn", null, true],
   ["trail", null, true],
+  ["spread", null, true],
   ["discovery", null, true],
   ["night-tarn", null, true],
   ["morning", null, false],

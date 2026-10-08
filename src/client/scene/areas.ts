@@ -4,6 +4,7 @@ import { bellGeometry, fernGeometry, flowerGeometry, instanced, lilyGeometry, lu
 import { rng, vnoise } from "./noise";
 import { heightAt, trailWear } from "./terrain";
 import type { TodState } from "./tod";
+import { buildLandmark, type Landmark } from "./landmarks";
 
 /**
  * The area kit: every far place's shore and clearing dressed from the same parts (rocks, reeds, lily
@@ -50,7 +51,7 @@ const RECIPES: Record<Exclude<AreaId, "moonwell">, Recipe> = {
 export type AreaDressing = {
   group: Group;
   byArea: Map<AreaId, Group>;
-  update(tod: TodState, camera: Camera, glowBoost: Float32Array): void;
+  update(tod: TodState, camera: Camera, glowBoost: Float32Array, pulse: Float32Array, time: number): void;
   dispose(): void;
 };
 
@@ -168,6 +169,7 @@ export function buildAreaDressing(full: boolean, m: AreaMats): AreaDressing {
   group.name = "areas";
   const byArea = new Map<AreaId, Group>();
   const glows: MeshBasicMaterial[] = [];
+  const landmarks = new Map<AreaId, Landmark>();
   // Water lilies glow softly pink at dusk and night (the marsh's signature).
   const lilyMat = new MeshLambertMaterial({ vertexColors: true });
   for (const a of AREAS) {
@@ -175,13 +177,16 @@ export function buildAreaDressing(full: boolean, m: AreaMats): AreaDressing {
     const glow = new MeshBasicMaterial({ vertexColors: true });
     glows.push(glow);
     const g = dress(a, RECIPES[a.id], full, m, glow, lilyMat);
+    const lm = buildLandmark(a.id, full, m.painted, m.tree);
+    g.add(lm.group);
+    landmarks.set(a.id, lm);
     byArea.set(a.id, g);
     group.add(g);
   }
   return {
     group,
     byArea,
-    update(tod, camera, glowBoost) {
+    update(tod, camera, glowBoost, pulse, time) {
       lilyMat.emissive.setRGB(0.9, 0.35, 0.7).multiplyScalar(0.15 + 0.6 * tod.glow);
       let i = 0;
       for (const a of AREAS) {
@@ -189,6 +194,7 @@ export function buildAreaDressing(full: boolean, m: AreaMats): AreaDressing {
         const g = byArea.get(a.id);
         if (g) g.visible = Math.hypot(camera.position.x - a.center.x, camera.position.z - a.center.z) < SHOW_DIST + a.clearing;
         const k = AREAS.indexOf(a);
+        if (g?.visible) landmarks.get(a.id)?.update(tod, time, pulse[k] ?? 0);
         glows[i]!.color.setScalar(0.3 + 0.75 * Math.min(1, tod.glow + (glowBoost[k] ?? 0)));
         i++;
       }
@@ -198,6 +204,7 @@ export function buildAreaDressing(full: boolean, m: AreaMats): AreaDressing {
         if ("geometry" in o && o.geometry && typeof o.geometry === "object" && "dispose" in o.geometry && typeof o.geometry.dispose === "function") o.geometry.dispose();
       });
       for (const gl of glows) gl.dispose();
+      for (const lm of landmarks.values()) lm.dispose();
       lilyMat.dispose();
     },
   };

@@ -1,4 +1,4 @@
-import { BufferAttribute, BufferGeometry, Color, MeshLambertMaterial, ShaderChunk, Vector3, type Side } from "three";
+import { BufferAttribute, BufferGeometry, Color, MeshLambertMaterial, ShaderChunk, Vector2, Vector3, Vector4, type Side } from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 let patched = false;
@@ -99,7 +99,14 @@ export function merge(parts: BufferGeometry[]): BufferGeometry {
   return m;
 }
 
-export type OccluderUniforms = { uCam: { value: Vector3 }; uFocus: { value: Vector3[] } };
+export type OccluderUniforms = {
+  uCam: { value: Vector3 };
+  uFocus: { value: Vector3[] };
+  /** The action's screen box (0..1, x0 y0 x1 y1, y up) and the view depth just in front of the nearest fisher. */
+  uBox: { value: Vector4 };
+  uNear: { value: number };
+  uRes: { value: Vector2 };
+};
 export const MAX_FOCUS = 5;
 
 /**
@@ -111,8 +118,11 @@ export function occluderMaterial(u: OccluderUniforms): MeshLambertMaterial {
   m.onBeforeCompile = (shader) => {
     shader.uniforms.uCam = u.uCam;
     shader.uniforms.uFocus = u.uFocus;
+    shader.uniforms.uBox = u.uBox;
+    shader.uniforms.uNear = u.uNear;
+    shader.uniforms.uRes = u.uRes;
     shader.vertexShader = shader.vertexShader
-      .replace("#include <common>", "#include <common>\nvarying vec3 vOccW;")
+      .replace("#include <common>", "#include <common>\nvarying vec3 vOccW;\nvarying float vOccZ;")
       .replace(
         "#include <project_vertex>",
         `#include <project_vertex>
@@ -120,13 +130,18 @@ export function occluderMaterial(u: OccluderUniforms): MeshLambertMaterial {
   #ifdef USE_INSTANCING
   occW = instanceMatrix * occW;
   #endif
-  vOccW = (modelMatrix * occW).xyz;`,
+  vOccW = (modelMatrix * occW).xyz;
+  vOccZ = -mvPosition.z;`,
       );
     shader.fragmentShader = shader.fragmentShader
       .replace(
         "#include <common>",
         `#include <common>
 varying vec3 vOccW;
+varying float vOccZ;
+uniform vec4 uBox;
+uniform float uNear;
+uniform vec2 uRes;
 uniform vec3 uCam;
 uniform vec3 uFocus[${MAX_FOCUS}];`,
       )
@@ -142,6 +157,12 @@ uniform vec3 uFocus[${MAX_FOCUS}];`,
     float d = length(vOccW - (uCam + ab * t));
     occ = max(occ, (1.0 - smoothstep(3.0, 5.5, d)) * step(0.03, t) * (1.0 - smoothstep(0.86, 0.93, t)));
   }
+  // Anything standing in front of the action's screen box (closer than the nearest fisher) fades too,
+  // so a canopy never covers a trail the family is spread along.
+  vec2 sc = gl_FragCoord.xy / uRes;
+  float inBox = smoothstep(uBox.x - 0.04, uBox.x + 0.02, sc.x) * smoothstep(uBox.z + 0.04, uBox.z - 0.02, sc.x)
+    * smoothstep(uBox.y - 0.04, uBox.y + 0.02, sc.y) * smoothstep(uBox.w + 0.04, uBox.w - 0.02, sc.y);
+  occ = max(occ, inBox * (1.0 - smoothstep(uNear - 3.0, uNear, vOccZ)) * 0.92);
   // Faded with alpha-to-coverage (multisampled, smooth) rather than a screen-door pattern.
   float occA = 1.0 - min(1.0, occ * 1.15);
   if (occA < 0.02) discard;`,

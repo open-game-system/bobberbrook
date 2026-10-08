@@ -139,6 +139,8 @@ export class Fx {
   }
 
   /** Ambient: fireflies at night, mist and spray at the falls, embers from the fire. */
+  private sporeAcc = 0;
+
   ambient(dt: number, tod: TodState, campfire: number, fx0 = 0, fz0 = 0): void {
     // Wisps and ground mist gather round the pond nearest the action.
     let near: Area = AREAS[0]!;
@@ -182,6 +184,19 @@ export class Fx {
       const x = cx + Math.cos(th) * rr;
       const z = cz + Math.sin(th) * rr;
       this.water.emit({ x, y: Math.max(0, heightAt(x, z)) + 0.3, z, vx: 0.25 + this.r() * 0.2, vy: 0.02, vz: (this.r() - 0.5) * 0.2, life: 9, size: 5 + this.r() * 4, r: tod.fog.r * 1.2 + 0.15, g: tod.fog.g * 1.2 + 0.15, b: tod.fog.b * 1.1 + 0.2, alpha: 0.07 + 0.07 * tod.mist, grow: 0.6 });
+    }
+    // Glowshroom Hollow: spores drifting up from the giant caps.
+    if (near.id === "hollow" && best < 40) {
+      this.sporeAcc += dt * (this.lite ? 6 : 14);
+      while (this.sporeAcc > 1) {
+        this.sporeAcc -= 1;
+        const th = this.r() * Math.PI * 2;
+        const rr = this.r() * (near.pond.r + near.clearing);
+        const x = cx + Math.cos(th) * rr;
+        const z = cz + Math.sin(th) * rr;
+        const teal = this.r() < 0.55;
+        this.glow.emit({ x, y: 0.5 + this.r() * 6, z, vx: (this.r() - 0.5) * 0.3, vy: 0.15 + this.r() * 0.3, vz: (this.r() - 0.5) * 0.3, life: 5 + this.r() * 4, size: 0.12 + this.r() * 0.14, r: teal ? 0.4 : 0.8, g: teal ? 1 : 0.6, b: 1, alpha: 0.9, shape: 0 });
+      }
     }
     // Embers.
     const fire = Math.max(tod.glow, campfire);

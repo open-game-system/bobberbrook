@@ -86,7 +86,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     const r = outerRadius(th) + e;
     const x = Math.cos(th) * r;
     const z = Math.sin(th) * r;
-    if (!clearOfTrails(x, z, 7)) continue;
+    if (!clearOfTrails(x, z, 16)) continue;
     giants[v]!.push({ x, y: heightAt(x, z) - 0.4, z, s: 0.95 + R() * 0.3, ry: R() * 6 });
   }
   for (let v = 0; v < 3; v++) if (giants[v]!.length) add(instanced(giantGeometry(v), treeMat, giants[v]!, true)).name = `giants-${v}`;

@@ -1,6 +1,7 @@
 import { BufferGeometry, Color, ConeGeometry, CylinderGeometry, Group, InstancedMesh, type Camera, type Material } from "three";
-import { AREAS, CAMPFIRE, SOUTH, angleGap } from "../../game/world";
+import { AREAS, CAMPFIRE, SOUTH, TRAIL_HALF_WIDTH, angleGap } from "../../game/world";
 import { CANOPY, blob, bushGeometry, instanced, oakGeometry, pineGeometry, type Inst } from "./kit";
+import { birchGeometry, willowGeometry } from "./landmarks";
 import { fbm, rng, vnoise } from "./noise";
 import { merge, paint, prep, puffNormals } from "./geo";
 import { FALLS, heightAt } from "./terrain";
@@ -65,6 +66,8 @@ export function buildForest(full: boolean, treeMat: Material): Forest {
     { hi: oakGeometry(2), lo: oakLo(2), shadows: true },
     { hi: pineGeometry(), lo: pineLo(), shadows: true },
     { hi: bushGeometry(), lo: bushGeometry(), shadows: false },
+    { hi: willowGeometry(3), lo: oakLo(0), shadows: true },
+    { hi: birchGeometry(9), lo: oakLo(2), shadows: true },
   ];
   const cols = Math.ceil((VALLEY.x1 - VALLEY.x0 + 60) / CHUNK);
   const rows = Math.ceil((VALLEY.z1 - VALLEY.z0 + 60) / CHUNK);
@@ -81,7 +84,9 @@ export function buildForest(full: boolean, treeMat: Material): Forest {
     for (let x = ox; x < ox + cols * CHUNK; x += spacing) {
       const px = x + (R() - 0.5) * spacing * 0.9;
       const pz = z + (R() - 0.5) * spacing * 0.9;
-      const { o } = openAt(px, pz, oi);
+      const { o, trail } = openAt(px, pz, oi);
+      // Near a trail the woods stay low and open, so the camera sees the family walking it.
+      const nearTrail = trail - TRAIL_HALF_WIDTH < 10;
       if (o < -0.5) continue;
       if (pondAt(px, pz, pi).d < 1.5) continue;
       if (Math.abs(px) < 4.5 && pz < 0 && pz > FALLS.topZ - 14) continue;
@@ -106,7 +111,14 @@ export function buildForest(full: boolean, treeMat: Material): Forest {
       } else {
         const pineK = 0.45 + 0.35 * W[4]! - 0.3 * W[3]! - 0.2 * W[1]!;
         k = R() < pineK ? 3 : Math.floor(R() * 3);
-        s = (0.95 + R() * 0.6 + Math.min(o, 40) * 0.012) * (k === 3 ? 1.15 : 1);
+        // Willows round the marsh, birches round the pools.
+        if (!nearTrail && o > 6 && R() < W[1]! * 1.1 - 0.15) k = 5;
+        else if (R() < W[2]! * 1.0 - 0.15) k = 6;
+        s = (0.95 + R() * 0.6 + Math.min(o, 40) * 0.012) * (k === 3 ? 1.15 : k === 5 ? 0.85 : 1);
+        if (nearTrail) {
+          if (R() < 0.4) continue;
+          s = Math.min(s, 0.75 + 0.03 * (trail - TRAIL_HALF_WIDTH));
+        }
       }
       // Canopy sub-palette of the place it belongs to.
       tint.setRGB(0, 0, 0);

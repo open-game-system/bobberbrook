@@ -266,7 +266,7 @@ function pondGeometry(a: Area): BufferGeometry {
 }
 
 /** A ribbon following a centre line: (x, y, z) points with a half width each. */
-function ribbon(points: { x: number; y: number; z: number; w: number }[], sideways: "x" | "z"): BufferGeometry {
+export function ribbon(points: { x: number; y: number; z: number; w: number }[], sideways: "x" | "z"): BufferGeometry {
   const pos: number[] = [];
   const flow: number[] = [];
   const idx: number[] = [];
@@ -295,7 +295,7 @@ function ribbon(points: { x: number; y: number; z: number; w: number }[], sidewa
   return g;
 }
 
-function flowMaterial(speed: number, sheet: number): ShaderMaterial {
+export function flowMaterial(speed: number, sheet: number): ShaderMaterial {
   return new ShaderMaterial({
     vertexShader: FLOW_VERT,
     fragmentShader: FLOW_FRAG,
