@@ -15,6 +15,19 @@ let musicBus: GainNode | null = null;
 let tod: TimeOfDay = "morning";
 let timers: number[] = [];
 
+/** A generated hall: decaying stereo noise, so the harp and pad bloom like a forest glade at dusk. */
+function reverb(ctx: AudioContext, seconds: number): ConvolverNode {
+  const len = Math.floor(ctx.sampleRate * seconds);
+  const ir = ctx.createBuffer(2, len, ctx.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = ir.getChannelData(ch);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6);
+  }
+  const conv = ctx.createConvolver();
+  conv.buffer = ir;
+  return conv;
+}
+
 function noiseSource(ctx: AudioContext, seconds: number, brown: boolean): AudioBufferSourceNode {
   const buf = ctx.createBuffer(1, ctx.sampleRate * seconds, ctx.sampleRate);
   const d = buf.getChannelData(0);
@@ -125,7 +138,7 @@ function owl(ctx: AudioContext, out: AudioNode, t: number): void {
   });
 }
 
-/** A plucked, marimba-ish note through a soft low-pass, with a little echo on the music bus. */
+/** A harp-like pluck: a triangle with a quick bright partial, decaying long into the reverb. */
 function pluck(ctx: AudioContext, out: AudioNode, freq: number, t: number, gain: number, bright: number): void {
   const o = ctx.createOscillator();
   o.type = "triangle";
@@ -141,14 +154,42 @@ function pluck(ctx: AudioContext, out: AudioNode, freq: number, t: number, gain:
   const e = ctx.createGain();
   e.gain.setValueAtTime(0.0001, t);
   e.gain.exponentialRampToValueAtTime(gain, t + 0.01);
-  e.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
+  e.gain.exponentialRampToValueAtTime(0.0001, t + 2.2);
   o.connect(f);
   o2.connect(g2).connect(f);
   f.connect(e).connect(out);
   o.start(t);
   o2.start(t);
-  o.stop(t + 1.5);
-  o2.stop(t + 1.5);
+  o.stop(t + 2.3);
+  o2.stop(t + 2.3);
+}
+
+/** A soft "ooh" choir: stacked sines with slow vibrato and a long swell. */
+function choir(ctx: AudioContext, out: AudioNode, freqs: number[], t: number, dur: number, gain: number): void {
+  for (const freq of freqs) {
+    const o = ctx.createOscillator();
+    o.frequency.value = freq;
+    const vib = ctx.createOscillator();
+    vib.frequency.value = 4.6 + Math.random();
+    const vg = ctx.createGain();
+    vg.gain.value = freq * 0.006;
+    vib.connect(vg).connect(o.frequency);
+    const o2 = ctx.createOscillator();
+    o2.frequency.value = freq * 2.003;
+    const g2 = ctx.createGain();
+    g2.gain.value = 0.25;
+    const e = ctx.createGain();
+    e.gain.setValueAtTime(0.0001, t);
+    e.gain.linearRampToValueAtTime(gain, t + dur * 0.45);
+    e.gain.linearRampToValueAtTime(0.0001, t + dur);
+    o.connect(e);
+    o2.connect(g2).connect(e);
+    e.connect(out);
+    for (const n of [o, o2, vib]) {
+      n.start(t);
+      n.stop(t + dur + 0.1);
+    }
+  }
 }
 
 function pad(ctx: AudioContext, out: AudioNode, freqs: number[], t: number, dur: number, gain: number): void {
@@ -179,20 +220,23 @@ const CHORDS = [
   [3, 5, 7],
   [1, 3, 6],
 ];
-const BEAT = 60 / 76;
+const BEAT = 60 / 66;
 
 function scheduleBar(ctx: AudioContext, bar: number, t: number): void {
   if (!musicBus) return;
   const chord = CHORDS[bar % CHORDS.length]!;
   const isNight = tod === "night";
   const bright = tod === "golden" ? 0.6 : isNight ? 0.1 : 0.9;
-  pad(ctx, musicBus, chord.map((n) => note(n - 5) / 2), t, BEAT * 4, isNight ? 0.02 : 0.014);
-  // A little melody: 5–7 notes per bar, never the same bar twice in a row.
-  const steps = [0, 1, 1.5, 2, 3, 3.5];
-  steps.forEach((s, i) => {
-    if (Math.random() < (isNight ? 0.45 : 0.25)) return;
-    const degree = chord[i % 3]! + (Math.random() < 0.4 ? 5 : 0) + (Math.random() < 0.3 ? 1 : 0);
-    pluck(ctx, musicBus!, note(degree), t + s * BEAT, isNight ? 0.05 : 0.07, bright);
+  pad(ctx, musicBus, chord.map((n) => note(n - 5) / 2), t, BEAT * 4, isNight ? 0.014 : 0.01);
+  if (bar % 2 === 0) choir(ctx, musicBus, chord.map((n) => note(n)), t, BEAT * 8, isNight ? 0.016 : 0.011);
+  // A rising harp arpeggio every bar, and a few melody notes above it.
+  [0, 0.5, 1, 1.5, 2, 2.5].forEach((s, i) => {
+    const degree = chord[i % 3]! + (i >= 3 ? 5 : 0);
+    pluck(ctx, musicBus!, note(degree), t + s * BEAT, (isNight ? 0.035 : 0.045) * (1 - i * 0.08), bright);
+  });
+  [2.75, 3.25].forEach((s) => {
+    if (Math.random() < 0.4) return;
+    pluck(ctx, musicBus!, note(chord[Math.floor(Math.random() * 3)]! + 10), t + s * BEAT, 0.035, bright);
   });
 }
 
@@ -219,7 +263,11 @@ export function startWorld(): void {
   fb.gain.value = 0.28;
   const wet = ctx.createGain();
   wet.gain.value = 0.25;
+  const hall = reverb(ctx, 3.8);
+  const hallWet = ctx.createGain();
+  hallWet.gain.value = 0.55;
   musicBus.connect(out);
+  musicBus.connect(hall).connect(hallWet).connect(out);
   musicBus.connect(delay);
   delay.connect(fb).connect(delay);
   delay.connect(wet).connect(out);
