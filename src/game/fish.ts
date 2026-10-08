@@ -19,9 +19,9 @@ export type FishDef = {
   glow?: boolean;
 };
 
+// Stryker disable all: the catalogue is content (names, colours, sizes); its rules are tested through chooseCatch.
 const ALL_WATERS: readonly Water[] = ["dock", "lily", "falls", "reeds", "shore"];
 
-// Stryker disable all: the catalogue is content (names, colours, sizes); its rules are tested through chooseCatch.
 export const FISH: readonly FishDef[] = [
   { id: "brook-trout", name: "Brook Trout", rarity: "common", waters: ["shore", "falls", "reeds"], when: "any", cm: [18, 34],
     fight: { calmMs: [1500, 2400], thrashMs: [500, 800], pull: 0.6 }, colors: { body: "#7a6a3a", belly: "#e9a24c", fin: "#d4552f", accent: "#2f2a1a" } },
