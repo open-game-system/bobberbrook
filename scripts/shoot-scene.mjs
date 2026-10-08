@@ -30,6 +30,7 @@ const SHOTS = [
   ["spread", null, true],
   ["discovery", null, true],
   ["night-tarn", null, true],
+  ["double-catch", null, true],
   ["morning", null, false],
   ["morning", 0.97, false],
   ["four-reel", null, true],

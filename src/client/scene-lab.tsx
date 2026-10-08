@@ -217,6 +217,17 @@ const SCENARIOS: Record<string, Scenario> = {
     warmUntil: () => true,
     hero: (l, now, s) => now - s > 3500 && areaAt(centroid(l)) === null && centroid(l).x < -38,
   },
+  // Two catches at once, side by side.
+  "double-catch": {
+    phase: 0.25,
+    fishers: [
+      { seat: 0, name: "Dad", spot: shore(2.3), easy: true, at: shore(2.3, 2) },
+      { seat: 3, name: "Sis", spot: shore(2.15), easy: true, at: shore(2.15, 2) },
+    ],
+    direct: (l) => produce(l, (d) => { for (const f of d.fishers) if (f.reel) f.reel.fishId = f.seat === 0 ? "perch" : "bluegill"; }),
+    warmUntil: (l) => l.fishers.every((f) => f.mode === "reel"),
+    hero: (l, now) => l.fishers.filter((f) => f.mode === "catch" && f.catch !== null && now - f.catch.at > 900 && now - f.catch.at < 2600).length >= 2,
+  },
   // The family strung out along the trail: one at the lake, one mid-trail, one at the marsh's edge.
   spread: {
     phase: 0.3,

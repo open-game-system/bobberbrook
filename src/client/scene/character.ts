@@ -235,7 +235,8 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials)
   const HR = 0.25;
   const skull = part(new SphereGeometry(HR, 22, 16).translate(0, 0.24, 0), SKIN, lighten(SKIN, 0.1));
   const hair = part(new SphereGeometry(HR + 0.012, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.6).rotateX(-0.75).translate(0, 0.25, -0.02), HAIR[seat]!);
-  const fringe = part(new SphereGeometry(0.1, 10, 6).scale(1.6, 0.5, 0.8).translate(0, 0.42, 0.15), HAIR[seat]!);
+  // The fringe sits low on the brow, under the hat's brim (it used to poke through it).
+  const fringe = part(new SphereGeometry(0.1, 10, 6).scale(1.5, 0.45, 0.7).translate(0, 0.375, 0.19), HAIR[seat]!);
   const ears = [1, -1].map((sx) => part(new SphereGeometry(0.05, 8, 6).scale(0.55, 1, 0.9).translate(sx * HR, 0.22, 0), SKIN));
   const eyes = [1, -1].map((sx) => part(new SphereGeometry(0.038, 10, 8).scale(0.85, 1.2, 0.45).translate(sx * 0.088, 0.255, 0.226), 0x24160f));
   const shines = [1, -1].map((sx) => part(new SphereGeometry(0.013, 6, 4).translate(sx * 0.088 + 0.012, 0.272, 0.244), 0xffffff));
@@ -246,7 +247,31 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials)
   const style = Math.max(0, HAT_STYLE.indexOf(colorName));
   // Scaled up for the bigger head and tipped back so the brim never hides the face.
   const hat = hatGeometry(style, color).scale(1.16, 1.16, 1.16).translate(0, 0.0, 0).rotateX(-0.28).translate(0, 0.03, -0.02);
-  head.add(mesh(merge([skull, hair, fringe, ...ears, ...eyes, ...shines, ...cheeks, smile, nose, hat])));
+  // One gentle trait each, by colour, so the family tell each other apart at a glance.
+  const traits: BufferGeometry[] = [];
+  if (colorName === "green") {
+    // A round, soft beard under the smile.
+    traits.push(part(new SphereGeometry(0.15, 14, 10).scale(1.15, 0.8, 0.75).translate(0, 0.07, 0.15), HAIR[seat]!, lighten(HAIR[seat]!, 0.15)));
+    traits.push(part(new SphereGeometry(0.05, 8, 6).scale(1.7, 0.55, 0.7).translate(0, 0.155, 0.235), HAIR[seat]!));
+  } else if (colorName === "pink") {
+    // A braid down the back with a little bow.
+    for (let i = 0; i < 5; i++) traits.push(part(new SphereGeometry(0.058 - i * 0.004, 9, 7).translate(0.04 + i * 0.012, 0.2 - i * 0.075, -0.24 - i * 0.012), HAIR[seat]!, lighten(HAIR[seat]!, 0.12)));
+    traits.push(part(new SphereGeometry(0.04, 8, 6).scale(1.8, 0.8, 0.6).translate(0.09, -0.17, -0.3), color));
+  } else if (colorName === "yellow") {
+    // Round glasses.
+    for (const sx of [1, -1]) traits.push(part(new TorusGeometry(0.058, 0.011, 6, 18).translate(sx * 0.088, 0.255, 0.238), 0x3a2a24));
+    traits.push(part(new CylinderGeometry(0.008, 0.008, 0.06, 5).rotateZ(Math.PI / 2).translate(0, 0.262, 0.245), 0x3a2a24));
+  } else if (colorName === "blue") {
+    // Freckles across the cheeks and nose.
+    for (const [fx, fy] of [[0.13, 0.215], [0.165, 0.2], [0.12, 0.19], [0.05, 0.225]] as [number, number][]) {
+      for (const sx of [1, -1]) {
+        const x = sx * fx;
+        const z = Math.sqrt(Math.max(0, HR * HR - x * x - (fy - 0.24) * (fy - 0.24))) + 0.002;
+        traits.push(part(new SphereGeometry(0.009, 5, 4).translate(x, fy, z), 0xb0603a));
+      }
+    }
+  }
+  head.add(mesh(merge([skull, hair, fringe, ...ears, ...eyes, ...shines, ...cheeks, smile, nose, hat, ...traits])));
 
   // Rods, one per tier; the scene shows the family's current one.
   const rods: RodRig[] = [];

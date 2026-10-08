@@ -1,3 +1,4 @@
+import type { Splashes } from "./splash";
 import { AREAS, pondRadius, type Area } from "../../game/world";
 import { CAMPFIRE } from "../../game/world";
 import type { Particles } from "./particles";
@@ -47,26 +48,20 @@ export class Fx {
   biteSplash(x: number, z: number, t: number): void {
     this.surface.ripple(x, z, t, 2.2);
     this.surface.ripple(x, z, t + 0.18, 1.4);
-    this.surface.ripple(x, z, t + 0.4, 0.9);
-    // Central column.
-    for (let i = 0; i < (this.lite ? 25 : 50); i++) {
+    this.splashes?.spawn(x, z, t, 1.15);
+    // Droplets: small and crisp, thrown up and out from the crown's rim.
+    for (let i = 0; i < (this.lite ? 22 : 40); i++) {
       const a = this.r() * Math.PI * 2;
-      const s = this.r() * 0.7;
-      this.water.emit({ x: x + Math.cos(a) * 0.15, y: 0.1, z: z + Math.sin(a) * 0.15, vx: Math.cos(a) * s, vy: 6 + this.r() * 5, vz: Math.sin(a) * s, life: 1.3, size: 0.22 + this.r() * 0.3, r: 1, g: 1, b: 1, gravity: 12, alpha: 1 });
+      const s = 1.0 + this.r() * 2.4;
+      this.water.emit({ x: x + Math.cos(a) * 0.5, y: 0.5 + this.r() * 0.6, z: z + Math.sin(a) * 0.5, vx: Math.cos(a) * s, vy: 2.6 + this.r() * 3.6, vz: Math.sin(a) * s, life: 1.0, size: 0.09 + this.r() * 0.08, r: 1, g: 1, b: 1, gravity: 11, alpha: 1 });
     }
-    // Crown.
-    for (let i = 0; i < (this.lite ? 45 : 90); i++) {
+    // A short central jet.
+    for (let i = 0; i < (this.lite ? 8 : 14); i++) {
       const a = this.r() * Math.PI * 2;
-      const s = 1.4 + this.r() * 2.8;
-      const up = 3.0 + this.r() * 4.0;
-      this.water.emit({ x: x + Math.cos(a) * 0.3, y: 0.1, z: z + Math.sin(a) * 0.3, vx: Math.cos(a) * s, vy: up, vz: Math.sin(a) * s, life: 1.1, size: 0.2 + this.r() * 0.26, r: 0.95, g: 1, b: 1, gravity: 11, alpha: 0.95 });
+      const s = this.r() * 0.4;
+      this.water.emit({ x, y: 0.1, z, vx: Math.cos(a) * s, vy: 5 + this.r() * 3.5, vz: Math.sin(a) * s, life: 1.0, size: 0.12 + this.r() * 0.08, r: 1, g: 1, b: 1, gravity: 12, alpha: 1 });
     }
-    // White water ring on the surface.
-    for (let i = 0; i < 24; i++) {
-      const a = (i / 24) * Math.PI * 2;
-      this.water.emit({ x: x + Math.cos(a) * 0.6, y: 0.1, z: z + Math.sin(a) * 0.6, vx: Math.cos(a) * 1.4, vy: 0.3, vz: Math.sin(a) * 1.4, life: 1.1, size: 0.6, r: 0.95, g: 1, b: 1, alpha: 0.5, grow: 1.4, drag: 2.2 });
-    }
-    this.sparkle(x, 0.8, z, 18, 1, 1, 0.9, 2.4, 0.4);
+    this.sparkle(x, 0.8, z, 14, 1, 1, 0.9, 2.4, 0.35);
   }
 
   /** Continuous small spray while a fish thrashes (call every ~0.1 s). */
@@ -92,6 +87,7 @@ export class Fx {
   /** The fish leaves the water: a crown of white water, a ring, spray. */
   leap(x: number, z: number, t: number, junk: boolean): void {
     this.surface.ripple(x, z, t, 1.5);
+    this.splashes?.spawn(x, z, t, 0.85);
     this.surface.ripple(x, z, t + 0.2, 0.9);
     for (let i = 0; i < (this.lite ? 40 : junk ? 80 : 70); i++) {
       const a = this.r() * Math.PI * 2;
@@ -140,6 +136,8 @@ export class Fx {
 
   /** Ambient: fireflies at night, mist and spray at the falls, embers from the fire. */
   private sporeAcc = 0;
+  /** Shaped splashes (ring + crown); droplets stay particles. */
+  splashes: Splashes | null = null;
 
   /** The discovery moment: light motes swirl in from all round a place toward its middle. */
   discoverySwirl(x: number, z: number, radius: number): void {

@@ -123,6 +123,8 @@ class FisherView {
   private lastBobZ = 0;
   // The catch moment.
   catchStart = -1;
+  /** Sideways shift (world units along the camera's right) keeping simultaneous catches apart. */
+  cardDx = 0;
   private catchFromX = 0;
   private catchFromZ = 0;
   private catchId = "";
@@ -709,7 +711,51 @@ export class FisherViews {
       const seat = f ? campSeats[ci++ % campSeats.length] : undefined;
       if (lake) this.views[i]!.frame(f, lake, sn, t, dt, camera, this.fx, this.shadows, seat);
     }
+    this.spreadCards(camera, dt);
     this.spreadTags(camera, dt);
+  }
+
+  private readonly right = new Vector3();
+  private readonly up = new Vector3();
+  private readonly cards: { v: FisherView; along: number; h: number; hw: number; dx: number }[] = [];
+
+  /**
+   * Two catches at once are shown side by side, never stacked: held fish cards that overlap on screen
+   * are pushed apart along the camera's right axis (eased, so they glide apart).
+   */
+  private spreadCards(camera: Camera, dt: number): void {
+    this.right.setFromMatrixColumn(camera.matrixWorld, 0);
+    this.up.setFromMatrixColumn(camera.matrixWorld, 1);
+    const list = this.cards;
+    list.length = 0;
+    for (const v of this.views) {
+      const g = v.card.group;
+      if (!v.present || !g.visible || v.catchStart < 0) continue;
+      const hw = Math.abs(v.card.card.scale.x) * 0.5 * 0.92;
+      list.push({ v, along: g.position.dot(this.right), h: g.position.dot(this.up), hw, dx: 0 });
+    }
+    for (let it = 0; it < 6; it++) {
+      for (let i = 0; i < list.length; i++) {
+        for (let j = i + 1; j < list.length; j++) {
+          const a = list[i]!;
+          const b = list[j]!;
+          const ax = a.along + a.dx;
+          const bx = b.along + b.dx;
+          const ox = a.hw + b.hw - Math.abs(ax - bx);
+          const oy = a.hw * 0.8 + b.hw * 0.8 - Math.abs(a.h - b.h);
+          if (ox <= 0 || oy <= 0) continue;
+          const sgn = ax < bx || (ax === bx && a.v.seat < b.v.seat) ? 1 : -1;
+          a.dx -= (sgn * ox) / 2;
+          b.dx += (sgn * ox) / 2;
+        }
+      }
+    }
+    const k = damp(6, dt);
+    for (const v of this.views) {
+      const c = list.find((x) => x.v === v);
+      v.cardDx += ((c ? c.dx : 0) - v.cardDx) * k;
+      if (c) v.card.group.position.addScaledVector(this.right, v.cardDx);
+    }
   }
 
   /** Name tags never overlap: close fishers' tags are pushed apart sideways in screen space. */

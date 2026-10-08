@@ -38,6 +38,7 @@ import { buildAreaDressing } from "./areas";
 import { paintedMaterial } from "./geo";
 import { Mood } from "./mood";
 import { buildMist } from "./mist";
+import { Splashes } from "./splash";
 import { AREAS, areaAt, areaById } from "../../game/world";
 import { AREA_INDEX } from "./valley";
 import { DoubleSide } from "three";
@@ -179,6 +180,9 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   const parts = makeParticles();
   scene.add(parts.water.points, parts.glow.points);
   const fx = new Fx(parts.water, parts.glow, water, !full);
+  const splashes = new Splashes();
+  scene.add(splashes.group);
+  fx.splashes = splashes;
   const shadows = new FishShadows();
   scene.add(shadows.mesh);
   const textures = new FishTextures(opts.assetBase ?? "/art/fish/");
@@ -284,6 +288,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     shadows.end();
     fx.ambient(dt, tod, lake?.campfire ? 1 : 0, rig.focus.x, rig.focus.z);
     parts.water.update(dt, t);
+    splashes.frame(t);
     parts.glow.update(dt, t);
     rig.beginFocus();
     fishers.forEachFocus((x, y, z) => rig.addFocus(x, y, z));
@@ -346,6 +351,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   // ---- shader prewarm: everything visible, compiled against the target we really draw into ----
   fishers.showAllForPrewarm();
   swirls.showAllForPrewarm();
+  splashes.showAllForPrewarm();
   rig.update(0, 0, false, null);
   camera.updateMatrixWorld();
   applyTod(0.15);
@@ -454,6 +460,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       trails.dispose();
       areas.dispose();
       mist.dispose();
+      splashes.dispose();
       painted.dispose();
       paintedDouble.dispose();
       groundMat.dispose();
