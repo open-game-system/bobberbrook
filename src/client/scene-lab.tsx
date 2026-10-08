@@ -251,6 +251,20 @@ const SCENARIOS: Record<string, Scenario> = {
     warmUntil: () => true,
     hero: (l, now) => l.discovery !== null && now - l.discovery.at > 1300,
   },
+  // The family split (round-02 live play): Juneau fishing at the lake, Dad dawdling at the marsh end
+  // of the trail, ~29 m apart (the leash is 30 m).
+  split: {
+    phase: 0.36,
+    fishers: [
+      { seat: 2, name: "Juneau", spot: shore(2.75), at: shore(2.75, 2) },
+      { seat: 0, name: "Dad", spot: onTrailAt(0, 0.9, 0.8), at: onTrailAt(0, 0.85) },
+    ],
+    setup: discoverOnly(["mistmarsh"]),
+    // Dad keeps "touching the stick" (no tag-along back to Juneau).
+    direct: (l, now) => produce(l, (d) => { for (const f of d.fishers) if (f.seat === 0) f.lastInputAt = now; }),
+    warmUntil: (l) => l.fishers.some((f) => f.seat === 2 && f.mode === "wait"),
+    hero: (_l, now, s) => now - s > 6000,
+  },
   // A Moonfin, the legend of Starfall Tarn, at night.
   "night-tarn": {
     phase: 0.68,
@@ -267,7 +281,7 @@ const SCENARIOS: Record<string, Scenario> = {
 
 declare global {
   interface Window {
-    __lab?: { ready: boolean; heroReady: boolean; scenario: string; lake(): Lake | null; skipTo(ms: number): void };
+    __lab?: { ready: boolean; heroReady: boolean; scenario: string; lake(): Lake | null; skipTo(ms: number): void; pause(on: boolean): void };
   }
 }
 
@@ -408,7 +422,9 @@ async function main(): Promise<void> {
     skipTo: (ms: number) => {
       for (let i = 0; i < ms / 50; i++) tick(50);
     },
+    pause: (on: boolean) => { paused = on; },
   };
+  let paused = false;
   window.__lab = lab;
   let realStart = now;
   let lastReal = performance.now();
@@ -418,7 +434,7 @@ async function main(): Promise<void> {
     const p = performance.now();
     const dt = Math.min(200, p - lastReal);
     lastReal = p;
-    tick(dt);
+    if (!paused) tick(dt);
     sendAcc += dt;
     if (sendAcc >= 125) {
       sendAcc = 0;

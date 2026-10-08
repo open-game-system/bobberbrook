@@ -5,9 +5,12 @@ import {
   Group,
   HemisphereLight,
   MeshBasicMaterial,
+  Mesh,
   MeshLambertMaterial,
   NeutralToneMapping,
+  Matrix4,
   PCFShadowMap,
+  Raycaster,
   Scene,
   SRGBColorSpace,
   Vector2,
@@ -21,7 +24,7 @@ import { CameraRig, isView, VIEWS } from "./camera";
 import { FisherViews, type CatchFocus } from "./fishers";
 import { FishShadows, FishTextures, sharedCardGeometry } from "./fishviz";
 import { Fx } from "./fx";
-import { MAX_FOCUS, occluderMaterial, patchLambertWrap } from "./geo";
+import { MAX_FOCUS, occluderDepthMaterial, occluderMaterial, patchLambertWrap } from "./geo";
 import { makeParticles } from "./particles";
 import { buildPost, type Post } from "./post";
 import { buildProps } from "./props";
@@ -65,6 +68,12 @@ export type SceneDebug = {
   setView(name: string): string;
   setPhase(phase: number | null): number | null;
   debug(): unknown;
+  /** What is drawn at a screen point (0..1 from the top left): object names along the ray. */
+  pick?(x: number, y: number): string[];
+  /** Hides (or shows again) every object with this name; returns how many. */
+  toggle?(name: string): number;
+  /** Names of the scene's top-level objects (for toggle). */
+  names?(): string[];
 };
 
 declare global {
@@ -151,7 +160,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     uFocus: { value: Array.from({ length: MAX_FOCUS }, () => new Vector3(0, -100, 0)) },
     uBox: { value: new Vector4(0, 0, 0, 0) },
     uNear: { value: 0 },
-    uRes: { value: new Vector2(1, 1) },
+    uVP: { value: new Matrix4() },
   };
   const treeMat = occluderMaterial(occ);
   const props = buildProps(opts.quality, sway, treeMat);
@@ -197,6 +206,11 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   scene.add(swirls.group);
   const world = new Group();
   scene.add(world);
+  // Every dissolving tree casts its shadow through the same fade (no shadow without its tree).
+  const treeDepth = occluderDepthMaterial(occ);
+  scene.traverse((o) => {
+    if ((o as Mesh).isMesh && (o as Mesh).material === treeMat) o.customDepthMaterial = treeDepth;
+  });
 
   let post: Post | null = full ? buildPost(renderer, scene, camera, w, h) : null;
   const pr = renderer.getPixelRatio();
@@ -331,7 +345,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       occ.uBox.value.set(bx0, by0, bx1, by1);
       occ.uNear.value = near - 1.5;
     } else occ.uNear.value = 0;
-    renderer.getDrawingBufferSize(occ.uRes.value);
+    occ.uVP.value.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     mist.update(tod, t, veil, occ.uNear.value);
     renderer.info.reset();
     if (post) post.render();
@@ -396,6 +410,20 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       return name;
     },
     debug: () => ({ fishers: fishers.debug(), camera: camera.position.toArray(), rig: rig.debug(), trees: forest.count, veil: Array.from(veil), mood: mood.debug() }),
+    pick(x, y) {
+      const rc = new Raycaster();
+      rc.setFromCamera(new Vector2(x * 2 - 1, 1 - y * 2), camera);
+      return rc.intersectObjects(scene.children, true).slice(0, 8).map((h) => `${h.object.name || h.object.type}${h.object.parent?.name ? "<" + h.object.parent.name : ""} d=${h.distance.toFixed(1)} i=${h.instanceId ?? "-"}`);
+    },
+    names: () => scene.children.map((o, i) => o.name || `${o.type}#${i}`),
+    toggle(name) {
+      let n = 0;
+      if (name.includes("+")) return name.split("+").reduce((acc, nm) => acc + (window.__scene?.toggle?.(nm) ?? 0), 0);
+      if (name === "shadows") { sun.castShadow = !sun.castShadow; return 1; }
+      scene.children.forEach((o, i) => { if (!o.name && `${o.type}#${i}` === name) { o.visible = !o.visible; n++; } });
+      scene.traverse((o) => { if (o.name === name) { o.visible = !o.visible; n++; } });
+      return n;
+    },
     setPhase(p) {
       if (p !== null && (!Number.isFinite(p) || p < 0 || p > 1)) throw new Error(`phase must be 0..1 or null, got ${String(p)}`);
       phaseOverride = p;
@@ -469,6 +497,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       props.dispose();
       sway.dispose();
       treeMat.dispose();
+      treeDepth.dispose();
       parts.water.dispose();
       parts.glow.dispose();
       shadows.dispose();

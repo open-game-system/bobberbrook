@@ -1,4 +1,4 @@
-import { BufferAttribute, BufferGeometry, Color, MeshLambertMaterial, ShaderChunk, Vector2, Vector3, Vector4, type Side } from "three";
+import { BufferAttribute, BufferGeometry, Color, Matrix4, MeshDepthMaterial, MeshLambertMaterial, ShaderChunk, Vector3, Vector4, type Side } from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 let patched = false;
@@ -109,49 +109,27 @@ export type OccluderUniforms = {
   /** The action's screen box (0..1, x0 y0 x1 y1, y up) and the view depth just in front of the nearest fisher. */
   uBox: { value: Vector4 };
   uNear: { value: number };
-  uRes: { value: Vector2 };
+  /** The main camera's view-projection: the fade is worked out from world position, so the shadow pass can apply it too. */
+  uVP: { value: Matrix4 };
 };
 export const MAX_FOCUS = 5;
 
-/**
- * Painted material for trees and bushes that dissolve (dithered) where they stand between the camera
- * and the action, so a canopy never hides a fisher.
- */
-export function occluderMaterial(u: OccluderUniforms): MeshLambertMaterial {
-  const m = new MeshLambertMaterial({ vertexColors: true });
-  m.onBeforeCompile = (shader) => {
-    shader.uniforms.uCam = u.uCam;
-    shader.uniforms.uFocus = u.uFocus;
-    shader.uniforms.uBox = u.uBox;
-    shader.uniforms.uNear = u.uNear;
-    shader.uniforms.uRes = u.uRes;
-    shader.vertexShader = shader.vertexShader
-      .replace("#include <common>", "#include <common>\nvarying vec3 vOccW;\nvarying float vOccZ;")
-      .replace(
-        "#include <project_vertex>",
-        `#include <project_vertex>
+const OCC_VERT_PARS = "varying vec3 vOccW;";
+const OCC_VERT = `
   vec4 occW = vec4(transformed, 1.0);
   #ifdef USE_INSTANCING
   occW = instanceMatrix * occW;
   #endif
-  vOccW = (modelMatrix * occW).xyz;
-  vOccZ = -mvPosition.z;`,
-      );
-    shader.fragmentShader = shader.fragmentShader
-      .replace(
-        "#include <common>",
-        `#include <common>
+  vOccW = (modelMatrix * occW).xyz;`;
+const OCC_FRAG_PARS = `
 varying vec3 vOccW;
-varying float vOccZ;
 uniform vec4 uBox;
 uniform float uNear;
-uniform vec2 uRes;
+uniform mat4 uVP;
 uniform vec3 uCam;
-uniform vec3 uFocus[${MAX_FOCUS}];`,
-      )
-      .replace(
-        "#include <clipping_planes_fragment>",
-        `#include <clipping_planes_fragment>
+uniform vec3 uFocus[${MAX_FOCUS}];
+/** 0 = solid, 1 = gone: on the line from the camera to a focus point, in front of the action's screen box, or against the lens. */
+float occAmount() {
   float occ = 0.0;
   for (int i = 0; i < ${MAX_FOCUS}; i++) {
     vec3 b = uFocus[i];
@@ -161,16 +139,43 @@ uniform vec3 uFocus[${MAX_FOCUS}];`,
     float d = length(vOccW - (uCam + ab * t));
     occ = max(occ, (1.0 - smoothstep(3.0, 5.5, d)) * step(0.03, t) * (1.0 - smoothstep(0.86, 0.93, t)));
   }
-  // Anything standing in front of the action's screen box (closer than the nearest fisher) fades too,
-  // so a canopy never covers a trail the family is spread along.
-  vec2 sc = gl_FragCoord.xy / uRes;
+  vec4 clip = uVP * vec4(vOccW, 1.0);
+  float vz = clip.w;
+  vec2 sc = clip.xy / max(abs(clip.w), 1e-3) * 0.5 + 0.5;
   float inBox = smoothstep(uBox.x - 0.04, uBox.x + 0.02, sc.x) * smoothstep(uBox.z + 0.04, uBox.z - 0.02, sc.x)
     * smoothstep(uBox.y - 0.04, uBox.y + 0.02, sc.y) * smoothstep(uBox.w + 0.04, uBox.w - 0.02, sc.y);
-  occ = max(occ, inBox * (1.0 - smoothstep(uNear - 3.0, uNear, vOccZ)) * 0.92);
+  occ = max(occ, inBox * (1.0 - smoothstep(uNear - 3.0, uNear, vz)) * 0.92 * step(0.0, vz));
   // Never a trunk or canopy right against the lens.
-  occ = max(occ, 1.0 - smoothstep(5.0, 10.0, vOccZ));
+  occ = max(occ, (1.0 - smoothstep(7.0, 13.0, vz)) * step(-1.0, vz));
+  return occ;
+}`;
+
+function bindOcc(shader: { uniforms: Record<string, unknown> }, u: OccluderUniforms): void {
+  shader.uniforms.uCam = u.uCam;
+  shader.uniforms.uFocus = u.uFocus;
+  shader.uniforms.uBox = u.uBox;
+  shader.uniforms.uNear = u.uNear;
+  shader.uniforms.uVP = u.uVP;
+}
+
+/**
+ * Painted material for trees and bushes that dissolve where they stand between the camera and the
+ * action, so a canopy never hides a fisher.
+ */
+export function occluderMaterial(u: OccluderUniforms): MeshLambertMaterial {
+  const m = new MeshLambertMaterial({ vertexColors: true });
+  m.onBeforeCompile = (shader) => {
+    bindOcc(shader, u);
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", `#include <common>\n${OCC_VERT_PARS}`)
+      .replace("#include <project_vertex>", `#include <project_vertex>${OCC_VERT}`);
+    shader.fragmentShader = shader.fragmentShader
+      .replace("#include <common>", `#include <common>${OCC_FRAG_PARS}`)
+      .replace(
+        "#include <clipping_planes_fragment>",
+        `#include <clipping_planes_fragment>
   // Faded with alpha-to-coverage (multisampled, smooth) rather than a screen-door pattern.
-  float occA = 1.0 - min(1.0, occ * 1.15);
+  float occA = 1.0 - min(1.0, occAmount() * 1.25);
   if (occA < 0.02) discard;`,
       )
       .replace(
@@ -180,5 +185,25 @@ uniform vec3 uFocus[${MAX_FOCUS}];`,
   };
   m.alphaToCoverage = true;
   m.customProgramCacheKey = () => "bobber-occluder";
+  return m;
+}
+
+/**
+ * The shadow-pass twin of occluderMaterial: a tree faded out of the view casts no shadow either (a dark
+ * hard-edged slab with nothing above it, round 02).
+ */
+export function occluderDepthMaterial(u: OccluderUniforms): MeshDepthMaterial {
+  const m = new MeshDepthMaterial();
+  m.onBeforeCompile = (shader) => {
+    bindOcc(shader, u);
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", `#include <common>\n${OCC_VERT_PARS}`)
+      .replace("#include <project_vertex>", `#include <project_vertex>${OCC_VERT}`);
+    shader.fragmentShader = shader.fragmentShader
+      .replace("#include <common>", `#include <common>${OCC_FRAG_PARS}`)
+      .replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>
+  if (occAmount() > 0.45) discard;`);
+  };
+  m.customProgramCacheKey = () => "bobber-occluder-depth";
   return m;
 }

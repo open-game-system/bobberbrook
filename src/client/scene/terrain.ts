@@ -104,7 +104,9 @@ function groundColor(x: number, z: number, y: number, slope: number, out: Color)
   const n1 = fbm(x * 0.09, z * 0.09, 3, 21);
   const n2 = vnoise(x * 0.45, z * 0.45, 22);
   out.copy(ga).lerp(gb, smoothstep(0.35, 0.65, n1));
-  out.lerp(gc, smoothstep(0.62, 0.8, n1) * 0.7);
+  // Violet moss drifts: soft-edged and broken up by finer noise, never a solid slab (round 02).
+  const n3 = vnoise(x * 0.23, z * 0.23, 23);
+  out.lerp(gc, smoothstep(0.58, 0.9, n1 * 0.75 + n3 * 0.25 + n2 * 0.08) * 0.38);
   out.multiplyScalar(0.92 + 0.16 * n2);
   const { o, cliff } = openAt(x, z, OI);
   // The forest floor darkens away from the open ground.
