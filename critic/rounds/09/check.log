@@ -1,0 +1,9 @@
+FAIL tv-empty-lake @ 1920x1080
+     - overlay_covers_focal selector="div.tv > div.ticket:nth-of-type(4)" text="" overlapPx=218
+ok   kid-hat-picker @ 1080x810 (tapped 3: green hat, yellow hat, blue hat)
+ok   phone-controller @ 393x852 (tapped 6: Open the map, Journal 0/30, Map, Fishers, Campfire, cast)
+ok   phone-controller @ 375x667
+ok   ipad-controller @ 1080x810 (tapped 2: Open the map, cast)
+ok   tv-two-fishers @ 1920x1080
+
+6 screen×viewport shots, 1 findings → critic/rounds/09/check/report.json, critic/rounds/09/check/sheet.png
