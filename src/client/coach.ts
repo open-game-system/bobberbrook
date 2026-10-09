@@ -89,6 +89,21 @@ const timeTip: Rule = (lake) => {
   return tod === "golden" ? "Golden hour: the Golden Koi comes out by the lily pads." : null;
 };
 
+/** Between moments, every other 15 s: something for the grown-up to say to the kid, not just numbers. */
+const TALK_MS = 15_000;
+const TALK_PROMPTS = [
+  (kid: string) => `Ask ${kid} which fish they hope to catch next.`,
+  (kid: string) => `Point at the TV: can ${kid} spot the swirling fish?`,
+  (kid: string) => `Ask ${kid} where you should explore next.`,
+  (kid: string) => `Open the journal together: which fish is ${kid}'s favourite?`,
+];
+const talkTip: Rule = (lake, mySeat, now) => {
+  const slot = Math.floor(now / TALK_MS);
+  const kid = lake.fishers.find((f) => f.seat !== mySeat);
+  if (slot % 2 === 0 || !kid) return null;
+  return TALK_PROMPTS[Math.floor(slot / 2) % TALK_PROMPTS.length]!(nameOf(lake, kid.seat));
+};
+
 const rodTip: Rule = (lake) => {
   const next = ROD_AT[lake.rodTier + 1];
   return next !== undefined ? `${next - lake.shells} more shells for everyone's ${ROD_NAMES[lake.rodTier + 1]} rod.` : null;
@@ -159,7 +174,7 @@ const exploreTip: Rule = (lake) => {
 };
 
 /** In priority order: what's happening to someone right now first, then news, then a tip. */
-const RULES: Rule[] = [campfireLine, riding, boardingNow, myBite, theirBite, theirReel, freshCatch, freshMiss, wentAhead, freshDiscovery, goldenSwirl, rideNearby, exploreTip, timeTip, rodTip];
+const RULES: Rule[] = [campfireLine, riding, boardingNow, myBite, theirBite, theirReel, freshCatch, freshMiss, wentAhead, freshDiscovery, goldenSwirl, rideNearby, exploreTip, timeTip, talkTip, rodTip];
 
 /**
  * The host phone's one line to read aloud. The grown-up is the coach: what's happening to the kids

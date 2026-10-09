@@ -33,6 +33,11 @@ describe("coachLine", () => {
     expect(catchLine(family(), "Dad", { fishId: "ember-perch", isNew: false, cm: 20 })).toBe("Dad caught an Ember Perch, 20 cm.");
     expect(catchLine(family(), "Dad", { fishId: "sturgeon", isNew: true, cm: 99 })).toContain("Dad caught an Old Sturgeon");
   });
+  it("when nothing is happening, alternates the rod tip with a prompt that gets Dad talking to the kid", () => {
+    expect(coachLine(family(), 0, 15_000)).toMatch(/Juneau/);
+    expect(coachLine(family(), 0, 15_000)).not.toMatch(/shells/);
+    expect(coachLine(family(), 0, 30_000)).toMatch(/shells/);
+  });
   it("coaches the reel", () => {
     expect(coachLine(withMode(family(), 1, { mode: "reel" }), 0, 10)).toContain("Juneau is reeling");
   });
