@@ -23,10 +23,13 @@ export function isView(v: string): v is ViewName {
   return (VIEWS as readonly string[]).includes(v);
 }
 
-/** Group camera orbit elevation: a high three-quarter, low enough that faces read. */
-const EL = 0.44;
-/** Pitch the view up a little after aiming: the fishers sit in the lower half, the lake above them. */
-const PITCH_UP = 0.07;
+/**
+ * Group camera orbit elevation: a low three-quarter (round 09: down from 0.44), the eye nearer the
+ * fishers' own level, like WoW's play camera: faces and the water read, the ground under the lens doesn't.
+ */
+const EL = 0.32;
+/** Pitch the view up a little after aiming: the fishers sit low, the lake and far bank above them. */
+const PITCH_UP = 0.08;
 /** The establishing view sits lower and looks up more, so the sky (and the moon) is in frame. */
 const EST_EL = 0.3;
 const EST_PITCH = 0.19;
@@ -34,15 +37,21 @@ const EST_PITCH = 0.19;
 const MIN_DIST = 17;
 const MAX_DIST = 64;
 /** Where the fishers' box must fit, in NDC (x: ±, y: bottom..top; the top leaves room for name tags). */
-const FIT_X = 0.8;
-const FIT_Y0 = -0.5;
-const FIT_Y1 = 0.5;
+/** 0.78: every fisher (feet to name tag) stays inside a 10% safe margin, with a little room to ease. */
+const FIT_X = 0.78;
+/** The safe margin a catch push-in may never break (NDC). */
+const SAFE = 0.8;
+/** The fishers' feet sit on this line (a short foreground band below them), not centred in the box. */
+const FIT_Y0 = -0.74;
+const FIT_Y1 = 0.6;
 /** Seconds the camera takes to settle in after the scene starts (from the establishing view). */
 const INTRO_S = 3.2;
 
 export type CatchAt = { x: number; y: number; z: number; age: number };
 
 const MAX_POINTS = 24;
+/** Push-in strengths tried in turn (the first that keeps the family in the safe margin wins). */
+const PUSH_STEPS = [1, 0.8, 0.6, 0.4, 0.2, 0];
 /** Heights above each focus point that must be in frame: the foot ring's front edge and the name tag. */
 const LIFTS = [-0.7, 4.0];
 
@@ -92,6 +101,7 @@ export class CameraRig {
   private startT = -1;
   private readonly tmp = new Vector3();
   private readonly cx = new Vector3();
+  private readonly base = new Vector3();
 
   constructor(aspect: number) {
     this.camera = new PerspectiveCamera(36, aspect, 0.5, 1200);
@@ -135,6 +145,23 @@ export class CameraRig {
     cam.updateMatrixWorld(true);
   }
 
+  /** Whether every focus point (feet to name tag) sits inside the safe margin from this pose. */
+  private fits(target: Vector3, dist: number, yaw: number, el: number, pitch: number): boolean {
+    const cam = this.probe;
+    cam.fov = this.camera.fov;
+    cam.aspect = this.camera.aspect;
+    cam.updateProjectionMatrix();
+    this.pose(cam, target, dist, yaw, el, pitch);
+    for (let i = 0; i < this.n; i++) {
+      const p = this.pts[i]!;
+      for (const lift of LIFTS) {
+        this.tmp.set(p.x, p.y + lift, p.z).project(cam);
+        if (Math.abs(this.tmp.x) > SAFE || Math.abs(this.tmp.y) > SAFE) return false;
+      }
+    }
+    return true;
+  }
+
   /**
    * Fits every focus point (feet to name tag) inside the safe box: a few rounds of "recentre, then
    * scale the distance by how much too big or small the box is". Writes wantTarget / wantDist.
@@ -152,7 +179,7 @@ export class CameraRig {
     }
     const t = this.cx.set((x0 + x1) / 2, ym / this.n + 1.2, (z0 + z1) / 2);
     let d = Math.min(MAX_DIST, Math.max(this.minDist, 0.9 * Math.max(x1 - x0, (z1 - z0) * 1.4) + 14));
-    for (let iter = 0; iter < 4; iter++) {
+    for (let iter = 0; iter < 8; iter++) {
       this.pose(cam, t, d, yaw, el, PITCH_UP);
       let nx0 = Infinity, nx1 = -Infinity, ny0 = Infinity, ny1 = -Infinity;
       for (let i = 0; i < this.n; i++) {
@@ -171,10 +198,13 @@ export class CameraRig {
       const halfH = Math.tan((cam.fov * Math.PI) / 360) * d;
       const halfW = halfH * cam.aspect;
       const offX = (nx0 + nx1) / 2;
-      const offY = (ny0 + ny1) / 2 - (FIT_Y0 + FIT_Y1) / 2;
+      // Feet on the bottom line when the box has height to spare (the slack goes to the lake above
+      // them, not to ground below them); centred only when the family is taller than the box.
+      const offY = sy >= 1 ? (ny0 + ny1) / 2 - (FIT_Y0 + FIT_Y1) / 2 : ny0 - FIT_Y0;
       // Screen-right on the ground is (cos yaw, -sin yaw); screen-up is "away from the camera"
       // (-sin yaw, -cos yaw) foreshortened by the elevation.
-      const up = (offY * halfH) / Math.max(0.35, Math.sin(el + PITCH_UP));
+      // Damped (0.6): at a low elevation a full step overshoots and the fit see-saws between iterations.
+      const up = (0.6 * offY * halfH) / Math.max(0.35, Math.sin(el + PITCH_UP));
       t.x += offX * halfW * Math.cos(yaw) - up * Math.sin(yaw);
       t.z += -offX * halfW * Math.sin(yaw) - up * Math.cos(yaw);
       d = Math.min(MAX_DIST, Math.max(this.minDist, d * (0.35 + 0.65 * s)));
@@ -297,15 +327,22 @@ export class CameraRig {
     }
     this.catchW += (cw - this.catchW) * damp(6, dt);
     if (catchAt && this.catchW > 0.001) {
-      // Close in on a lone catcher; with others spread round the water, a gentler push that keeps
-      // everyone in frame (toward the catcher a little, a little closer and lower).
-      // A spread family still gets a real push-in (the catcher and their fish fill the middle of the
-      // frame for the moment; the others come back as it eases out).
+      // Close in on a lone catcher; with others spread round the water, a gentler push.
+      // Round 09: only as far as keeps every fisher inside the safe margin (a full push first, then
+      // weaker ones until the whole family fits; none if nothing does).
       const tight = this.wantDist < 24;
-      const w = this.catchW * (tight ? 0.8 : 0.62);
-      this.wantTarget.lerp(this.tmp.set(catchAt.x, catchAt.y + 1.2, catchAt.z), w);
-      this.wantDist += ((tight ? Math.min(this.wantDist, 14) : Math.max(17, this.wantDist * 0.58)) - this.wantDist) * (tight ? w : this.catchW);
-      this.wantEl += (0.36 - this.wantEl) * this.catchW * 0.8;
+      const t0 = this.base.copy(this.wantTarget);
+      const d0 = this.wantDist;
+      const e0 = this.wantEl;
+      const pitch = PITCH_UP * (1 - this.catchW * 0.6);
+      for (const k of PUSH_STEPS) {
+        const cw = this.catchW * k;
+        const w = cw * (tight ? 0.8 : 0.62);
+        this.wantTarget.copy(t0).lerp(this.tmp.set(catchAt.x, catchAt.y + 1.2, catchAt.z), w);
+        this.wantDist = d0 + ((tight ? Math.min(d0, 14) : Math.max(17, d0 * 0.58)) - d0) * (tight ? w : cw);
+        this.wantEl = e0 + (0.36 - e0) * cw * 0.8;
+        if (k === 0 || this.fits(this.wantTarget, this.wantDist, this.wantYaw, this.wantEl, pitch)) break;
+      }
     }
     // The discovery reveal: up and out over the new place for ~2.5 s (a catch push-in wins).
     let rw = 0;

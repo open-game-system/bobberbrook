@@ -482,11 +482,13 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   boat.rotation.y = 0.08;
   boat.castShadow = true;
 
-  // --- cottages on the east-south-east hill + two behind the falls ---
+  // --- cottages on the east-north-east hill + two behind the falls ---
+  // Round 09: the hamlet moved from the east-south-east (it stood between the boarding camera and the
+  // zeppelin tower at (24.5, 4.5), its roofs filling the bottom of the tower shot) to behind the tower.
   const winParts: BufferGeometry[] = [];
   const bodyParts: BufferGeometry[] = [];
   const spots: [number, number, number, number][] = [
-    [34, 9, 0, 1.1], [38, 15, 1, 1.0], [31, 18, 2, 1.0], [41, 6, 3, 1.0],
+    [38, -6, 0, 1.1], [44, -12, 1, 1.0], [36, -15, 2, 1.0], [45, -2, 3, 1.0],
     // The far shore: big and close, framing the falls.
     [Math.cos(-2.62) * 37, Math.sin(-2.62) * 37, 4, 1.45], [Math.cos(-0.82) * 36, Math.sin(-0.82) * 36, 5, 1.45],
     [-5, -41, 6, 1.2], [12, -40, 7, 1.2],
