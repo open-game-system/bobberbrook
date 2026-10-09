@@ -172,15 +172,15 @@ function* dress(a: PondPlace, r0: Recipe, full: boolean, m: AreaMats, glow: Mesh
       }
     }
   };
-  clump("fern", n(14 * r.fern), 1.4, 1.2, 24, white, 0.5);
+  clump("fern", n(14 * r.fern), 1.4, 1.2, 24, () => white().lerp(fl, 0.22), 0.5);
   clump("bluebell", n(9 * r.bell + 2), 0.9, 0.8, 20, bellTint, 0.4);
-  clump("glowcap", n(7 * r.shroom + 2), 0.7, 0.6, 22, () => pick(capCols).clone(), 0.35);
+  clump("glowcap", n(7 * r.shroom + 2), 0.7, 0.6, 22, () => new Color(1, 1, 1).lerp(pick(capCols), 0.55), 0.35);
   clump("foxglove", n(4 * r.lily + 4), 0.9, 5, 24, bellTint, 0);
   if (r.litter) {
     for (let i = 0; i < n(26 * r.litter); i++) {
       const p = land(0.8, 24);
       if (trailWear(p.x, p.z) > 0.5) continue;
-      plants.litter.push({ x: p.x, y: heightAt(p.x, p.z), z: p.z, s: 0.8 + R() * 0.9, ry: R() * 6, tint: new Color(1, 1, 1).lerp(new Color(pick(r.flowers)), 0.2).multiplyScalar(0.85 + R() * 0.25) });
+      plants.litter.push({ x: p.x, y: heightAt(p.x, p.z), z: p.z, s: 1.2 + R() * 1.1, ry: R() * 6, tint: new Color(1, 1, 1).lerp(new Color(pick(r.flowers)), 0.2).multiplyScalar(0.85 + R() * 0.25) });
     }
   }
   yield;

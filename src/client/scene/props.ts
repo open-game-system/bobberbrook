@@ -306,7 +306,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   // between them (ferns mostly, some bluebells and glow-caps, foxgloves off to the sides).
   const plants: Record<PlantKind, Inst[]> = { fern: [], bluebell: [], foxglove: foxgloves, glowcap: [], litter: [] };
   const capCols = shroomCols;
-  const plantTint = (k: PlantKind) => (k === "glowcap" ? capCols[Math.floor(R() * capCols.length)]!.clone() : new Color(1, 1, 1).multiplyScalar(0.82 + R() * 0.25));
+  const plantTint = (k: PlantKind) => (k === "glowcap" ? new Color(1, 1, 1).lerp(capCols[Math.floor(R() * capCols.length)]!, 0.55) : new Color(1, 1, 1).multiplyScalar(0.82 + R() * 0.25));
   let clumps = 0;
   for (let i = 0; i < 600 && clumps < (full ? 40 : 20); i++) {
     const th = SOUTH + (R() - 0.5) * 3.4;

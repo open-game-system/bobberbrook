@@ -87,9 +87,9 @@ function paintFern(ctx: Ctx, _glow: Ctx, R: Rand, x0: number, y0: number): void 
   const tx = x0 + CS / 2 + (R() - 0.5) * 30;
   const ty = y0 + 18;
   const bend = 40;
-  const base = hx(0x2e6a52);
-  const mid = hx(0x58a878);
-  const tip = hx(0xa8e0a0);
+  const base = hx(0x3a7a66);
+  const mid = hx(0x6ab890);
+  const tip = hx(0xc0f0b8);
   const c = new Color();
   // Two passes: a shadow layer (darker, wider) and the lit pinnae over it.
   for (const pass of [0, 1]) {
@@ -133,11 +133,11 @@ function paintBluebell(ctx: Ctx, glow: Ctx, R: Rand, x0: number, y0: number): vo
     const top = { x: sx + (s - 1) * 40 + 50, y: y0 + 40 + R() * 40 };
     const bend = (s - 1) * 30 - 30;
     stem(ctx, sx, by, top.x, top.y, bend, 5, css(hx(0x2e5a40)));
-    const nb = 6;
+    const nb = 5;
     for (let k = 0; k < nb; k++) {
       const t = 0.55 + (k / nb) * 0.45;
       const p = stemAt(sx, by, top.x, top.y, bend, t);
-      const r = 22 - k * 2;
+      const r = 32 - k * 3;
       const hxp = p.x + 10;
       const hyp = p.y + 6;
       // The bell: a dome, darker to the inside, a pale flared mouth.
@@ -224,7 +224,7 @@ function paintFoxglove(ctx: Ctx, glow: Ctx, R: Rand, x0: number, y0: number): vo
 
 /** A cluster of glow-caps: pale stems, brushy caps (shaded crown, a glowing rim), dark gills. */
 function paintGlowcap(ctx: Ctx, glow: Ctx, R: Rand, x0: number, y0: number): void {
-  const caps: [number, number, number][] = [[0, 0.95, 1], [-0.27, 0.62, 0.72], [0.28, 0.7, 0.8], [-0.12, 0.42, 0.5], [0.15, 0.36, 0.45]];
+  const caps: [number, number, number][] = [[0.04, 0.95, 1], [-0.26, 0.6, 0.72], [0.27, 0.42, 0.55]];
   // Back to front: the biggest at the back.
   for (const [ox, hk, rk] of caps) {
     const cx = x0 + CS / 2 + ox * CS;
@@ -270,7 +270,7 @@ function paintGlowcap(ctx: Ctx, glow: Ctx, R: Rand, x0: number, y0: number): voi
       const rr = r * (0.3 + R() * 0.6);
       const px = cx + Math.cos(a) * rr;
       const py = capY - Math.abs(Math.sin(a)) * rr * 0.75;
-      bristles(ctx, R, px, py, r * 0.25, a + Math.PI / 2, css(hx(R() < 0.5 ? 0x5a68a8 : 0xa8b8ec), 0.45), 2, 2);
+      bristles(ctx, R, px, py, r * 0.25, a + Math.PI / 2, css(hx(R() < 0.5 ? 0x7a88bc : 0x9aaadc), 0.3), 2, 2);
     }
     // Pale spots.
     for (let i = 0; i < 4; i++) {
@@ -435,7 +435,7 @@ export function plantGeometry(k: PlantKind): BufferGeometry {
     case "fern": return fernRosette();
     case "bluebell": return crossed("bluebell", 1.0, 1.0, 3);
     case "foxglove": return crossed("foxglove", 1.25, 1.7, 3);
-    case "glowcap": return crossed("glowcap", 1.05, 0.95, 3);
+    case "glowcap": return crossed("glowcap", 1.0, 0.9, 2);
     case "litter": return litterPatch();
   }
 }
