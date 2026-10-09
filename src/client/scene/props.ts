@@ -35,6 +35,7 @@ import { PK } from "./painter";
 import type { TodState } from "./tod";
 import type { SceneQuality } from "./types";
 
+import { poolMesh, updatePools } from "./pools";
 import { CANOPY, blob, bushGeometry, cliffRockGeometry, cottageGeometry, dummy, flowerGeometry, giantGeometry, instanced, lilyGeometry, mushroomGeometry, oakGeometry, padGeometry, pineGeometry, reedGeometry, rockGeometry, tuftGeometry, type Inst } from "./kit";
 import { matteTint, plantLists, plantMeshes, type PlantKind } from "./plants";
 import { matteGlowMaterial } from "./matte";
@@ -370,6 +371,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   disposables.push(lampGlassMat);
   const lampGlass = new SphereGeometry(0.1, 8, 6).scale(1, 1.3, 1).translate(0.28, 1.05, 0);
   add(instanced(lampGlass, lampGlassMat, lamps.map((l) => ({ ...l, tint: new Color(1, 0.7, 0.35) })), false)).name = "lamp-glass";
+  const pools: Inst[] = lamps.map((l) => ({ x: l.x + Math.cos(l.ry) * 0.28, y: l.y, z: l.z - Math.sin(l.ry) * 0.28, s: 3.4, ry: l.ry }));
 
   // --- the dock ---
   const deckY = 0.42;
@@ -504,7 +506,13 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     }
     bodyParts.push(body);
     winParts.push(windows);
+    // Lamplight spilling from the windows onto the ground in front.
+    const fx0 = x + Math.sin(face) * 3.2 * k;
+    const fz0 = z + Math.cos(face) * 3.2 * k;
+    pools.push({ x: fx0, y: heightAt(fx0, fz0), z: fz0, s: 4.2 * k, ry: face });
   }
+  pools.push({ x: lx - 0.5, y: deckY - 0.12, z: lz, s: 3.2, ry: 0 });
+  add(poolMesh(pools));
   const village = add(new Mesh(merge(bodyParts), mat));
   village.name = "village";
   village.castShadow = true;
@@ -613,6 +621,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     campSeats,
     update(tod, time, campfire) {
       winCol.copy(day).lerp(night, tod.glow);
+      updatePools(tod);
       lampGlassMat.color.setScalar(0.9 + 2.2 * tod.glow);
       shroomGlow.setScalar(0.35 + 2.2 * tod.glow);
       plantMat.emissive.setScalar(0.3 + 1.9 * tod.glow);

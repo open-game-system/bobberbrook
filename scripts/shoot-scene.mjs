@@ -40,6 +40,8 @@ const SHOTS = [
   ["tarn", null, true],
   ["trail", null, true],
   ["spread", null, true],
+  ["split", null, true],
+  ["night-woods", null, true],
   ["discovery", null, true],
   ["night-tarn", null, true],
   ["double-catch", null, true],

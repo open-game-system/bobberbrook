@@ -1,4 +1,4 @@
-import { CanvasTexture, ClampToEdgeWrapping, DataArrayTexture, LinearFilter, LinearMipmapLinearFilter, RepeatWrapping, SRGBColorSpace, Texture, Vector3 } from "three";
+import { CanvasTexture, ClampToEdgeWrapping, Color, DataArrayTexture, LinearFilter, LinearMipmapLinearFilter, RepeatWrapping, SRGBColorSpace, Texture, Vector3 } from "three";
 import { rng } from "./noise";
 
 /**
@@ -250,6 +250,9 @@ function luminanceMean(d: Uint8ClampedArray): Vector3 {
   return new Vector3(r / n, g / n, b / n);
 }
 
+/** Character light (fill colour, rim colour): uniforms shared by every painted program, set per frame. */
+export const CHAR_LIGHT = { fill: { value: new Color(0, 0, 0) }, rim: { value: new Color(0, 0, 0) } };
+
 export type PaintArray = { tex: DataArrayTexture; /** 1 / mean colour (linear) per layer. */ inv: Vector3[] };
 let shared: PaintArray | null = null;
 
@@ -309,6 +312,8 @@ export const PAINTER = { stroke, dab, rgb, grey };
 
 /** GLSL: painted detail from the array by the vertex's surface kind (object space; see applyPaint). */
 export const PAINT_ARRAY_GLSL = /* glsl */ `
+uniform vec3 uChFill;
+uniform vec3 uChRim;
 uniform highp sampler2DArray tPk;
 uniform vec3 iPk[${LAYERS}];
 uniform float uPkScale;
@@ -328,6 +333,8 @@ export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexSh
   shader.uniforms.iPk = { value: pa.inv };
   shader.uniforms.uPkScale = scale;
   shader.uniforms.uPkCrisp = crisp;
+  shader.uniforms.uChFill = CHAR_LIGHT.fill;
+  shader.uniforms.uChRim = CHAR_LIGHT.rim;
   shader.vertexShader = shader.vertexShader
     .replace("#include <common>", "#include <common>\nattribute vec3 aPaint;\nvarying vec3 vPkP;\nvarying vec3 vPkN;\nvarying vec3 vPk;")
     .replace("#include <beginnormal_vertex>", "#include <beginnormal_vertex>\n  vPkN = objectNormal;")
@@ -335,6 +342,17 @@ export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexSh
   shader.fragmentShader = shader.fragmentShader
     .replace("#include <common>", `#include <common>\n${PAINT_ARRAY_GLSL}`)
     .replace("#include <dithering_fragment>", "#include <dithering_fragment>\n  gl_FragColor.a *= 1.0 - uPkCrisp;")
+    // Characters only: a warm lantern fill from the camera's lower left and a cool moonlit rim, so faces
+    // and clothes read at night (round 09: Dad a silhouette). Zero by day (set per frame, see index.ts).
+    .replace(
+      "#include <opaque_fragment>",
+      `if (uPkCrisp > 0.5) {
+    float chNV = saturate(dot(normal, geometryViewDir));
+    float chFill = saturate((dot(normal, normalize(vec3(-0.45, 0.2, 0.87))) + 0.45) / 1.45);
+    outgoingLight += diffuseColor.rgb * uChFill * chFill + uChRim * pow(1.0 - chNV, 2.5);
+  }
+  #include <opaque_fragment>`,
+    )
     .replace(
       "#include <color_fragment>",
       `#include <color_fragment>

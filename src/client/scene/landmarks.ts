@@ -24,6 +24,7 @@ import {
 } from "three";
 import { pondRadius, type Area, type AreaId, type PondPlace } from "../../game/world";
 import { cliffRockGeometry, instanced, rockGeometry, type Inst } from "./kit";
+import { poolMesh } from "./pools";
 import { jitter, merge, paint, prep, puffNormals } from "./geo";
 import { attachFoliage, hangingCards, leafCards, type Puff, type Strand } from "./foliage";
 import { barked } from "./surfaces";
@@ -147,7 +148,7 @@ function lanternPost(h: number): { wood: BufferGeometry; glass: BufferGeometry }
 
 export type Landmark = { group: Group; update(tod: TodState, time: number, pulse: number): void; dispose(): void };
 
-type Ctx = { a: PondPlace; seed: number; wood: BufferGeometry[]; glow: BufferGeometry[]; full: boolean; group: Group; painted: Material; tree: Material; extra: { dispose(): void }[]; flows: SM[] };
+type Ctx = { a: PondPlace; seed: number; wood: BufferGeometry[]; glow: BufferGeometry[]; full: boolean; group: Group; painted: Material; tree: Material; extra: { dispose(): void }[]; flows: SM[]; /** Fade out at night (a rainbow under the moon reads wrong). */ dayOnly: SM[] };
 
 // ---------- Mistmarsh ----------
 
@@ -163,6 +164,7 @@ function mistmarsh(c: Ctx): void {
   const wMesh = instanced(willowGeometry(7), c.tree, willows, c.full);
   wMesh.name = "willows";
   c.group.add(wMesh);
+  const lampPools: Inst[] = [];
   // The boardwalk on stilts: from the north shore out over the water and along it, lanterns on posts.
   const path: Vector3[] = [];
   for (let i = 0; i <= 14; i++) {
@@ -196,6 +198,7 @@ function mistmarsh(c: Ctx): void {
           for (const gg of [lp.wood, lp.glass]) gg.rotateY(ry + Math.PI / 2).translate(p.x + ox, p.y, p.z + oz);
           c.wood.push(lp.wood);
           c.glow.push(lp.glass);
+          lampPools.push({ x: p.x + ox, y: p.y - 0.1, z: p.z + oz, s: 2.6, ry: 0 });
         }
       }
     }
@@ -248,7 +251,10 @@ function mistmarsh(c: Ctx): void {
     const ry = Math.atan2(a.center.x - p.x, a.center.z - p.z) - Math.PI / 2;
     c.wood.push(place(lp.wood, p.x, p.z, ry));
     c.glow.push(place(lp.glass, p.x, p.z, ry));
+    lampPools.push({ x: p.x, y: heightAt(p.x, p.z), z: p.z, s: 3.0, ry: 0 });
   }
+  lampPools.push({ x: pv.x, y: py + 0.4, z: pv.z, s: 4.5, ry: 0 });
+  c.group.add(poolMesh(lampPools));
   // Big glowing water lilies on their pads.
   for (let i = 0; i < 18; i++) {
     const th = R() * Math.PI * 2;
@@ -452,6 +458,7 @@ function pools(c: Ctx): void {
         gl_FragColor = vec4(hue(band * 0.78) * a * 0.22 * uK, 1.0); }`,
   });
   c.extra.push(rb);
+  c.dayOnly.push(rb);
   const arc = new Mesh(new RingGeometry(6.2, 7.6, 48, 1, 0, Math.PI), rb);
   const ap = at(a, -1.45, -2.5);
   arc.position.set(ap.x, -0.5, ap.z + 2.5);
@@ -548,7 +555,7 @@ export function buildLandmark(a: PondPlace, style: LandmarkStyle, seed: number, 
   const id = style;
   const group = new Group();
   group.name = `landmark-${a.id}`;
-  const c: Ctx = { a, seed, wood: [], glow: [], full, group, painted, tree, extra: [], flows: [] };
+  const c: Ctx = { a, seed, wood: [], glow: [], full, group, painted, tree, extra: [], flows: [], dayOnly: [] };
   BUILDERS[id](c);
   // Generated places: their own shoreline by seed, then their landmark.
   if (landmark) dressShore(c, id);
@@ -573,6 +580,7 @@ export function buildLandmark(a: PondPlace, style: LandmarkStyle, seed: number, 
       // The discovery pulse brightens the glow a little and never past the cap (a 2.6x pulse on the
       // Hollow's giant caps bloomed the whole TV to white, round 05).
       glowMat.color.setScalar(Math.min(GLOW_CAP, (lo + (hi - lo) * tod.glow) * (1 + pulse * (0.3 + 0.1 * Math.sin(time * 6)))));
+      for (const m of c.dayOnly) m.uniforms.uK!.value = Math.max(0, 1 - tod.moon * 1.2 - tod.stars * 0.3);
       for (const f of c.flows) {
         f.uniforms.uTime!.value = time;
         (f.uniforms.uDeep!.value as Color).copy(tod.waterShallow).multiplyScalar(0.9);

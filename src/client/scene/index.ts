@@ -34,7 +34,7 @@ import { buildGroundStream } from "./terrain";
 import { loadPaintKit } from "./paintkit";
 import { groundMaterial } from "./groundmat";
 import { leafMaterial, setFoliageMaterials } from "./foliage";
-import { needleSheet } from "./painter";
+import { CHAR_LIGHT, needleSheet } from "./painter";
 import { barkMaterial, rockMaterial, setSurfaceMaterials, tilesMaterial } from "./surfaces";
 import { placeHash } from "./valley";
 import { buildEscape } from "./escape";
@@ -122,6 +122,9 @@ function swayMaterial(time: { value: number }): MeshLambertMaterial {
   m.customProgramCacheKey = () => "bobber-sway";
   return m;
 }
+
+/** Character night light strengths (fill: warm lantern from the camera side; rim: cool moon edge). */
+const CHAR_NIGHT = { fill: 0.55, rim: 0.35 };
 
 export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality: SceneQuality; assetBase?: string; textureBase?: string }): Promise<LakeScene> {
   patchLambertWrap();
@@ -291,6 +294,8 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
 
   /** 0..1: how far the sky has gone over to the zeppelin's twilight (eased; last frame's ride). */
   let rideSky = 0;
+  /** 0..1: the campfire is lit (eased), so the fire takes over the fishers' warm fill. */
+  let campLight = 0;
   const applyTod = (phase: number) => {
     sampleTod(phase, tod);
     mood.apply(tod);
@@ -312,6 +317,10 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     renderer.toneMappingExposure = tod.exposure;
     scene.background = tod.skyHorizon;
     if (post) post.gain.copy(tod.grade);
+    // Night: a warm lantern fill and a cool moonlit rim on the fishers (they stay readable on the TV).
+    // By the campfire the fire itself is the warm key (no second lantern on the faces).
+    CHAR_LIGHT.fill.value.setRGB(1.0, 0.64, 0.36).multiplyScalar(CHAR_NIGHT.fill * tod.moon * (1 - 0.8 * campLight));
+    CHAR_LIGHT.rim.value.setRGB(0.42, 0.6, 1.0).multiplyScalar(CHAR_NIGHT.rim * tod.moon);
   };
 
   const serverNow = (now: number) => now + offset;
@@ -355,6 +364,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     const sn = serverNow(now);
     const phase = phaseOverride ?? (lake ? dayPhase(lake.startedAt, sn) : 0.15);
     mood.follow(rig.focus.x, rig.focus.z, dt);
+    campLight += ((lake?.campfire ? 1 : 0) - campLight) * Math.min(1, dt * 1.5);
     applyTod(phase);
     // Places nobody has found yet stay veiled; a new find lifts its veil and plays the reveal.
     for (const a of nearPlaces) {
@@ -599,7 +609,16 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       rig.setView(name);
       return name;
     },
-    debug: () => ({ split: { framed: [...framed], markers: markers.debug() }, fishers: fishers.debug(), camera: camera.position.toArray(), rig: rig.debug(), trees: forest.count, chunks: ground.count(), jobs: jobs.pending(), world: activeWorld().seed, progs: (renderer.info.programs ?? []).map((pr) => `${pr.name}#${pr.cacheKey}`), ride: (() => { const o = { x: 0, y: 0, z: 0, facing: 0 }; const ok = vehicles.rideSeat(0, o); const n = vehicles.rideFocus(rideFocus); return { kind: vehicles.riding(), ok, seat0: [o.x, o.y, o.z].map(Math.round), focus: rideFocus.slice(0, n).map((v) => v.toArray().map(Math.round)) }; })(), fow: { on: fow.mesh.visible, ...fow.stats(), map: Array.from({ length: 11 }, (_, j) => Array.from({ length: 11 }, (_, i) => fow.veilAt(rig.focus.x + (i - 5) * 24, rig.focus.z + (j - 5) * 24)).join('')).join('/'), ahead: [fow.veilAt(rig.focus.x, rig.focus.z), fow.veilAt(rig.focus.x + 100, rig.focus.z), fow.veilAt(rig.focus.x - 100, rig.focus.z - 100)] }, near: nearPlaces.map((p) => `${p.id}:${p.biome}`), veil: Object.fromEntries(veil), mood: mood.debug() }),
+    debug: () => ({ bodies: (() => {
+      const out: number[][] = [];
+      fishers.forEachSeat((seat, x, y, z) => {
+        const a = tmpO.set(x, y + 0.5, z).project(camera);
+        const ax = a.x, ay = a.y;
+        const b = tmpO.set(x, y + 2.0, z).project(camera);
+        out.push([seat, (ax + b.x) * 0.25 + 0.5, 0.5 - b.y * 0.5, 0.5 - ay * 0.5]);
+      });
+      return out;
+    })(), split: { framed: [...framed], markers: markers.debug() }, fishers: fishers.debug(), camera: camera.position.toArray(), rig: rig.debug(), trees: forest.count, chunks: ground.count(), jobs: jobs.pending(), world: activeWorld().seed, progs: (renderer.info.programs ?? []).map((pr) => `${pr.name}#${pr.cacheKey}`), ride: (() => { const o = { x: 0, y: 0, z: 0, facing: 0 }; const ok = vehicles.rideSeat(0, o); const n = vehicles.rideFocus(rideFocus); return { kind: vehicles.riding(), ok, seat0: [o.x, o.y, o.z].map(Math.round), focus: rideFocus.slice(0, n).map((v) => v.toArray().map(Math.round)) }; })(), fow: { on: fow.mesh.visible, ...fow.stats(), map: Array.from({ length: 11 }, (_, j) => Array.from({ length: 11 }, (_, i) => fow.veilAt(rig.focus.x + (i - 5) * 24, rig.focus.z + (j - 5) * 24)).join('')).join('/'), ahead: [fow.veilAt(rig.focus.x, rig.focus.z), fow.veilAt(rig.focus.x + 100, rig.focus.z), fow.veilAt(rig.focus.x - 100, rig.focus.z - 100)] }, near: nearPlaces.map((p) => `${p.id}:${p.biome}`), veil: Object.fromEntries(veil), mood: mood.debug() }),
     painterly(on) {
       post?.setPainterly(on);
       frameN = 0;

@@ -395,6 +395,17 @@ const SCENARIOS: Record<string, Scenario> = {
     warmUntil: (l) => l.fishers.some((f) => f.seat === 2 && f.mode === "wait"),
     hero: (_l, now, s) => now - s > 6000,
   },
+  // A night walk in the woods: Dad and Juneau on the trail between Moonwell and Mistmarsh, lanterns lit.
+  "night-woods": {
+    phase: 0.68,
+    fishers: [
+      { seat: 0, name: "Dad", spot: onTrailAt(0, 0.5, 2.2), at: onTrailAt(0, 0.5, 2.2), stay: true },
+      { seat: 2, name: "Juneau", spot: onTrailAt(0, 0.47, -1.6), at: onTrailAt(0, 0.47, -1.6), stay: true },
+    ],
+    setup: discoverAll,
+    warmUntil: () => true,
+    hero: (l, now, s) => now - s > 4000 && areaAt(centroid(l)) === null,
+  },
   // A Moonfin, the legend of Starfall Tarn, at night.
   "night-tarn": {
     phase: 0.68,

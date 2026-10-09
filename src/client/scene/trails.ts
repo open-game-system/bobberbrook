@@ -1,6 +1,7 @@
 import { BoxGeometry, Color, ConeGeometry, CylinderGeometry, Group, InstancedMesh, MeshBasicMaterial, SphereGeometry, type Material } from "three";
 import { TRAIL_HALF_WIDTH } from "../../game/world";
 import { instanced, mushroomGeometry, rockGeometry, type Inst } from "./kit";
+import { poolMesh } from "./pools";
 import { matteGlowMaterial } from "./matte";
 import { matteTint } from "./plants";
 import { merge, paint, prep } from "./geo";
@@ -46,6 +47,7 @@ export function buildTrails(full: boolean, painted: Material, jobs: Jobs): Trail
     const lamps: Inst[] = [];
     const glass: Inst[] = [];
     const shrooms: Inst[] = [];
+    const pools: Inst[] = [];
     const { ux, uz, len } = t;
     const at = (along: number, lat: number) => ({ x: t.from.x + ux * along - uz * lat, z: t.from.z + uz * along + ux * lat });
     for (let s = -4; s < len + 4; s += 1.6 + R() * 1.2) {
@@ -64,6 +66,7 @@ export function buildTrails(full: boolean, painted: Material, jobs: Jobs): Trail
       const ry = Math.atan2(side * ux, side * uz);
       lamps.push({ x: p.x, y, z: p.z, s: 1, ry });
       glass.push({ x: p.x, y, z: p.z, s: 1, ry, tint: new Color(1, 0.7, 0.35) });
+      pools.push({ x: p.x + Math.cos(ry) * 0.28, y, z: p.z - Math.sin(ry) * 0.28, s: 3.4, ry });
       side = -side;
     }
     for (let s = 2; s < len; s += 3 + R() * 4) {
@@ -87,7 +90,7 @@ export function buildTrails(full: boolean, painted: Material, jobs: Jobs): Trail
     stoneMesh.name = "trail-stones";
     const shroomMesh = instanced(shroomGeo, shroomMat, shrooms, false);
     shroomMesh.name = "trail-mushrooms";
-    g.add(posts, glassMesh, stoneMesh, shroomMesh);
+    g.add(posts, glassMesh, stoneMesh, shroomMesh, poolMesh(pools));
     slot.g = g;
     group.add(g);
   }

@@ -161,7 +161,16 @@ void main() {
   // Painted glints: soft-edged dabs, capped (never a white-hot speck that blooms the frame out).
   float nh = max(dot(N, H), 0.0);
   float spec = smoothstep(0.35, 0.8, pow(nh, 120.0)) * 0.45 + pow(nh, 30.0) * 0.06;
-  col += uSunCol * vec3(1.0, 0.93, 0.82) * spec * smoothstep(-0.05, 0.15, uSunDir.y);
+  col += uSunCol * vec3(1.0, 0.93, 0.82) * spec * smoothstep(-0.05, 0.15, uSunDir.y) * (1.0 - 0.65 * uStars);
+  // Moon path (night): a broken silver road across the water toward the moon, wherever the reflected
+  // ray points at the moon's bearing; the ripples break it into dabs that shimmer.
+  if (uStars > 0.01) {
+    vec2 rz = R.xz / max(length(R.xz), 1e-4);
+    vec2 mz = uSunDir.xz / max(length(uSunDir.xz), 1e-4);
+    float road = smoothstep(0.994, 0.9993, dot(rz, mz)) * smoothstep(0.8, 0.35, R.y);
+    float bits = smoothstep(0.42, 0.78, vn(vec2(p.x * 1.6, p.y * 5.0) + vec2(uTime * 0.35, -uTime * 0.2)));
+    col += vec3(0.7, 0.8, 1.0) * road * (0.15 + 0.85 * bits) * uStars * 0.9;
+  }
   // Shore foam, painted (round 07: one even white rim): a broken lip of foam dabs right at the bank and
   // a second, thinner lapping line a little way out that comes and goes; between them the shallows show.
   float lap = sin(uTime * 1.3 + th * 23.0 + vn(p * 2.0) * 4.0) * 0.08;
