@@ -456,7 +456,7 @@ class FisherView {
     }
     // Got away: a splash and a shadow darting off.
     if (f.missSeq !== this.missSeq) {
-      if (this.missSeq >= 0 && f.missSeq > this.missSeq && f.bobber) fx.missSplash(f.bobber.x, f.bobber.z, t);
+      if (this.missSeq >= 0 && f.missSeq > this.missSeq && f.bobber) fx.missSplash(f.bobber.x, f.bobber.z, t, Math.atan2(f.bobber.z - f.pos.z, f.bobber.x - f.pos.x));
       this.missSeq = f.missSeq;
     }
     // ---- the catch ----

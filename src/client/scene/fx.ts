@@ -1,4 +1,5 @@
 import type { Splashes } from "./splash";
+import type { Escape } from "./escape";
 import { AREAS, pondRadius, type PondPlace } from "../../game/world";
 import { placesAround } from "./worldQuery";
 import { CAMPFIRE } from "../../game/world";
@@ -76,14 +77,30 @@ export class Fx {
   }
 
   /** A small "got away" splash. */
-  missSplash(x: number, z: number, t: number): void {
-    this.surface.ripple(x, z, t, 0.8);
-    for (let i = 0; i < 16; i++) {
+  missSplash(x: number, z: number, t: number, away = this.r() * Math.PI * 2): void {
+    this.surface.ripple(x, z, t, 1.1);
+    // The tail breaks the surface: a burst of spray as it comes up, then (escape.ts) it flicks and slaps.
+    for (let i = 0; i < (this.lite ? 14 : 24); i++) {
       const a = this.r() * Math.PI * 2;
       const s = 0.4 + this.r() * 1.2;
-      this.water.emit({ x, y: 0.05, z, vx: Math.cos(a) * s + 1.2, vy: 1.5 + this.r() * 1.5, vz: Math.sin(a) * s, life: 0.7, size: 0.14, r: 0.95, g: 1, b: 1, gravity: 10 });
+      this.water.emit({ x, y: 0.05, z, vx: Math.cos(a) * s, vy: 2.2 + this.r() * 2.2, vz: Math.sin(a) * s, life: 0.8, size: 0.13 + this.r() * 0.08, r: 0.96, g: 1, b: 1, gravity: 10, alpha: 0.95 });
+    }
+    this.escape?.spawn(x, z, t, away);
+  }
+
+  /** The escaping tail slaps the water: a sheet of spray thrown along the way it goes, a crown, rings. */
+  slap(x: number, z: number, t: number, away: number): void {
+    this.surface.ripple(x, z, t, 1.6);
+    this.surface.ripple(x, z, t + 0.15, 1.0);
+    this.splashes?.spawn(x, z, t, 0.7);
+    for (let i = 0; i < (this.lite ? 20 : 36); i++) {
+      const a = away + (this.r() - 0.5) * 1.6;
+      const s = 1.4 + this.r() * 2.6;
+      this.water.emit({ x, y: 0.12, z, vx: Math.cos(a) * s, vy: 2.4 + this.r() * 3.2, vz: Math.sin(a) * s, life: 0.95, size: 0.12 + this.r() * 0.14, r: 0.97, g: 1, b: 1, gravity: 11, alpha: 0.95 });
     }
   }
+
+  escape: Escape | null = null;
 
   /** The fish leaves the water: a crown of white water, a ring, spray. */
   leap(x: number, z: number, t: number, junk: boolean): void {

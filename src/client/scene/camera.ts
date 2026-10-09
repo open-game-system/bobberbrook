@@ -296,10 +296,13 @@ export class CameraRig {
     }
     this.catchW += (cw - this.catchW) * damp(6, dt);
     if (catchAt && this.catchW > 0.001) {
-      const w = this.catchW * 0.8;
+      // Close in on a lone catcher; with others spread round the water, a gentler push that keeps
+      // everyone in frame (toward the catcher a little, a little closer and lower).
+      const tight = this.wantDist < 24;
+      const w = this.catchW * (tight ? 0.8 : 0.32);
       this.wantTarget.lerp(this.tmp.set(catchAt.x, catchAt.y, catchAt.z), w);
-      this.wantDist += (Math.min(this.wantDist, 14) - this.wantDist) * w;
-      this.wantEl += (0.4 - this.wantEl) * w;
+      this.wantDist += ((tight ? Math.min(this.wantDist, 14) : this.wantDist * 0.8) - this.wantDist) * (tight ? w : this.catchW);
+      this.wantEl += (0.4 - this.wantEl) * this.catchW * 0.8;
     }
     // The discovery reveal: up and out over the new place for ~2.5 s (a catch push-in wins).
     let rw = 0;

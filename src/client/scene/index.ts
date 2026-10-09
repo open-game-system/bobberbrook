@@ -32,6 +32,7 @@ import { buildSky } from "./sky";
 import { SwirlViews } from "./swirls";
 import { buildGroundStream } from "./terrain";
 import { placeHash } from "./valley";
+import { buildEscape } from "./escape";
 import { newTodState, sampleTod } from "./tod";
 import type { LakeScene, SceneQuality } from "./types";
 import { buildWater } from "./water";
@@ -212,6 +213,9 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   const splashes = new Splashes();
   scene.add(splashes.group);
   fx.splashes = splashes;
+  const escape = buildEscape(painted);
+  scene.add(escape.group);
+  fx.escape = escape;
   const shadows = new FishShadows();
   scene.add(shadows.mesh);
   const textures = new FishTextures(opts.assetBase ?? "/art/fish/");
@@ -375,6 +379,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     fx.ambient(dt, tod, lake?.campfire ? 1 : 0, rig.focus.x, rig.focus.z);
     parts.water.update(dt, t);
     splashes.frame(t);
+    escape.frame(t, (x, z, ts, away) => fx.slap(x, z, ts, away));
     parts.glow.update(dt, t);
     // Spread out: frame the active place (a line in the water, else the latest mover), mark the rest.
     members.length = 0;
@@ -473,6 +478,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   // ---- shader prewarm: everything visible, compiled against the target we really draw into ----
   fishers.showAllForPrewarm();
   vehicles.prewarm(true);
+  escape.prewarm(true);
   // A showroom: one place of every style (home builders, the four new kits, every landmark kind), a
   // patch of sea and the fog blanket, all in front of the camera, so every variant compiles now.
   const showroom: Place[] = [];
@@ -514,6 +520,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   if (post) post.render();
   fishers.hideAll();
   vehicles.prewarm(false);
+  escape.prewarm(false);
   areas.showroom(false, [], { x: 0, z: 0 });
   scene.remove(seaShow);
   seaShow.geometry.dispose();
@@ -637,6 +644,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       fow.dispose();
       markers.dispose();
       splashes.dispose();
+      escape.dispose();
       painted.dispose();
       paintedDouble.dispose();
       groundMat.dispose();

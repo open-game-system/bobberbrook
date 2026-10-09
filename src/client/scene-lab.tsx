@@ -13,10 +13,10 @@ import { AREAS, DOCK, TRAILS, areaAt, areaById, castRing, castRingIn, distance, 
 import { worldFor, type Biome, type Place, type Platform } from "../game/regions";
 import { createLakeScene } from "./scene";
 
-type Bot = { stay: boolean; target: Vec; hookAt: number; nextCastAt: number; stick: { x: number; y: number }; holding: boolean; reactAt: number; wander: boolean };
+type Bot = { stay: boolean; noHook: boolean; target: Vec; hookAt: number; nextCastAt: number; stick: { x: number; y: number }; holding: boolean; reactAt: number; wander: boolean };
 type Scenario = {
   phase: number;
-  fishers: { seat: number; name: string; spot: Vec | "swirl" | "golden"; easy?: boolean; at?: Vec; stay?: boolean }[];
+  fishers: { seat: number; name: string; spot: Vec | "swirl" | "golden"; easy?: boolean; at?: Vec; stay?: boolean; noHook?: boolean }[];
   setup?: (lake: Lake, now: number) => Lake;
   /** Tweaks every step (the "director"). */
   direct?: (lake: Lake, now: number) => Lake;
@@ -193,7 +193,28 @@ const LAZY: Record<string, () => Scenario> = {
   },
 };
 
+/** The moment a fisher's fish got away (lab clock), for the miss scenario. */
+const missWatch = { seq: 0, at: -1e9 };
+
 const SCENARIOS: Record<string, Scenario> = {
+  // A missed hook: Juneau never strikes, the fish flicks its tail and gets away.
+  miss: {
+    phase: 0.22,
+    fishers: [
+      { seat: 2, name: "Juneau", spot: shore(2.6), at: shore(2.6, 2), noHook: true },
+      { seat: 0, name: "Dad", spot: shore(2.2), at: shore(2.2, 2), noHook: true },
+    ],
+    warmUntil: (l) => l.fishers.some((f) => f.mode === "bite"),
+    direct: (l, now) => {
+      const seq = l.fishers.reduce((a, f) => a + f.missSeq, 0);
+      if (seq > missWatch.seq) {
+        missWatch.seq = seq;
+        missWatch.at = now;
+      }
+      return l;
+    },
+    hero: (_l, now, s) => now - s > 1500 && now - missWatch.at > 380 && now - missWatch.at < 520,
+  },
   morning: {
     phase: 0.14,
     fishers: [
@@ -436,6 +457,7 @@ function botStep(lake: Lake, f: Fisher, bot: Bot, now: number): Lake {
       if (now >= bot.nextCastAt) l = action(l, f.seat, now);
     }
   } else if (f.mode === "bite") {
+    if (bot.noHook) return l;
     if (bot.hookAt === 0) bot.hookAt = now + 300 + ((f.seat * 97) % 400);
     if (now >= bot.hookAt) {
       bot.hookAt = 0;
@@ -482,7 +504,7 @@ async function main(): Promise<void> {
   const bots = new Map<number, Bot>();
   for (const spec of sc.fishers) {
     lake = joinAs(lake, spec.seat, spec.name, spec.at, spec.easy ?? false);
-    bots.set(spec.seat, { stay: spec.stay ?? false, target: { x: 0, z: 0 }, hookAt: 0, nextCastAt: 0, stick: { x: 0, y: 0 }, holding: false, reactAt: 0, wander: false });
+    bots.set(spec.seat, { stay: spec.stay ?? false, noHook: spec.noHook ?? false, target: { x: 0, z: 0 }, hookAt: 0, nextCastAt: 0, stick: { x: 0, y: 0 }, holding: false, reactAt: 0, wander: false });
   }
   if (sc.setup) lake = sc.setup(lake, now);
   // ?swapColors=1: colours are chosen per device, not by seat; reverse them to prove the TV follows `color`.
