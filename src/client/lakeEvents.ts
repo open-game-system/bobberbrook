@@ -20,16 +20,26 @@ export type LakeEvent =
 
 export function lakeEvents(prev: Lake | null, next: Lake): LakeEvent[] {
   if (!prev) return [];
-  const out = next.fishers.flatMap((f) => fisherEvents(prev.fishers.find((p) => p.seat === f.seat), f));
-  if (next.upgradeSeq > prev.upgradeSeq) out.push({ kind: "upgrade", tier: next.rodTier });
-  if (newGoldenSwirl(prev, next)) out.push({ kind: "golden-swirl" });
-  if (next.campfire !== prev.campfire) out.push({ kind: "campfire", on: next.campfire });
-  const d = next.discovery;
-  if (d && d.seq !== prev.discovery?.seq) out.push({ kind: "discovered", seat: d.seat, area: d.area });
-  if (next.pickup && next.pickup.seq !== prev.pickup?.seq) out.push({ kind: "treasure", seat: next.pickup.seat });
-  if (next.ride && !prev.ride) out.push({ kind: "ride", vehicle: next.ride.kind, to: worldFor(next.worldSeed).placeById(next.ride.toPlace)?.name ?? "somewhere new", toPlace: next.ride.toPlace });
-  if (!next.ride && prev.ride) out.push({ kind: "arrived", place: prev.ride.toPlace });
-  return out;
+  const fishers = next.fishers.flatMap((f) => fisherEvents(prev.fishers.find((p) => p.seat === f.seat), f));
+  return [...fishers, ...LAKE_MOMENTS.map((m) => m(prev, next)).filter((e): e is LakeEvent => e !== null)];
+}
+
+type Moment = (prev: Lake, next: Lake) => LakeEvent | null;
+
+/** The lake-wide moments, in the order they are reported (after every fisher's own). */
+const LAKE_MOMENTS: readonly Moment[] = [
+  (prev, next) => (next.upgradeSeq > prev.upgradeSeq ? { kind: "upgrade", tier: next.rodTier } : null),
+  (prev, next) => (newGoldenSwirl(prev, next) ? { kind: "golden-swirl" } : null),
+  (prev, next) => (next.campfire !== prev.campfire ? { kind: "campfire", on: next.campfire } : null),
+  (prev, next) => (next.discovery && next.discovery.seq !== prev.discovery?.seq ? { kind: "discovered", seat: next.discovery.seat, area: next.discovery.area } : null),
+  (prev, next) => (next.pickup && next.pickup.seq !== prev.pickup?.seq ? { kind: "treasure", seat: next.pickup.seat } : null),
+  (prev, next) => (next.ride && !prev.ride ? { kind: "ride", vehicle: next.ride.kind, to: rideName(next.worldSeed, next.ride.toPlace), toPlace: next.ride.toPlace } : null),
+  (prev, next) => (!next.ride && prev.ride ? { kind: "arrived", place: prev.ride.toPlace } : null),
+];
+
+/** Where a ride is going, by name ("somewhere new" if the world doesn't know it). */
+export function rideName(worldSeed: number, toPlace: string): string {
+  return worldFor(worldSeed).placeById(toPlace)?.name ?? "somewhere new";
 }
 
 /** Entering these modes is a moment of its own. */

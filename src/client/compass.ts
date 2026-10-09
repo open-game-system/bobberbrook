@@ -1,5 +1,5 @@
 import { LEASH, type Lake, type Swirl } from "../game/lake";
-import { worldFor } from "../game/regions";
+import { worldFor, type Platform } from "../game/regions";
 import { SHORE_REACH, pondRadius, type Vec } from "../game/world";
 
 const dist = (a: Vec, b: Vec) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -34,35 +34,70 @@ type Goal = { at: Vec; golden: boolean; explore: boolean; vehicle?: "boat" | "ze
  * place nobody has found yet (through the fog), else a boat or zeppelin to somewhere new, else any swirl.
  */
 export function compassGoal(lake: Lake, from: Vec): Goal | null {
-  const w = worldFor(lake.worldSeed);
+  return goldenGoal(lake, from) ?? swirlGoal(lake, from, localSwirls(lake, from)) ?? exploreGoal(lake, from) ?? rideGoal(lake, from) ?? swirlGoal(lake, from, lake.swirls);
+}
+
+function goldenGoal(lake: Lake, from: Vec): Goal | null {
   const golden = lake.swirls.find((s) => s.golden && dist(s.pos, from) < 2.5 * 96);
-  if (golden) return { at: shoreFor(lake, golden), golden: true, explore: false };
-  const here = w.areaAt(from)?.id;
-  const local = lake.swirls.filter((s) => s.area === here);
-  const nearestSwirl = (list: Swirl[]) => list.reduce<Swirl | null>((b, s) => (!b || dist(shoreFor(lake, s), from) < dist(shoreFor(lake, b), from) ? s : b), null);
-  const swirlHere = nearestSwirl(local);
-  if (swirlHere) return { at: shoreFor(lake, swirlHere), golden: false, explore: false };
-  const unfound = w.placesNear(from, 2).filter((p) => !lake.discovered.includes(p.id));
-  const place = unfound.reduce<(typeof unfound)[number] | null>((b, p) => (!b || dist(p.center, from) < dist(b.center, from) ? p : b), null);
-  if (place) return { at: place.center, golden: false, explore: true };
-  const ride = w
-    .platformsNear(from, 2)
-    .filter((p) => !lake.discovered.includes(p.toPlace))
+  return golden ? { at: shoreFor(lake, golden), golden: true, explore: false } : null;
+}
+
+function localSwirls(lake: Lake, from: Vec): Swirl[] {
+  const here = worldFor(lake.worldSeed).areaAt(from)?.id;
+  return lake.swirls.filter((s) => s.area === here);
+}
+
+/** The shore behind the nearest of these swirls (null if there are none). */
+function swirlGoal(lake: Lake, from: Vec, swirls: Swirl[]): Goal | null {
+  const s = nearestSwirl(lake, from, swirls);
+  return s ? { at: shoreFor(lake, s), golden: false, explore: false } : null;
+}
+
+/** The swirl whose casting shore is nearest `from` (the first on a tie). */
+export function nearestSwirl(lake: Pick<Lake, "worldSeed">, from: Vec, list: Swirl[]): Swirl | null {
+  return list.reduce<Swirl | null>((b, s) => (!b || dist(shoreFor(lake, s), from) < dist(shoreFor(lake, b), from) ? s : b), null);
+}
+
+function exploreGoal(lake: Lake, from: Vec): Goal | null {
+  const place = nearestUnfound(worldFor(lake.worldSeed).placesNear(from, 2), lake.discovered, from);
+  return place ? { at: place.center, golden: false, explore: true } : null;
+}
+
+/** The nearest place nobody has found yet (the first on a tie). */
+export function nearestUnfound<P extends { id: string; center: Vec }>(places: P[], discovered: string[], from: Vec): P | null {
+  return places.filter((p) => !discovered.includes(p.id)).reduce<P | null>((b, p) => (!b || dist(p.center, from) < dist(b.center, from) ? p : b), null);
+}
+
+function rideGoal(lake: Lake, from: Vec): Goal | null {
+  const ride = nearestRide(worldFor(lake.worldSeed).platformsNear(from, 2), lake.discovered, from);
+  return ride ? { at: ride.at, golden: false, explore: true, vehicle: ride.kind } : null;
+}
+
+/** The nearest boat or zeppelin mooring that goes somewhere nobody has found yet (the first on a tie). */
+export function nearestRide(platforms: Pick<Platform, "at" | "kind" | "toPlace">[], discovered: string[], from: Vec): { at: Vec; kind: "boat" | "zeppelin" } | null {
+  return platforms
+    .filter((p) => !discovered.includes(p.toPlace))
     .reduce<{ at: Vec; kind: "boat" | "zeppelin" } | null>((b, p) => (!b || dist(p.at, from) < dist(b.at, from) ? { at: p.at, kind: p.kind } : b), null);
-  if (ride) return { at: ride.at, golden: false, explore: true, vehicle: ride.kind };
-  const any = nearestSwirl(lake.swirls);
-  return any ? { at: shoreFor(lake, any), golden: false, explore: false } : null;
 }
 
 /** The compass arrow (screen angle: 0 = right, π/2 = down, the minimap's north-up frame). */
 export function compassTo(lake: Lake, from: Vec, mySeat?: number): Compass | null {
-  const mid = mySeat === undefined ? null : familyMiddle(lake, mySeat);
-  if (mySeat !== undefined && mid && atLeashEnd(lake, mySeat, from)) {
-    // Gone too far ahead: point back to the family (they're on their way).
-    return { angle: Math.atan2(mid.z - from.z, mid.x - from.x), distance: dist(mid, from), golden: false, explore: false, family: true, arrived: false };
-  }
+  const back = backToFamily(lake, from, mySeat);
+  if (back) return back;
   const goal = compassGoal(lake, from);
-  if (!goal) return null;
+  return goal ? arrowTo(lake, from, goal) : null;
+}
+
+/** Gone too far ahead: point back to the family (they're on their way). */
+function backToFamily(lake: Lake, from: Vec, mySeat: number | undefined): Compass | null {
+  if (mySeat === undefined) return null;
+  const mid = familyMiddle(lake, mySeat);
+  if (!mid || !atLeashEnd(lake, mySeat, from)) return null;
+  return { angle: Math.atan2(mid.z - from.z, mid.x - from.x), distance: dist(mid, from), golden: false, explore: false, family: true, arrived: false };
+}
+
+/** The arrow toward a goal: along the way there (round ponds, by trail), arrived once on a swirl's shore. */
+function arrowTo(lake: Lake, from: Vec, goal: Goal): Compass {
   const way = worldFor(lake.worldSeed).navNext(from, goal.at);
   const distance = dist(goal.at, from);
   return {
