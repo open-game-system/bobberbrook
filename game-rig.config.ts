@@ -190,12 +190,9 @@ const config: GameRigInput = {
     const { tv, dad, kid } = await hostAndJoin(fromSession(rig));
     rig.mark("everyone in");
     await rig.wait(2500);
-    // Juneau heads for the nearest swirl's shore, Dad for the end of the dock.
-    const { lake } = await me(kid);
-    const swirl = lake.swirls[0]?.pos ?? { x: -16, z: 0 };
-    const k = Math.hypot(swirl.x, swirl.z);
-    const shore = { x: (swirl.x / k) * (k + 5.6), z: (swirl.z / k) * (k + 5.6) };
-    await Promise.all([walkTo(kid, shore, 1.2), walkTo(dad, { x: 0, z: 17 }, 0.6).then(() => walkTo(dad, { x: 0, z: 9 }, 0.6))]);
+    // Dad walks out on the dock; Juneau stays beside him and just presses the big button (it walks him
+    // down the bank and casts), like a 5-year-old next to his dad.
+    await walkTo(dad, { x: 0, z: 17 }, 0.6).then(() => walkTo(dad, { x: 0, z: 9 }, 0.6));
     rig.mark("at the water");
     for (let i = 0; i < 2; i++) {
       await Promise.all([fishOnce(rig, kid, "Juneau", i > 0), fishOnce(rig, dad, "Dad", true)]);
