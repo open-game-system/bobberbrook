@@ -1,0 +1,42 @@
+[3.0s] everyone in
+[20.2s] at the water
+[20.7s] Dad casts
+[20.7s] Juneau casts
+[25.9s] Juneau hooks
+[29.2s] Dad hooks
+[30.3s] Juneau catch
+[35.2s] Dad catch
+[39.3s] Juneau casts
+[39.3s] Dad casts
+[46.6s] Dad hooks
+[47.0s] Juneau hooks
+[52.9s] Dad catch
+[54.5s] Juneau catch
+[58.1s] explore: trail to Mistmarsh
+[106.1s] found Mistmarsh
+[106.3s] Juneau tagged along
+[115.3s] Juneau casts
+[115.4s] Dad casts
+[120.6s] Juneau hooks
+[122.9s] Dad hooks
+[127.1s] Dad catch
+[135.4s] Juneau catch
+[139.9s] Juneau casts
+[140.0s] Dad casts
+[145.0s] Dad hooks
+[146.0s] Juneau hooks
+[150.9s] Juneau catch
+[152.4s] Dad catch
+[156.0s] explore: back to the zeppelin tower
+[196.5s] at the zeppelin
+[200.1s] zeppelin flying
+[215.0s] landed somewhere new
+[234.8s] Dad casts
+[234.8s] Juneau casts
+[239.1s] Dad hooks
+[242.2s] Juneau hooks
+[245.5s] Dad catch
+[246.9s] Juneau catch
+[251.0s] campfire
+[258.3s] back to fishing
+Expected ',' or '}' after property value in JSON at position 65536 (line 3743 column 4)

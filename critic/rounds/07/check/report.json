@@ -1,0 +1,86 @@
+{
+  "pass": false,
+  "results": [
+    {
+      "screen": "tv-empty-lake",
+      "role": "tv",
+      "viewport": "1920x1080",
+      "shot": "critic/rounds/07/check/tv-empty-lake/tv-1920x1080.png",
+      "failures": [
+        {
+          "code": "overlay_covers_focal",
+          "selector": "div.tv > div.ticket:nth-of-type(4)",
+          "text": "",
+          "rect": {
+            "x": 105.59375,
+            "y": 847.21875,
+            "width": 379.796875,
+            "height": 167.984375
+          },
+          "overlapPx": 2418
+        }
+      ],
+      "errors": [],
+      "tapped": []
+    },
+    {
+      "screen": "kid-hat-picker",
+      "role": "kid",
+      "viewport": "1080x810",
+      "shot": "critic/rounds/07/check/kid-hat-picker/kid-1080x810.png",
+      "failures": [],
+      "errors": [],
+      "tapped": [
+        "green hat",
+        "yellow hat"
+      ]
+    },
+    {
+      "screen": "phone-controller",
+      "role": "dad",
+      "viewport": "393x852",
+      "shot": "critic/rounds/07/check/phone-controller/dad-393x852.png",
+      "failures": [],
+      "errors": [],
+      "tapped": [
+        "Open the map",
+        "Journal 0/30",
+        "Map",
+        "Fishers",
+        "Campfire",
+        "cast"
+      ]
+    },
+    {
+      "screen": "phone-controller",
+      "role": "dad",
+      "viewport": "375x667",
+      "shot": "critic/rounds/07/check/phone-controller/dad-375x667.png",
+      "failures": [],
+      "errors": [],
+      "tapped": []
+    },
+    {
+      "screen": "ipad-controller",
+      "role": "kid",
+      "viewport": "1080x810",
+      "shot": "critic/rounds/07/check/ipad-controller/kid-1080x810.png",
+      "failures": [],
+      "errors": [],
+      "tapped": [
+        "Open the map",
+        "cast"
+      ]
+    },
+    {
+      "screen": "tv-two-fishers",
+      "role": "tv",
+      "viewport": "1920x1080",
+      "shot": "critic/rounds/07/check/tv-two-fishers/tv-1920x1080.png",
+      "failures": [],
+      "errors": [],
+      "tapped": []
+    }
+  ],
+  "sheet": "critic/rounds/07/check/sheet.png"
+}
