@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { Lake } from "../game/lake";
-import { thrashingAt } from "../game/reel";
+import { thrashing, type Lake } from "../game/lake";
 import { fishById } from "../game/fish";
 import { lakeEvents } from "./lakeEvents";
 import { sfx } from "./audio/sfx";
@@ -39,8 +38,7 @@ export function useDeviceSounds(lake: Lake, seat: number, now: number): void {
           sfx.nibble();
         }
     if (me.mode === "reel" && me.reel) {
-      const def = fishById(me.reel.fishId);
-      const thrash = def ? thrashingAt(def.fight, me.reel, now) : false;
+      const thrash = thrashing(me, now);
       if (thrash && !wasThrash.current) sfx.thrash({ gain: 0.5 });
       wasThrash.current = thrash;
       if (me.reel.holding && Date.now() - lastClick.current > 90) {

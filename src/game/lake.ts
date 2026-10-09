@@ -2,7 +2,7 @@ import { produce, type Draft } from "immer";
 import { dayPhase, timeOfDay, type TimeOfDay } from "./daycycle";
 import { FISH, JOURNAL_FISH, SHELLS, bitesNow, fishById, type FishDef } from "./fish";
 import { between, pickWeighted, rand } from "./rng";
-import { REEL_START, integrateReel, type Reel } from "./reel";
+import { REEL_START, integrateReel, thrashingAt, type Reel } from "./reel";
 import { WALK_SPEED, advance, angleGap, castFrom, castRing, distance, spawnPoint, type Vec, type Water } from "./world";
 
 /** Everything on the lake that changes with time. The room keeps one of these; every screen sees it. */
@@ -266,30 +266,39 @@ function land(d: Draft<Lake>, f: Draft<Fisher>, at: number): void {
   f.bobber = null;
 }
 
+/**
+ * When the room next moves this fisher on by itself, if nobody touches it: the cast lands, the bite
+ * comes, the bite gets away (or hooks itself for an easy fisher), the catch card ends. Null when nothing
+ * is scheduled: walking, or reeling (the reel moves continuously). The room steps the fisher exactly at
+ * this moment; a screen that waits on it ticks the room once it has passed.
+ */
+export function deadlineOf(f: Fisher): number | null {
+  switch (f.mode) {
+    case "cast":
+      return f.castAt + CAST_FLIGHT_MS;
+    case "wait":
+      return f.biteAt;
+    case "bite":
+      return f.easy ? f.biteAt + EASY_HOOK_DELAY_MS : f.biteUntil;
+    case "catch":
+      return f.catch ? f.catch.at + CATCH_SHOW_MS : null;
+    case "walk":
+    case "reel":
+      return null;
+  }
+}
+
+/** Whether this fisher's hooked fish is thrashing (pulling back) at `now`. False unless reeling. */
+export function thrashing(f: Fisher, now: number): boolean {
+  if (f.mode !== "reel" || !f.reel) return false;
+  const def = fishById(f.reel.fishId);
+  return def !== undefined && thrashingAt(def.fight, f.reel, now);
+}
+
 function stepFisher(d: Draft<Lake>, f: Draft<Fisher>, now: number): void {
   settle(f, now);
-  // Each step either moves the fisher on to its next mode at a known moment, or stops.
+  // Each step either moves the fisher on to its next mode at its deadline, or stops.
   for (let guard = 0; guard < 8; guard++) {
-    if (f.mode === "cast" && now >= f.castAt + CAST_FLIGHT_MS) {
-      f.mode = "wait";
-      scheduleBite(d, f, f.castAt + CAST_FLIGHT_MS);
-      continue;
-    }
-    if (f.mode === "wait" && now >= f.biteAt) {
-      f.mode = "bite";
-      continue;
-    }
-    if (f.mode === "bite" && f.easy && now >= f.biteAt + EASY_HOOK_DELAY_MS) {
-      hook(d, f, f.biteAt + EASY_HOOK_DELAY_MS);
-      continue;
-    }
-    if (f.mode === "bite" && now >= f.biteUntil) {
-      // It got away: a splash, and the bobber waits for the next one.
-      f.missSeq += 1;
-      f.mode = "wait";
-      scheduleBite(d, f, f.biteUntil);
-      continue;
-    }
     if (f.mode === "reel" && f.reel) {
       const def = fishById(f.reel.fishId)!;
       const r = integrateReel(f.reel, def.fight, now, { easy: f.easy, tier: d.rodTier });
@@ -297,11 +306,23 @@ function stepFisher(d: Draft<Lake>, f: Draft<Fisher>, now: number): void {
       if (r.progress >= 1 || now >= r.hookAt + RESCUE_REEL_MS) land(d, f, now);
       break;
     }
-    if (f.mode === "catch" && f.catch && now >= f.catch.at + CATCH_SHOW_MS) {
+    const due = deadlineOf(f);
+    if (due === null || now < due) break;
+    if (f.mode === "cast") {
+      f.mode = "wait";
+      scheduleBite(d, f, due);
+    } else if (f.mode === "wait") {
+      f.mode = "bite";
+    } else if (f.mode === "bite" && f.easy) {
+      hook(d, f, due);
+    } else if (f.mode === "bite") {
+      // It got away: a splash, and the bobber waits for the next one.
+      f.missSeq += 1;
+      f.mode = "wait";
+      scheduleBite(d, f, due);
+    } else if (f.mode === "catch") {
       f.mode = "walk";
-      continue;
     }
-    break;
   }
 }
 
