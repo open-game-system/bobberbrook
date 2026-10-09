@@ -1,5 +1,5 @@
 import { fishById, JOURNAL_FISH } from "../game/fish";
-import { ROD_AT, ROD_NAMES, speciesCount, todOf, type Lake } from "../game/lake";
+import { ROD_AT, ROD_NAMES, deadlineOf, speciesCount, todOf, type Lake } from "../game/lake";
 import { waterAt, type Water } from "../game/world";
 
 const WATER_NAME: Record<Water, string> = {
@@ -23,7 +23,8 @@ export function coachLine(lake: Lake, mySeat: number, now: number): string {
   if (bite) return `${nameOf(lake, bite.seat)} has a bite! Tell them: tap now!`;
   const reeling = others.find((f) => f.mode === "reel" && !f.easy);
   if (reeling) return `${nameOf(lake, reeling.seat)} is reeling: hold the button, let go when the fish splashes!`;
-  const fresh = lake.fishers.find((f) => f.mode === "catch" && f.catch && now - f.catch.at < 3400);
+  // A catch card still showing: its deadline (the card ending) is still ahead.
+  const fresh = lake.fishers.find((f) => f.mode === "catch" && now < (deadlineOf(f) ?? now));
   if (fresh?.catch) {
     const def = fishById(fresh.catch.fishId);
     const who = nameOf(lake, fresh.seat);

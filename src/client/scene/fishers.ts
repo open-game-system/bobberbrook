@@ -11,8 +11,8 @@ import {
   type Camera,
   type PlaneGeometry,
 } from "three";
-import { CAST_FLIGHT_MS, CATCH_SHOW_MS, type Fisher, type Lake } from "../../game/lake";
-import { REEL_START, thrashingAt } from "../../game/reel";
+import { CAST_FLIGHT_MS, CATCH_SHOW_MS, thrashing, type Fisher, type Lake } from "../../game/lake";
+import { REEL_START } from "../../game/reel";
 import { fishById } from "../../game/fish";
 import { onDock, walkable, type Vec } from "../../game/world";
 import { FISHER_SCALE, ROD_SEGMENTS, buildFisher, type FisherRig, type RigMaterials } from "./character";
@@ -344,7 +344,7 @@ class FisherView {
     }
     if (mode === "reel" && f.reel && f.bobber) {
       const def = fishById(f.reel.fishId);
-      const thrash = def ? thrashingAt(def.fight, f.reel, sn) : false;
+      const thrash = thrashing(f, sn);
       this.dispProgress += (f.reel.progress - this.dispProgress) * damp(4, dt);
       const pr = Math.max(0, (this.dispProgress - REEL_START) / (1 - REEL_START));
       const dx = f.bobber.x - this.x;

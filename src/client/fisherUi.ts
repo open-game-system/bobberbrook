@@ -1,6 +1,5 @@
-import { CATCH_SKIP_MS, type Fisher, type Lake } from "../game/lake";
+import { CATCH_SKIP_MS, deadlineOf, thrashing, type Fisher, type Lake } from "../game/lake";
 import { fishById } from "../game/fish";
-import { thrashingAt } from "../game/reel";
 import { castFrom } from "../game/world";
 
 /** What the one big button shows and does right now. */
@@ -30,7 +29,7 @@ export function buttonState(lake: Lake, me: Fisher, now: number): ButtonState {
       const reel = me.reel;
       const def = reel ? fishById(reel.fishId) : undefined;
       if (!reel || !def) return { kind: "reel", progress: 0, thrashing: false, holding: false };
-      return { kind: "reel", progress: reel.progress, thrashing: thrashingAt(def.fight, reel, now), holding: reel.holding };
+      return { kind: "reel", progress: reel.progress, thrashing: thrashing(me, now), holding: reel.holding };
     }
     case "catch":
       return { kind: "caught", fishId: me.catch?.fishId ?? "minnow", canRecast: me.catch !== null && now >= me.catch.at + CATCH_SKIP_MS && castFrom(me.pos) !== null };
@@ -45,10 +44,10 @@ export function positionAt(f: Fisher, now: number): { x: number; z: number } {
 
 /** Whether this screen should nudge the room's clock (a deadline it is waiting on has passed). */
 export function needsTick(me: Fisher, now: number): boolean {
-  if (me.mode === "cast") return now >= me.castAt + 900;
-  if (me.mode === "wait") return now >= me.biteAt;
-  if (me.mode === "bite") return now >= me.biteUntil;
   if (me.mode === "reel") return true;
-  if (me.mode === "catch") return me.catch !== null && now >= me.catch.at + 3400;
-  return false;
+  // A bite: this screen waits on the bite window's end, also for an easy fisher (whose bite hooks itself
+  // earlier, at its deadline, on the TV's tick).
+  if (me.mode === "bite") return now >= me.biteUntil;
+  const due = deadlineOf(me);
+  return due !== null && now >= due;
 }

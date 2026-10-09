@@ -4,10 +4,8 @@
  * &phase=0..1 &seed=N &lite=1 &view=name
  */
 import { produce } from "immer";
-import { CATCH_SKIP_MS, action, join, move, newLake, reelHold, setCampfire, step, type Fisher, type Lake } from "../game/lake";
+import { CATCH_SKIP_MS, action, join, move, newLake, reelHold, setCampfire, step, thrashing, type Fisher, type Lake } from "../game/lake";
 import { DAY_MS, DAY_START } from "../game/daycycle";
-import { fishById } from "../game/fish";
-import { thrashingAt } from "../game/reel";
 import { DOCK, castFrom, castRing, distance, lakeRadius, type Vec } from "../game/world";
 import { createLakeScene } from "./scene";
 
@@ -172,8 +170,7 @@ function botStep(lake: Lake, f: Fisher, bot: Bot, now: number): Lake {
       l = action(l, f.seat, now);
     }
   } else if (f.mode === "reel" && f.reel) {
-    const def = fishById(f.reel.fishId);
-    const thrash = def ? thrashingAt(def.fight, f.reel, now) : false;
+    const thrash = thrashing(f, now);
     const want = !thrash;
     if (want !== bot.holding && now >= bot.reactAt) {
       bot.holding = want;

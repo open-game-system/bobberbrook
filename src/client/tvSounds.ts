@@ -1,6 +1,5 @@
 import { fishById } from "../game/fish";
-import type { Lake } from "../game/lake";
-import { thrashingAt } from "../game/reel";
+import { thrashing as thrashingNow, type Lake } from "../game/lake";
 import type { LakeEvent } from "./lakeEvents";
 import { sfx } from "./audio/sfx";
 import { voice } from "./audio/voice";
@@ -64,8 +63,7 @@ export function createLiveSounds() {
             nibbled.add(t);
             sfx.nibble({ pan: panOf(lake, f.seat) });
           }
-      const def = f.reel ? fishById(f.reel.fishId) : undefined;
-      const thrash = f.mode === "reel" && f.reel !== null && def !== undefined && thrashingAt(def.fight, f.reel, now);
+      const thrash = thrashingNow(f, now);
       if (thrash && !thrashing.get(f.seat)) sfx.thrash({ pan: panOf(lake, f.seat) });
       thrashing.set(f.seat, thrash);
     }
