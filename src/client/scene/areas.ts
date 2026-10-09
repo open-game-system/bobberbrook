@@ -1,11 +1,14 @@
 import { Color, Group, InstancedMesh, MeshBasicMaterial, MeshLambertMaterial, type Camera, type Material } from "three";
-import { pondRadius, type Area } from "../../game/world";
+import { pondRadius, type Area, type PondPlace } from "../../game/world";
 import type { Biome, Place } from "../../game/regions";
 import { bellGeometry, fernGeometry, flowerGeometry, instanced, lilyGeometry, lupineGeometry, mushroomGeometry, padGeometry, reedGeometry, rockGeometry, tuftGeometry, type Inst } from "./kit";
 import { rng, vnoise } from "./noise";
 import { heightAt, trailWear } from "./terrain";
 import type { TodState } from "./tod";
 import { buildLandmark, type Landmark, type LandmarkStyle } from "./landmarks";
+
+/** The home valley's own landmark styles (Moonwell has none of its own). */
+const HOME_STYLES: readonly LandmarkStyle[] = ["mistmarsh", "pools", "hollow", "tarn"];
 import { placeHash } from "./valley";
 import { LANDMARKS, landmarkFor, type LandmarkKind } from "./biomes";
 import { placesWithin } from "./worldQuery";
@@ -90,7 +93,7 @@ const SHOW_DIST = 150;
 const BUILD_DIST = 200;
 const KEEP_DIST = 260;
 
-function* dress(a: Area, r0: Recipe, full: boolean, m: AreaMats, glow: MeshBasicMaterial, lilyMat: Material, key: string, home: boolean): Generator<void, Group> {
+function* dress(a: PondPlace, r0: Recipe, full: boolean, m: AreaMats, glow: MeshBasicMaterial, lilyMat: Material, key: string, home: boolean): Generator<void, Group> {
   const R = rng(a.center.x * 13 + a.center.z * 7 + 99);
   // Each generated place leans its recipe its own way (more ferns here, more rocks there).
   const v = (salt: number) => (home ? 1 : 0.6 + 0.8 * placeHash(key, salt));
@@ -220,7 +223,8 @@ export function buildAreaDressing(full: boolean, m: AreaMats, jobs: Jobs): AreaD
     const recipe = RECIPES[a.biome === "moonwell" ? "tarn" : a.biome];
     const g: Group = yield* dress(a, recipe, full, m, l.glow, lilyMat, a.key, a.home);
     yield;
-    const style: LandmarkStyle = a.home ? (a.id as LandmarkStyle) : STYLE[a.biome === "moonwell" ? "tarn" : a.biome];
+    const homeStyle = HOME_STYLES.find((st) => st === a.id);
+    const style: LandmarkStyle = a.home && homeStyle ? homeStyle : STYLE[a.biome === "moonwell" ? "tarn" : a.biome];
     const lm = buildLandmark(a, style, a.home ? 0 : Math.floor(placeHash(a.key, 5) * 1000), full, m.painted, m.tree, a.home ? null : forced ?? landmarkFor(a.biome, placeHash(a.key, 6)));
     if (!l.alive) {
       disposeGroup(g);

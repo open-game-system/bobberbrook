@@ -22,7 +22,7 @@ import {
   type Material,
   type ShaderMaterial as SM,
 } from "three";
-import { pondRadius, type Area, type AreaId } from "../../game/world";
+import { pondRadius, type Area, type AreaId, type PondPlace } from "../../game/world";
 import { cliffRockGeometry, instanced, rockGeometry, type Inst } from "./kit";
 import { jitter, merge, paint, prep, puffNormals } from "./geo";
 import { rng, vnoise } from "./noise";
@@ -38,11 +38,11 @@ import { buildPlaceLandmark, crystalKit, emberKit, frostKit, willowKit, type Lan
  * cliffs. Each place's glowing parts share one material that pulses when the place is discovered.
  */
 
-const at = (a: Area, theta: number, d: number): { x: number; z: number } => {
+const at = (a: PondPlace, theta: number, d: number): { x: number; z: number } => {
   const r = pondRadius(a, theta) + d;
   return { x: a.center.x + Math.cos(theta) * r, z: a.center.z + Math.sin(theta) * r };
 };
-const atR = (a: Area, theta: number, r: number) => ({ x: a.center.x + Math.cos(theta) * r, z: a.center.z + Math.sin(theta) * r });
+const atR = (a: PondPlace, theta: number, r: number) => ({ x: a.center.x + Math.cos(theta) * r, z: a.center.z + Math.sin(theta) * r });
 
 /** Puts a geometry at a world point on the ground, turned by ry. */
 function place(g: BufferGeometry, x: number, z: number, ry: number, s = 1, dy = 0): BufferGeometry {
@@ -135,7 +135,7 @@ function lanternPost(h: number): { wood: BufferGeometry; glass: BufferGeometry }
 
 export type Landmark = { group: Group; update(tod: TodState, time: number, pulse: number): void; dispose(): void };
 
-type Ctx = { a: Area; seed: number; wood: BufferGeometry[]; glow: BufferGeometry[]; full: boolean; group: Group; painted: Material; tree: Material; extra: { dispose(): void }[]; flows: SM[] };
+type Ctx = { a: PondPlace; seed: number; wood: BufferGeometry[]; glow: BufferGeometry[]; full: boolean; group: Group; painted: Material; tree: Material; extra: { dispose(): void }[]; flows: SM[] };
 
 // ---------- Mistmarsh ----------
 
@@ -529,7 +529,7 @@ const GLOW_BASE: Record<LandmarkStyle, [number, number]> = {
 
 export type LandmarkStyle = Exclude<AreaId, "moonwell"> | "willow" | "crystal" | "ember" | "frost";
 
-export function buildLandmark(a: Area, style: LandmarkStyle, seed: number, full: boolean, painted: Material, tree: Material, landmark: LandmarkKind | null = null): Landmark {
+export function buildLandmark(a: PondPlace, style: LandmarkStyle, seed: number, full: boolean, painted: Material, tree: Material, landmark: LandmarkKind | null = null): Landmark {
   const id = style;
   const group = new Group();
   group.name = `landmark-${a.id}`;

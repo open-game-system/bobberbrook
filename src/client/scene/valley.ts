@@ -1,5 +1,6 @@
 import { Color } from "three";
 import { NORTH, TRAIL_HALF_WIDTH, angleGap, pondRadius, segmentDistance, type AreaId } from "../../game/world";
+const HOME_IDS: readonly AreaId[] = ["moonwell", "mistmarsh", "pools", "hollow", "tarn"];
 import type { Biome, Place } from "../../game/regions";
 import { smoothstep } from "./noise";
 import { clearingEdge, placesAround, trailsAround, type SceneTrail } from "./worldQuery";
@@ -247,7 +248,8 @@ function vary(c: Color, dh: number, dl: number): Color {
 
 /** A place's look: the home valley's hand-tuned ones, else its biome's with a seeded sub-palette. */
 export function lookOf(p: Place): AreaLook {
-  if (p.home) return LOOKS[p.id];
+  const homeId = HOME_IDS.find((id) => id === p.id);
+  if (p.home && homeId) return LOOKS[homeId];
   const ck = `${p.key}:${p.biome}:${p.center.x}`;
   const hit = lookCache.get(ck);
   if (hit) return hit;

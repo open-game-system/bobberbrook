@@ -1,5 +1,5 @@
 import type { Splashes } from "./splash";
-import { AREAS, pondRadius, type Area } from "../../game/world";
+import { AREAS, pondRadius, type PondPlace } from "../../game/world";
 import { placesAround } from "./worldQuery";
 import { CAMPFIRE } from "../../game/world";
 import type { Particles } from "./particles";
@@ -159,7 +159,7 @@ export class Fx {
 
   ambient(dt: number, tod: TodState, campfire: number, fx0 = 0, fz0 = 0): void {
     // Wisps and ground mist gather round the pond nearest the action.
-    let near: Area = AREAS[0]!;
+    let near: PondPlace = AREAS[0]!;
     let best = Infinity;
     for (const a of placesAround(fx0, fz0)) {
       const d = Math.hypot(a.center.x - fx0, a.center.z - fz0) - a.pond.r;

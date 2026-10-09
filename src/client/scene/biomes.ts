@@ -10,7 +10,7 @@ import {
   type Group,
   type Material,
 } from "three";
-import { pondRadius, type Area } from "../../game/world";
+import { pondRadius, type Area, type PondPlace } from "../../game/world";
 import { instanced, giantGeometry, rockGeometry, type Inst } from "./kit";
 import { jitter, merge, paint, prep, puffNormals } from "./geo";
 import { rng, vnoise } from "./noise";
@@ -25,13 +25,13 @@ import { activeWorld, platformsAround } from "./worldQuery";
  * shore where the group camera looks.
  */
 
-export type KitCtx = { a: Area; seed: number; wood: BufferGeometry[]; glow: BufferGeometry[]; full: boolean; group: Group; painted: Material; tree: Material };
+export type KitCtx = { a: PondPlace; seed: number; wood: BufferGeometry[]; glow: BufferGeometry[]; full: boolean; group: Group; painted: Material; tree: Material };
 
-const at = (a: Area, theta: number, d: number) => {
+const at = (a: PondPlace, theta: number, d: number) => {
   const r = pondRadius(a, theta) + d;
   return { x: a.center.x + Math.cos(theta) * r, z: a.center.z + Math.sin(theta) * r };
 };
-const atR = (a: Area, theta: number, r: number) => ({ x: a.center.x + Math.cos(theta) * r, z: a.center.z + Math.sin(theta) * r });
+const atR = (a: PondPlace, theta: number, r: number) => ({ x: a.center.x + Math.cos(theta) * r, z: a.center.z + Math.sin(theta) * r });
 
 function put(g: BufferGeometry, x: number, z: number, ry: number, s = 1, dy = 0): BufferGeometry {
   g.scale(s, s, s);

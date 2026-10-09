@@ -1,7 +1,7 @@
 import { rand } from "./rng";
 import {
   AREAS, OBSTACLES, STEER_HEADINGS, TRAILS, TRAIL_HALF_WIDTH, castFrom as homeCastFrom, distance, inClearing, inPond, onDock, polarIn, pondRadius,
-  castRingIn, segmentDistance, turned, waterAt, type Area, type Vec, type Water,
+  castRingIn, segmentDistance, turned, waterAt, type Area, type PondPlace, type Vec, type Water,
 } from "./world";
 
 /**
@@ -18,7 +18,7 @@ export type Biome = (typeof BIOMES)[number] | "moonwell";
 export type Cell = { i: number; j: number };
 
 /** A place to fish: a pond in a clearing. The home valley's places are Areas with these extra fields. */
-export type Place = Area & { key: string; cell: Cell; biome: Biome; home: boolean; ring: number };
+export type Place = PondPlace & { key: string; cell: Cell; biome: Biome; home: boolean; ring: number };
 
 export type Trail = { from: Vec; to: Vec; a: string; b: string };
 
@@ -206,7 +206,7 @@ export function createWorld(seed: number): World {
     const r = 9 + 6 * h(seed, 13, c.i, c.j);
     const jitter = (k: number) => (h(seed, k, c.i, c.j) - 0.5) * 30;
     return {
-      id: key as Area["id"],
+      id: key,
       key,
       cell: c,
       biome,
@@ -245,7 +245,7 @@ export function createWorld(seed: number): World {
         if (!linked(c, n)) continue;
         const there = placeAt(n)!;
         if (here.home && there.home) {
-          const t = TRAILS.find((tr) => tr.joins.includes(here.id) && tr.joins.includes(there.id))!;
+          const t = TRAILS.find((tr) => tr.joins.some((j) => j === here.id) && tr.joins.some((j) => j === there.id))!;
           out.push({ from: t.from, to: t.to, a: here.key, b: there.key });
           continue;
         }

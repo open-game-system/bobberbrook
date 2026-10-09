@@ -199,6 +199,9 @@ export const TRAILS: readonly { from: Vec; to: Vec; joins: readonly [AreaId, Are
 ];
 // Stryker restore all
 
+/** Any place with a pond: the home valley's Areas, or a generated place (whose id is "i,j"). */
+export type PondPlace = Omit<Area, "id"> & { id: string };
+
 const AREA_BY_ID = new Map(AREAS.map((a) => [a.id, a]));
 export function areaById(id: AreaId): Area {
   const a = AREA_BY_ID.get(id);
@@ -206,23 +209,23 @@ export function areaById(id: AreaId): Area {
   return a;
 }
 
-export function polarIn(a: Area, p: Vec): { r: number; theta: number } {
+export function polarIn(a: PondPlace, p: Vec): { r: number; theta: number } {
   return polar({ x: p.x - a.center.x, z: p.z - a.center.z });
 }
 
 /** A pond's edge at an angle around its centre (Moonwell's is lakeRadius). */
-export function pondRadius(a: Area, theta: number): number {
+export function pondRadius(a: PondPlace, theta: number): number {
   const { r, bumps, phases } = a.pond;
   return r + bumps[0] * Math.sin(2 * theta + phases[0]) + bumps[1] * Math.sin(3 * theta + phases[1]) + bumps[2] * Math.sin(5 * theta + phases[2]);
 }
 
-export function inPond(a: Area, p: Vec, margin = 0): boolean {
+export function inPond(a: PondPlace, p: Vec, margin = 0): boolean {
   const { r, theta } = polarIn(a, p);
   return r < pondRadius(a, theta) + margin;
 }
 
 /** The walkable clearing around a pond (Moonwell's is hemmed in by the falls cliff: outerRadius). */
-export function inClearing(a: Area, p: Vec): boolean {
+export function inClearing(a: PondPlace, p: Vec): boolean {
   const { r, theta } = polarIn(a, p);
   return r <= (a.id === "moonwell" ? outerRadius(theta) : a.pond.r + a.clearing);
 }
@@ -245,14 +248,14 @@ export function areaAt(p: Vec): Area | null {
 }
 
 /** Where a straight cast from the shore at an angle lands in a pond (swirls float on this ring). */
-export function castRingIn(a: Area, theta: number): Vec {
+export function castRingIn(a: PondPlace, theta: number): Vec {
   const edge = pondRadius(a, theta);
   const r = edge - Math.min(CAST_DISTANCE, edge * 0.45);
   return { x: a.center.x + Math.cos(theta) * r, z: a.center.z + Math.sin(theta) * r };
 }
 
 /** A pond's outline as a polygon (mini-maps, the scene's shoreline). */
-export function pondOutline(a: Area, points = 72): Vec[] {
+export function pondOutline(a: PondPlace, points = 72): Vec[] {
   return Array.from({ length: points }, (_, i) => {
     const theta = (i / points) * 2 * Math.PI;
     const r = pondRadius(a, theta);
