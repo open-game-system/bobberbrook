@@ -99,6 +99,17 @@ describe("riding a zeppelin", () => {
     expect(landed.discovered).toContain(zep.toPlace);
     expect(landed.revealed.length).toBeGreaterThan(mid.revealed.length - 1);
   });
+  it("finds only the place it lands at, not the places it flies over (one name per trip)", () => {
+    let l: Lake = { ...join(join(newLake(1, T0), { name: "A", ogsId: null }).lake, { name: "B", ogsId: null }).lake, worldSeed: seed };
+    const zep = worldFor(seed).platformsNear({ x: 0, z: 0 }, 0).find((p) => p.kind === "zeppelin")!;
+    l = { ...l, fishers: l.fishers.map((f, i) => ({ ...f, pos: { x: zep.at.x + (i ? 1 : -1), z: zep.at.z } })) };
+    l = step(step(l, T0 + 10), T0 + 10 + BOARD_MS);
+    const before = l.discovered.length;
+    for (let t = l.ride!.departAt; t < l.ride!.arriveAt; t += 250) l = step(l, t);
+    expect(l.discovered.length).toBe(before);
+    l = step(l, l.ride!.arriveAt + 1);
+    expect(l.discovered.slice(before)).toEqual([zep.toPlace]);
+  });
   it("doesn't leave while someone is still elsewhere", () => {
     let l: Lake = { ...join(join(newLake(1, T0), { name: "A", ogsId: null }).lake, { name: "B", ogsId: null }).lake, worldSeed: seed };
     const zep = worldFor(seed).platformsNear({ x: 0, z: 0 }, 0).find((p) => p.kind === "zeppelin")!;

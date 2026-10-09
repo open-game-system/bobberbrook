@@ -29,6 +29,10 @@ describe("coachLine", () => {
     expect(coachLine(withMode(family(), 0, { mode: "wait", missAt: 1000 }), 0, 2000)).toBe("Too slow, it got away! Tap the moment it dips. Another one is coming.");
     expect(coachLine(missed, 0, 1000 + 4500)).not.toContain("got away");
   });
+  it("uses 'an' before a vowel: an Ember Perch, an Old Sturgeon", () => {
+    expect(catchLine(family(), "Dad", { fishId: "ember-perch", isNew: false, cm: 20 })).toBe("Dad caught an Ember Perch, 20 cm.");
+    expect(catchLine(family(), "Dad", { fishId: "sturgeon", isNew: true, cm: 99 })).toContain("Dad caught an Old Sturgeon");
+  });
   it("coaches the reel", () => {
     expect(coachLine(withMode(family(), 1, { mode: "reel" }), 0, 10)).toContain("Juneau is reeling");
   });
@@ -85,5 +89,10 @@ describe("coachLine", () => {
     const l = family();
     const ahead = { ...l, fishers: l.fishers.map((f) => ({ ...f, pos: f.seat === 0 ? { x: 0, z: 20 } : { x: -29.5, z: 20 } })) };
     expect(coachLine(ahead, 0, 0)).toBe("Juneau is far away on the trail: get back together!");
+  });
+  it("two banks of the same lake are not 'far away' (both at Moonwell)", () => {
+    const l = family();
+    const across = { ...l, fishers: l.fishers.map((f) => ({ ...f, pos: f.seat === 0 ? { x: -22, z: 0 } : { x: 22, z: 2 } })) };
+    expect(coachLine(across, 0, 0)).not.toContain("far away");
   });
 });

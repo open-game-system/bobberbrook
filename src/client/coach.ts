@@ -66,7 +66,7 @@ export function catchLine(lake: Lake, who: string, c: { fishId: string; isNew: b
   };
   const line = special[def?.rarity ?? ""];
   if (line) return line;
-  return c.isNew ? `New fish! ${who} caught a ${name}. That's ${speciesCount(lake.journal)} of ${JOURNAL_FISH.length} in the journal.` : `${who} caught a ${name}, ${c.cm} cm.`;
+  return c.isNew ? `New fish! ${who} caught ${article(name)} ${name}. That's ${speciesCount(lake.journal)} of ${JOURNAL_FISH.length} in the journal.` : `${who} caught ${article(name)} ${name}, ${c.cm} cm.`;
 }
 
 const freshCatch: Rule = (lake, _mySeat, now) => {
@@ -110,7 +110,11 @@ const BIOME_TIPS: Record<Biome, string> = {
 const wentAhead: Rule = (lake, mySeat) => {
   const ahead = lake.fishers.find((f) => f.seat !== mySeat && atLeashEnd(lake, f.seat, f.pos));
   if (!ahead) return null;
-  const where = worldFor(lake.worldSeed).areaAt(ahead.pos);
+  const w = worldFor(lake.worldSeed);
+  const where = w.areaAt(ahead.pos);
+  const mine = lake.fishers.find((f) => f.seat === mySeat);
+  // Two banks of the same lake are together, however wide it is.
+  if (where && mine && w.areaAt(mine.pos)?.id === where.id) return null;
   return `${nameOf(lake, ahead.seat)} is far away${where ? ` at ${where.name}` : " on the trail"}: get back together!`;
 };
 

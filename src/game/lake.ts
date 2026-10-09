@@ -602,7 +602,8 @@ export function step(lake: Lake, now: number): Lake {
     }
     pickUpSparkles(d, now);
     reveal(d);
-    discover(d, now);
+    // Flying over places doesn't find them: the trip finds the place it lands at (one name per trip).
+    if (!d.ride) discover(d, now);
     keepSwirlsNear(d, now, w);
     refreshSwirls(d, now);
   });
