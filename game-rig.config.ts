@@ -35,9 +35,25 @@ async function walkTo(page: Page, target: V, near = 0.8, maxMs = 12_000): Promis
   const end = Date.now() + maxMs;
   await page.mouse.move(cx, cy);
   await page.mouse.down();
+  // A player who bumps into a tree steps sideways: no progress for ~1.5 s, sidestep for a moment.
+  let lastPos: V | null = null;
+  let stuckSince = Date.now();
+  let side = 1;
   while (Date.now() < end) {
     const { f } = await me(page);
     if (Math.hypot(target.x - f.pos.x, target.z - f.pos.z) < near) break;
+    if (lastPos && Math.hypot(f.pos.x - lastPos.x, f.pos.z - lastPos.z) > 0.3) stuckSince = Date.now();
+    lastPos = lastPos && Math.hypot(f.pos.x - lastPos.x, f.pos.z - lastPos.z) <= 0.3 ? lastPos : f.pos;
+    if (Date.now() - stuckSince > 1500) {
+      const dx0 = target.x - f.pos.x;
+      const dz0 = target.z - f.pos.z;
+      const d0 = Math.hypot(dx0, dz0) || 1;
+      await page.mouse.move(cx + (-dz0 / d0) * side * r * 2, cy + (dx0 / d0) * side * r * 2, { steps: 2 });
+      await page.waitForTimeout(700);
+      side = -side;
+      stuckSince = Date.now();
+      continue;
+    }
     // Steer like a player who can see the way: round ponds and along trails (the game's own pathing).
     const way = await page.evaluate(
       ([from, to]) => (Reflect.get(window, "__bb") as { nav: (a: unknown, b: unknown) => { x: number; z: number } }).nav(from, to),
@@ -235,23 +251,29 @@ const config: GameRigInput = {
     });
     if (zep) {
       rig.mark("explore: back to the zeppelin tower");
-      for (const p of [...trail].reverse()) await walkTo(dad, p, 2, 15_000);
-      await walkTo(dad, { x: 18, z: 20 }, 2, 15_000);
+      for (const p of [...trail].reverse()) await walkTo(dad, p, 2, 25_000);
+      await walkTo(dad, { x: 18, z: 20 }, 2, 25_000);
       // Dad steps onto the mooring; Juneau lets go of his stick and tags along onto it by himself.
-      await walkTo(dad, zep.at, 0.6, 20_000);
-      rig.mark("at the zeppelin");
+      await walkTo(dad, zep.at, 0.6, 40_000);
+      const onIt = await me(dad);
+      // Marks say what happened, never what was meant to (round 09 logged a ride that never left).
+      rig.mark(Math.hypot(onIt.f.pos.x - zep.at.x, onIt.f.pos.z - zep.at.z) < 2.6 ? "at the zeppelin" : "short of the zeppelin (bot stuck)");
+      let rode = false;
       for (let i = 0; i < 160; i++) {
         const { lake } = await me(dad);
-        if (Reflect.get(lake, "ride")) break;
+        if (Reflect.get(lake, "ride")) {
+          rode = true;
+          break;
+        }
         await dad.waitForTimeout(250);
       }
-      rig.mark("zeppelin flying");
-      for (let i = 0; i < 160; i++) {
+      rig.mark(rode ? "zeppelin flying" : "zeppelin did not leave");
+      for (let i = 0; rode && i < 160; i++) {
         const { lake } = await me(dad);
         if (!Reflect.get(lake, "ride")) break;
         await dad.waitForTimeout(250);
       }
-      rig.mark("landed somewhere new");
+      if (rode) rig.mark("landed somewhere new");
       await rig.wait(3000);
       // Down to the water of the new place and fish.
       const place = await dad.evaluate((id) => {
