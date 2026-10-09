@@ -36,7 +36,7 @@ import type { TodState } from "./tod";
 import type { SceneQuality } from "./types";
 
 import { CANOPY, blob, bushGeometry, cliffRockGeometry, cottageGeometry, dummy, flowerGeometry, giantGeometry, instanced, lilyGeometry, mushroomGeometry, oakGeometry, padGeometry, pineGeometry, reedGeometry, rockGeometry, tuftGeometry, type Inst } from "./kit";
-import { matteTint, plantMeshes, type PlantKind } from "./plants";
+import { matteTint, plantLists, plantMeshes, type PlantKind } from "./plants";
 import { matteGlowMaterial } from "./matte";
 
 // ---------- the set ----------
@@ -170,6 +170,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   const tufts: Inst[] = [];
   const flowers: Inst[] = [];
   const foxgloves: Inst[] = [];
+  const grassCards: Inst[] = [];
   const flowerCols = [0xffffff, 0xc9a6ff, 0x9ad8ff, 0xb08aff, 0xff9ee0, 0x7ae8e0].map((h) => new Color(h));
   const tuftN = full ? 5200 : 1800;
   for (let i = 0; i < tuftN * 3 && tufts.length < tuftN; i++) {
@@ -181,11 +182,15 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     const z = Math.sin(th) * r;
     if (Math.abs(x) <= DOCK.halfWidth + 0.3 && z > DOCK.tipZ && z < DOCK.rootZ + 0.5) continue;
     if (Math.abs(d - PATH_D) < 0.7 && R() < 0.85) continue;
-    // Round 09-B: the camera's foreground keeps open painted ground between the tufts.
-    if (angleGap(th, SOUTH) < 1.2 && d < 18 && R() < 0.72) continue;
     if (Math.abs(x) < 2 && z < -edge + 1 && z > FALLS.topZ) continue;
     const dens = fbm(x * 0.15, z * 0.15, 2, 5);
     if (dens < 0.38 && R() < 0.6) continue;
+    // Round 09: the band nearest the camera is painted grass cards (no 3D blades under the lens),
+    // fewer and bigger than the tufts they replace.
+    if (angleGap(th, SOUTH) < 1.2 && d < 18) {
+      if (R() < 0.3 && Math.hypot(x - CAMPFIRE.x, z - CAMPFIRE.z) > 3.2) grassCards.push({ x, y: heightAt(x, z) - 0.04, z, s: 0.75 + R() * 0.55, ry: R() * 6, tint: tint(1.0, 1.25) });
+      continue;
+    }
     tufts.push({ x, y: heightAt(x, z) - 0.03, z, s: 0.8 + R() * 0.9, ry: R() * 6, tint: tint(0.8, 1.15) });
   }
   // Round 09-B: a third of the old carpet, and almost none in the band in front of the camera.
@@ -302,13 +307,14 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     const z = gt.z + Math.sin(a) * rr;
     shrooms.push({ x, y: heightAt(x, z) - 0.02, z, s: 1.6 + R() * 1.6, ry: R() * 6, tint: shroomCols[Math.floor(R() * shroomCols.length)]! });
   }
-  // The near grass (the camera's foreground): a few clumps of painted plants with open painted ground
-  // between them (ferns mostly, some bluebells and glow-caps, foxgloves off to the sides).
-  const plants: Record<PlantKind, Inst[]> = { fern: [], bluebell: [], foxglove: foxgloves, glowcap: [], litter: [] };
+  // The near grass (the camera's foreground): clumps of painted plants over the painted grass cards
+  // (ferns mostly, some bluebells and glow-caps, foxgloves off to the sides). Round 09: denser than
+  // 09-B's (its lawn read bare), still one calm matte family of plants, no glossy props.
+  const plants: Record<PlantKind, Inst[]> = { ...plantLists(), foxglove: foxgloves, grass: grassCards };
   const capCols = shroomCols;
   const plantTint = (k: PlantKind) => (k === "glowcap" ? new Color(1, 1, 1).lerp(capCols[Math.floor(R() * capCols.length)]!, 0.55) : new Color(1, 1, 1).multiplyScalar(0.82 + R() * 0.25));
   let clumps = 0;
-  for (let i = 0; i < 600 && clumps < (full ? 40 : 20); i++) {
+  for (let i = 0; i < 900 && clumps < (full ? 72 : 30); i++) {
     const th = SOUTH + (R() - 0.5) * 3.4;
     const edge = lakeRadius(th);
     const d = 1.5 + R() * 21;
@@ -318,7 +324,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     if (Math.abs(d - PATH_D) < 1.6) continue;
     if (Math.abs(cx) <= DOCK.halfWidth + 1.5 && cz > DOCK.tipZ && cz < DOCK.rootZ + 2.5) continue;
     if (Math.hypot(cx - CAMPFIRE.x, cz - CAMPFIRE.z) < 4.2) continue;
-    if (vnoise(cx * 0.22, cz * 0.22, 63) < 0.52) continue;
+    if (vnoise(cx * 0.22, cz * 0.22, 63) < 0.4) continue;
     const side = angleGap(th, SOUTH) > 0.55;
     const roll = R();
     const main: PlantKind = roll < 0.5 ? "fern" : roll < 0.72 ? "bluebell" : roll < 0.9 || !side ? "glowcap" : "foxglove";

@@ -11,9 +11,13 @@ import { instanced, type Inst } from "./kit";
  * a gentle wind sway. One program for every plant.
  */
 
-export type PlantKind = "fern" | "bluebell" | "foxglove" | "glowcap" | "litter";
-export const PLANT_KINDS: readonly PlantKind[] = ["fern", "bluebell", "foxglove", "glowcap", "litter"];
-const CELL: Record<PlantKind, number> = { fern: 0, bluebell: 1, foxglove: 2, glowcap: 3, litter: 4 };
+export type PlantKind = "fern" | "bluebell" | "foxglove" | "glowcap" | "litter" | "grass";
+export const PLANT_KINDS: readonly PlantKind[] = ["fern", "bluebell", "foxglove", "glowcap", "litter", "grass"];
+const CELL: Record<PlantKind, number> = { fern: 0, bluebell: 1, foxglove: 2, glowcap: 3, litter: 4, grass: 5 };
+/** An empty list for every kind. */
+export function plantLists(): Record<PlantKind, Inst[]> {
+  return { fern: [], bluebell: [], foxglove: [], glowcap: [], litter: [], grass: [] };
+}
 const COLS = 4;
 const ROWS = 2;
 const CS = 512;
@@ -244,8 +248,8 @@ function paintGlowcap(ctx: Ctx, glow: Ctx, R: Rand, x0: number, y0: number): voi
     ctx.quadraticCurveTo(cx + r * 0.2, groundY - h * 0.5, cx + r * 0.32, groundY);
     ctx.fill();
     for (let i = 0; i < 4; i++) bristles(ctx, R, cx - r * 0.1 + (R() - 0.5) * r * 0.2, groundY - 4, h * 0.8, -Math.PI / 2, css(hx(0x8a94a8), 0.35), 1, 0);
-    // Gills: a dark band under the cap.
-    ctx.fillStyle = css(hx(0x283044));
+    // Gills: a shaded band under the cap (mid violet, not black: dark gills on pale caps read as stripes).
+    ctx.fillStyle = css(hx(0x5a5a86));
     ctx.beginPath();
     ctx.ellipse(cx, capY + 4, r, r * 0.22, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -290,11 +294,12 @@ function paintGlowcap(ctx: Ctx, glow: Ctx, R: Rand, x0: number, y0: number): voi
   }
 }
 
-/** Fallen leaves seen from above: an irregular drift, copper and amber, darker toward its heart. */
+/** Fallen leaves seen from above: an irregular drift, ochre and gold, darker toward its heart. */
 function paintLitter(ctx: Ctx, _glow: Ctx, R: Rand, x0: number, y0: number): void {
   const cx = x0 + CS / 2;
   const cy = y0 + CS / 2;
-  const cols = [0x8a3a1a, 0xb85a24, 0xd88a3a, 0xe8b04a, 0x7a4a2a, 0xc87040].map((h) => hx(h));
+  // Ochre and gold (round 09: the old dark reds read as blood from across the room).
+  const cols = [0xb8843a, 0xd09a44, 0xe0b458, 0xe8c66a, 0xa8803e, 0xc8a050].map((h) => hx(h));
   for (let i = 0; i < 260; i++) {
     const a = R() * Math.PI * 2;
     const d = Math.pow(R(), 0.7) * CS * 0.42 * (0.8 + 0.2 * Math.sin(a * 3 + 1));
@@ -308,8 +313,43 @@ function paintLitter(ctx: Ctx, _glow: Ctx, R: Rand, x0: number, y0: number): voi
   }
 }
 
+
+/** A clump of meadow grass: tapered blades fanning from the root, deep teal at the base, lit tips. */
+function paintGrass(ctx: Ctx, _glow: Ctx, R: Rand, x0: number, y0: number): void {
+  const bx = x0 + CS / 2;
+  const by = y0 + CS - 4;
+  // Close to the painted ground's own greens (blades read as the lawn grown up, not dark shrubs).
+  const base = hx(0x3e7a6a);
+  const mid = hx(0x62a88e);
+  const tip = hx(0xb8e4c0);
+  const c = new Color();
+  // A faint wash of the blade colour under everything (alpha 0.12, below the cut-out): mipmaps blend
+  // the thin blades with green, not with transparent black, so the clumps don't go dark at a distance.
+  ctx.fillStyle = css(mid, 0.12);
+  ctx.fillRect(x0 + 2, y0 + 2, CS - 4, CS - 4);
+  for (const pass of [0, 1]) {
+    for (let i = 0; i < 40; i++) {
+      const sx = bx + (R() - 0.5) * CS * 0.46;
+      const ang = -Math.PI / 2 + (R() - 0.5) * 1.1 + ((sx - bx) / CS) * 1.2;
+      const len = CS * (0.5 + R() * 0.45) * (pass === 0 ? 1 : 0.88);
+      const w = 9 + R() * 7;
+      c.copy(base).lerp(mid, 0.35 + R() * 0.65);
+      const curl = (R() - 0.5) * 0.45;
+      if (pass === 0) {
+        leaf(ctx, sx, by, len, w * 1.15, ang, css(c.clone().multiplyScalar(0.78)), curl);
+      } else {
+        leaf(ctx, sx, by, len, w, ang, css(c), curl);
+        // Light down the upper half of the blade (brush strokes, not a gradient).
+        const ux = sx + Math.cos(ang) * len * 0.45;
+        const uy = by + Math.sin(ang) * len * 0.45;
+        bristles(ctx, R, ux, uy, len * 0.45, ang + curl * 0.6, css(c.clone().lerp(tip, 0.6), 0.6), 2, 2);
+      }
+    }
+  }
+}
+
 const PAINTERS: Record<PlantKind, (ctx: Ctx, glow: Ctx, R: Rand, x0: number, y0: number) => void> = {
-  fern: paintFern, bluebell: paintBluebell, foxglove: paintFoxglove, glowcap: paintGlowcap, litter: paintLitter,
+  fern: paintFern, bluebell: paintBluebell, foxglove: paintFoxglove, glowcap: paintGlowcap, litter: paintLitter, grass: paintGrass,
 };
 
 export type PlantSheet = { map: Texture; glow: Texture; dispose(): void };
@@ -393,14 +433,18 @@ function cards(k: PlantKind, quads: Quad[], rootShade: number): BufferGeometry {
   return g;
 }
 
-/** Upright crossed cards (w wide, h tall), n planes. */
-function crossed(k: PlantKind, w: number, h: number, n: number): BufferGeometry {
+function crossedQuads(w: number, h: number, n: number): Quad[] {
   const quads: Quad[] = [];
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI;
     quads.push({ o: [0, 0, 0], right: [Math.cos(a) * w, 0, Math.sin(a) * w], up: [0, h, 0] });
   }
-  return cards(k, quads, 0.72);
+  return quads;
+}
+
+/** Upright crossed cards (w wide, h tall), n planes. */
+function crossed(k: PlantKind, w: number, h: number, n: number): BufferGeometry {
+  return cards(k, crossedQuads(w, h, n), 0.72);
 }
 
 /** A fern rosette: fronds leaning out all round, a few more upright in the middle. */
@@ -437,6 +481,7 @@ export function plantGeometry(k: PlantKind): BufferGeometry {
     case "foxglove": return crossed("foxglove", 1.25, 1.7, 3);
     case "glowcap": return crossed("glowcap", 1.0, 0.9, 2);
     case "litter": return litterPatch();
+    case "grass": return cards("grass", crossedQuads(1.0, 0.52, 3), 0.86);
   }
 }
 

@@ -2,7 +2,7 @@ import { Color, Group, InstancedMesh, MeshLambertMaterial, type Camera, type Mat
 import { pondRadius, segmentDistance, type Area, type PondPlace } from "../../game/world";
 import type { Biome, Place } from "../../game/regions";
 import { flowerGeometry, giantGeometry, instanced, lilyGeometry, mushroomGeometry, padGeometry, reedGeometry, rockGeometry, tuftGeometry, type Inst } from "./kit";
-import { matteTint, plantMeshes, type PlantKind } from "./plants";
+import { matteTint, plantLists, plantMeshes, type PlantKind } from "./plants";
 import { matteGlowMaterial } from "./matte";
 import { rng, vnoise } from "./noise";
 import { heightAt, trailWear } from "./terrain";
@@ -68,7 +68,7 @@ const RECIPES: Record<Exclude<Biome, "moonwell">, Recipe> = {
   },
   ember: {
     flowers: [0xffc070, 0xff9a60, 0xffe0a0, 0xd8a0ff], shrooms: [new Color(2.4, 1.3, 0.5), new Color(2.2, 1.0, 0.6)],
-    grass: 1.0, flower: 1.2, fern: 1.4, reed: 0.5, pad: 0.6, lily: 0.4, shroom: 1.2, rock: 1.0, bell: 0.5, litter: 1.0,
+    grass: 1.0, flower: 1.2, fern: 1.4, reed: 0.5, pad: 0.6, lily: 0.4, shroom: 1.2, rock: 1.0, bell: 0.5,
   },
   frost: {
     flowers: [0xffffff, 0xd8e8ff, 0xb8c8ff], shrooms: [new Color(0.8, 1.4, 2.4)],
@@ -114,7 +114,7 @@ function* dress(a: PondPlace, r0: Recipe, full: boolean, m: AreaMats, glow: Mesh
   const cattails: Inst[] = [];
   const pads: Inst[] = [];
   const lilies: Inst[] = [];
-  const plants: Record<PlantKind, Inst[]> = { fern: [], bluebell: [], foxglove: [], glowcap: [], litter: [] };
+  const plants: Record<PlantKind, Inst[]> = plantLists();
   const flowerCols = r.flowers.map((h) => new Color(h));
   const capCols = r.shrooms.map(matteTint);
   const pick = <T,>(arr: T[]): T => arr[Math.floor(R() * arr.length)]!;
@@ -134,7 +134,11 @@ function* dress(a: PondPlace, r0: Recipe, full: boolean, m: AreaMats, glow: Mesh
     const p = land(0.6, 30);
     if (trailWear(p.x, p.z) > 0.5 && R() < 0.85) continue;
     if (vnoise(p.x * 0.15, p.z * 0.15, 5) < 0.35 && R() < 0.6) continue;
-    if (foreground(p) && R() < 0.72) continue;
+    // Round 09: the band nearest the camera gets painted grass cards instead of 3D blades.
+    if (foreground(p)) {
+      if (R() < 0.3) plants.grass.push({ x: p.x, y: heightAt(p.x, p.z) - 0.04, z: p.z, s: 0.75 + R() * 0.55, ry: R() * 6, tint: new Color(1, 1, 1).multiplyScalar(1.0 + R() * 0.25) });
+      continue;
+    }
     tufts.push({ x: p.x, y: heightAt(p.x, p.z) - 0.03, z: p.z, s: 0.8 + R() * 0.9, ry: R() * 6, tint: new Color(1, 1, 1).multiplyScalar(0.8 + R() * 0.35) });
   }
   yield;
@@ -174,7 +178,11 @@ function* dress(a: PondPlace, r0: Recipe, full: boolean, m: AreaMats, glow: Mesh
   };
   clump("fern", n(14 * r.fern), 1.4, 1.2, 24, () => white().lerp(fl, 0.22), 0.5);
   clump("bluebell", n(9 * r.bell + 2), 0.9, 0.8, 20, bellTint, 0.4);
-  clump("glowcap", n(7 * r.shroom + 2), 0.7, 0.6, 22, () => new Color(1, 1, 1).lerp(pick(capCols), 0.55), 0.35);
+  // Glow-caps stand back from the water and out of the foreground (round 09: a pale clump on the near
+  // shore of Mistmarsh read as black-and-white stripes).
+  clump("glowcap", n(7 * r.shroom + 2), 0.7, 3, 22, () => new Color(1, 1, 1).lerp(pick(capCols), 0.55), 0);
+  // The near band: a few more ferns over the grass cards, so it is planted, not bare.
+  clump("fern", n(6 * r.fern + 2), 1.2, 1.5, 14, () => white().lerp(fl, 0.22), 1);
   clump("foxglove", n(4 * r.lily + 4), 0.9, 5, 24, bellTint, 0);
   if (r.litter) {
     for (let i = 0; i < n(26 * r.litter); i++) {
