@@ -6,7 +6,7 @@ import { worldFor } from "../game/regions";
 /** What the one big button shows and does right now. */
 export type ButtonState =
   | { kind: "walk-to-water" }
-  | { kind: "cast" }
+  | { kind: "cast"; wade?: boolean }
   | { kind: "waiting"; nibble: boolean }
   | { kind: "bite" }
   | { kind: "reel"; progress: number; thrashing: boolean; holding: boolean }
@@ -21,7 +21,8 @@ function walkView(lake: Lake, me: Fisher): ButtonState {
   const ride = w.platformsNear(me.pos, 0).find((p) => Math.hypot(p.at.x - me.pos.x, p.at.z - me.pos.z) <= PLATFORM_REACH);
   if (ride) return { kind: "board", vehicle: ride.kind };
   // Near the water the rod shows: a press walks the fisher down to the bank and casts.
-  return w.fishingSpot(me.pos, WADE_RANGE) ? { kind: "cast" } : { kind: "walk-to-water" };
+  if (w.castFrom(me.pos)) return { kind: "cast", wade: false };
+  return w.fishingSpot(me.pos, WADE_RANGE) ? { kind: "cast", wade: true } : { kind: "walk-to-water" };
 }
 
 type ModeView = (lake: Lake, me: Fisher, now: number) => ButtonState;

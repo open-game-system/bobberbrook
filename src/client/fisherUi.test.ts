@@ -20,7 +20,8 @@ describe("the big button", () => {
   });
   it("a few metres up the bank: the rod (pressing it walks the fisher down and casts); deep in the forest: walk to water", () => {
     const back = (r: number): Lake => ({ ...shore(), fishers: shore().fishers.map((f) => ({ ...f, pos: { x: -(lakeRadius(WEST) + r), z: 0 } })) });
-    expect(buttonState(back(8), me(back(8)), T0).kind).toBe("cast");
+    expect(buttonState(back(8), me(back(8)), T0)).toEqual({ kind: "cast", wade: true });
+    expect(buttonState(shore(), me(shore()), T0)).toEqual({ kind: "cast", wade: false });
     const deep: Lake = { ...shore(), fishers: shore().fishers.map((f) => ({ ...f, pos: { x: 0, z: 1000 } })) };
     expect(buttonState(deep, me(deep), T0).kind).toBe("walk-to-water");
   });

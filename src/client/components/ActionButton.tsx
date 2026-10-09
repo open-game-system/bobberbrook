@@ -47,6 +47,12 @@ export function ActionButton({ state, onPress, onHold }: { state: ButtonState; o
       )}
       <span className="action-icon">
         {state.kind === "cast" && <RodIcon />}
+        {/* Up the bank: a little arrow into the water says "press and I'll walk you down". */}
+        {state.kind === "cast" && state.wade && (
+          <span className="wade-badge">
+            <FeetIcon />
+          </span>
+        )}
         {state.kind === "walk-to-water" && <FeetIcon />}
         {state.kind === "waiting" && <BobberIcon />}
         {state.kind === "bite" && <img src="/art/fish/brook-trout.webp" alt="" draggable={false} />}
