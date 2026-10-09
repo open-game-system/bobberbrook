@@ -37,10 +37,15 @@ async function walkTo(page: Page, target: V, near = 0.8, maxMs = 12_000): Promis
   await page.mouse.down();
   while (Date.now() < end) {
     const { f } = await me(page);
-    const dx = target.x - f.pos.x;
-    const dz = target.z - f.pos.z;
-    const d = Math.hypot(dx, dz);
-    if (d < near) break;
+    if (Math.hypot(target.x - f.pos.x, target.z - f.pos.z) < near) break;
+    // Steer like a player who can see the way: round ponds and along trails (the game's own pathing).
+    const way = await page.evaluate(
+      ([from, to]) => (Reflect.get(window, "__bb") as { nav: (a: unknown, b: unknown) => { x: number; z: number } }).nav(from, to),
+      [f.pos, target] as const,
+    );
+    const dx = way.x - f.pos.x;
+    const dz = way.z - f.pos.z;
+    const d = Math.hypot(dx, dz) || 1;
     await page.mouse.move(cx + (dx / d) * r * 2, cy + (dz / d) * r * 2, { steps: 2 });
     await page.waitForTimeout(150);
   }

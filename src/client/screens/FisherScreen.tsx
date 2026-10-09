@@ -91,6 +91,7 @@ export function FisherScreen({ seat, host, hosting }: { seat: number; host: bool
       now: () => clock.now(),
       platforms: () => worldFor(latestLake.current.worldSeed).platformsNear({ x: 0, z: 0 }, 1),
       place: (id: string) => worldFor(latestLake.current.worldSeed).placeById(id),
+      nav: (from: { x: number; z: number }, to: { x: number; z: number }) => worldFor(latestLake.current.worldSeed).navNext(from, to),
     });
   }, [seat, clock]);
 
