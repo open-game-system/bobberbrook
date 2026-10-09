@@ -9,6 +9,7 @@ import {
   SphereGeometry,
   CylinderGeometry,
   Vector3,
+  PerspectiveCamera,
   type ShaderMaterial,
   type Camera,
   type PlaneGeometry,
@@ -27,6 +28,7 @@ import { heightAt } from "./terrain";
 import { towerDeckY } from "./vehicles";
 import { merge, paint, prep } from "./geo";
 import { layoutTags, type TagBox, type TagShift } from "./tagLayout";
+import { CARD_PX, FISH_PX, holdCard } from "./holdCard";
 
 const DECK_Y = 0.42;
 const LINE_SEGS = 18;
@@ -34,6 +36,8 @@ const LEAP_S = 0.95;
 /** The fish is held up until this age (s), then tucked away over TUCK_S. */
 const TUCK_AT = 2.75;
 const TUCK_S = 0.45;
+/** Half the fisher's head width with the hat brim (world units, at FISHER_SCALE). */
+const HEAD_HALF = 0.3 * FISHER_SCALE;
 
 const scratch: Vec = { x: 0, z: 0 };
 const predicted: Vec = { x: 0, z: 0 };
@@ -522,8 +526,15 @@ class FisherView {
         if (still) {
           rodVisible = age < LEAP_S * 0.6;
           const up = Math.min(1, age / LEAP_S) * (1 - out);
-          target.armRx = -0.8 - 2.0 * up; target.armLx = -0.8 - 2.0 * up;
-          target.armRz = -0.32 * up; target.armLz = 0.32 * up;
+          // Both hands under the fish on its side: the near arm out and up, the far arm across the chest.
+          // (Facing the camera, the fisher's left, +x, is the camera's right.)
+          const near = this.cardSide >= 0 ? 1 : -1;
+          const nx = -0.8 + (-0.2 + 0.8) * up;
+          const nz = near * 1.9 * up;
+          const fx2 = -0.8 + (-1.55 + 0.8) * up;
+          const fz = near * 0.55 * up;
+          if (near > 0) { target.armLx = nx; target.armLz = nz; target.armRx = fx2; target.armRz = fz; }
+          else { target.armRx = nx; target.armRz = nz; target.armLx = fx2; target.armLz = fz; }
           target.lean = -0.08 * up;
           target.headX = -0.15 * up;
           target.headY = 0;
@@ -616,19 +627,24 @@ class FisherView {
       this.cardSide = this.neighbourX !== null ? (this.neighbourX > sx ? -1 : 1) : sx > 0.1 ? -1 : 1;
       if ((sx < -0.55 && this.cardSide < 0) || (sx > 0.55 && this.cardSide > 0)) this.cardSide = -this.cardSide;
     }
-    // Held up in the catcher's hands (round 07: it floated beside them): its middle a little above the
-    // raised hands and shifted to the open side, so the face stays clear and it never covers a neighbour.
-    const HELD = 0.72;
-    const W0 = w * (640 / 520) * HELD;
+    // Held in the catcher's raised hands (holdCard.ts): both mittens under the fish's belly on the
+    // open side of the head, the card just behind them so the hands read as gripping it.
+    let screenW = 0;
+    if (camera instanceof PerspectiveCamera) {
+      const dist = Math.hypot(camera.position.x - this.x, camera.position.y - this.y - 1.5, camera.position.z - this.z);
+      screenW = 2 * Math.tan((camera.fov * Math.PI) / 360) * dist * camera.aspect;
+    }
+    const held = holdCard({ base: w * (CARD_PX / FISH_PX) * 0.8, aspect: this.catchAspect, headHalf: HEAD_HALF, screenW });
+    const W0 = held.size;
     this.rig.hand.getWorldPosition(this.handA);
     this.handB.set(0, -0.18, 0);
     this.rig.armL.localToWorld(this.handB);
     this.toCam.copy(camera.position).sub(this.handA).setY(0).normalize();
-    this.hold.copy(this.handA).add(this.handB).multiplyScalar(0.5);
-    // Before the arms are up (first frames), fall back to where raised hands will be.
-    this.hold.y = Math.max(this.hold.y, this.y + 1.45);
-    this.hold.y += W0 * 0.12;
-    this.hold.addScaledVector(this.camRight, this.cardSide * W0 * 0.56).addScaledVector(this.toCam, 0.35);
+    // The fish rests on the near hand (the one out under its belly); before the arms are up, on where
+    // that hand will be.
+    const handsY = Math.max(this.cardSide >= 0 ? this.handB.y : this.handA.y, this.y + 1.1);
+    this.hold.set(this.x, handsY + held.lift, this.z);
+    this.hold.addScaledVector(this.camRight, this.cardSide * held.lateral).addScaledVector(this.toCam, -0.25);
     // The leap: out of the water at the bobber, an arc into the raised hands.
     const e = s * s * (3 - 2 * s);
     let gx = this.catchFromX + (this.hold.x - this.catchFromX) * e;
@@ -658,7 +674,7 @@ class FisherView {
     this.card.rays.visible = rayK > 0;
     this.card.rays.rotation.z = t * (tier === 2 ? 0.9 : 0.6);
     // Kept tight round the fish and soft, so they never wash over the catcher beside it.
-    this.card.rays.scale.setScalar(w * HELD * (tier === 2 ? 0.95 : this.catchNew ? 0.85 : 0.75) * (0.85 + 0.15 * Math.sin(t * 3)) * (1 - o));
+    this.card.rays.scale.setScalar(W0 * (FISH_PX / CARD_PX) * (tier === 2 ? 0.95 : this.catchNew ? 0.85 : 0.75) * (0.85 + 0.15 * Math.sin(t * 3)) * (1 - o));
     this.card.raysMat.color.setRGB(1, 0.9, 0.6).multiplyScalar(rayK * (tier === 2 ? 0.55 : 0.45));
     // Legendary: a soft gold light pillar over the fisher.
     const pil = tier === 2 && age > LEAP_S * 0.7 ? Math.min(1, (age - LEAP_S * 0.7) * 2) * (1 - out) : 0;
