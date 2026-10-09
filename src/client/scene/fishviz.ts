@@ -10,6 +10,11 @@ import {
   InstancedMesh,
   Mesh,
   MeshBasicMaterial,
+  CustomBlending,
+  SrcAlphaFactor,
+  OneMinusSrcAlphaFactor,
+  ZeroFactor,
+  OneFactor,
   Object3D,
   PlaneGeometry,
   SRGBColorSpace,
@@ -144,6 +149,13 @@ export class CatchCard {
     this.tex = new CanvasTexture(this.canvas);
     this.tex.colorSpace = SRGBColorSpace;
     this.cardMat = new MeshBasicMaterial({ map: this.tex, transparent: true, alphaTest: 0.02, side: DoubleSide, depthWrite: false });
+    // Colour blends as usual; the buffer's alpha is cut where the fish is, so the painterly filter
+    // (post.ts) leaves the painted sprite as it is (GL state only: no new program).
+    this.cardMat.blending = CustomBlending;
+    this.cardMat.blendSrc = SrcAlphaFactor;
+    this.cardMat.blendDst = OneMinusSrcAlphaFactor;
+    this.cardMat.blendSrcAlpha = ZeroFactor;
+    this.cardMat.blendDstAlpha = OneMinusSrcAlphaFactor;
     this.card = new Mesh(planeGeo, this.cardMat);
     this.card.renderOrder = 15;
     this.raysMat = new MeshBasicMaterial({ vertexColors: true, transparent: true, blending: AdditiveBlending, depthWrite: false, side: DoubleSide });
@@ -192,7 +204,12 @@ export function lightPillar(): { mesh: Mesh; mat: ShaderMaterial } {
   g.translate(0, 5, 0);
   const mat = new ShaderMaterial({
     transparent: true,
-    blending: AdditiveBlending,
+    // Additive light that leaves the buffer's alpha alone (a catcher inside it stays out of the paint filter).
+    blending: CustomBlending,
+    blendSrc: OneFactor,
+    blendDst: OneFactor,
+    blendSrcAlpha: ZeroFactor,
+    blendDstAlpha: OneFactor,
     depthWrite: false,
     side: DoubleSide,
     uniforms: { uStrength: { value: 0 }, uTime: { value: 0 } },

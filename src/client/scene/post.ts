@@ -1,12 +1,15 @@
 import {
   Color,
+  CustomBlending,
+  OneFactor,
+  SrcAlphaFactor,
+  ZeroFactor,
   DepthTexture,
   PerspectiveCamera,
   HalfFloatType,
   LinearFilter,
   ShaderMaterial,
   Vector2,
-  Vector4,
   WebGLRenderTarget,
   type Camera,
   type Object3D,
@@ -22,8 +25,6 @@ import { FullScreenQuad, Pass } from "three/addons/postprocessing/Pass.js";
 
 /** The layer the name tags live on: drawn after the post chain, so the painterly filter never smears them. */
 export const TAG_LAYER = 1;
-/** Screen spots kept crisp (the fishers' heads and faces). */
-export const CRISP_SPOTS = 4;
 
 const VERT = /* glsl */ `
 varying vec2 vUv;
@@ -67,7 +68,11 @@ float vn2(vec2 p) {
   return mix(mix(h12(i), h12(i + vec2(1.0, 0.0)), f.x), mix(h12(i + vec2(0.0, 1.0)), h12(i + vec2(1.0, 1.0)), f.x), f.y);
 }
 void main() {
-  vec3 c = texture2D(tDiffuse, vUv).rgb;
+  vec4 t0 = texture2D(tDiffuse, vUv);
+  vec3 c = t0.rgb;
+  // The fishers (alpha 0, carried from the scene buffer) skip the warm squeeze and most of the split
+  // tone: firelight on a face stays warm instead of turning mauve.
+  float ch = 1.0 - smoothstep(0.05, 0.6, t0.a);
   if (any(isnan(c)) || any(isinf(c))) c = vec3(0.0);
   c = max(c, vec3(0.0)) * uGain;
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
@@ -75,7 +80,7 @@ void main() {
   float mx = max(c.r, max(c.g, c.b));
   float mn = min(c.r, min(c.g, c.b));
   float warmLead = clamp((c.r - c.b) / max(mx, 1e-4), 0.0, 1.0) * smoothstep(0.55, 0.95, (mx - mn) / max(mx, 1e-4));
-  c = mix(c, vec3(l) + (c - vec3(l)) * 0.78, warmLead * 0.6);
+  c = mix(c, vec3(l) + (c - vec3(l)) * 0.78, warmLead * 0.6 * (1.0 - ch));
   c = mix(vec3(l), c, uSat);
   c = pow(max(c, vec3(0.0)) / 0.18, vec3(uContrast)) * 0.18;
   // Three-way split tone by luminance (perceptual-ish: on sqrt of linear light).
@@ -83,7 +88,7 @@ void main() {
   float wS = 1.0 - smoothstep(0.08, 0.42, pl);
   float wH = smoothstep(0.55, 0.95, pl);
   float wM = max(0.0, 1.0 - wS - wH);
-  c *= uShadowTint * wS + uMidTint * wM + uHighTint * wH;
+  c *= mix(uShadowTint * wS + uMidTint * wM + uHighTint * wH, vec3(1.0), 0.75 * ch);
   // Still canvas: a fine tooth and a soft woven unevenness (screen-fixed, like paint on a canvas).
   vec2 px = vUv * uRes;
   float tooth = h12(floor(px)) - 0.5;
@@ -159,14 +164,18 @@ void main() {
     c *= mix(vec3(1.0), uAOTint, occ);
   }
   float m = max(c.r, max(c.g, c.b));
-  if (m > uKnee) {
+  // The fishers (alpha 0, see painter.ts) roll off later: firelit and lamplit faces keep their warm light.
+  float ch = 1.0 - smoothstep(0.05, 0.6, t.a);
+  float knee = mix(uKnee, uKnee * 1.6, ch);
+  float top = mix(uMax, uMax * 1.6, ch);
+  if (m > knee) {
     // Glows keep their hue: the ceiling sits just under where the tone curve bleaches to white.
-    float r = uMax - uKnee;
-    float mm = uKnee + r * (1.0 - exp(-(m - uKnee) / r));
+    float r = top - knee;
+    float mm = knee + r * (1.0 - exp(-(m - knee) / r));
     c *= mm / m;
     // Very hot pixels also lose a little saturation toward a pale warm tint (painted highlights, not neon).
     float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
-    c = mix(c, vec3(l) * vec3(1.02, 1.0, 0.96), smoothstep(uKnee, uMax, m) * 0.05);
+    c = mix(c, vec3(l) * vec3(1.02, 1.0, 0.96), smoothstep(knee, top, m) * 0.05);
   }
   gl_FragColor = vec4(c, t.a);
 }`,
@@ -305,35 +314,27 @@ void main() {
 }`,
 };
 
-/** Blends the half-res paint over the frame, except round the fishers' faces (kept crisp). */
+/** Blends the half-res paint over the frame, except over the fishers and held fish (alpha 0: kept crisp). */
 const PaintBlendShader = {
   uniforms: {
     tDiffuse: { value: null },
     tPaint: { value: null },
     uAmount: { value: 0.58 },
-    uAspect: { value: 16 / 9 },
-    uCrisp: { value: Array.from({ length: CRISP_SPOTS }, () => new Vector4(0, 0, 0, 0)) },
   },
   vertexShader: VERT,
   fragmentShader: /* glsl */ `
 uniform sampler2D tDiffuse;
 uniform sampler2D tPaint;
 uniform float uAmount;
-uniform float uAspect;
-uniform vec4 uCrisp[${CRISP_SPOTS}];
 varying vec2 vUv;
 void main() {
   vec4 o = texture2D(tDiffuse, vUv);
   vec3 p = texture2D(tPaint, vUv).rgb;
-  float keep = 0.0;
-  for (int i = 0; i < ${CRISP_SPOTS}; i++) {
-    vec4 s = uCrisp[i];
-    if (s.z <= 0.0) continue;
-    vec2 d = (vUv - s.xy) * vec2(uAspect, 1.0);
-    keep = max(keep, 1.0 - smoothstep(s.z * 0.6, s.z, length(d)));
-  }
+  // Characters and the held fish write alpha 0 into the scene buffer: never painted over (faces stay crisp).
+  float keep = 1.0 - smoothstep(0.05, 0.6, o.a);
   // Strokes take the colour of the paint, but keep the frame's own value detail a little (no mush).
   float amt = uAmount * (1.0 - keep);
+  // Alpha goes on as the character mask for the grade (bloom adds colour only, see buildPost).
   gl_FragColor = vec4(mix(o.rgb, p, amt), o.a);
 }`,
 };
@@ -347,14 +348,12 @@ class PaintPass extends Pass {
   private readonly quad = new FullScreenQuad();
   private readonly texel = new Vector2();
   private readonly halfTexel = new Vector2();
-  readonly crisp = Array.from({ length: CRISP_SPOTS }, () => new Vector4(0, 0, 0, 0));
 
   constructor(w: number, h: number) {
     super();
     this.tens.uniforms.uTexel = { value: this.texel };
     this.kuwa.uniforms.uTexel = { value: this.texel };
     this.kuwa.uniforms.uHalfTexel = { value: this.halfTexel };
-    this.blend.uniforms.uCrisp = { value: this.crisp };
     const opts = { type: HalfFloatType, minFilter: LinearFilter, magFilter: LinearFilter, depthBuffer: false };
     this.half = new WebGLRenderTarget(1, 1, opts);
     this.tensor = new WebGLRenderTarget(1, 1, opts);
@@ -370,7 +369,6 @@ class PaintPass extends Pass {
     this.texel.set(1 / Math.max(1, w), 1 / Math.max(1, h));
     this.halfTexel.set(1 / hw, 1 / hh);
     this.kuwa.uniforms.uRadius!.value = Math.max(3, (h / 1080) * 7);
-    this.blend.uniforms.uAspect!.value = w / Math.max(1, h);
   }
 
   override render(renderer: WebGLRenderer, writeBuffer: WebGLRenderTarget, readBuffer: WebGLRenderTarget): void {
@@ -415,8 +413,6 @@ export type Post = {
   gain: Color;
   /** The render target the scene is drawn into (shader prewarm compiles against it). */
   target: WebGLRenderTarget;
-  /** Screen spots kept crisp this frame: (u, v, radius in screen-height units, unused); radius 0 = off. */
-  crisp: Vector4[];
   /** A/B switch for perf checks: false skips the contact shadow, knee and painterly filter. */
   setPainterly(on: boolean): void;
   /** Calls draw for each object drawn over the finished frame (the name tags, on TAG_LAYER). */
@@ -439,6 +435,12 @@ export function buildPost(renderer: WebGLRenderer, scene: Scene, camera: Camera,
   // Bloom only on what is left above the knee: a soft wide glow round lanterns and glowing water.
   const bloom = new UnrealBloomPass(new Vector2(w / 2, h / 2), 0.42, 0.65, 0.72);
   composer.addPass(bloom);
+  // The bloom adds light but leaves alpha (the character mask the grade reads) as it is.
+  bloom.blendMaterial.blending = CustomBlending;
+  bloom.blendMaterial.blendSrc = SrcAlphaFactor;
+  bloom.blendMaterial.blendDst = OneFactor;
+  bloom.blendMaterial.blendSrcAlpha = ZeroFactor;
+  bloom.blendMaterial.blendDstAlpha = OneFactor;
   const grade = new ShaderPass(GradeShader);
   composer.addPass(grade);
   composer.addPass(new OutputPass());
@@ -452,14 +454,12 @@ export function buildPost(renderer: WebGLRenderer, scene: Scene, camera: Camera,
     res.set(w2 * pr, h2 * pr);
   };
   setRes(w, h);
-  const crisp = paint.crisp;
   const drawOverlay = (o: Object3D) => renderer.render(o, camera);
   return {
     composer,
     bloom,
     grade,
     target,
-    crisp,
     gain,
     setSize(w2, h2) {
       composer.setSize(w2, h2);

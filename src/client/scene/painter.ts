@@ -317,17 +317,24 @@ varying vec3 vPkN;
 varying vec3 vPk;
 `;
 
-export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexShader: string; fragmentShader: string }, scale: { value: number }): void {
+/**
+ * crisp: 1 marks the surface as a character (the fishers): it writes alpha 0 into the scene buffer,
+ * and the painterly filter (post.ts) leaves alpha-0 pixels unpainted, so faces never smear. The uniform
+ * is declared by the patched Lambert light chunk (geo.ts), which also gives characters a smooth ramp.
+ */
+export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexShader: string; fragmentShader: string }, scale: { value: number }, crisp: { value: number } = { value: 0 }): void {
   const pa = paintArray();
   shader.uniforms.tPk = { value: pa.tex };
   shader.uniforms.iPk = { value: pa.inv };
   shader.uniforms.uPkScale = scale;
+  shader.uniforms.uPkCrisp = crisp;
   shader.vertexShader = shader.vertexShader
     .replace("#include <common>", "#include <common>\nattribute vec3 aPaint;\nvarying vec3 vPkP;\nvarying vec3 vPkN;\nvarying vec3 vPk;")
     .replace("#include <beginnormal_vertex>", "#include <beginnormal_vertex>\n  vPkN = objectNormal;")
     .replace("#include <begin_vertex>", "#include <begin_vertex>\n  vPkP = transformed;\n  vPk = aPaint;");
   shader.fragmentShader = shader.fragmentShader
     .replace("#include <common>", `#include <common>\n${PAINT_ARRAY_GLSL}`)
+    .replace("#include <dithering_fragment>", "#include <dithering_fragment>\n  gl_FragColor.a *= 1.0 - uPkCrisp;")
     .replace(
       "#include <color_fragment>",
       `#include <color_fragment>

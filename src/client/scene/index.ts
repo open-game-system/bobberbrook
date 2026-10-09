@@ -26,7 +26,7 @@ import { FishShadows, FishTextures, sharedCardGeometry } from "./fishviz";
 import { Fx } from "./fx";
 import { MAX_FOCUS, occluderDepthMaterial, occluderMaterial, patchLambertWrap } from "./geo";
 import { makeParticles } from "./particles";
-import { CRISP_SPOTS, TAG_LAYER, buildPost, type Post } from "./post";
+import { TAG_LAYER, buildPost, type Post } from "./post";
 import { buildProps } from "./props";
 import { buildSky } from "./sky";
 import { SwirlViews } from "./swirls";
@@ -239,7 +239,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   const textures = new FishTextures(opts.assetBase ?? "/art/fish/");
   const cardGeo = sharedCardGeometry();
   const rigMats = {
-    body: paintedMaterial({ pkScale: 0.6 }),
+    body: paintedMaterial({ pkScale: 0.6, crisp: true }),
     glowRod: new MeshBasicMaterial({ vertexColors: true, color: new Color(1.6, 1.8, 2.4) }),
   };
   const fishers = new FisherViews(rigMats, cardGeo, textures, fx, shadows);
@@ -502,21 +502,6 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     mist.update(tod, t, veilOf, near < Infinity ? far + 1.5 : 0);
     fow.update(tod, t, dt, rig.focus.x, rig.focus.z, lake ? lake.revealed : null, lake ? lake.discovered : [], camera.position.x, camera.position.z, farDist);
     stream(rig.focus.x, rig.focus.z, streamBudget);
-    if (post) {
-      // The fishers' heads and faces stay crisp under the painterly filter.
-      const spots = post.crisp;
-      let si = 0;
-      const halfH = Math.tan((camera.fov * Math.PI) / 360) * 2;
-      fishers.forEachSeat((_seat, x, y, z) => {
-        if (si >= CRISP_SPOTS) return;
-        tmpO.set(x, y + 1.3, z);
-        const dist = tmpO.distanceTo(camera.position);
-        tmpO.project(camera);
-        if (tmpO.z > 1 || Math.abs(tmpO.x) > 1.2 || Math.abs(tmpO.y) > 1.2) return;
-        spots[si++]!.set(tmpO.x * 0.5 + 0.5, tmpO.y * 0.5 + 0.5, 1.5 / Math.max(0.5, dist * halfH), 0);
-      });
-      while (si < CRISP_SPOTS) spots[si++]!.set(0, 0, 0, 0);
-    }
     renderer.info.reset();
     if (post) post.render();
     else renderer.render(scene, camera);

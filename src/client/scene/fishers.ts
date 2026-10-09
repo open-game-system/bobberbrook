@@ -26,6 +26,7 @@ import { damp } from "./noise";
 import { heightAt } from "./terrain";
 import { towerDeckY } from "./vehicles";
 import { merge, paint, prep } from "./geo";
+import { layoutTags, type TagBox, type TagShift } from "./tagLayout";
 
 const DECK_Y = 0.42;
 const LINE_SEGS = 18;
@@ -177,8 +178,9 @@ class FisherView {
   private readonly side = new Vector3();
   private readonly camDir = new Vector3();
   upgradeFlash = 0;
-  /** Screen-space (NDC) sideways shift of the name tag, so close fishers' tags don't overlap. */
+  /** Screen-space (NDC) shift of the name tag, so close fishers' tags don't overlap (eased). */
   tagDx = 0;
+  tagDy = 0;
 
   constructor(
     readonly seat: number,
@@ -639,11 +641,13 @@ class FisherView {
     gy += (this.y + 1.4 - gy) * o;
     g.position.set(gx, gy, gz);
     g.quaternion.copy(camera.quaternion);
-    // Grows out of the splash (never pops in), a little overshoot on landing, shrinks when tucked.
-    const grow = Math.min(1, age / 0.4);
-    const emerge = 0.12 + 0.88 * (1 - (1 - grow) * (1 - grow));
+    // Grows out of the splash quickly (never pops in, never reads as a thumbnail), a little overshoot on
+    // landing; tucked away by fading, not by shrinking to a speck.
+    const grow = Math.min(1, age / 0.22);
+    const emerge = 0.45 + 0.55 * (1 - (1 - grow) * (1 - grow));
     const land = age >= LEAP_S ? Math.max(0, 0.16 - (age - LEAP_S) * 0.5) * Math.sin(Math.min(Math.PI, (age - LEAP_S) * 9)) : 0;
-    const scale = (age < LEAP_S ? emerge * (0.6 + 0.4 * s) : 1 + land) * (1 - o);
+    const scale = (age < LEAP_S ? emerge * (0.8 + 0.2 * s) : 1 + land) * (1 - 0.25 * o);
+    this.card.cardMat.opacity = 1 - o;
     const W = W0 * Math.max(0.001, scale);
     this.card.card.scale.set(W, W, 1);
     const wiggle = age < LEAP_S ? (this.catchJunk ? s * Math.PI * 4 : Math.sin(age * 22) * 0.35) : Math.sin(age * 7) * 0.12;
@@ -735,7 +739,7 @@ export class FisherViews {
   private readonly lineMat: MeshBasicMaterial;
   private upgradeSeq = -1;
   private readonly bySeat: (Fisher | undefined)[] = [undefined, undefined, undefined, undefined];
-  private readonly tagBoxes = Array.from({ length: 4 }, () => ({ v: null as FisherView | null, x: 0, y: 0, hw: 0, h: 0, dx: 0 }));
+  private readonly tagBoxes: TagBox[] = [];
   private readonly tv = new Vector3();
   /** The catch the camera is pushing toward (the first one, held until it ends). */
   private focusView: FisherView | null = null;
@@ -850,51 +854,33 @@ export class FisherViews {
     }
   }
 
-  /** Name tags never overlap: close fishers' tags are pushed apart sideways in screen space. */
+  private readonly tagShift: TagShift[] = [];
+  private readonly tagViews: FisherView[] = [];
+
+  /** Name tags never overlap: close fishers' tags are staggered into two rows and pushed apart (tagLayout.ts). */
   private spreadTags(camera: Camera, dt: number): void {
     const P = camera.projectionMatrix.elements;
     const p00 = P[0]!;
     const p11 = P[5]!;
     const tags = this.tagBoxes;
-    let n = 0;
+    const views = this.tagViews;
+    tags.length = 0;
+    views.length = 0;
     for (const v of this.views) {
       const tag = v.rig.tag;
       if (!v.present || !tag.visible) continue;
       this.tv.copy(tag.position).project(camera);
-      const b = tags[n++]!;
-      b.v = v;
-      b.x = this.tv.x;
-      b.y = this.tv.y;
-      b.hw = (v.rig.tagFrac * tag.scale.x * p00) / 2 + 0.006;
-      b.h = tag.scale.y * p11 * 0.9;
-      b.dx = 0;
+      tags.push({ x: this.tv.x, y: this.tv.y, hw: (v.rig.tagFrac * tag.scale.x * p00) / 2, h: tag.scale.y * p11, seat: v.seat });
+      views.push(v);
     }
-    for (let it = 0; it < 8; it++) {
-      for (let i = 0; i < n; i++) {
-        for (let j = i + 1; j < n; j++) {
-          const a = tags[i]!;
-          const b = tags[j]!;
-          const ax = a.x + a.dx;
-          const bx = b.x + b.dx;
-          const ox = a.hw + b.hw - Math.abs(ax - bx);
-          const oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
-          if (ox <= 0 || oy <= 0) continue;
-          const s = ax < bx || (ax === bx && a.v!.seat < b.v!.seat) ? 1 : -1;
-          a.dx -= (s * ox) / 2;
-          b.dx += (s * ox) / 2;
-        }
-      }
-    }
-    const k = damp(8, dt);
-    for (let i = 0; i < n; i++) {
-      const b = tags[i]!;
-      const v = b.v!;
-      // Keep the pill on screen.
-      const lo = -0.98 + b.hw;
-      const hi = 0.98 - b.hw;
-      const want = Math.min(hi, Math.max(lo, b.x + b.dx)) - b.x;
-      v.tagDx += (want - v.tagDx) * k;
-      v.rig.tag.center.set(0.5 - v.tagDx / Math.max(1e-6, v.rig.tag.scale.x * p00), 0);
+    layoutTags(tags, this.tagShift);
+    const k = damp(16, dt);
+    for (let i = 0; i < views.length; i++) {
+      const v = views[i]!;
+      const s = this.tagShift[i]!;
+      v.tagDx += (s.dx - v.tagDx) * k;
+      v.tagDy += (s.dy - v.tagDy) * k;
+      v.rig.tag.center.set(0.5 - v.tagDx / Math.max(1e-6, v.rig.tag.scale.x * p00), -v.tagDy / Math.max(1e-6, v.rig.tag.scale.y * p11));
     }
   }
 

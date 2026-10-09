@@ -13,26 +13,29 @@ export function patchLambertWrap(): void {
   const src = ShaderChunk.lights_lambert_pars_fragment;
   const from = "float dotNL = saturate( dot( geometryNormal, directLight.direction ) );\n\tvec3 irradiance = dotNL * directLight.color;";
   if (!src.includes(from)) throw new Error("three's Lambert chunk changed: re-check the painted light ramp");
-  ShaderChunk.lights_lambert_pars_fragment = src.replace(
+  // uPkCrisp (1 on the fishers, see painter.ts; 0 = unset elsewhere): characters keep a smooth ramp,
+  // so firelight and lamplight model their faces instead of flattening them into one band.
+  ShaderChunk.lights_lambert_pars_fragment = `uniform float uPkCrisp;\n${src.replace(
     from,
     `float wrapNL = saturate( ( dot( geometryNormal, directLight.direction ) + 0.3 ) / 1.3 );
 \t// Painted light: four soft value bands (a painter's planes of light, not a smooth airbrush ramp).
 \tfloat bandsNL = wrapNL * 3.0;
-\tfloat dotNL = mix( wrapNL, ( floor( bandsNL ) + smoothstep( 0.36, 0.64, fract( bandsNL ) ) ) / 3.0, 0.75 );
+\tfloat dotNL = mix( wrapNL, ( floor( bandsNL ) + smoothstep( 0.36, 0.64, fract( bandsNL ) ) ) / 3.0, 0.75 * ( 1.0 - uPkCrisp ) );
 \t// Warm key, cool violet bounce on the turned-away side (Ashenvale's lilac shadows).
 \tvec3 irradiance = dotNL * directLight.color * vec3( 1.04, 1.0, 0.94 ) + ( 1.0 - dotNL ) * directLight.color * vec3( 0.07, 0.06, 0.14 );
 \t// A painted rim of key light on the silhouette (the warm edge WoW paints on its characters and props).
 \tirradiance += directLight.color * vec3( 0.13, 0.09, 0.05 ) * pow( 1.0 - saturate( dot( geometryNormal, geometryViewDir ) ), 3.0 ) * wrapNL;`,
-  );
+  )}`;
 }
 
 /** Painted props: vertex colours with hand-painted detail by surface kind (see painter.ts). */
-export function paintedMaterial(opts: { side?: Side; emissive?: number; /** Object units per metre (fishers are built ~1 unit tall). */ pkScale?: number } = {}): MeshLambertMaterial {
+export function paintedMaterial(opts: { side?: Side; emissive?: number; /** Object units per metre (fishers are built ~1 unit tall). */ pkScale?: number; /** A character: kept out of the painterly filter (same program). */ crisp?: boolean } = {}): MeshLambertMaterial {
   const m = new MeshLambertMaterial({ vertexColors: true });
   if (opts.side !== undefined) m.side = opts.side;
   if (opts.emissive !== undefined) m.emissive.setHex(opts.emissive);
   const scale = { value: opts.pkScale ?? 1 };
-  m.onBeforeCompile = (shader) => applyPaint(shader, scale);
+  const crisp = { value: opts.crisp ? 1 : 0 };
+  m.onBeforeCompile = (shader) => applyPaint(shader, scale, crisp);
   m.customProgramCacheKey = () => "bobber-painted";
   return m;
 }

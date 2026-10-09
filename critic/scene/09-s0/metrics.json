@@ -1,0 +1,86 @@
+{
+  "round": "09-s0",
+  "shots": [
+    {
+      "label": "moonwell",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 76,
+      "programs": 76,
+      "calls": 661,
+      "triangles": 2983382,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 97
+    },
+    {
+      "label": "biome-ember",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 75,
+      "programs": 75,
+      "calls": 584,
+      "triangles": 3081678,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 102
+    },
+    {
+      "label": "tower",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 76,
+      "programs": 76,
+      "calls": 715,
+      "triangles": 3594532,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 83
+    },
+    {
+      "label": "mistmarsh",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 76,
+      "programs": 76,
+      "calls": 721,
+      "triangles": 3896848,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 57
+    },
+    {
+      "label": "night-tarn",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 76,
+      "programs": 77,
+      "calls": 480,
+      "triangles": 3116286,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 52
+    },
+    {
+      "label": "double-catch",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 76,
+      "programs": 76,
+      "calls": 581,
+      "triangles": 3161748,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 114
+    },
+    {
+      "label": "campfire",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 76,
+      "programs": 76,
+      "calls": 622,
+      "triangles": 3173584,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 54
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}
