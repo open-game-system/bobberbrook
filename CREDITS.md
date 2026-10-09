@@ -1,0 +1,1 @@
+- `public/art/textures/*.webp`: painted texture kit cut from one Codex (gpt-image, ChatGPT plan) sheet, `assets-src/textures/atlas-a.png`, 2026-10-09, by `scripts/slice-textures.py`.

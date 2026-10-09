@@ -25,3 +25,10 @@ thing is reverted, whatever it scored.
   group-around-a-swirl moment). Jon asked for "beautiful setting", "definitely 3D and WoW-like".
 - Running around and fishing in different places, progression and variety.
 - The painted fish sprites (public/art/fish/*.webp) and the Bobberbrook logo and cover.
+
+## Owner note, 2026-10-09 (on map-tour.mp4 at 1:41, Mistmarsh)
+- "This looks pretty amateur-ish": the bar is **on par with WoW aesthetically**. Flat untextured
+  low-poly, plain blob canopies and spiky purple strands are what reads amateur. WoW's look comes
+  from hand-painted diffuse textures on simple shapes (painted light, visible brushwork), leafy
+  alpha-card canopies, textured ground blending (grass / moss / path) and painted bark and rock.
+- Painted texture kit: `public/art/textures/` (Codex sheet `assets-src/textures/atlas-a.png`).

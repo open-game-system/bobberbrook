@@ -78,3 +78,4 @@
 {"date":"2026-10-08T22:57:37.080Z","project":"bobberbrook","service":"gemini","unit":"gemini_usd","amount":0.0005705,"estimated":false,"label":"new-place","files":["new-place.m4a"],"model":"gemini-3.8-flash-tts","voice":"Sulafat","tokens":63}
 {"date":"2026-10-08T22:57:37.139Z","project":"bobberbrook","service":"gemini","unit":"gemini_usd","amount":0.000562,"estimated":false,"label":"all-aboard","files":["all-aboard.m4a"],"model":"gemini-3.8-flash-tts","voice":"Sulafat","tokens":62}
 {"date":"2026-10-08T22:57:38.755Z","project":"bobberbrook","service":"gemini","unit":"gemini_usd","amount":0.000652,"estimated":false,"label":"here-we-are","files":["here-we-are.m4a"],"model":"gemini-3.8-flash-tts","voice":"Sulafat","tokens":72}
+{"date":"2026-10-09T02:48:12.604Z","project":"bobberbrook","service":"codex","unit":"codex_images","amount":1,"estimated":false,"label":"codex image_generation","files":["assets-src/textures/atlas-a.png"],"usd":0}
