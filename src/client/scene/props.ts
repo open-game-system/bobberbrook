@@ -30,6 +30,7 @@ import { FALLS, PATH_D, heightAt } from "./terrain";
 import { clearOfTrails } from "./valley";
 import { fbm, rng, vnoise } from "./noise";
 import { jitter, merge, paint, paintedMaterial, prep, puffNormals, surf } from "./geo";
+import { buildCampfireFx } from "./campfire";
 import { PK } from "./painter";
 import type { TodState } from "./tod";
 import type { SceneQuality } from "./types";
@@ -341,7 +342,8 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   surf(lampHook, PK.grain, 1);
   const lampCap = prep(new ConeGeometry(0.13, 0.12, 6).translate(0.28, 1.2, 0));
   paint(lampCap, 0x2a2228);
-  add(instanced(merge([lampPost, lampHook, lampCap]), mat, lamps, true)).name = "lamp-posts";
+  // Lamp posts dissolve like the trees when they stand between the camera and a fisher.
+  add(instanced(merge([lampPost, lampHook, lampCap]), treeMat, lamps, true)).name = "lamp-posts";
   const lampGlassMat = new MeshBasicMaterial({ color: 0xffffff });
   disposables.push(lampGlassMat);
   const lampGlass = new SphereGeometry(0.1, 8, 6).scale(1, 1.3, 1).translate(0.28, 1.05, 0);
@@ -510,16 +512,19 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     paint(g, 0x3a2416, 0x6a4628);
     campParts.push(surf(g, PK.grain));
   }
-  // String-light poles.
+  // String-light poles (they dissolve like the trees in front of a fisher).
+  const poleParts: BufferGeometry[] = [];
   const poleA = new Vector3(CAMPFIRE.x - 3.4, 0, CAMPFIRE.z - 1.6);
   const poleB = new Vector3(CAMPFIRE.x + 3.4, 0, CAMPFIRE.z - 1.2);
   for (const p of [poleA, poleB]) {
     p.y = heightAt(p.x, p.z);
-    const g = prep(new CylinderGeometry(0.07, 0.09, 3.0, 6).translate(p.x, p.y + 1.5, p.z));
+    // Tall enough that the string of lights hangs above the family's heads in the campfire shot.
+    const g = prep(new CylinderGeometry(0.07, 0.09, 3.9, 6).translate(p.x, p.y + 1.95, p.z));
     paint(g, 0x5a3e28);
-    campParts.push(surf(g, PK.grain));
+    poleParts.push(surf(g, PK.grain));
   }
   add(new Mesh(merge(campParts), mat)).castShadow = true;
+  add(new Mesh(merge(poleParts), treeMat)).castShadow = true;
   const bulbN = 15;
   const bulbGeo = new SphereGeometry(0.075, 8, 6);
   const bulbMat = new MeshBasicMaterial({ color: 0xffffff });
@@ -530,7 +535,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     const t = (i + 0.5) / bulbN;
     dummy.position.set(
       poleA.x + (poleB.x - poleA.x) * t,
-      poleA.y + 2.9 + (poleB.y - poleA.y) * t - Math.sin(t * Math.PI) * 0.7,
+      poleA.y + 3.8 + (poleB.y - poleA.y) * t - Math.sin(t * Math.PI) * 0.55,
       poleA.z + (poleB.z - poleA.z) * t,
     );
     dummy.rotation.set(0, 0, 0);
@@ -543,29 +548,20 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   const wire = new CatmullRomCurve3(
     Array.from({ length: 9 }, (_, i) => {
       const t = i / 8;
-      return new Vector3(poleA.x + (poleB.x - poleA.x) * t, poleA.y + 2.95 + (poleB.y - poleA.y) * t - Math.sin(t * Math.PI) * 0.7, poleA.z + (poleB.z - poleA.z) * t);
+      return new Vector3(poleA.x + (poleB.x - poleA.x) * t, poleA.y + 3.85 + (poleB.y - poleA.y) * t - Math.sin(t * Math.PI) * 0.55, poleA.z + (poleB.z - poleA.z) * t);
     }),
   );
   const wireGeo = prep(new TubeGeometry(wire, 24, 0.015, 3, false));
   paint(wireGeo, 0x2a2a2a);
   add(new Mesh(wireGeo, mat));
 
-  // Flames: three additive cones flickering.
-  const flameMat = new MeshBasicMaterial({ color: 0xffa040, transparent: true, opacity: 0.9, blending: AdditiveBlending, depthWrite: false });
-  const flameCore = new MeshBasicMaterial({ color: 0xfff0a0, transparent: true, opacity: 0.9, blending: AdditiveBlending, depthWrite: false });
-  disposables.push(flameMat, flameCore);
-  const flames: Mesh[] = [];
+  // Flames and embers: painted flame cards licking and leaning, embers rising (one draw).
   const fy = heightAt(CAMPFIRE.x, CAMPFIRE.z) + 0.2;
-  for (let i = 0; i < 4; i++) {
-    const g = new ConeGeometry(i === 3 ? 0.16 : 0.26, i === 3 ? 0.6 : 0.95, 7);
-    g.translate(0, (i === 3 ? 0.6 : 0.95) / 2, 0);
-    const f = add(new Mesh(g, i === 3 ? flameCore : flameMat));
-    const a = (i / 3) * Math.PI * 2;
-    f.position.set(CAMPFIRE.x + (i === 3 ? 0 : Math.cos(a) * 0.12), fy, CAMPFIRE.z + (i === 3 ? 0 : Math.sin(a) * 0.12));
-    f.renderOrder = 5;
-    flames.push(f);
-  }
-  const fireLight = new PointLight(0xff9040, 0, 12, 1.5);
+  const flames = buildCampfireFx(CAMPFIRE.x, fy, CAMPFIRE.z);
+  group.add(flames.mesh);
+  disposables.push(flames);
+  // The fire light reaches the faces round the circle and the ground (same light, warmer and further).
+  const fireLight = new PointLight(0xff8a3a, 0, 16, 1.3);
   fireLight.position.set(CAMPFIRE.x, fy + 0.8, CAMPFIRE.z);
   group.add(fireLight);
 
@@ -601,12 +597,8 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
       bulbMat.color.setScalar(0.75 + 1.9 * Math.max(g, campfire));
       const fire = 0.55 + 0.45 * Math.max(g, campfire);
       const fl1 = 0.85 + 0.15 * Math.sin(time * 13.0) * Math.sin(time * 7.3 + 1.0);
-      fireLight.intensity = (2 + 10 * Math.max(g, campfire)) * fl1;
-      flames.forEach((f, i) => {
-        const k = 0.75 + 0.25 * Math.sin(time * (9 + i * 2.3) + i * 1.7);
-        f.scale.set(fire * (0.9 + 0.1 * k), fire * k * (1 + 0.3 * campfire), fire * (0.9 + 0.1 * k));
-        f.rotation.y = time * (0.7 + i * 0.2);
-      });
+      fireLight.intensity = (2 + 10 * Math.max(g, campfire) + 8 * campfire) * fl1;
+      flames.update(time, fire * (1 + 0.3 * campfire));
     },
     dispose() {
       for (const d of disposables) d.dispose();

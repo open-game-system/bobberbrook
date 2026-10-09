@@ -1,0 +1,87 @@
+{
+  "round": "08-s3",
+  "shots": [
+    {
+      "label": "double-catch",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 70,
+      "programs": 70,
+      "calls": 576,
+      "triangles": 3426244,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 117
+    },
+    {
+      "label": "four-reel",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 70,
+      "programs": 70,
+      "calls": 632,
+      "triangles": 3520098,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 112
+    },
+    {
+      "label": "night-catch",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 70,
+      "programs": 70,
+      "calls": 574,
+      "triangles": 3488285,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 75
+    },
+    {
+      "label": "campfire",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 70,
+      "programs": 70,
+      "calls": 611,
+      "triangles": 3460398,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 61
+    }
+  ],
+  "soaks": {
+    "four-reel": {
+      "programsBefore": 70,
+      "programsAfter": 70,
+      "p50": 13.100000381469727,
+      "p95": 17.899999618530273,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 1659
+    },
+    "tower": {
+      "programsBefore": 70,
+      "programsAfter": 70,
+      "p50": 14,
+      "p95": 17.299999237060547,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 1595
+    },
+    "boarding": {
+      "programsBefore": 67,
+      "programsAfter": 67,
+      "p50": 12.600000381469727,
+      "p95": 15.600000381469727,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 1768
+    }
+  },
+  "soak": {
+    "programsBefore": 70,
+    "programsAfter": 70,
+    "p50": 13.100000381469727,
+    "p95": 17.899999618530273,
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+    "frames": 1659
+  },
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}

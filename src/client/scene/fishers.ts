@@ -158,6 +158,9 @@ class FisherView {
   private readonly camRight = new Vector3();
   private sparkAcc = 0;
   readonly hold = new Vector3();
+  private readonly handA = new Vector3();
+  private readonly handB = new Vector3();
+  private readonly toCam = new Vector3();
   private readonly tip = new Vector3();
   private readonly tmp = new Vector3();
   private readonly side = new Vector3();
@@ -596,8 +599,19 @@ class FisherView {
       this.cardSide = this.neighbourX !== null ? (this.neighbourX > sx ? -1 : 1) : sx > 0.1 ? -1 : 1;
       if ((sx < -0.55 && this.cardSide < 0) || (sx > 0.55 && this.cardSide > 0)) this.cardSide = -this.cardSide;
     }
-    const sideOff = this.cardSide * (w * (640 / 520) * 0.5 + 1.5);
-    this.hold.set(this.x, this.y + 2.3, this.z).addScaledVector(this.camRight, sideOff);
+    // Held up in the catcher's hands (round 07: it floated beside them): its middle a little above the
+    // raised hands and shifted to the open side, so the face stays clear and it never covers a neighbour.
+    const HELD = 0.72;
+    const W0 = w * (640 / 520) * HELD;
+    this.rig.hand.getWorldPosition(this.handA);
+    this.handB.set(0, -0.18, 0);
+    this.rig.armL.localToWorld(this.handB);
+    this.toCam.copy(camera.position).sub(this.handA).setY(0).normalize();
+    this.hold.copy(this.handA).add(this.handB).multiplyScalar(0.5);
+    // Before the arms are up (first frames), fall back to where raised hands will be.
+    this.hold.y = Math.max(this.hold.y, this.y + 1.45);
+    this.hold.y += W0 * 0.12;
+    this.hold.addScaledVector(this.camRight, this.cardSide * W0 * 0.56).addScaledVector(this.toCam, 0.35);
     // The leap: out of the water at the bobber, an arc into the raised hands.
     const e = s * s * (3 - 2 * s);
     let gx = this.catchFromX + (this.hold.x - this.catchFromX) * e;
@@ -615,7 +629,7 @@ class FisherView {
     const emerge = 0.12 + 0.88 * (1 - (1 - grow) * (1 - grow));
     const land = age >= LEAP_S ? Math.max(0, 0.16 - (age - LEAP_S) * 0.5) * Math.sin(Math.min(Math.PI, (age - LEAP_S) * 9)) : 0;
     const scale = (age < LEAP_S ? emerge * (0.6 + 0.4 * s) : 1 + land) * (1 - o);
-    const W = w * (640 / 520) * Math.max(0.001, scale);
+    const W = W0 * Math.max(0.001, scale);
     this.card.card.scale.set(W, W, 1);
     const wiggle = age < LEAP_S ? (this.catchJunk ? s * Math.PI * 4 : Math.sin(age * 22) * 0.35) : Math.sin(age * 7) * 0.12;
     this.card.card.rotation.z = wiggle * (1 - o);
@@ -625,7 +639,7 @@ class FisherView {
     this.card.rays.visible = rayK > 0;
     this.card.rays.rotation.z = t * (tier === 2 ? 0.9 : 0.6);
     // Kept tight round the fish and soft, so they never wash over the catcher beside it.
-    this.card.rays.scale.setScalar(w * (tier === 2 ? 0.95 : this.catchNew ? 0.85 : 0.75) * (0.85 + 0.15 * Math.sin(t * 3)) * (1 - o));
+    this.card.rays.scale.setScalar(w * HELD * (tier === 2 ? 0.95 : this.catchNew ? 0.85 : 0.75) * (0.85 + 0.15 * Math.sin(t * 3)) * (1 - o));
     this.card.raysMat.color.setRGB(1, 0.9, 0.6).multiplyScalar(rayK * (tier === 2 ? 0.55 : 0.45));
     // Legendary: a soft gold light pillar over the fisher.
     const pil = tier === 2 && age > LEAP_S * 0.7 ? Math.min(1, (age - LEAP_S * 0.7) * 2) * (1 - out) : 0;

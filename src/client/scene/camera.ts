@@ -229,9 +229,10 @@ export class CameraRig {
       rate = 0.8;
     } else if (v === "campfire" || (v === "auto" && campfire)) {
       // The family on its logs, the fire at the focal point.
-      this.wantTarget.set(CAMPFIRE.x + 0.5, 1.0, CAMPFIRE.z + 0.9);
-      this.wantDist = 14.5;
-      this.wantEl = 0.36;
+      // Pushed in on the circle: seated fishers fill the frame, faces lit by the fire.
+      this.wantTarget.set(CAMPFIRE.x + 0.4, 1.05, CAMPFIRE.z + 0.7);
+      this.wantDist = 12.0;
+      this.wantEl = 0.3;
       this.wantYaw = Math.PI + 0.1;
       rate = 1.1;
     } else if (groupMode && this.ride) {
