@@ -151,6 +151,11 @@ class FisherView {
   private catchCm = 30;
   private catchEnd = -1;
   private catchAspect = 1.6;
+  /** Which side of the catcher the fish is held up on (camera right +1 / left -1; 0 = not chosen yet). */
+  private cardSide = 0;
+  /** Screen x (NDC) of the nearest other fisher on screen, set by FisherViews each frame (null: none near). */
+  neighbourX: number | null = null;
+  private readonly camRight = new Vector3();
   private sparkAcc = 0;
   readonly hold = new Vector3();
   private readonly tip = new Vector3();
@@ -476,6 +481,7 @@ class FisherView {
         this.catchTier = rar === "legendary" ? 2 : rar === "rare" || rar === "treasure" ? 1 : 0;
         this.catchCm = f.catch.cm;
         this.catchEnd = -1;
+        this.cardSide = 0;
         this.catchAspect = this.card.paint(this.textures.image(this.catchId), def?.glow ? (def.colors.accent) : "rgba(255,255,255,0.95)");
         fx.leap(this.catchFromX, this.catchFromZ, t, this.catchJunk);
       }
@@ -549,8 +555,8 @@ class FisherView {
     rig.markerMat.opacity = biting ? 0.6 + 0.4 * Math.sin(t * 16) : 0.55 + 0.1 * Math.sin(t * 2);
     rig.marker.scale.setScalar(biting ? 1.25 : 1);
     rig.tag.position.set(this.x, this.y + (lake.campfire ? 3.0 + (this.seat % 2) * 0.5 : 3.4) * Math.min(1, this.appear * 1.4), this.z);
-    const tagK = this.card.group.visible ? 0 : 1;
-    rig.tag.visible = tagK > 0;
+    // The name tag stays up through a catch (the fish is held beside the catcher, clear of it).
+    rig.tag.visible = true;
     rig.tag.scale.set(0.17, 0.0374, 1);
 
     // ---- bobber + line ----
@@ -580,7 +586,18 @@ class FisherView {
     g.visible = true;
     const s = Math.min(1, age / LEAP_S);
     const tier = this.catchTier;
-    this.hold.set(this.x, this.y + 4.9, this.z);
+    const w = (2.3 + Math.min(1.4, this.catchCm / 60)) * (this.catchNew ? 1.12 : 1) * (tier === 2 ? 1.15 : 1);
+    // Held up beside the catcher (toward the middle of the frame), never over their body or name tag.
+    this.camRight.setFromMatrixColumn(camera.matrixWorld, 0);
+    if (this.cardSide === 0) {
+      this.tmp.set(this.x, this.y + 1.5, this.z).project(camera);
+      const sx = this.tmp.x;
+      // Away from a fisher standing close by on screen, else toward the middle of the frame.
+      this.cardSide = this.neighbourX !== null ? (this.neighbourX > sx ? -1 : 1) : sx > 0.1 ? -1 : 1;
+      if ((sx < -0.55 && this.cardSide < 0) || (sx > 0.55 && this.cardSide > 0)) this.cardSide = -this.cardSide;
+    }
+    const sideOff = this.cardSide * (w * (640 / 520) * 0.5 + 1.5);
+    this.hold.set(this.x, this.y + 2.3, this.z).addScaledVector(this.camRight, sideOff);
     // The leap: out of the water at the bobber, an arc into the raised hands.
     const e = s * s * (3 - 2 * s);
     let gx = this.catchFromX + (this.hold.x - this.catchFromX) * e;
@@ -593,7 +610,6 @@ class FisherView {
     gy += (this.y + 1.4 - gy) * o;
     g.position.set(gx, gy, gz);
     g.quaternion.copy(camera.quaternion);
-    const w = (2.3 + Math.min(1.4, this.catchCm / 60)) * (this.catchNew ? 1.12 : 1) * (tier === 2 ? 1.15 : 1);
     // Grows out of the splash (never pops in), a little overshoot on landing, shrinks when tucked.
     const grow = Math.min(1, age / 0.4);
     const emerge = 0.12 + 0.88 * (1 - (1 - grow) * (1 - grow));
@@ -608,14 +624,15 @@ class FisherView {
     const rayK = rayOn && age > LEAP_S * 0.8 ? Math.min(1, (age - LEAP_S * 0.8) * 3) * (1 - out) : 0;
     this.card.rays.visible = rayK > 0;
     this.card.rays.rotation.z = t * (tier === 2 ? 0.9 : 0.6);
-    this.card.rays.scale.setScalar(w * (tier === 2 ? 1.55 : this.catchNew ? 1.35 : 1.15) * (0.85 + 0.15 * Math.sin(t * 3)) * (1 - o));
-    this.card.raysMat.color.setRGB(1, 0.9, 0.6).multiplyScalar(rayK * (tier === 2 ? 1.0 : 0.7));
+    // Kept tight round the fish and soft, so they never wash over the catcher beside it.
+    this.card.rays.scale.setScalar(w * (tier === 2 ? 0.95 : this.catchNew ? 0.85 : 0.75) * (0.85 + 0.15 * Math.sin(t * 3)) * (1 - o));
+    this.card.raysMat.color.setRGB(1, 0.9, 0.6).multiplyScalar(rayK * (tier === 2 ? 0.55 : 0.45));
     // Legendary: a soft gold light pillar over the fisher.
     const pil = tier === 2 && age > LEAP_S * 0.7 ? Math.min(1, (age - LEAP_S * 0.7) * 2) * (1 - out) : 0;
     this.pillar.visible = pil > 0.001;
     if (this.pillar.visible) {
       this.pillar.position.set(this.x, this.y, this.z);
-      this.pillarMat.uniforms.uStrength!.value = pil * 1.3;
+      this.pillarMat.uniforms.uStrength!.value = pil * 0.5;
       this.pillarMat.uniforms.uTime!.value = t;
     }
     if (age < LEAP_S && Math.random() < 0.7) fx.drip(gx, gy - 0.3, gz);
@@ -626,7 +643,7 @@ class FisherView {
       fx.sparkle(gx, gy, gz, n, 1, gold ? 0.88 : 1, gold ? 0.45 : 0.95, tier === 2 ? 6 : tier === 1 ? 3.6 : 2.0, tier === 2 ? 0.6 : 0.4);
       if (this.catchGolden || tier === 2) fx.confetti(gx, gy + 0.5, gz);
       if (this.catchNew) fx.sparkle(gx, gy, gz, 30, 1, 1, 1, 6, 0.3);
-      if (tier === 2) fx.upgradeBurst(this.x, this.y, this.z);
+      if (tier === 2) fx.upgradeBurst(gx, gy - 1.6, gz);
     }
     if (age >= LEAP_S && out === 0) {
       this.sparkAcc += dt * (tier === 2 ? 30 : tier === 1 || this.catchNew ? 16 : 5);
@@ -726,6 +743,24 @@ export class FisherViews {
         }
       }
       this.upgradeSeq = lake.upgradeSeq;
+    }
+    // Each fisher's nearest neighbour on screen (a held fish goes up on the other side).
+    for (const v of this.views) {
+      v.neighbourX = null;
+      if (!v.present) continue;
+      this.tv.set(v.x, v.y + 1.5, v.z).project(camera);
+      const ax = this.tv.x;
+      const ay = this.tv.y;
+      let best = 0.45;
+      for (const o of this.views) {
+        if (o === v || !o.present) continue;
+        this.tv.set(o.x, o.y + 1.5, o.z).project(camera);
+        const d = Math.hypot(this.tv.x - ax, (this.tv.y - ay) * 0.6);
+        if (d < best) {
+          best = d;
+          v.neighbourX = this.tv.x;
+        }
+      }
     }
     let ci = 0;
     for (let i = 0; i < 4; i++) {

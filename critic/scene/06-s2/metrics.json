@@ -1,0 +1,76 @@
+{
+  "round": "06-s2",
+  "shots": [
+    {
+      "label": "night-tarn",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 58,
+      "programs": 59,
+      "calls": 334,
+      "triangles": 2787716,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 74
+    },
+    {
+      "label": "double-catch",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 58,
+      "programs": 58,
+      "calls": 428,
+      "triangles": 3073983,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 120
+    },
+    {
+      "label": "four-reel",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 58,
+      "programs": 58,
+      "calls": 493,
+      "triangles": 3170169,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 115
+    }
+  ],
+  "soaks": {
+    "four-reel": {
+      "programsBefore": 58,
+      "programsAfter": 58,
+      "p50": 8.100000381469727,
+      "p95": 10.899999618530273,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 2326
+    },
+    "tower": {
+      "programsBefore": 58,
+      "programsAfter": 58,
+      "p50": 7.900000095367432,
+      "p95": 10.899999618530273,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 2640
+    },
+    "boarding": {
+      "programsBefore": 56,
+      "programsAfter": 56,
+      "p50": 7.099999904632568,
+      "p95": 10.100000381469727,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 2896
+    }
+  },
+  "soak": {
+    "programsBefore": 58,
+    "programsAfter": 58,
+    "p50": 8.100000381469727,
+    "p95": 10.899999618530273,
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+    "frames": 2326
+  },
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}

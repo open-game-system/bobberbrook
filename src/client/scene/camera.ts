@@ -298,11 +298,13 @@ export class CameraRig {
     if (catchAt && this.catchW > 0.001) {
       // Close in on a lone catcher; with others spread round the water, a gentler push that keeps
       // everyone in frame (toward the catcher a little, a little closer and lower).
+      // A spread family still gets a real push-in (the catcher and their fish fill the middle of the
+      // frame for the moment; the others come back as it eases out).
       const tight = this.wantDist < 24;
-      const w = this.catchW * (tight ? 0.8 : 0.32);
-      this.wantTarget.lerp(this.tmp.set(catchAt.x, catchAt.y, catchAt.z), w);
-      this.wantDist += ((tight ? Math.min(this.wantDist, 14) : this.wantDist * 0.8) - this.wantDist) * (tight ? w : this.catchW);
-      this.wantEl += (0.4 - this.wantEl) * this.catchW * 0.8;
+      const w = this.catchW * (tight ? 0.8 : 0.62);
+      this.wantTarget.lerp(this.tmp.set(catchAt.x, catchAt.y + 1.2, catchAt.z), w);
+      this.wantDist += ((tight ? Math.min(this.wantDist, 14) : Math.max(17, this.wantDist * 0.58)) - this.wantDist) * (tight ? w : this.catchW);
+      this.wantEl += (0.36 - this.wantEl) * this.catchW * 0.8;
     }
     // The discovery reveal: up and out over the new place for ~2.5 s (a catch push-in wins).
     let rw = 0;
@@ -339,7 +341,8 @@ export class CameraRig {
     // Two stages: the goal is low-passed (no sudden goal jumps), then a critically damped spring follows
     // it (continuous velocity and acceleration: no jerk, no overshoot).
     const intro = Math.min(1, Math.max(0, (t - this.startT) / INTRO_S));
-    const r = rate * this.rateK * (0.25 + 0.75 * intro * intro);
+    // A catch push-in arrives while the fish is still up (the hold is only ~2.4 s).
+    const r = rate * this.rateK * (0.25 + 0.75 * intro * intro) * (1 + this.catchW * 1.3);
     const k1 = damp(r * 2.2, dt);
     this.goalTarget.lerp(this.wantTarget, k1);
     this.goalDist += (this.wantDist - this.goalDist) * k1;
