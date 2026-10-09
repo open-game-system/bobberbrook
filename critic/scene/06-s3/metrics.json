@@ -1,0 +1,97 @@
+{
+  "round": "06-s3",
+  "shots": [
+    {
+      "label": "far-place",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 57,
+      "programs": 57,
+      "calls": 420,
+      "triangles": 2178126,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 75
+    },
+    {
+      "label": "biome-ember",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 59,
+      "programs": 59,
+      "calls": 443,
+      "triangles": 2820755,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 99
+    },
+    {
+      "label": "fog",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 59,
+      "programs": 59,
+      "calls": 293,
+      "triangles": 2569633,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 77
+    },
+    {
+      "label": "boat-ride",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 56,
+      "programs": 57,
+      "calls": 341,
+      "triangles": 1234136,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 115
+    },
+    {
+      "label": "zeppelin-ride",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 57,
+      "programs": 57,
+      "calls": 256,
+      "triangles": 1247660,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 163
+    },
+    {
+      "label": "arrival",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 57,
+      "programs": 57,
+      "calls": 474,
+      "triangles": 3011912,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 103
+    },
+    {
+      "label": "mistmarsh",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 59,
+      "programs": 59,
+      "calls": 536,
+      "triangles": 3848710,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 60
+    },
+    {
+      "label": "hollow",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 59,
+      "programs": 59,
+      "calls": 425,
+      "triangles": 2946513,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 112
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}

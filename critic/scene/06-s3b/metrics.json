@@ -1,0 +1,42 @@
+{
+  "round": "06-s3b",
+  "shots": [
+    {
+      "label": "fog",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 59,
+      "programs": 59,
+      "calls": 293,
+      "triangles": 2570533,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 77
+    },
+    {
+      "label": "boat-ride",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 56,
+      "programs": 57,
+      "calls": 343,
+      "triangles": 1269154,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 116
+    },
+    {
+      "label": "zeppelin-ride",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 57,
+      "programs": 57,
+      "calls": 254,
+      "triangles": 1207760,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 163
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}

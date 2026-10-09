@@ -45,6 +45,40 @@ void main() {
 }`,
 };
 
+/**
+ * Highlights roll off before bloom: a soft knee on each pixel's brightest channel (hue kept), so a
+ * screen full of glowing caps, lanterns and mist can glow but never bloom the TV to white.
+ */
+const KneeShader = {
+  name: "BobberKnee",
+  uniforms: {
+    tDiffuse: { value: null },
+    uKnee: { value: 0.85 },
+    uMax: { value: 1.45 },
+  },
+  vertexShader: /* glsl */ `
+varying vec2 vUv;
+void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: /* glsl */ `
+uniform sampler2D tDiffuse;
+uniform float uKnee;
+uniform float uMax;
+varying vec2 vUv;
+void main() {
+  vec4 t = texture2D(tDiffuse, vUv);
+  vec3 c = t.rgb;
+  if (any(isnan(c)) || any(isinf(c))) c = vec3(0.0);
+  c = max(c, vec3(0.0));
+  float m = max(c.r, max(c.g, c.b));
+  if (m > uKnee) {
+    float r = uMax - uKnee;
+    float mm = uKnee + r * (1.0 - exp(-(m - uKnee) / r));
+    c *= mm / m;
+  }
+  gl_FragColor = vec4(c, t.a);
+}`,
+};
+
 export type Post = {
   composer: EffectComposer;
   bloom: UnrealBloomPass;
@@ -60,6 +94,7 @@ export function buildPost(renderer: WebGLRenderer, scene: Scene, camera: Camera,
   const target = new WebGLRenderTarget(w, h, { type: HalfFloatType, samples: 4 });
   const composer = new EffectComposer(renderer, target);
   composer.addPass(new RenderPass(scene, camera));
+  composer.addPass(new ShaderPass(KneeShader));
   const bloom = new UnrealBloomPass(new Vector2(w / 2, h / 2), 0.38, 0.5, 1.0);
   composer.addPass(bloom);
   const grade = new ShaderPass(GradeShader);

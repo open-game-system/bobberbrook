@@ -444,10 +444,11 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     while (fi < MAX_FOCUS) foc[fi++]!.set(0, -100, 0);
     // The action's screen box and how far away its nearest fisher is (see occluderMaterial).
     camera.updateMatrixWorld();
-    let bx0 = 1, by0 = 1, bx1 = 0, by1 = 0, near = Infinity;
+    let bx0 = 1, by0 = 1, bx1 = 0, by1 = 0, near = Infinity, far = 0, farDist = 0;
     const boxPt = (x: number, y: number, z: number) => {
       tmpO.set(x, y, z).applyMatrix4(camera.matrixWorldInverse);
       near = Math.min(near, -tmpO.z);
+      far = Math.max(far, -tmpO.z);
       tmpO.applyMatrix4(camera.projectionMatrix);
       const sx = tmpO.x * 0.5 + 0.5;
       const sy = tmpO.y * 0.5 + 0.5;
@@ -455,6 +456,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     };
     fishers.forEachSeat((seat, x, y, z) => {
       if (!framed.has(seat)) return;
+      farDist = Math.max(farDist, camera.position.distanceTo(tmpO.set(x, y, z)));
       boxPt(x, y, z);
       boxPt(x, y + 3.2, z);
     });
@@ -470,8 +472,8 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       occ.uNear.value = near - 1.5;
     } else occ.uNear.value = 0;
     occ.uVP.value.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
-    mist.update(tod, t, veilOf, occ.uNear.value);
-    fow.update(tod, t, dt, rig.focus.x, rig.focus.z, lake ? lake.revealed : null, lake ? lake.discovered : [], camera.position.x, camera.position.z);
+    mist.update(tod, t, veilOf, near < Infinity ? far + 1.5 : 0);
+    fow.update(tod, t, dt, rig.focus.x, rig.focus.z, lake ? lake.revealed : null, lake ? lake.discovered : [], camera.position.x, camera.position.z, farDist);
     stream(rig.focus.x, rig.focus.z, streamBudget);
     renderer.info.reset();
     if (post) post.render();

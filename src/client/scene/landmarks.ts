@@ -528,6 +528,9 @@ const GLOW_BASE: Record<LandmarkStyle, [number, number]> = {
   tarn: [0.9, 1.9],
 };
 
+/** No landmark glows brighter than this (vertex colours x this; the post knee rolls off the rest). */
+const GLOW_CAP = 1.9;
+
 export type LandmarkStyle = Exclude<AreaId, "moonwell"> | "willow" | "crystal" | "ember" | "frost";
 
 export function buildLandmark(a: PondPlace, style: LandmarkStyle, seed: number, full: boolean, painted: Material, tree: Material, landmark: LandmarkKind | null = null): Landmark {
@@ -556,7 +559,9 @@ export function buildLandmark(a: PondPlace, style: LandmarkStyle, seed: number, 
   return {
     group,
     update(tod, time, pulse) {
-      glowMat.color.setScalar((lo + (hi - lo) * tod.glow) * (1 + pulse * (1.2 + 0.4 * Math.sin(time * 6))));
+      // The discovery pulse brightens the glow a little and never past the cap (a 2.6x pulse on the
+      // Hollow's giant caps bloomed the whole TV to white, round 05).
+      glowMat.color.setScalar(Math.min(GLOW_CAP, (lo + (hi - lo) * tod.glow) * (1 + pulse * (0.3 + 0.1 * Math.sin(time * 6)))));
       for (const f of c.flows) {
         f.uniforms.uTime!.value = time;
         (f.uniforms.uDeep!.value as Color).copy(tod.waterShallow).multiplyScalar(0.9);

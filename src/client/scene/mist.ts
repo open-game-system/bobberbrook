@@ -33,8 +33,8 @@ void main() {
   c.z += cos(uTime * 0.05 + aSeed * 4.0) * 1.2;
   c.y += sin(uTime * 0.2 + aSeed * 9.0) * 0.15;
   vec4 mvPosition = viewMatrix * vec4(c, 1.0);
-  // A card in front of the family thins out, so the mist hides the place, never the fishers.
-  if (uNear > 0.0) vAlpha *= 0.15 + 0.85 * smoothstep(uNear - 2.0, uNear + 6.0, -mvPosition.z);
+  // A card in front of any fisher (up to the farthest one) is gone, so the mist hides the place, never a fisher.
+  if (uNear > 0.0) vAlpha *= smoothstep(uNear, uNear + 6.0, -mvPosition.z);
   mvPosition.xy += position.xy * s;
   gl_Position = projectionMatrix * mvPosition;
   #include <fog_vertex>
