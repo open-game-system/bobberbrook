@@ -105,6 +105,49 @@ const DIRS: readonly Cell[] = [
 
 const sameCell = (a: Cell, b: Cell) => a.i === b.i && a.j === b.j;
 
+/** Next-door cells (no diagonals). */
+export const adjacent = (a: Cell, b: Cell) => Math.abs(a.i - b.i) + Math.abs(a.j - b.j) === 1;
+
+/** The pair {x, y} is the pair {a, b}, either way round. */
+export const samePair = (x: string, y: string, a: string, b: string) => (x === a && y === b) || (x === b && y === a);
+
+/** Whether a trail joins two neighbouring cells when either is in the home valley: hand-made trails, or the home exits. */
+export function homeLinked(ka: string, kb: string): boolean {
+  const ha = HOME_CELLS[ka];
+  const hb = HOME_CELLS[kb];
+  if (ha !== undefined && hb !== undefined) return TRAILS.some((t) => samePair(t.joins[0], t.joins[1], ha, hb));
+  return HOME_EXITS.some(([x, y]) => samePair(x, y, ka, kb));
+}
+
+/** Whether a trail joins two neighbouring generated land cells: always toward home, else by the seed (55%). */
+export function wildLinked(seed: number, a: Cell, b: Cell): boolean {
+  if (pointsAt(inwardNeighbour(seed, a), b) || pointsAt(inwardNeighbour(seed, b), a)) return true;
+  const [lo, hi] = cellKey(a) < cellKey(b) ? [a, b] : [b, a];
+  return h(seed, 51, lo.i, lo.j, hi.i, hi.j) < 0.55;
+}
+
+const pointsAt = (n: Cell | null, c: Cell) => (n ? sameCell(n, c) : false);
+
+/** The first land cell 2–6 cells out across the sea from `c` in direction `d` (null if it is all sea). */
+export function farShore(seed: number, c: Cell, d: Cell): Cell | null {
+  for (let k = 2; k <= 6; k++) {
+    const far = { i: c.i + d.i * k, j: c.j + d.j * k };
+    if (!isSea(seed, far)) return far;
+  }
+  return null;
+}
+
+/** Walks predecessors back from `to` to `from`; [] when `to` was never reached. */
+export function tracePath(prev: ReadonlyMap<string, Cell>, from: Cell, to: Cell): Cell[] {
+  const path: Cell[] = [to];
+  while (!sameCell(path[0]!, from)) {
+    const p = prev.get(cellKey(path[0]!));
+    if (!p) return [];
+    path.unshift(p);
+  }
+  return path;
+}
+
 export type World = {
   seed: number;
   /** Where a place's zeppelin tower stands (only tower places have one). */
@@ -182,20 +225,11 @@ export function createWorld(seed: number): World {
   }
 
   function linked(a: Cell, b: Cell): boolean {
+    if (!adjacent(a, b) || !placeAt(a) || !placeAt(b)) return false;
     const ka = cellKey(a);
     const kb = cellKey(b);
-    if (Math.abs(a.i - b.i) + Math.abs(a.j - b.j) !== 1) return false;
-    if (!placeAt(a) || !placeAt(b)) return false;
-    const homeA = HOME_CELLS[ka] !== undefined;
-    const homeB = HOME_CELLS[kb] !== undefined;
-    if (homeA && homeB) return TRAILS.some((t) => (t.joins[0] === HOME_CELLS[ka] && t.joins[1] === HOME_CELLS[kb]) || (t.joins[0] === HOME_CELLS[kb] && t.joins[1] === HOME_CELLS[ka]));
-    if (homeA || homeB) return HOME_EXITS.some(([x, y]) => (x === ka && y === kb) || (x === kb && y === ka));
-    const inA = inwardNeighbour(seed, a);
-    const inB = inwardNeighbour(seed, b);
-    if ((inA && sameCell(inA, b)) || (inB && sameCell(inB, a))) return true;
-    const lo = ka < kb ? a : b;
-    const hi = ka < kb ? b : a;
-    return h(seed, 51, lo.i, lo.j, hi.i, hi.j) < 0.55;
+    if (HOME_CELLS[ka] !== undefined || HOME_CELLS[kb] !== undefined) return homeLinked(ka, kb);
+    return wildLinked(seed, a, b);
   }
 
   /** Trails leaving a cell's place (to linked neighbours), as segments from clearing edge to clearing edge. */
@@ -292,13 +326,18 @@ export function createWorld(seed: number): World {
     while (left > 1e-9) {
       const step = Math.min(0.05, left);
       left -= step;
-      const ahead = { x: p.x + vel.x * step, z: p.z + vel.z * step };
-      const heads = walkable(ahead) ? [vel] : hitsObstacle(ahead) ? STEER_HEADINGS.map((a) => turned(vel, a)) : [{ x: vel.x, z: 0 }, { x: 0, z: vel.z }];
-      const next = heads.map((v) => ({ x: p.x + v.x * step, z: p.z + v.z * step })).find(walkable);
+      const next = stepOnce(p, vel, step);
       if (!next) break;
       p = next;
     }
     return p;
+  }
+
+  /** One small step: straight on if walkable; else steer round a rock, or slide along an edge; undefined when stuck. */
+  function stepOnce(p: Vec, vel: Vec, step: number): Vec | undefined {
+    const ahead = { x: p.x + vel.x * step, z: p.z + vel.z * step };
+    const heads = walkable(ahead) ? [vel] : hitsObstacle(ahead) ? STEER_HEADINGS.map((a) => turned(vel, a)) : [{ x: vel.x, z: 0 }, { x: 0, z: vel.z }];
+    return heads.map((v) => ({ x: p.x + v.x * step, z: p.z + v.z * step })).find(walkable);
   }
 
   function areaAt(p: Vec): Place | null {
@@ -345,42 +384,51 @@ export function createWorld(seed: number): World {
 
   /** Places to walk through, by trail, from one cell to another (breadth-first, at most `limit` cells searched). */
   function routeCells(from: Cell, to: Cell, limit = 400): Cell[] {
+    return tracePath(searchCells(from, to, limit), from, to);
+  }
+
+  /** Breadth-first over linked cells from `from` until `to` or `limit` cells seen: each reached cell's predecessor. */
+  function searchCells(from: Cell, to: Cell, limit: number): Map<string, Cell> {
     const prev = new Map<string, Cell>();
     const seen = new Set<string>([cellKey(from)]);
     const queue: Cell[] = [from];
     while (queue.length > 0 && seen.size < limit) {
       const at = queue.shift()!;
       if (sameCell(at, to)) break;
-      for (const d of DIRS) {
-        const n = { i: at.i + d.i, j: at.j + d.j };
-        const k = cellKey(n);
-        if (seen.has(k) || !linked(at, n)) continue;
-        seen.add(k);
-        prev.set(k, at);
-        queue.push(n);
-      }
+      expandCell(at, seen, prev, queue);
     }
-    const path: Cell[] = [to];
-    while (!sameCell(path[0]!, from)) {
-      const p = prev.get(cellKey(path[0]!));
-      if (!p) return [];
-      path.unshift(p);
+    return prev;
+  }
+
+  function expandCell(at: Cell, seen: Set<string>, prev: Map<string, Cell>, queue: Cell[]): void {
+    for (const d of DIRS) {
+      const n = { i: at.i + d.i, j: at.j + d.j };
+      const k = cellKey(n);
+      if (seen.has(k) || !linked(at, n)) continue;
+      seen.add(k);
+      prev.set(k, at);
+      queue.push(n);
     }
-    return path;
   }
 
   function navNext(from: Vec, to: Vec): Vec {
     const here = areaAt(from);
     const there = areaAt(to);
     if (!there || (here && here.key === there.key)) return roundThePond(from, to);
-    if (!here) {
-      // On a trail: walk to the end nearer the target.
-      const t = trailsNear(from, 1).find((tr) => segmentDistance(from, tr.from, tr.to) <= 4);
-      if (!t) return to;
-      return distance(t.from, to) < distance(t.to, to) ? t.from : t.to;
-    }
-    const path = routeCells(here.cell, there.cell);
-    const next = path[1];
+    if (!here) return trailEndToward(from, to);
+    return byTrail(here, there, from, to);
+  }
+
+  /** On a trail: walk to the end nearer the target. */
+  function trailEndToward(from: Vec, to: Vec): Vec {
+    const t = trailsNear(from, 1).find((tr) => segmentDistance(from, tr.from, tr.to) <= 4);
+    if (!t) return to;
+    return distance(t.from, to) < distance(t.to, to) ? t.from : t.to;
+  }
+
+  /** In one place, bound for another: round the pond to the trailhead of the first trail on the way, then down it. */
+  function byTrail(here: Place, there: Place, from: Vec, to: Vec): Vec {
+    const next = routeCells(here.cell, there.cell)[1];
     if (!next) return roundThePond(from, to);
     const t = trailsOf(here.cell).find((tr) => tr.b === cellKey(next));
     if (!t) return to;
@@ -394,21 +442,20 @@ export function createWorld(seed: number): World {
   /** A boat crossing from a land cell over open water in one direction, to the first land on the far side. */
   function boatFrom(c: Cell, d: Cell): Platform | null {
     const here = placeAt(c);
-    const first = { i: c.i + d.i, j: c.j + d.j };
-    if (!here || !isSea(seed, first)) return null;
-    for (let k = 2; k <= 6; k++) {
-      const far = { i: c.i + d.i * k, j: c.j + d.j * k };
-      if (isSea(seed, far)) continue;
-      const there = placeAt(far);
-      if (!there) return null;
-      const lo = cellKey(c) < cellKey(far) ? c : far;
-      const hi = cellKey(c) < cellKey(far) ? far : c;
-      if (h(seed, 61, lo.i, lo.j, hi.i, hi.j) > 0.7) return null;
-      const at = dockPoint(here, d);
-      const to = dockPoint(there, { i: -d.i, j: -d.j });
-      return { id: `boat:${cellKey(c)}>${cellKey(far)}`, kind: "boat", place: here.key, at, to, toPlace: there.key, path: [at, to] };
-    }
-    return null;
+    if (!here || !isSea(seed, { i: c.i + d.i, j: c.j + d.j })) return null;
+    const far = farShore(seed, c, d);
+    return far ? boatTo(here, c, far, d) : null;
+  }
+
+  /** The boat from `here` (cell `c`) to the far shore's cell, unless there is no place there or the route isn't run. */
+  function boatTo(here: Place, c: Cell, far: Cell, d: Cell): Platform | null {
+    const there = placeAt(far);
+    if (!there) return null;
+    const [lo, hi] = cellKey(c) < cellKey(far) ? [c, far] : [far, c];
+    if (h(seed, 61, lo.i, lo.j, hi.i, hi.j) > 0.7) return null;
+    const at = dockPoint(here, d);
+    const to = dockPoint(there, { i: -d.i, j: -d.j });
+    return { id: `boat:${cellKey(c)}>${cellKey(far)}`, kind: "boat", place: here.key, at, to, toPlace: there.key, path: [at, to] };
   }
 
   /** Where a dock or zeppelin mooring stands: on the clearing's edge, facing a direction. */
