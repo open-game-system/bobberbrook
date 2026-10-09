@@ -2,7 +2,7 @@ import { BufferAttribute, BufferGeometry, Color, Group, Mesh, type Material } fr
 import { NORTH, lakeRadius } from "../../game/world";
 import { fbm, smoothstep, lerp, vnoise } from "./noise";
 import { LOOKS, lookOf, newOpenInfo, newPondInfo, openAt, placeWeights, pondAt, type Weighted } from "./valley";
-import { seaDist, trailsAround } from "./worldQuery";
+import { dockDist, seaDist, towerDist, trailsAround } from "./worldQuery";
 import type { Jobs } from "./stream";
 
 /** The falls: a cliff on the north shore, a brook from its foot across the land ring into the lake. */
@@ -91,10 +91,20 @@ const W: Weighted[] = [];
 const BEACH = C(0xc8bcc8);
 const SEABED = C(0x5a8a9a);
 
-export function groundColor(x: number, z: number, y: number, slope: number, out: Color, sea: number): void {
+/** Which painted surface the ground shows at a point (0..1 each): moss, worn path, rock, lakebed. */
+export type Surf = { moss: number; path: number; rock: number; bed: number };
+const NO_SURF: Surf = { moss: 0, path: 0, rock: 0, bed: 0 };
+
+export function groundColor(x: number, z: number, y: number, slope: number, out: Color, sea: number, surf: Surf = NO_SURF): void {
+  surf.moss = 0;
+  surf.path = 0;
+  surf.rock = 0;
+  surf.bed = 0;
   if (sea < 6) {
     // The coast: pale sand at the waterline, a teal sea bed under it.
     if (sea < 0) {
+      surf.bed = smoothstep(0, 2, -sea);
+      surf.path = 1 - surf.bed;
       out.copy(BEACH).lerp(SEABED, smoothstep(0, 4, -sea)).multiplyScalar(0.9 + 0.2 * vnoise(x * 0.5, z * 0.5, 6));
       return;
     }
@@ -102,6 +112,8 @@ export function groundColor(x: number, z: number, y: number, slope: number, out:
   const pond = pondAt(x, z, PI);
   const d = pond.d;
   if (d < 0) {
+    surf.bed = smoothstep(0, 0.6, -d);
+    surf.path = 1 - surf.bed;
     out.copy(BED).lerp(BED_DEEP, smoothstep(0, 3, -d));
     out.multiplyScalar(0.9 + 0.2 * vnoise(x * 0.8, z * 0.8, 5));
     return;
@@ -126,15 +138,19 @@ export function groundColor(x: number, z: number, y: number, slope: number, out:
   out.copy(ga).lerp(gb, smoothstep(0.35, 0.65, n1));
   // Violet moss drifts: soft-edged and broken up by finer noise, never a solid slab (round 02).
   const n3 = vnoise(x * 0.23, z * 0.23, 23);
-  out.lerp(gc, smoothstep(0.58, 0.9, n1 * 0.75 + n3 * 0.25 + n2 * 0.08) * 0.38);
+  const drift = smoothstep(0.58, 0.9, n1 * 0.75 + n3 * 0.25 + n2 * 0.08);
+  out.lerp(gc, drift * 0.38);
   out.multiplyScalar(0.92 + 0.16 * n2);
   const { o, cliff } = openAt(x, z, OI);
   // The forest floor darkens away from the open ground.
   out.lerp(GRASS_FAR, smoothstep(2, 40, o) * 0.55);
+  // Moss in the drifts and on the forest floor under the trees.
+  surf.moss = Math.max(drift * 0.9, smoothstep(1, 14, o) * (0.6 + 0.4 * n3));
   // Sandy bank with a wet line at the water.
   const sand = 1 - smoothstep(0.5, 1.5 + 0.8 * n2, d);
   tmp.copy(WET).lerp(SAND, smoothstep(0, 0.45, d));
   out.lerp(tmp, sand);
+  surf.path = sand;
   // Moonwell's path loop round the lake (not over the cliff) and the lane to the cottages.
   let path = 0;
   if (pond.area?.id === "moonwell") {
@@ -146,10 +162,18 @@ export function groundColor(x: number, z: number, y: number, slope: number, out:
   }
   // Forest trails: worn earth that runs on into each clearing and fades before the shore.
   path = Math.max(path, trailWear(x, z) * smoothstep(1.5, 5, d));
+  // Trodden ground round the zeppelin towers and at the land end of the boat docks.
+  const worn = Math.max(1 - smoothstep(7, 11 + 3 * n2, towerDist(x, z, heightAt)), (1 - smoothstep(2.5, 6 + 2 * n2, dockDist(x, z))) * smoothstep(0.4, 1.8, d));
+  path = Math.max(path, worn * 0.85);
   if (path > 0) out.lerp(tmp.copy(DIRT).multiplyScalar(0.92 + 0.15 * n2), Math.max(0, Math.min(1, path)) * 0.9);
-  if (sea < 3) out.lerp(BEACH, (1 - smoothstep(0.5, 3, sea)) * 0.85);
+  surf.path = Math.max(surf.path, Math.min(1, path));
+  if (sea < 3) {
+    out.lerp(BEACH, (1 - smoothstep(0.5, 3, sea)) * 0.85);
+    surf.path = Math.max(surf.path, 1 - smoothstep(0.5, 3, sea));
+  }
   // Rock on steep faces, moss on top.
   const rock = smoothstep(0.55, 0.85, slope);
+  surf.rock = rock;
   if (rock > 0) {
     tmp.copy(ROCK).lerp(ROCK_DARK, vnoise(x * 0.6, y * 1.4, 9));
     out.lerp(tmp, rock);
@@ -199,6 +223,8 @@ function* chunkJob(ci: number, cj: number, step: number, mat: Material, seaMat: 
   const pos = new Float32Array((V + skirt) * 3);
   const col = new Float32Array((V + skirt) * 3);
   const nor = new Float32Array((V + skirt) * 3);
+  const srf = new Float32Array((V + skirt) * 4);
+  const su: Surf = { moss: 0, path: 0, rock: 0, bed: 0 };
   const c = new Color();
   let anySea = false;
   for (let j = 0; j <= n; j++) {
@@ -219,7 +245,12 @@ function* chunkJob(ci: number, cj: number, step: number, mat: Material, seaMat: 
       nor[k + 2] = -gz / len;
       const sea = S[g]!;
       if (sea < 1.5) anySea = true;
-      groundColor(x, z, y, (1 - 1 / len) * 1.6, c, sea);
+      groundColor(x, z, y, (1 - 1 / len) * 1.6, c, sea, su);
+      const q = (j * (n + 1) + i) * 4;
+      srf[q] = su.moss;
+      srf[q + 1] = su.path;
+      srf[q + 2] = su.rock;
+      srf[q + 3] = su.bed;
       col[k] = c.r;
       col[k + 1] = c.g;
       col[k + 2] = c.b;
@@ -256,6 +287,7 @@ function* chunkJob(ci: number, cj: number, step: number, mat: Material, seaMat: 
         col[sv * 3 + q] = col[v * 3 + q]!;
         nor[sv * 3 + q] = nor[v * 3 + q]!;
       }
+      for (let q = 0; q < 4; q++) srf[sv * 4 + q] = srf[v * 4 + q]!;
       sv++;
     }
     for (let t = 0; t < n; t++) {
@@ -272,6 +304,7 @@ function* chunkJob(ci: number, cj: number, step: number, mat: Material, seaMat: 
   g.setAttribute("position", new BufferAttribute(pos, 3));
   g.setAttribute("color", new BufferAttribute(col, 3));
   g.setAttribute("normal", new BufferAttribute(nor, 3));
+  g.setAttribute("aSurf", new BufferAttribute(srf, 4));
   g.setIndex(idx);
   g.computeBoundingSphere();
   const ground = new Mesh(g, mat);

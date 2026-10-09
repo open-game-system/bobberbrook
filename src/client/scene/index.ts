@@ -31,6 +31,8 @@ import { buildProps } from "./props";
 import { buildSky } from "./sky";
 import { SwirlViews } from "./swirls";
 import { buildGroundStream } from "./terrain";
+import { loadPaintKit } from "./paintkit";
+import { groundMaterial } from "./groundmat";
 import { placeHash } from "./valley";
 import { buildEscape } from "./escape";
 import { newTodState, rideTwilight, sampleTod } from "./tod";
@@ -115,7 +117,7 @@ function swayMaterial(time: { value: number }): MeshLambertMaterial {
   return m;
 }
 
-export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality: SceneQuality; assetBase?: string }): Promise<LakeScene> {
+export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality: SceneQuality; assetBase?: string; textureBase?: string }): Promise<LakeScene> {
   patchLambertWrap();
   const full = opts.quality === "full";
   const renderer = new WebGLRenderer({ canvas, antialias: !full, powerPreference: "high-performance", alpha: false });
@@ -159,7 +161,8 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   const sky = buildSky();
   scene.add(sky.dome, sky.mountains);
   const jobs = createJobs();
-  const groundMat = new MeshLambertMaterial({ vertexColors: true });
+  const kit = await loadPaintKit(opts.textureBase ?? "/art/textures/");
+  const groundMat = groundMaterial(kit);
   const water = buildWater();
   const ground = buildGroundStream(groundMat, water.sea, jobs, full);
   scene.add(ground.group);
@@ -667,6 +670,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       painted.dispose();
       paintedDouble.dispose();
       groundMat.dispose();
+      kit.dispose();
       water.dispose();
       rays.dispose();
       props.dispose();
