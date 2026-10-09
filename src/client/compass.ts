@@ -85,8 +85,19 @@ export function nearestRide(platforms: Pick<Platform, "at" | "kind" | "toPlace">
 export function compassTo(lake: Lake, from: Vec, mySeat?: number): Compass | null {
   const back = backToFamily(lake, from, mySeat);
   if (back) return back;
-  const goal = compassGoal(lake, from);
+  const goal = sharedGoal(lake, from);
   return goal ? arrowTo(lake, from, goal) : null;
+}
+
+/**
+ * The family's one goal: chosen from the middle of everyone, so every device's arrow leads to the same
+ * place (round 09: Dad's and Juneau's arrows pointed opposite ways). Fishing alone: from `from`.
+ */
+export function sharedGoal(lake: Lake, from: Vec): Goal | null {
+  const n = lake.fishers.length;
+  if (n < 2) return compassGoal(lake, from);
+  const middle = { x: lake.fishers.reduce((a, f) => a + f.pos.x, 0) / n, z: lake.fishers.reduce((a, f) => a + f.pos.z, 0) / n };
+  return compassGoal(lake, middle);
 }
 
 /** Gone too far ahead: point back to the family (they're on their way). */

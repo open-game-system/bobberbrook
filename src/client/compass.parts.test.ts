@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { newLake } from "../game/lake";
+import { join, newLake } from "../game/lake";
 import { areaById, castRingIn, type AreaId } from "../game/world";
 import { worldFor } from "../game/regions";
-import { compassGoal, compassShown, compassTo, nearestRide, nearestSwirl, nearestUnfound, shoreFor } from "./compass";
+import { compassGoal, compassShown, compassTo, sharedGoal, nearestRide, nearestSwirl, nearestUnfound, shoreFor } from "./compass";
 
 const swirl = (id: number, area: AreaId, theta: number) => ({ id, area, pos: castRingIn(areaById(area), theta), theta, golden: false, since: 0, until: 1e9, catches: 0 });
 
@@ -97,5 +97,14 @@ describe("compassShown", () => {
   it("no goal, or busy fishing: nothing", () => {
     expect(compassShown("walk-to-water", null)).toBeNull();
     expect(compassShown("waiting", c)).toBeNull();
+  });
+});
+
+describe("one shared goal for the family", () => {
+  it("Dad and Juneau far apart get the same goal (their arrows lead to one place)", () => {
+    let lake = join(join(newLake(1, 0), { name: "Dad", ogsId: null }).lake, { name: "J", ogsId: null }).lake;
+    lake = { ...lake, fishers: lake.fishers.map((f) => ({ ...f, pos: f.seat === 0 ? { x: -40, z: 25 } : { x: 10, z: 22 } })) };
+    expect(sharedGoal(lake, { x: -40, z: 25 })).toEqual(sharedGoal(lake, { x: 10, z: 22 }));
+    expect(sharedGoal(lake, { x: -40, z: 25 })).not.toBeNull();
   });
 });
