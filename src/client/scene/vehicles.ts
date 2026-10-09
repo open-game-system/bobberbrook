@@ -6,8 +6,11 @@ import {
   ConeGeometry,
   CylinderGeometry,
   DoubleSide,
+  ExtrudeGeometry,
+  Float32BufferAttribute,
   Group,
   InstancedMesh,
+  LatheGeometry,
   Matrix4,
   Mesh,
   MeshBasicMaterial,
@@ -15,8 +18,10 @@ import {
   PlaneGeometry,
   Quaternion,
   RingGeometry,
+  Shape,
   SphereGeometry,
   TorusGeometry,
+  Vector2,
   Vector3,
   type Material,
 } from "three";
@@ -27,7 +32,7 @@ import { jitter, merge, paint, prep, puffNormals } from "./geo";
 import { rng, vnoise } from "./noise";
 import { SEA_Y, heightAt } from "./terrain";
 import type { TodState } from "./tod";
-import { activeWorld, platformsWithin } from "./worldQuery";
+import { activeWorld, platformsWithin, towersAround } from "./worldQuery";
 
 /**
  * Boats and zeppelins. Every boat route has a wooden dock with a lantern and a moored, painted boat
@@ -40,12 +45,15 @@ import { activeWorld, platformsWithin } from "./worldQuery";
 
 /** Tower platform height (m above its foot). */
 export const TOWER_H = 13;
+void TOWER_H;
 /** How far out from the land end of a dock the boat is moored. */
 const MOOR = 10;
 /** Vehicles are built small and scaled up to carry four chunky fishers. */
 const SIZE = 1.55;
 /** Seconds the vehicle holds (turning, loading) at each end of a ride. */
 const HOLD = 1.6;
+/** How high an airship cruises above its towers (m). */
+const CRUISE = 44;
 /** Seconds the riders take to step aboard / ashore. */
 const STEP = 1.2;
 
@@ -58,6 +66,8 @@ export type Vehicles = {
   rideSeat(seat: number, out: RidePose): boolean;
   /** Focus points for the travelling shot (bow, stern, top), or 0 when there is no ride. */
   rideFocus(out: Vector3[]): number;
+  /** While the family gathers at a mooring: its vehicle's focus points and the way from the mooring to it. */
+  boardFocus(out: Vector3[]): { n: number; ux: number; uz: number; kind: number } | null;
   /** 0 none, 1 boat, 2 zeppelin. */
   riding(): number;
   /** The riding vehicle's heading (atan2(z, x)). */
@@ -133,83 +143,254 @@ function dockGeometry(): { body: BufferGeometry; glow: BufferGeometry } {
   return { body: merge(parts), glow };
 }
 
+/** Envelope radius along its length (t 0 tail .. 1 nose), small units. */
+const ENV_L = 11.5;
+const ENV_R = 2.7;
+const ENV_Y = 5.4;
+function envR(t: number): number {
+  const k = Math.max(0, Math.min(1, t));
+  // A plump teardrop: blunt nose, long tapering tail.
+  return ENV_R * Math.pow(Math.max(0, 4 * k * (1 - k)), 0.5) * (0.82 + 0.18 * k);
+}
+
+function finGeometry(root: number, tip: number, span: number, sweep: number): BufferGeometry {
+  const sh = new Shape();
+  sh.moveTo(0, 0);
+  sh.lineTo(-root, 0);
+  sh.lineTo(-root + sweep - tip * 0.15, span);
+  sh.lineTo(-root + sweep + tip * 0.85, span);
+  sh.closePath();
+  return new ExtrudeGeometry(sh, { depth: 0.14, bevelEnabled: true, bevelSize: 0.05, bevelThickness: 0.05, bevelSegments: 1 }).translate(0, 0, -0.07);
+}
+
 function zeppelinGeometry(): { body: BufferGeometry; prop: BufferGeometry; glow: BufferGeometry } {
-  const env = new SphereGeometry(1, 28, 16).scale(6.4, 2.6, 2.6).translate(0, 5.2, 0);
-  jitter(env, 0.02, 3);
-  env.computeVertexNormals();
-  const envP = paint(prep(env), 0xc06a9a, 0xf0a8c8, (p, _n, c) => {
-    // Painted gores: rose and cream bands, a gold belly band.
-    const band = Math.floor((p.x + 6.4) / 1.6) % 2;
-    if (band === 0) c.lerp(new Color(0xfff0e0), 0.55);
-    if (p.y < 3.4 && p.y > 3.0) c.setHex(0xe8b860);
-  });
-  const fins: BufferGeometry[] = [];
-  for (const [ry, rx] of [[0, 0], [0, Math.PI / 2], [0, Math.PI], [0, -Math.PI / 2]] as const) {
-    const f = new BoxGeometry(1.6, 0.12, 1.5).translate(-0.4, 0, 0.75).rotateX(rx).rotateY(ry).translate(-6.0, 5.2, 0);
-    fins.push(paint(prep(f), 0x5a3a9a, 0x8a6ad0));
+  // The envelope: a lathe along +x with 8 painted gores (rose and cream), stitched seams, gold ribs.
+  const prof: Vector2[] = [];
+  const N = 28;
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    prof.push(new Vector2(Math.max(0.001, envR(t)), -ENV_L / 2 + ENV_L * t));
   }
-  const gondola = paint(prep(new BoxGeometry(4.2, 0.9, 2.2).translate(0, -0.45, 0)), 0x7a4a30, 0xa87a50);
-  const keel = paint(prep(new SphereGeometry(1, 12, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2).scale(2.2, 0.6, 1.15).translate(0, -0.9, 0)), 0x5a3020, 0x7a4a30);
-  const floor = paint(prep(new BoxGeometry(4.0, 0.1, 2.0).translate(0, 0.02, 0)), 0xc89a68);
+  const env = new LatheGeometry(prof, 48).rotateZ(-Math.PI / 2).translate(0, ENV_Y, 0);
+  env.computeVertexNormals();
+  const rose = new Color(0xd86f92);
+  const cream = new Color(0xf8e6cc);
+  const seam = new Color(0x6a2f55);
+  const envP = paint(prep(env), 0xd86f92, 0xd86f92, (p, _n, c) => {
+    const phi = Math.atan2(p.z, p.y - ENV_Y) + Math.PI;
+    const g = (phi / (Math.PI * 2)) * 8;
+    const gore = Math.floor(g + 1e-4) % 2;
+    const f = g - Math.floor(g + 1e-4);
+    c.copy(gore === 0 ? rose : cream);
+    // Light from above, a warmer belly.
+    c.multiplyScalar(0.86 + 0.2 * Math.max(0, (p.y - ENV_Y) / ENV_R));
+    // Stitched seams: dashes along every gore edge.
+    const t = (p.x + ENV_L / 2) / ENV_L;
+    if ((f < 0.02 || f > 0.98) && Math.floor(t * 40) % 2 === 0) c.lerp(seam, 0.65);
+  });
+  const ribs: BufferGeometry[] = [];
+  for (const t of [0.16, 0.34, 0.52, 0.7, 0.86]) {
+    const r = envR(t) + 0.03;
+    ribs.push(paint(prep(new TorusGeometry(r, 0.075, 6, 40).rotateY(Math.PI / 2).translate(-ENV_L / 2 + ENV_L * t, ENV_Y, 0)), 0xb98a3a, 0xf0c870));
+  }
+  // A gold nose cap and a tail cone.
+  ribs.push(paint(prep(new SphereGeometry(0.42, 12, 8).translate(ENV_L / 2 - 0.12, ENV_Y, 0)), 0xd8a848, 0xf8d880));
+  ribs.push(paint(prep(new ConeGeometry(0.3, 0.9, 10).rotateZ(Math.PI / 2).translate(-ENV_L / 2 - 0.2, ENV_Y, 0)), 0xb98a3a));
+  // A spine along the top and a belly keel the gondola hangs from.
+  ribs.push(paint(prep(new BoxGeometry(ENV_L * 0.62, 0.16, 0.5).translate(0.3, ENV_Y - ENV_R + 0.12, 0)), 0x6a4a30, 0x8a6a40));
+  // Tail: a tall fin with a rudder on top and below, elevators either side (violet, gold-edged).
+  const fins: BufferGeometry[] = [];
+  const tailX = -ENV_L / 2 + 2.6;
+  for (let k = 0; k < 4; k++) {
+    const rot = (k * Math.PI) / 2;
+    const span = k % 2 === 0 ? 2.3 : 1.9;
+    const fin = finGeometry(2.6, 1.3, span, 0.6);
+    const root = envR(0.2) - 0.25;
+    const g = fin.translate(0, root, 0).rotateX(rot).translate(tailX, ENV_Y, 0);
+    fins.push(paint(prep(g), 0x4a2f88, 0x8a6ad0));
+    // The rudder / elevator: a hinged flap on the trailing edge, turned a little.
+    const flap = new BoxGeometry(0.8, span * 0.8, 0.12).translate(-0.4, root + span * 0.45, 0).rotateY(k % 2 === 0 ? 0.22 : 0).translate(-2.6, 0, 0).rotateX(rot).translate(tailX, ENV_Y, 0);
+    fins.push(paint(prep(flap), 0xd8a848, 0xf0c870));
+  }
+  // The gondola: a little wooden boat with railings and four lanterns.
+  const hull = paint(prep(new SphereGeometry(1, 20, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2).scale(2.35, 0.8, 1.15)), 0x5a3020, 0x8a5a38, (p, _n, c) => {
+    if (Math.abs(((p.y + 1) * 6) % 1) < 0.12) c.multiplyScalar(0.75);
+    if (p.y > -0.18) c.setHex(0xd8a848);
+  });
+  const floor = paint(prep(new BoxGeometry(4.3, 0.12, 2.15).translate(0, 0.02, 0)), 0xc89a68, 0xd8aa78, (p, _n, c) => {
+    if (Math.abs(((p.x + 3) * 2.4) % 1) < 0.08) c.multiplyScalar(0.82);
+  });
   const rails: BufferGeometry[] = [];
-  for (const z of [-1.05, 1.05]) rails.push(paint(prep(new BoxGeometry(4.2, 0.08, 0.08).translate(0, 0.75, z)), 0x5a3a28));
-  for (const x of [-2.05, 2.05]) rails.push(paint(prep(new BoxGeometry(0.08, 0.08, 2.2).translate(x, 0.75, 0)), 0x5a3a28));
-  for (const x of [-2, -0.7, 0.7, 2]) for (const z of [-1.05, 1.05]) rails.push(paint(prep(new CylinderGeometry(0.04, 0.04, 0.75, 5).translate(x, 0.38, z)), 0x5a3a28));
-  // Ropes up to the envelope.
-  for (const x of [-1.8, 1.8]) for (const z of [-1, 1]) {
-    const top = new Vector3(x * 1.4, 3.2, z * 1.7);
-    const bot = new Vector3(x, 0.75, z);
+  const RX = 2.05;
+  const RZ = 1.02;
+  const RH = 0.78;
+  for (const z of [-RZ, RZ]) rails.push(paint(prep(new CylinderGeometry(0.06, 0.06, RX * 2, 6).rotateZ(Math.PI / 2).translate(0, RH, z)), 0x7a4a28, 0xa87a50));
+  for (const x of [-RX, RX]) rails.push(paint(prep(new CylinderGeometry(0.06, 0.06, RZ * 2, 6).rotateX(Math.PI / 2).translate(x, RH, 0)), 0x7a4a28, 0xa87a50));
+  for (let x = -RX; x <= RX + 1e-3; x += RX / 5) for (const z of [-RZ, RZ]) rails.push(paint(prep(new CylinderGeometry(0.035, 0.035, RH, 5).translate(x, RH / 2, z)), 0x5a3a28));
+  for (let z = -RZ + RZ / 2; z < RZ; z += RZ / 2) for (const x of [-RX, RX]) rails.push(paint(prep(new CylinderGeometry(0.035, 0.035, RH, 5).translate(x, RH / 2, z)), 0x5a3a28));
+  // Lantern posts at the four corners: post, little cage, swept cap.
+  const lamps: [number, number][] = [[RX, RZ], [RX, -RZ], [-RX, RZ], [-RX, -RZ]];
+  for (const [x, z] of lamps) {
+    rails.push(paint(prep(new CylinderGeometry(0.05, 0.06, 1.35, 6).translate(x, 0.68, z)), 0x4a3220));
+    rails.push(paint(prep(new CylinderGeometry(0.2, 0.2, 0.06, 6).translate(x, 1.36, z)), 0x2a2420));
+    rails.push(paint(prep(new ConeGeometry(0.24, 0.26, 6).translate(x, 1.78, z)), 0x4a2f88, 0x8a6ad0));
+  }
+  // Ropes up to the keel.
+  for (const x of [-1.8, 0, 1.8]) for (const z of [-RZ, RZ]) {
+    const top = new Vector3(x * 1.15, ENV_Y - ENV_R + 0.15, z * 0.2);
+    const bot = new Vector3(x, RH, z);
     const len = top.distanceTo(bot);
     const g = along(new CylinderGeometry(0.03, 0.03, len, 4).translate(0, len / 2, 0), top.clone().sub(bot));
-    rails.push(paint(prep(g.translate(bot.x, bot.y, bot.z)), 0xd8c8a0));
+    rails.push(paint(prep(g.translate(bot.x, bot.y, bot.z)), 0xe8d8b0));
   }
-  const engine = paint(prep(new CylinderGeometry(0.35, 0.45, 0.9, 10).rotateZ(Math.PI / 2).translate(-2.55, 0.2, 0)), 0x8a8aa0, 0xb0b0c8);
-  const body = merge([envP, ...fins, gondola, keel, floor, ...rails, engine]);
+  // Engine pods either side with the propellers' hubs (props spin separately).
+  for (const z of [-1.55, 1.55]) {
+    rails.push(paint(prep(new SphereGeometry(0.4, 12, 8).scale(1.5, 1, 1).translate(-1.3, 0.55, z)), 0x8a8aa0, 0xc8c8e0));
+    rails.push(paint(prep(new CylinderGeometry(0.06, 0.06, 0.55, 5).rotateX(Math.PI / 2).translate(-1.3, 0.55, z * 0.82)), 0x4a3220));
+  }
+  const body = merge([envP, ...ribs, ...fins, hull, floor, ...rails]);
   const prop = merge([
-    paint(prep(new BoxGeometry(0.08, 1.7, 0.22)), 0x5a3a28),
-    paint(prep(new BoxGeometry(0.08, 0.22, 1.7)), 0x5a3a28),
+    paint(prep(new BoxGeometry(0.08, 1.5, 0.24)), 0x5a3a28, 0x8a6a40),
+    paint(prep(new BoxGeometry(0.08, 0.24, 1.5)), 0x5a3a28, 0x8a6a40),
     paint(prep(new SphereGeometry(0.14, 8, 6)), 0xe8b860),
   ]);
-  const glow = merge([
-    paint(prep(new SphereGeometry(0.16, 8, 6).translate(2.1, 1.0, 1.05)), 0xffc070),
-    paint(prep(new SphereGeometry(0.16, 8, 6).translate(2.1, 1.0, -1.05)), 0xffc070),
-    paint(prep(new SphereGeometry(0.14, 8, 6).translate(-2.1, 1.0, 1.05)), 0xffd890),
-    paint(prep(new SphereGeometry(0.14, 8, 6).translate(-2.1, 1.0, -1.05)), 0xffd890),
-  ]);
+  const glow = merge(lamps.map(([x, z]) => paint(prep(new SphereGeometry(0.17, 10, 8).translate(x, 1.52, z)), 0xffc070)));
   return { body, prop, glow };
+}
+
+/** The landing platform: deck height, deck radius, and the steps' outer radius (metres). */
+export const DECK_H = 2.4;
+export const DECK_R = 5.9;
+const STEPS_R = 7.3;
+/** Where a moored airship hangs: its centre this far out from the tower, gondola floor at deck height. */
+const ZEP_OUT = 11;
+
+/** The ground a walker stands on round a zeppelin tower (the deck, its steps), or -Infinity off it. */
+export function towerDeckY(x: number, z: number): number {
+  let y = -Infinity;
+  for (const t of towersAround(x, z, heightAt)) {
+    const r = Math.hypot(x - t.x, z - t.z);
+    if (r >= STEPS_R) continue;
+    const k = r <= DECK_R ? 1 : (STEPS_R - r) / (STEPS_R - DECK_R);
+    y = Math.max(y, t.y + DECK_H * k);
+  }
+  return y;
 }
 
 function towerGeometry(): { body: BufferGeometry; glow: BufferGeometry } {
   const parts: BufferGeometry[] = [];
-  const H = TOWER_H;
-  // Four splayed log legs, braced in X's, a round landing platform with a rail and a lantern mast.
-  for (let k = 0; k < 4; k++) {
-    const a = (k / 4) * Math.PI * 2 + Math.PI / 4;
-    const foot = new Vector3(Math.cos(a) * 3.2, 0, Math.sin(a) * 3.2);
-    const head = new Vector3(Math.cos(a) * 1.9, H, Math.sin(a) * 1.9);
-    const len = foot.distanceTo(head);
-    const g = along(new CylinderGeometry(0.3, 0.22, len, 7).translate(0, len / 2, 0), head.clone().sub(foot));
-    parts.push(paint(prep(g.translate(foot.x, -0.4, foot.z)), 0x4a3220, 0x7a5a38));
+  const stone = (p: Vector3, _n: Vector3, c: Color) => {
+    const v = vnoise(p.x * 1.3 + p.y * 0.7, p.z * 1.3, 17);
+    c.multiplyScalar(0.84 + 0.3 * v);
+  };
+  // A round stone dais with three steps all round it.
+  parts.push(paint(prep(new CylinderGeometry(DECK_R + 0.05, DECK_R + 0.25, DECK_H + 1.2, 28).translate(0, (DECK_H + 1.2) / 2 - 1.3, 0)), 0x6a5e86, 0x8a7ea8, stone));
+  const steps = 3;
+  for (let i = 0; i < steps; i++) {
+    const r = STEPS_R - (i * (STEPS_R - DECK_R)) / steps;
+    const h = (DECK_H * (i + 1)) / (steps + 1);
+    parts.push(paint(prep(new CylinderGeometry(r, r + 0.08, h + 1.2, 32).translate(0, (h + 1.2) / 2 - 1.2, 0)), 0x7a6e98, 0xa89cc8, stone));
   }
-  for (let lvl = 0; lvl < 3; lvl++) {
-    const y = 2.5 + lvl * 3.6;
-    const r = 3.2 - (1.3 * y) / H;
-    parts.push(paint(prep(new TorusGeometry(r, 0.09, 5, 4).rotateX(Math.PI / 2).rotateY(Math.PI / 4).translate(0, y, 0)), 0x6a4a30));
+  // The wooden deck: planks round the centre.
+  parts.push(paint(prep(new CylinderGeometry(DECK_R + 0.2, DECK_R + 0.2, 0.22, 40).translate(0, DECK_H - 0.08, 0)), 0xb88a58, 0xd0a070, (p, _n, c) => {
+    const a = Math.atan2(p.z, p.x);
+    if (Math.abs(((a / (Math.PI * 2)) * 48) % 1) < 0.1) c.multiplyScalar(0.78);
+    if (Math.hypot(p.x, p.z) > DECK_R - 0.2) c.setHex(0x8a5a38);
+  }));
+  // A rail in eight arcs, open toward every mooring direction (multiples of 45 degrees).
+  const RAIL = DECK_R + 0.05;
+  const gap = 0.17;
+  for (let k = 0; k < 8; k++) {
+    const a0 = (k * Math.PI) / 4 + gap;
+    const arc = Math.PI / 4 - 2 * gap;
+    parts.push(paint(prep(new TorusGeometry(RAIL, 0.07, 5, 10, arc).rotateX(Math.PI / 2).rotateY(-a0 - arc).translate(0, DECK_H + 0.95, 0)), 0x5a3a28, 0x8a6a40));
+    for (let j = 0; j <= 3; j++) {
+      const a = a0 + (arc * j) / 3;
+      parts.push(paint(prep(new CylinderGeometry(0.06, 0.07, 0.95, 6).translate(Math.cos(a) * RAIL, DECK_H + 0.48, Math.sin(a) * RAIL)), 0x5a3a28));
+    }
   }
-  parts.push(paint(prep(new CylinderGeometry(3.2, 3.0, 0.4, 16).translate(0, H, 0)), 0xa87a50, 0xc89a68));
-  parts.push(paint(prep(new TorusGeometry(3.1, 0.07, 5, 24).rotateX(Math.PI / 2).translate(0, H + 0.95, 0)), 0x5a3a28));
-  for (let k = 0; k < 10; k++) {
-    const a = (k / 10) * Math.PI * 2;
-    parts.push(paint(prep(new CylinderGeometry(0.05, 0.05, 0.95, 5).translate(Math.cos(a) * 3.1, H + 0.5, Math.sin(a) * 3.1)), 0x5a3a28));
+  // Lantern posts at four of the arcs' middles.
+  const lampAt: [number, number][] = [];
+  for (let k = 0; k < 8; k += 2) {
+    const a = (k * Math.PI) / 4 + Math.PI / 8;
+    const x = Math.cos(a) * (RAIL - 0.1);
+    const z = Math.sin(a) * (RAIL - 0.1);
+    parts.push(paint(prep(new CylinderGeometry(0.09, 0.12, 2.4, 7).translate(x, DECK_H + 1.2, z)), 0x4a3220, 0x6a4a30));
+    parts.push(paint(prep(new CylinderGeometry(0.3, 0.3, 0.07, 6).translate(x, DECK_H + 2.4, z)), 0x2a2420));
+    parts.push(paint(prep(new ConeGeometry(0.36, 0.4, 6).translate(x, DECK_H + 3.05, z)), 0x4a2f88, 0x8a6ad0));
+    lampAt.push([x, z]);
   }
-  // A ladder up one leg-side, a mast with a little round roof.
-  parts.push(paint(prep(new BoxGeometry(0.1, H, 0.1).translate(2.4, H / 2 - 0.3, -0.35)), 0x5a3a28));
-  parts.push(paint(prep(new BoxGeometry(0.1, H, 0.1).translate(2.4, H / 2 - 0.3, 0.35)), 0x5a3a28));
-  for (let y = 0.4; y < H; y += 0.55) parts.push(paint(prep(new BoxGeometry(0.08, 0.06, 0.7).translate(2.4 - (y / H) * 0.0, y, 0)), 0x6a4a30));
-  parts.push(paint(prep(new CylinderGeometry(0.14, 0.16, 4.2, 7).translate(0, H + 2.1, 0)), 0x4a3220, 0x6a4a30));
-  parts.push(paint(prep(new ConeGeometry(1.0, 0.9, 8).translate(0, H + 4.6, 0)), 0x5a3a9a, 0x8a6ad0));
-  const glow = paint(prep(new SphereGeometry(0.45, 12, 8).translate(0, H + 3.6, 0)), 0xffc878);
+  // The mooring mast: a slender carved trunk with a lantern crown under a swept elven roof.
+  const MH = 17;
+  parts.push(paint(prep(new CylinderGeometry(1.25, 1.4, 0.55, 16).translate(0, DECK_H + 0.27, 0)), 0x8a5a38, 0xa87a50));
+  parts.push(paint(prep(new CylinderGeometry(0.32, 0.55, MH, 10).translate(0, DECK_H + MH / 2, 0)), 0x4a3220, 0x7a5a38));
+  for (const y of [4, 8.5, 12.5]) parts.push(paint(prep(new TorusGeometry(0.5 - y * 0.012, 0.09, 5, 14).rotateX(Math.PI / 2).translate(0, DECK_H + y, 0)), 0xd8a848));
+  parts.push(paint(prep(new CylinderGeometry(1.5, 1.2, 0.25, 14).translate(0, DECK_H + MH - 1.2, 0)), 0x8a5a38, 0xa87a50));
+  for (let k = 0; k < 8; k++) {
+    const a = (k / 8) * Math.PI * 2;
+    parts.push(paint(prep(new CylinderGeometry(0.05, 0.05, 1.3, 5).translate(Math.cos(a) * 1.35, DECK_H + MH - 0.45, Math.sin(a) * 1.35)), 0x5a3a28));
+  }
+  const prof: Vector2[] = [];
+  for (let i = 0; i <= 8; i++) {
+    const t = i / 8;
+    prof.push(new Vector2(0.02 + 2.1 * Math.pow(1 - t, 1.8), DECK_H + MH + 0.1 + t * 2.4));
+  }
+  parts.push(paint(prep(new LatheGeometry(prof, 14)), 0x3e2a7a, 0x9a7ae0));
+  const glow = merge([
+    paint(prep(new SphereGeometry(0.55, 12, 8).translate(0, DECK_H + MH - 0.4, 0)), 0xffc878),
+    ...lampAt.map(([x, z]) => paint(prep(new SphereGeometry(0.2, 8, 6).translate(x, DECK_H + 2.7, z)), 0xffc070)),
+  ]);
   return { body: merge(parts), glow };
+}
+
+/** A plank bridge from the deck's edge out to a moored gondola (along +x, deck height). */
+function gangplankGeometry(): BufferGeometry {
+  const parts: BufferGeometry[] = [];
+  const x0 = DECK_R - 0.3;
+  const x1 = ZEP_OUT - 1.15 * SIZE + 0.1;
+  for (let x = x0; x < x1; x += 0.36) parts.push(paint(prep(new BoxGeometry(0.32, 0.1, 1.7).translate(x + 0.16, DECK_H + 0.02, 0)), [0xa0714a, 0xb07e52][Math.round(x * 3) % 2]!));
+  for (const z of [-0.85, 0.85]) {
+    parts.push(paint(prep(new CylinderGeometry(0.045, 0.045, x1 - x0, 5).rotateZ(Math.PI / 2).translate((x0 + x1) / 2, DECK_H + 0.9, z)), 0xe8d8b0));
+    for (const x of [x0 + 0.1, x1 - 0.1]) parts.push(paint(prep(new CylinderGeometry(0.06, 0.06, 0.95, 5).translate(x, DECK_H + 0.45, z)), 0x5a3a28));
+  }
+  return merge(parts);
+}
+
+/** A boat's wake: a foaming V and a churned stripe behind the stern (boat space, +x forward). */
+function wakeGeometry(): BufferGeometry {
+  const pos: number[] = [];
+  const col: number[] = [];
+  const idx: number[] = [];
+  const R = rng(515);
+  const strip = (side: number, angle: number, len: number, w0: number, w1: number, gain: number) => {
+    const base = pos.length / 3;
+    const n = 44;
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      const d = t * len;
+      const cx = -3.2 - Math.cos(angle) * d;
+      const cz = side * Math.sin(angle) * d;
+      const w = w0 + (w1 - w0) * t;
+      // Across the strip: perpendicular to its direction (-cos a, side sin a).
+      const px = side * Math.sin(angle) * w * 0.5;
+      const pz = Math.cos(angle) * w * 0.5;
+      // Broken foam: bright clumps and gaps, not a solid beam.
+      const r = R();
+      const lump = r < 0.3 ? 0.12 : 0.6 + 0.4 * r;
+      const f = gain * Math.pow(1 - t, 1.6) * lump * Math.min(1, t * 8 + 0.2);
+      pos.push(cx - px, 0, cz - pz, cx + px, 0, cz + pz);
+      col.push(f * 0.85, f * 0.95, f, f * 0.85, f * 0.95, f);
+      if (i < n) idx.push(base + i * 2, base + i * 2 + 1, base + i * 2 + 2, base + i * 2 + 1, base + i * 2 + 3, base + i * 2 + 2);
+    }
+  };
+  strip(1, 0.42, 11, 0.5, 1.6, 0.9);
+  strip(-1, 0.42, 11, 0.5, 1.6, 0.9);
+  strip(1, 0, 8, 1.4, 2.4, 0.6);
+  const g = new BufferGeometry();
+  g.setAttribute("position", new Float32BufferAttribute(pos, 3));
+  g.setAttribute("color", new Float32BufferAttribute(col, 3));
+  g.setIndex(idx);
+  return g;
 }
 
 // ---------- poses ----------
@@ -250,13 +431,26 @@ function restPose(p: Platform, out: Pose): Pose {
     out.x = p.at.x + ux * MOOR;
     out.z = p.at.z + uz * MOOR;
     out.y = SEA_Y + 0.25;
+    out.heading = mooredHeading(ux, uz);
   } else {
+    // Out from the tower past its mooring, alongside the deck: the gondola floor level with it.
     const t = towerOf(p);
-    out.x = t.x + ux * 5.9;
-    out.z = t.z + uz * 5.9;
-    out.y = Math.max(0, heightAt(t.x, t.z)) + TOWER_H + 0.1;
+    let mx = p.at.x - t.x;
+    let mz = p.at.z - t.z;
+    const ml = Math.hypot(mx, mz);
+    if (ml < 0.5) {
+      mx = ux;
+      mz = uz;
+    } else {
+      mx /= ml;
+      mz /= ml;
+    }
+    out.x = t.x + mx * ZEP_OUT;
+    out.z = t.z + mz * ZEP_OUT;
+    out.y = Math.max(0, heightAt(t.x, t.z)) + DECK_H + 0.02;
+    // Broadside to the deck, nose clockwise (the same from either end of a route).
+    out.heading = Math.atan2(mx, -mz);
   }
-  out.heading = mooredHeading(ux, uz);
   out.roll = 0;
   out.pitch = 0;
   return out;
@@ -278,6 +472,14 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
   const dock = dockGeometry();
   const zep = zeppelinGeometry();
   const tower = towerGeometry();
+  const plank = gangplankGeometry();
+  const wakeGeo = wakeGeometry();
+  const wakeMat = new MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, blending: AdditiveBlending, depthWrite: false, side: DoubleSide });
+  const wake = new Mesh(wakeGeo, wakeMat);
+  wake.name = "wake";
+  wake.renderOrder = 4;
+  wake.visible = false;
+  wake.position.y = 0.1;
   const glowMat = new MeshBasicMaterial({ vertexColors: true });
   const ringMat = new MeshBasicMaterial({ color: 0xffe0a0, transparent: true, opacity: 0, blending: AdditiveBlending, depthWrite: false, side: DoubleSide });
   const ringGeo = new RingGeometry(2.2, 3.4, 40).rotateX(-Math.PI / 2);
@@ -311,6 +513,7 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
   let rideState = { k: 0, board: 0, land: 0, from: { x: 0, z: 0 }, to: { x: 0, z: 0 }, kind: 0 };
   const rideOrder: number[] = [];
   let rideHeading = 0;
+  let boardLive: Live | null = null;
 
   function make(p: Platform): Live {
     const vehicle = new Group();
@@ -346,23 +549,35 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
       b.castShadow = full;
       const g = new Mesh(zep.glow, glowMat);
       vehicle.add(b, g);
-      const pr = new Mesh(zep.prop, painted);
-      pr.position.set(-3.05, 0.2, 0);
-      props.push(pr);
-      vehicle.add(pr);
+      for (const z of [-1.55, 1.55]) {
+        const pr = new Mesh(zep.prop, painted);
+        pr.position.set(-2.0, 0.55, z);
+        props.push(pr);
+        vehicle.add(pr);
+      }
       // One tower per place, shared by its routes.
+      const t = towerOf(p);
+      const ty = Math.max(0, heightAt(t.x, t.z));
       if (!towers.has(p.place)) {
-        const t = towerOf(p);
         const tg = new Group();
         tg.name = `tower-${p.place}`;
-        const tb = new Mesh(tower.body, painted);
+        const tb = new Mesh(tower.body, fadeMat);
         tb.castShadow = full;
         tb.receiveShadow = true;
         tg.add(tb, new Mesh(tower.glow, glowMat));
-        tg.position.set(t.x, Math.max(0, heightAt(t.x, t.z)), t.z);
+        tg.position.set(t.x, ty, t.z);
         towers.set(p.place, tg);
         group.add(tg);
       }
+      // This mooring's gangplank, out from the deck toward its airship.
+      base = new Group();
+      base.name = `plank-${p.id}`;
+      const pl = new Mesh(plank, fadeMat);
+      pl.receiveShadow = true;
+      base.add(pl);
+      base.position.set(t.x, ty, t.z);
+      base.rotation.y = -Math.atan2(p.at.z - t.z, p.at.x - t.x);
+      group.add(base);
     }
     restPose(p, pose);
     place(vehicle, pose);
@@ -400,18 +615,24 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
       out.roll = Math.sin(t * 1.1) * 0.05;
       out.pitch = Math.sin(t * 0.8 + 1) * 0.03;
     } else {
-      const lift = Math.sin(Math.PI * k);
-      out.y = from.y + (to.y - from.y) * k + lift * 26;
+      // Straight up off the tower first (clear of every canopy), cruise high, then down at the far end.
+      const u = Math.max(0, Math.min(1, (ts - HOLD) / moveDur));
+      const kh = ease((u - 0.14) / 0.72);
+      out.x = from.x + dx * kh;
+      out.z = from.z + dz * kh;
+      const climb = ease(u / 0.2) * ease((1 - u) / 0.2);
+      out.y = from.y + (to.y - from.y) * kh + climb * CRUISE;
       out.roll = Math.sin(t * 0.6) * 0.02;
       // Nose up while climbing, down while descending.
-      out.pitch = Math.cos(Math.PI * k) * 0.08 * Math.min(1, lift * 4);
+      out.pitch = (u < 0.5 ? 1 : -1) * 0.07 * Math.sin(Math.PI * Math.min(1, (u < 0.5 ? u : 1 - u) / 0.2));
+      return kh;
     }
     void p;
     return k;
   }
 
   const deck = (kind: number, i: number) => {
-    const slots: [number, number][] = kind === 1 ? [[-0.9, -0.55], [-0.9, 0.55], [1.3, -0.55], [1.3, 0.55]] : [[-0.9, -0.5], [-0.9, 0.5], [0.9, -0.5], [0.9, 0.5]];
+    const slots: [number, number][] = kind === 1 ? [[-0.9, -0.55], [-0.9, 0.55], [1.3, -0.55], [1.3, 0.55]] : [[-1.0, -0.45], [-1.0, 0.45], [0.95, -0.45], [0.95, 0.45]];
     return slots[i % 4]!;
   };
   const deckY = (kind: number) => (kind === 1 ? 0.06 : 0.08);
@@ -444,10 +665,12 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
       // Boarding: the vehicle readies and the platform glows.
       const boarding = lake?.boarding ?? null;
       ring.visible = false;
+      boardLive = null;
       for (const l of live.values()) {
         const want = boarding?.platformId === l.p.id ? Math.min(1, (sn - boarding.since) / BOARD_MS) : 0;
         l.ready += (want - l.ready) * Math.min(1, dt * (want > l.ready ? 6 : 1.5));
         if (boarding?.platformId === l.p.id) {
+          boardLive = l;
           ring.visible = true;
           ring.position.set(l.p.at.x, Math.max(0, heightAt(l.p.at.x, l.p.at.z)) + 0.08, l.p.at.z);
           const pulse = 0.5 + 0.5 * Math.sin(t * 5.5);
@@ -499,6 +722,7 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
         }
       }
       clouds.visible = false;
+      wake.visible = false;
       rideState.kind = 0;
       if (ride && rl) {
         const kind = ride.kind === "boat" ? 1 : 2;
@@ -524,6 +748,14 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
         rideState = { k, board: ease(ts / STEP), land: ease((ts - (dur - STEP - 0.2)) / STEP), from: ride.from, to: ride.to, kind };
         rideOrder.length = 0;
         if (lake) for (const f of lake.fishers) rideOrder.push(f.seat);
+        if (kind === 1) {
+          // The wake foams up with speed (the eased crossing: still at the docks, fastest mid-sea).
+          if (wake.parent !== rl.vehicle) rl.vehicle.add(wake);
+          wake.visible = true;
+          const spd = Math.min(1, 4.5 * k * (1 - k));
+          wakeMat.opacity = spd * (0.75 + 0.25 * Math.sin(t * 7.3));
+          wake.scale.set(0.6 + 0.4 * spd, 1, 1);
+        }
         if (kind === 2) {
           clouds.visible = true;
           const fwd = pose.heading;
@@ -560,10 +792,10 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
       const l = rideState.land;
       let x = sx + (tmpV.x - sx) * b;
       let z = sz + (tmpV.z - sz) * b;
-      const sy = Math.max(0, heightAt(sx, sz));
+      const sy = Math.max(0, heightAt(sx, sz), towerDeckY(sx, sz));
       let y = sy + (tmpV.y - sy) * b + Math.sin(Math.PI * b) * 0.8;
       if (l > 0) {
-        const ey = Math.max(0, heightAt(ex, ez));
+        const ey = Math.max(0, heightAt(ex, ez), towerDeckY(ex, ez));
         x += (ex - x) * l;
         z += (ez - z) * l;
         y += (ey - y) * l + Math.sin(Math.PI * l) * 0.8;
@@ -578,9 +810,22 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
       if (!rideLive || rideState.kind === 0) return 0;
       const v = rideLive.vehicle;
       v.updateMatrixWorld();
-      const pts = rideState.kind === 1 ? [[3.8, 0.5, 0], [-3.6, 0.5, 0], [0.4, 4, 0]] : [[5, 5.2, 0], [-5, 5.2, 0], [0, -1, 0]];
+      const pts = rideState.kind === 1 ? [[3.8, 0.5, 0], [-3.6, 0.5, 0], [0.4, 4, 0]] : [[2.6, 0.2, 0], [-2.6, 0.2, 0], [0, 5.6, 0]];
       pts.forEach(([x, y, z], i) => out[i]!.set(x!, y!, z!).applyMatrix4(v.matrixWorld));
       return pts.length;
+    },
+    boardFocus(out) {
+      if (!boardLive || rideState.kind !== 0) return null;
+      const v = boardLive.vehicle;
+      v.updateMatrixWorld();
+      const zep = boardLive.p.kind === "zeppelin";
+      const pts = zep ? [[2.6, 0.2, 0], [-2.6, 0.2, 0], [0, 4.2, 0]] : [[3.6, 0.5, 0], [-3.4, 0.5, 0], [0.4, 3.5, 0]];
+      pts.forEach(([x, y, z], i) => out[i]!.set(x!, y!, z!).applyMatrix4(v.matrixWorld));
+      // From the people's mooring toward their vehicle.
+      const dx = v.position.x - boardLive.p.at.x;
+      const dz = v.position.z - boardLive.p.at.z;
+      const len = Math.hypot(dx, dz) || 1;
+      return { n: pts.length, ux: dx / len, uz: dz / len, kind: zep ? 2 : 1 };
     },
     riding: () => (rideLive ? rideState.kind : 0),
     heading: () => rideHeading,
@@ -589,12 +834,18 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
       if (on) {
         const pb: Platform = { id: "prewarm-boat", kind: "boat", place: "moonwell", at: { x: 0, z: 30 }, to: { x: 0, z: 200 }, toPlace: "moonwell", path: [] };
         const pz: Platform = { id: "prewarm-zep", kind: "zeppelin", place: "moonwell", at: { x: 22, z: 4 }, to: { x: 300, z: 4 }, toPlace: "moonwell", path: [] };
-        live.set(pb.id, make(pb));
+        const lb = make(pb);
+        live.set(pb.id, lb);
         live.set(pz.id, make(pz));
+        lb.vehicle.add(wake);
+        wake.visible = true;
+        wakeMat.opacity = 0.5;
         ring.visible = true;
         clouds.visible = true;
         clouds.count = 1;
       } else {
+        wake.removeFromParent();
+        wake.visible = false;
         for (const id of ["prewarm-boat", "prewarm-zep"]) {
           const l = live.get(id);
           if (l) drop(l);
@@ -617,7 +868,8 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
       lastX = 1e9;
     },
     dispose() {
-      for (const g of [boat.body, boat.sail, boat.glow, dock.body, dock.glow, zep.body, zep.prop, zep.glow, tower.body, tower.glow, ringGeo, cloudGeo]) g.dispose();
+      for (const g of [boat.body, boat.sail, boat.glow, dock.body, dock.glow, zep.body, zep.prop, zep.glow, tower.body, tower.glow, plank, wakeGeo, ringGeo, cloudGeo]) g.dispose();
+      wakeMat.dispose();
       glowMat.dispose();
       ringMat.dispose();
       cloudMat.dispose();

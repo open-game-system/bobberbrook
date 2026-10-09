@@ -80,6 +80,8 @@ export class CameraRig {
   rateK = 1;
   /** On a ride: the vehicle's heading (radians, atan2(z, x)) and kind (1 boat, 2 zeppelin), for a side-on travelling shot. */
   ride: { heading: number; kind: number } | null = null;
+  /** Gathered at a mooring: the way from it to the vehicle (unit), and its kind (1 boat, 2 zeppelin). */
+  board: { ux: number; uz: number; kind: number } | null = null;
   /** The place the establishing view looks over (where the family last was; Moonwell at first). */
   readonly anchor = new Vector3();
   private readonly pts: Vector3[] = Array.from({ length: MAX_POINTS }, () => new Vector3());
@@ -135,7 +137,7 @@ export class CameraRig {
    * Fits every focus point (feet to name tag) inside the safe box: a few rounds of "recentre, then
    * scale the distance by how much too big or small the box is". Writes wantTarget / wantDist.
    */
-  private fitGroup(): void {
+  private fitGroup(yaw = 0, el = EL): void {
     const cam = this.probe;
     cam.fov = this.camera.fov;
     cam.aspect = this.camera.aspect;
@@ -149,7 +151,7 @@ export class CameraRig {
     const t = this.cx.set((x0 + x1) / 2, ym / this.n + 1.2, (z0 + z1) / 2);
     let d = Math.min(MAX_DIST, Math.max(this.minDist, 0.9 * Math.max(x1 - x0, (z1 - z0) * 1.4) + 14));
     for (let iter = 0; iter < 4; iter++) {
-      this.pose(cam, t, d, 0, EL, PITCH_UP);
+      this.pose(cam, t, d, yaw, el, PITCH_UP);
       let nx0 = Infinity, nx1 = -Infinity, ny0 = Infinity, ny1 = -Infinity;
       for (let i = 0; i < this.n; i++) {
         const p = this.pts[i]!;
@@ -168,9 +170,11 @@ export class CameraRig {
       const halfW = halfH * cam.aspect;
       const offX = (nx0 + nx1) / 2;
       const offY = (ny0 + ny1) / 2 - (FIT_Y0 + FIT_Y1) / 2;
-      t.x += offX * halfW;
-      // Screen-up on the ground is "away from the camera" (−z) foreshortened by the elevation.
-      t.z -= (offY * halfH) / Math.max(0.35, Math.sin(EL + PITCH_UP));
+      // Screen-right on the ground is (cos yaw, -sin yaw); screen-up is "away from the camera"
+      // (-sin yaw, -cos yaw) foreshortened by the elevation.
+      const up = (offY * halfH) / Math.max(0.35, Math.sin(el + PITCH_UP));
+      t.x += offX * halfW * Math.cos(yaw) - up * Math.sin(yaw);
+      t.z += -offX * halfW * Math.sin(yaw) - up * Math.cos(yaw);
       d = Math.min(MAX_DIST, Math.max(this.minDist, d * (0.35 + 0.65 * s)));
     }
     this.wantTarget.copy(t);
@@ -230,7 +234,6 @@ export class CameraRig {
       rate = 1.1;
     } else if (groupMode && this.ride) {
       // The travelling shot: from the side and a little behind, so the vehicle sails across the frame.
-      this.fitGroup();
       const h = this.ride.heading;
       let px = -Math.sin(h);
       let pz = Math.cos(h);
@@ -241,8 +244,26 @@ export class CameraRig {
       const ox = px * 0.85 - Math.cos(h) * 0.5;
       const oz = pz * 0.85 - Math.sin(h) * 0.5;
       this.wantYaw = Math.atan2(ox, oz);
-      this.wantEl = this.ride.kind === 2 ? 0.22 : 0.3;
+      this.wantEl = this.ride.kind === 2 ? 0.2 : 0.3;
+      this.fitGroup(this.wantYaw, this.wantEl);
       rate = 1.6;
+    } else if (groupMode && this.board) {
+      // Boarding: a three-quarter view across the mooring, the family in front of their vehicle.
+      const { ux, uz, kind } = this.board;
+      // Boats: from over the harbour, off to one flank and high (the family on the dock, the boat beside them).
+      // Airships: broadside, a little past the tower, so the mast stands behind the family, never between.
+      let sx = -uz;
+      let sz = ux;
+      if (sz < 0) {
+        sx = -sx;
+        sz = -sz;
+      }
+      const side = kind === 1 ? 0.75 : 0.85;
+      const back = kind === 1 ? 0.55 : 0.25;
+      this.wantYaw = Math.atan2(sx * side + ux * back, sz * side + uz * back);
+      this.wantEl = kind === 1 ? 0.5 : 0.4;
+      this.fitGroup(this.wantYaw, this.wantEl);
+      rate = 1.2;
     } else if (groupMode) {
       this.fitGroup();
     } else if (v === "wide" && this.n > 0) {

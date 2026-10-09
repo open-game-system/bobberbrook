@@ -388,7 +388,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     const riding = vehicles.riding();
     rig.rateK += ((riding ? 3.2 : 1) - rig.rateK) * Math.min(1, dt * 2);
     rig.ride = riding ? { heading: vehicles.heading(), kind: riding } : null;
-    rig.minDist += ((riding === 2 ? 34 : riding === 1 ? 26 : sp.split ? 23 : 17) - rig.minDist) * Math.min(1, dt * (riding ? 0.8 : 2));
+    rig.minDist += ((riding === 2 ? 24 : riding === 1 ? 22 : sp.split ? 23 : 17) - rig.minDist) * Math.min(1, dt * (riding ? 0.8 : 2));
     rig.beginFocus();
     fishers.forEachSeat((seat, x, y, z, _c, bob) => {
       if (!framed.has(seat)) return;
@@ -397,6 +397,9 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     });
     const nf = vehicles.rideFocus(rideFocus);
     for (let i = 0; i < nf; i++) rig.addFocus(rideFocus[i]!.x, rideFocus[i]!.y, rideFocus[i]!.z);
+    const bf = riding ? null : vehicles.boardFocus(rideFocus);
+    if (bf) for (let i = 0; i < bf.n; i++) rig.addFocus(rideFocus[i]!.x, rideFocus[i]!.y, rideFocus[i]!.z);
+    rig.board = bf ? { ux: bf.ux, uz: bf.uz, kind: bf.kind } : null;
     const cf = fishers.catchFocus(t, catchBuf);
     // Out on a trail (between places), the camera looks further ahead.
     let n = 0;

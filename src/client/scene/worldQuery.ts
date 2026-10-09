@@ -34,6 +34,7 @@ export function setWorld(seed: number): boolean {
   placeNear.clear();
   platCache.clear();
   channelCache.clear();
+  towerCache.clear();
   epoch++;
   return true;
 }
@@ -156,6 +157,54 @@ export function platformsWithin(x: number, z: number, cells: number): Platform[]
       out.push(p);
     }
   return out;
+}
+
+const towerCache = new Map<number, { x: number; z: number; y: number }[]>();
+
+/** Zeppelin towers of the 3x3 cells round a point (centre and foot height). */
+export function towersAround(x: number, z: number, groundAt: (x: number, z: number) => number): { x: number; z: number; y: number }[] {
+  const k = key(cellI(x), cellI(z));
+  let hit = towerCache.get(k);
+  if (!hit) {
+    const seen = new Set<string>();
+    hit = [];
+    for (const p of platformsAround(x, z)) {
+      if (p.kind !== "zeppelin" || seen.has(p.place)) continue;
+      seen.add(p.place);
+      const place = world.placeById(p.place);
+      if (!place) continue;
+      const t = world.towerAt(place);
+      hit.push({ x: t.x, z: t.z, y: Math.max(0, groundAt(t.x, t.z)) });
+    }
+    towerCache.set(k, hit);
+  }
+  return hit;
+}
+
+/** Distance to the nearest zeppelin tower round a point (Infinity when none). */
+export function towerDist(x: number, z: number, groundAt: (x: number, z: number) => number): number {
+  let d = Infinity;
+  for (const t of towersAround(x, z, groundAt)) d = Math.min(d, Math.hypot(t.x - x, t.z - z));
+  return d;
+}
+
+/** Distance to the nearest boat dock round a point (the dock and its moored boat, ~14 m out from the land end). */
+export function dockDist(x: number, z: number): number {
+  let d = Infinity;
+  PP.x = x;
+  PP.z = z;
+  for (const p of platformsAround(x, z)) {
+    if (p.kind !== "boat") continue;
+    const dx = p.to.x - p.at.x;
+    const dz = p.to.z - p.at.z;
+    const len = Math.hypot(dx, dz) || 1;
+    PA.x = p.at.x - (dx / len) * 3;
+    PA.z = p.at.z - (dz / len) * 3;
+    PB.x = p.at.x + (dx / len) * 14;
+    PB.z = p.at.z + (dz / len) * 14;
+    d = Math.min(d, segmentDistance(PP, PA, PB));
+  }
+  return d;
 }
 
 /** Signed distance outside a place's clearing (negative inside). */

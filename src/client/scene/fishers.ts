@@ -22,6 +22,7 @@ import { CatchCard, lightPillar, type FishShadows, type FishTextures } from "./f
 import type { Fx } from "./fx";
 import { damp } from "./noise";
 import { heightAt } from "./terrain";
+import { towerDeckY } from "./vehicles";
 import { merge, paint, prep } from "./geo";
 
 const DECK_Y = 0.42;
@@ -71,7 +72,7 @@ function predict(f: Fisher, serverNow: number, out: Vec): void {
 function groundY(x: number, z: number): number {
   scratch.x = x;
   scratch.z = z;
-  return onDock(scratch) ? DECK_Y : Math.max(heightAt(x, z), -0.25);
+  return onDock(scratch) ? DECK_Y : Math.max(heightAt(x, z), -0.25, towerDeckY(x, z));
 }
 
 function angleLerp(a: number, b: number, t: number): number {

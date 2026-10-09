@@ -7,7 +7,7 @@ import { fbm, hash2, rng, vnoise } from "./noise";
 import { merge, paint, prep, puffNormals } from "./geo";
 import { FALLS, heightAt } from "./terrain";
 import { LOOKS, lookOf, newOpenInfo, newPondInfo, openAt, placeWeights, pondAt, type Weighted } from "./valley";
-import { activeWorld, seaDist } from "./worldQuery";
+import { activeWorld, dockDist, seaDist, towerDist } from "./worldQuery";
 import type { Jobs } from "./stream";
 import type { Biome } from "../../game/regions";
 
@@ -125,6 +125,12 @@ export function buildForest(full: boolean, treeMat: Material, jobs: Jobs): Fores
         if (pondAt(px, pz, pi).d < 1.5) continue;
         if (Math.abs(px) < 4.5 && pz < 0 && pz > FALLS.topZ - 14) continue;
         if (FOREST_CLEAR.some(([cx, cz, r]) => Math.hypot(px - cx, pz - cz) < r)) continue;
+        // Round a zeppelin tower: open sky for the moored airships (no canopy through an envelope).
+        const td = towerDist(px, pz, heightAt);
+        if (td < 23) continue;
+        // Round a boat dock: an open harbour, so the boat and the family boarding it read from the shore.
+        const dd = dockDist(px, pz);
+        if (dd < 13) continue;
         // A meadow south of Moonwell where the camera sits.
         const mr = Math.hypot(px, pz);
         if (angleGap(Math.atan2(pz, px), SOUTH) < 0.75 && mr < 75 && (mr > 62 || r1 < 0.85)) continue;
@@ -163,6 +169,8 @@ export function buildForest(full: boolean, treeMat: Material, jobs: Jobs): Fores
           if (k === 3 && r7 < snowK - 0.1) k = 8;
           else if (k < 3 && r7 < paleK - 0.1) k = 7;
           s = (0.95 + r6 * 0.6 + Math.min(o, 40) * 0.012) * (k === 3 ? 1.15 : k === 5 ? 0.85 : 1);
+          if (td < 34) s = Math.min(s, 0.6 + 0.03 * (td - 23));
+          if (dd < 22) s = Math.min(s, 0.6 + 0.04 * (dd - 13));
           if (nearTrail) {
             if (r1 < 0.4) continue;
             s = Math.min(s, 0.75 + 0.03 * (trail - TRAIL_HALF_WIDTH));
