@@ -463,7 +463,30 @@ function towerOf(p: Platform): { x: number; z: number } {
 
 // ---------- the module ----------
 
-type Live = { p: Platform; vehicle: Group; sail: Mesh | null; props: Mesh[]; base: Group | null; ready: number; alive: boolean; bodies: Mesh[] };
+type Live = {
+  p: Platform; vehicle: Group; sail: Mesh | null; props: Mesh[]; base: Group | null; ready: number; alive: boolean; bodies: Mesh[];
+  /** An airship moored on the side of its tower facing the pond (it would hang over the fishing). */
+  facesPlace: boolean;
+  /** 0 = up and away (out of the frame), 1 = moored at the tower. */
+  shown: number;
+};
+
+/** Does a zeppelin mooring face its place's pond (from the tower)? */
+function mooringFacesPlace(p: Platform): boolean {
+  if (p.kind !== "zeppelin") return false;
+  const place = activeWorld().placeById(p.place);
+  if (!place) return false;
+  const t = towerOf(p);
+  const mx = p.at.x - t.x;
+  const mz = p.at.z - t.z;
+  const cx = place.center.x - t.x;
+  const cz = place.center.z - t.z;
+  const ml = Math.hypot(mx, mz);
+  const cl = Math.hypot(cx, cz);
+  return ml > 0.5 && cl > 0.5 && (mx * cx + mz * cz) / (ml * cl) > 0.3;
+}
+/** How high a parked airship lifts off when it makes way. */
+const PARK_LIFT = 40;
 
 export function buildVehicles(full: boolean, painted: Material, paintedDouble: Material, fadeMat: Material = painted, fadeDouble: Material = paintedDouble): Vehicles {
   const group = new Group();
@@ -534,7 +557,7 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
       // The dock: from the land end (at) out along the route.
       base = new Group();
       base.name = `dock-${p.id}`;
-      const d = new Mesh(dock.body, fadeMat);
+      const d = new Mesh(dock.body, painted);
       d.castShadow = full;
       d.receiveShadow = true;
       base.add(d, new Mesh(dock.glow, glowMat));
@@ -561,7 +584,7 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
       if (!towers.has(p.place)) {
         const tg = new Group();
         tg.name = `tower-${p.place}`;
-        const tb = new Mesh(tower.body, fadeMat);
+        const tb = new Mesh(tower.body, painted);
         tb.castShadow = full;
         tb.receiveShadow = true;
         tg.add(tb, new Mesh(tower.glow, glowMat));
@@ -572,7 +595,7 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
       // This mooring's gangplank, out from the deck toward its airship.
       base = new Group();
       base.name = `plank-${p.id}`;
-      const pl = new Mesh(plank, fadeMat);
+      const pl = new Mesh(plank, painted);
       pl.receiveShadow = true;
       base.add(pl);
       base.position.set(t.x, ty, t.z);
@@ -582,7 +605,8 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
     restPose(p, pose);
     place(vehicle, pose);
     group.add(vehicle);
-    return { p, vehicle, sail, props, base, ready: 0, alive: true, bodies };
+    const facesPlace = mooringFacesPlace(p);
+    return { p, vehicle, sail, props, base, ready: 0, alive: true, bodies, facesPlace, shown: facesPlace ? 0 : 1 };
   }
 
   function place(v: Group, ps: Pose): void {
@@ -703,7 +727,18 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
       for (const l of live.values()) {
         // The far end's twin hides while its partner sails in.
         const twin = ride && rl && l !== rl && l.p.place === rl.p.toPlace && l.p.toPlace === rl.p.place;
-        l.vehicle.visible = !twin;
+        // Parked airships keep out of the fishing frame: the ones on the pond side of their tower stay up
+        // and away, and every idle one lifts off while the family boards, rides or lands at that tower.
+        if (l.p.kind === "zeppelin") {
+          const active = l === rl || l === boardLive;
+          const busyHere = (boardLive !== null && boardLive !== l && boardLive.p.kind === "zeppelin" && boardLive.p.place === l.p.place)
+            || (rl !== null && rl !== l && rl.p.kind === "zeppelin" && (rl.p.place === l.p.place || rl.p.toPlace === l.p.place));
+          const want = active ? 1 : !l.facesPlace && !busyHere ? 1 : 0;
+          l.shown = l === rl ? 1 : l.shown + (want - l.shown) * Math.min(1, dt * (active ? 1.6 : 0.9));
+          if (Math.abs(want - l.shown) < 0.002) l.shown = want;
+          if (l.base) l.base.visible = l.shown > 0.6;
+        }
+        l.vehicle.visible = !twin && l.shown > 0.01;
         const busy = l === rl ? 1 : l.ready;
         // Moored vehicles fade like trees when they stand between the camera and the family; the ride's never does.
         for (const b of l.bodies) b.material = l === rl ? painted : fadeMat;
@@ -717,7 +752,12 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
           place(l.vehicle, pose);
         } else if (l !== rl) {
           restPose(l.p, pose);
-          pose.y += Math.sin(t * 0.7 + l.p.at.x) * 0.15;
+          const lift = 1 - ease(l.shown);
+          pose.y += Math.sin(t * 0.7 + l.p.at.x) * 0.15 + lift * PARK_LIFT;
+          // Drifting off outward as it climbs.
+          const t0 = towerOf(l.p);
+          pose.x += (pose.x - t0.x) * lift * 1.2;
+          pose.z += (pose.z - t0.z) * lift * 1.2;
           place(l.vehicle, pose);
         }
       }
@@ -836,7 +876,9 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
         const pz: Platform = { id: "prewarm-zep", kind: "zeppelin", place: "moonwell", at: { x: 22, z: 4 }, to: { x: 300, z: 4 }, toPlace: "moonwell", path: [] };
         const lb = make(pb);
         live.set(pb.id, lb);
-        live.set(pz.id, make(pz));
+        const lz = make(pz);
+        lz.shown = 1;
+        live.set(pz.id, lz);
         lb.vehicle.add(wake);
         wake.visible = true;
         wakeMat.opacity = 0.5;

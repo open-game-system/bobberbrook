@@ -405,6 +405,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     for (let i = 0; i < nf; i++) rig.addFocus(rideFocus[i]!.x, rideFocus[i]!.y, rideFocus[i]!.z);
     const bf = riding ? null : vehicles.boardFocus(rideFocus);
     if (bf) for (let i = 0; i < bf.n; i++) rig.addFocus(rideFocus[i]!.x, rideFocus[i]!.y, rideFocus[i]!.z);
+    const vehN = nf > 0 ? nf : bf ? bf.n : 0;
     rig.board = bf ? { ux: bf.ux, uz: bf.uz, kind: bf.kind } : null;
     const cf = fishers.catchFocus(t, catchBuf);
     // Out on a trail (between places), the camera looks further ahead.
@@ -414,6 +415,16 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     fishers.forEachSeat((seat, x, _y, z) => { if (framed.has(seat)) { gx += x; gz += z; n++; } });
     const here = n > 0 ? activeWorld().areaAt({ x: gx / n, z: gz / n }) : null;
     const onTrail = n > 0 && here === null && !riding ? 1 : 0;
+    if (here && n > 0 && !riding && !bf) {
+      // Fishers by a pond: frame the water they stand at, not the trail behind them.
+      const wx = here.center.x - gx / n;
+      const wz = here.center.z - gz / n;
+      const wd = Math.hypot(wx, wz);
+      if (wd < here.pond.r + here.clearing && wd > 0.5) {
+        const k = Math.min(wd, 10) / wd;
+        rig.addFocus(gx / n + wx * k, 0, gz / n + wz * k);
+      }
+    }
     if (here) {
       rig.anchor.set(here.center.x, 0, here.center.z);
       rig.placeYaw = here.home ? 0 : (placeHash(here.key, 11) - 0.5) * 0.9;
@@ -447,6 +458,8 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       boxPt(x, y, z);
       boxPt(x, y + 3.2, z);
     });
+    // The vehicle the family boards or rides is part of the action: nothing in front of it either.
+    for (let i = 0; i < vehN; i++) boxPt(rideFocus[i]!.x, rideFocus[i]!.y, rideFocus[i]!.z);
     markerList.length = 0;
     fishers.forEachSeat((seat, x, y, z, color) => {
       markerList.push({ seat, x, y, z, color, show: sp.split && !framed.has(seat) });

@@ -1,0 +1,42 @@
+{
+  "round": "06-s1c",
+  "shots": [
+    {
+      "label": "boarding",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 56,
+      "programs": 56,
+      "calls": 390,
+      "triangles": 2499664,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 68
+    },
+    {
+      "label": "tower",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 58,
+      "programs": 58,
+      "calls": 536,
+      "triangles": 3504420,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 105
+    },
+    {
+      "label": "arrival",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 56,
+      "programs": 56,
+      "calls": 478,
+      "triangles": 3063125,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 101
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}

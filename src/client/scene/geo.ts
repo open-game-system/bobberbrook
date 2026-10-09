@@ -142,10 +142,11 @@ float occAmount() {
   vec4 clip = uVP * vec4(vOccW, 1.0);
   float vz = clip.w;
   vec2 sc = clip.xy / max(abs(clip.w), 1e-3) * 0.5 + 0.5;
-  float inBox = smoothstep(uBox.x - 0.04, uBox.x + 0.02, sc.x) * smoothstep(uBox.z + 0.04, uBox.z - 0.02, sc.x)
-    * smoothstep(uBox.y - 0.04, uBox.y + 0.02, sc.y) * smoothstep(uBox.w + 0.04, uBox.w - 0.02, sc.y);
-  occ = max(occ, inBox * (1.0 - smoothstep(uNear - 3.0, uNear, vz)) * 0.92 * step(0.0, vz));
-  // Never a trunk or canopy right against the lens.
+  // In front of the action and no higher on screen than its top (name tags): the whole foreground band
+  // across the frame, so no canopy, rock or prop sits over the family or the water before them.
+  float inBand = smoothstep(uBox.w + 0.06, uBox.w + 0.01, sc.y) * step(0.0, uBox.z - uBox.x);
+  occ = max(occ, inBand * (1.0 - smoothstep(uNear - 3.0, uNear, vz)) * step(0.0, vz));
+  // Never a trunk or canopy right against the lens, nor foreground clutter well in front of the family.
   occ = max(occ, (1.0 - smoothstep(7.0, 13.0, vz)) * step(-1.0, vz));
   return occ;
 }`;

@@ -1,0 +1,64 @@
+{
+  "round": "06-s1b",
+  "shots": [
+    {
+      "label": "moonwell",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 59,
+      "programs": 59,
+      "calls": 508,
+      "triangles": 2899152,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 109
+    },
+    {
+      "label": "boarding",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 57,
+      "programs": 57,
+      "calls": 386,
+      "triangles": 2539788,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 69
+    },
+    {
+      "label": "tower",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 59,
+      "programs": 59,
+      "calls": 541,
+      "triangles": 3523731,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 104
+    },
+    {
+      "label": "arrival",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 57,
+      "programs": 57,
+      "calls": 478,
+      "triangles": 3072461,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 101
+    },
+    {
+      "label": "mistmarsh",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 59,
+      "programs": 59,
+      "calls": 535,
+      "triangles": 3848709,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 67
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}
