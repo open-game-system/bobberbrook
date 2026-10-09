@@ -2,7 +2,7 @@
  * Scene lab: the TV scene full-window, driven by a local simulation with the real lake rules and
  * simple bots. ?scenario=morning|four-reel|golden-swirl|night-catch|rod-upgrade|campfire|empty|
  * moonwell|mistmarsh|pools|hollow|tarn|trail|discovery|night-tarn|far-place|biome-<biome>|boat-ride|
- * zeppelin-ride|boarding|fog &phase=0..1 &seed=N &world=N (world seed, default 7) &lite=1 &view=name
+ * zeppelin-ride|boarding|tower|arrival|fog &phase=0..1 &seed=N &world=N (world seed, default 7) &lite=1 &view=name
  */
 import { produce } from "immer";
 import { CATCH_SKIP_MS, SEAT_COLORS, action, join, move, newLake, reelHold, setCampfire, step, type Fisher, type Lake } from "../game/lake";
@@ -13,10 +13,10 @@ import { AREAS, DOCK, TRAILS, areaAt, areaById, castRing, castRingIn, distance, 
 import { worldFor, type Biome, type Place, type Platform } from "../game/regions";
 import { createLakeScene } from "./scene";
 
-type Bot = { target: Vec; hookAt: number; nextCastAt: number; stick: { x: number; y: number }; holding: boolean; reactAt: number; wander: boolean };
+type Bot = { stay: boolean; target: Vec; hookAt: number; nextCastAt: number; stick: { x: number; y: number }; holding: boolean; reactAt: number; wander: boolean };
 type Scenario = {
   phase: number;
-  fishers: { seat: number; name: string; spot: Vec | "swirl" | "golden"; easy?: boolean; at?: Vec }[];
+  fishers: { seat: number; name: string; spot: Vec | "swirl" | "golden"; easy?: boolean; at?: Vec; stay?: boolean }[];
   setup?: (lake: Lake, now: number) => Lake;
   /** Tweaks every step (the "director"). */
   direct?: (lake: Lake, now: number) => Lake;
@@ -24,6 +24,8 @@ type Scenario = {
   warmUntil?: (lake: Lake) => boolean;
   hero: (lake: Lake, now: number, startedRealAt: number) => boolean;
   campfire?: boolean;
+  /** Hold the rules where the warm-up left them (the scene keeps animating): a still moment for the shot. */
+  freeze?: boolean;
 };
 
 const shore = (theta: number, out = 1.3): Vec => {
@@ -123,23 +125,25 @@ function atPlace(p: Place, phase: number): Scenario {
     hero: calm,
   };
 }
-/** The family gathered at a dock or mooring: boards after BOARD_MS, then rides. */
-function atPlatform(pl: Platform, phase: number, until: (l: Lake) => boolean, hero: Scenario["hero"]): Scenario {
+/**
+ * The family standing on a dock or mooring, packed inside its reach (the real rules board them after
+ * BOARD_MS, then ride). Nobody walks or casts: they wait for the vehicle like a family would.
+ */
+function atPlatform(pl: Platform, phase: number, until: (l: Lake) => boolean, hero: Scenario["hero"], freeze = false): Scenario {
   const dx = pl.to.x - pl.at.x;
   const dz = pl.to.z - pl.at.z;
   const len = Math.hypot(dx, dz) || 1;
-  const near = (k: number, side: number): Vec => ({ x: pl.at.x - (dx / len) * (0.6 + k) - (dz / len) * side, z: pl.at.z - (dz / len) * (0.6 + k) + (dx / len) * side });
+  // k metres along the route (toward the vehicle), side metres across it: all within PLATFORM_REACH - 1.
+  const on = (k: number, side: number): Vec => ({ x: pl.at.x + (dx / len) * k - (dz / len) * side, z: pl.at.z + (dz / len) * k + (dx / len) * side });
+  const spots = [on(0.5, 0.75), on(0.5, -0.75), on(-0.55, 0.55), on(-0.55, -0.6)];
+  const names: [number, string][] = [[0, "Dad"], [1, "Mom"], [2, "Juneau"], [3, "Sis"]];
   return {
     phase,
-    fishers: [
-      { seat: 0, name: "Dad", spot: near(0.4, 1.1), at: near(0.4, 1.1) },
-      { seat: 1, name: "Mom", spot: near(0.4, -1.1), at: near(0.4, -1.1) },
-      { seat: 2, name: "Juneau", spot: near(1.6, 0.5), at: near(1.6, 0.5) },
-      { seat: 3, name: "Sis", spot: near(1.6, -0.6), easy: true, at: near(1.6, -0.6) },
-    ],
+    fishers: names.map(([seat, name], i) => ({ seat, name, spot: spots[i]!, at: spots[i]!, stay: true, easy: seat === 3 })),
     setup: (l) => produce(l, (d) => { d.discovered = ["moonwell", pl.place, pl.toPlace]; }),
     warmUntil: until,
     hero,
+    freeze,
   };
 }
 const BIOME_SCENES = Object.fromEntries(
@@ -149,10 +153,14 @@ const rideK = (l: Lake) => (l.ride ? (l.now - l.ride.departAt) / (l.ride.arriveA
 const LAZY: Record<string, () => Scenario> = {
   ...BIOME_SCENES,
   "far-place": () => atPlace(findPlace((p) => p.ring === 4), 0.32),
-  "boat-ride": () => atPlatform(findPlatform("boat"), 0.3, (l) => l.ride !== null && rideK(l) > 0.35, (l, now, s) => now - s > 2500 && l.ride !== null),
-  "zeppelin-ride": () => atPlatform(findPlatform("zeppelin"), 0.36, (l) => l.ride !== null && rideK(l) > 0.4, (l, now, s) => now - s > 2500 && l.ride !== null),
-  tower: () => atPlatform(findPlatform("zeppelin"), 0.3, (l) => l.boarding !== null, (l, now, s) => now - s > 1500 && l.boarding !== null),
-  boarding: () => atPlatform(findPlatform("boat"), 0.4, (l) => l.boarding !== null, (l, now, s) => now - s > 1200 && l.boarding !== null),
+  // Mid-sea and mid-air: boarded by the real rules, then fast-forwarded to the middle of the ride.
+  "boat-ride": () => atPlatform(findPlatform("boat"), 0.3, (l) => rideK(l) > 0.42, (l, now, s) => now - s > 3000 && l.ride !== null),
+  "zeppelin-ride": () => atPlatform(findPlatform("zeppelin"), 0.36, (l) => rideK(l) > 0.4, (l, now, s) => now - s > 3000 && l.ride !== null),
+  // The boarding moment (sail unfurling / propellers spinning, the platform glowing): held there.
+  tower: () => atPlatform(findPlatform("zeppelin"), 0.3, (l) => l.boarding !== null && l.now - l.boarding.since > 1700, (_l, now, s) => now - s > 2600, true),
+  boarding: () => atPlatform(findPlatform("boat"), 0.4, (l) => l.boarding !== null && l.now - l.boarding.since > 1700, (_l, now, s) => now - s > 2600, true),
+  // Arrival: the airship settling at the far tower, the family stepping off.
+  arrival: () => atPlatform(findPlatform("zeppelin"), 0.3, (l) => rideK(l) > 0.86, (l, now, s) => now - s > 1500 && (l.ride === null || rideK(l) > 0.985)),
   // The edge of what the family has explored: up the trail from Moonwell Lake toward the pools (not found yet).
   fog: () => ({
     phase: 0.34,
@@ -388,7 +396,7 @@ function joinAs(lake: Lake, seat: number, name: string, at: Vec | undefined, eas
 
 function botStep(lake: Lake, f: Fisher, bot: Bot, now: number): Lake {
   let l = lake;
-  if (l.campfire) return l;
+  if (l.campfire || bot.stay) return l;
   if (f.mode === "walk") {
     const dx = bot.target.x - f.pos.x;
     const dz = bot.target.z - f.pos.z;
@@ -454,7 +462,7 @@ async function main(): Promise<void> {
   const bots = new Map<number, Bot>();
   for (const spec of sc.fishers) {
     lake = joinAs(lake, spec.seat, spec.name, spec.at, spec.easy ?? false);
-    bots.set(spec.seat, { target: { x: 0, z: 0 }, hookAt: 0, nextCastAt: 0, stick: { x: 0, y: 0 }, holding: false, reactAt: 0, wander: false });
+    bots.set(spec.seat, { stay: spec.stay ?? false, target: { x: 0, z: 0 }, hookAt: 0, nextCastAt: 0, stick: { x: 0, y: 0 }, holding: false, reactAt: 0, wander: false });
   }
   if (sc.setup) lake = sc.setup(lake, now);
   // ?swapColors=1: colours are chosen per device, not by seat; reverse them to prove the TV follows `color`.
@@ -506,10 +514,11 @@ async function main(): Promise<void> {
     },
     pause: (on: boolean) => { paused = on; },
   };
-  let paused = false;
+  let paused = sc.freeze ?? false;
   window.__lab = lab;
   let realStart = now;
   let lastReal = performance.now();
+  let realT0 = lastReal;
   let sendAcc = 0;
   scene.update(lake, performance.now());
   const pump = () => {
@@ -522,13 +531,16 @@ async function main(): Promise<void> {
       sendAcc = 0;
       scene.update(lake, performance.now());
     }
-    if (!lab.heroReady && sc.hero(lake, now, realStart)) lab.heroReady = true;
+    // A frozen scenario's clock is the wall clock (the rules' clock stands still).
+    const heroNow = sc.freeze ? realStart + (p - realT0) : now;
+    if (!lab.heroReady && sc.hero(lake, heroNow, realStart)) lab.heroReady = true;
     setTimeout(pump, 16);
   };
   requestAnimationFrame(() => requestAnimationFrame(() => {
     lab.ready = true;
     realStart = now;
     lastReal = performance.now();
+    realT0 = lastReal;
     pump();
   }));
   void distance;

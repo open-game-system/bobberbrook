@@ -33,6 +33,7 @@ const SHOTS = [
   ["tower", null, true],
   ["boat-ride", null, true],
   ["zeppelin-ride", null, true],
+  ["arrival", null, true],
   ["mistmarsh", null, true],
   ["hollow", null, true],
   ["pools", null, true],
@@ -75,6 +76,7 @@ page.on("pageerror", (e) => errors.push(String(e)));
 page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
 
 const metrics = { round, shots: [] };
+const failures = [];
 const files = [];
 for (const [scenario, phase, hero] of shots) {
   const q = new URLSearchParams({ scenario });
@@ -84,8 +86,15 @@ for (const [scenario, phase, hero] of shots) {
   await page.goto(`${base}/scene-lab.html?${q}`);
   await page.waitForFunction(() => window.__lab?.ready === true, null, { timeout: 60_000 });
   const before = await page.evaluate(() => window.__scene.info());
-  if (hero) await page.waitForFunction(() => window.__lab?.heroReady === true, null, { timeout: 45_000 }).catch(() => errors.push(`${label}: hero moment not reached`));
-  else await page.waitForTimeout(6500);
+  if (hero) {
+    // No fallback: a scenario that never reaches its moment is a failed shot, not a still of something else.
+    const ok = await page.waitForFunction(() => window.__lab?.heroReady === true, null, { timeout: 45_000 }).then(() => true, () => false);
+    if (!ok) {
+      failures.push(label);
+      console.error(`FAIL ${label}: hero moment not reached (no shot taken)`);
+      continue;
+    }
+  } else await page.waitForTimeout(6500);
   const file = join(out, `${label.replace(/[@.]/g, "_")}.png`);
   await page.screenshot({ path: file, timeout: 120_000 });
   files.push([label, file]);
@@ -135,6 +144,7 @@ if (!only || only.includes("four-reel")) {
   await perf.close();
 }
 metrics.errors = errors;
+metrics.failures = failures;
 writeFileSync(join(out, "metrics.json"), JSON.stringify(metrics, null, 2));
 
 // Contact sheet: 3 columns of 640x360 tiles with labels.
@@ -152,3 +162,7 @@ await sp.screenshot({ path: join(out, "sheet.png"), fullPage: true });
 await browser.close();
 console.log(`sheet: ${join(out, "sheet.png")}`);
 if (errors.length) console.log("errors:", errors.slice(0, 10));
+if (failures.length) {
+  console.error(`\nFAILED: ${failures.length} hero moment(s) not reached: ${failures.join(", ")}`);
+  process.exit(1);
+}
