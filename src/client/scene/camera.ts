@@ -80,6 +80,8 @@ export class CameraRig {
   rateK = 1;
   /** On a ride: the vehicle's heading (radians, atan2(z, x)) and kind (1 boat, 2 zeppelin), for a side-on travelling shot. */
   ride: { heading: number; kind: number } | null = null;
+  /** The yaw the group camera prefers at the place the family is in (eased by the rig's springs). */
+  placeYaw = 0;
   /** Gathered at a mooring: the way from it to the vehicle (unit), and its kind (1 boat, 2 zeppelin). */
   board: { ux: number; uz: number; kind: number } | null = null;
   /** The place the establishing view looks over (where the family last was; Moonwell at first). */
@@ -265,7 +267,9 @@ export class CameraRig {
       this.fitGroup(this.wantYaw, this.wantEl);
       rate = 1.2;
     } else if (groupMode) {
-      this.fitGroup();
+      // Each generated place is framed from its own side (home places keep the classic view).
+      this.wantYaw = this.placeYaw;
+      this.fitGroup(this.placeYaw);
     } else if (v === "wide" && this.n > 0) {
       // High and far over the family: the lie of the land round them (the fog's edge, the sea).
       this.fitGroup();

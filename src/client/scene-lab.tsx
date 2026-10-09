@@ -114,12 +114,18 @@ function findPlatform(kind: "boat" | "zeppelin"): Platform {
 }
 /** The family fishing at a generated place (found, its fog lifted). */
 function atPlace(p: Place, phase: number): Scenario {
+  // Where along the near shore they settle, and how spread, varies by place (not always a row).
+  let h = 0;
+  for (const ch of p.key) h = (h * 31 + ch.charCodeAt(0)) % 9973;
+  const base = Math.PI / 2 + ((h % 7) / 6 - 0.5) * 0.8;
+  const spread = 0.35 + ((h >> 3) % 5) * 0.12;
+  const ths = [base + spread * 1.4, base, base - spread];
   return {
     phase,
     fishers: [
-      { seat: 0, name: "Dad", spot: shoreOf(p, 1.9), at: shoreOf(p, 1.9, 2.5) },
-      { seat: 2, name: "Juneau", spot: shoreOf(p, 1.3), at: shoreOf(p, 1.3, 2.5) },
-      { seat: 3, name: "Sis", spot: shoreOf(p, 0.7), easy: true, at: shoreOf(p, 0.7, 2.5) },
+      { seat: 0, name: "Dad", spot: shoreOf(p, ths[0]!), at: shoreOf(p, ths[0]!, 2.5) },
+      { seat: 2, name: "Juneau", spot: shoreOf(p, ths[1]!), at: shoreOf(p, ths[1]!, 2.5) },
+      { seat: 3, name: "Sis", spot: shoreOf(p, ths[2]!), easy: true, at: shoreOf(p, ths[2]!, 2.5) },
     ],
     setup: (l) => produce(l, (d) => { d.discovered = ["moonwell", p.id]; }),
     hero: calm,

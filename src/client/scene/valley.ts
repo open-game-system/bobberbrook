@@ -195,14 +195,14 @@ const BIOME_LOOKS: Record<"willow" | "crystal" | "ember" | "frost", AreaLook> = 
     grassA: B(0x3e7a6a), grassB: B(0x6aa88a), grassC: B(0xb898e0),
     canopy: [B(0xd8b0ff), B(0xc8a0f0), B(0xe8c8ff)],
     waterShallow: B(0xf0e8ff), waterDeep: B(0xc8b8f0), calm: 0.7,
-    fog: B(0xd8c8f0), fogK: 0.45, fogScale: 0.8, sunK: 1.0, hemiK: 1.1, hemiSky: B(0xe8d8ff), glowAdd: 0.15, mistAdd: 0.35, exposureK: 1.05, grade: B(0xfaf4ff),
+    fog: B(0xd0c0ec), fogK: 0.4, fogScale: 0.85, sunK: 1.12, hemiK: 0.88, hemiSky: B(0xdccaf8), glowAdd: 0.15, mistAdd: 0.3, exposureK: 0.97, grade: B(0xfaf4ff),
   },
   // Pale glowing crystal clusters, prism light.
   crystal: {
     grassA: B(0x3a6a7a), grassB: B(0x5a9aa0), grassC: B(0xa0c0ff),
     canopy: [B(0xb0d0ff), B(0xc0b8ff), B(0xa8f0f0)],
     waterShallow: B(0xc0ffff), waterDeep: B(0x90a8ff), calm: 0.6,
-    fog: B(0xa8c0f0), fogK: 0.45, fogScale: 0.85, sunK: 0.95, hemiK: 1.05, hemiSky: B(0xd0e0ff), glowAdd: 0.45, mistAdd: 0.2, exposureK: 1.04, grade: B(0xf0f6ff),
+    fog: B(0xa8c0f0), fogK: 0.4, fogScale: 0.9, sunK: 1.12, hemiK: 0.85, hemiSky: B(0xc0d0f8), glowAdd: 0.45, mistAdd: 0.15, exposureK: 0.95, grade: B(0xf0f6ff),
   },
   // Amber and copper autumn canopy, warm lanterns: twilight, not summer.
   ember: {
@@ -213,10 +213,11 @@ const BIOME_LOOKS: Record<"willow" | "crystal" | "ember" | "frost", AreaLook> = 
   },
   // Snowy pines, frosted grass, pale blue ice edge.
   frost: {
-    grassA: B(0xc8d8ea), grassB: B(0xeef4fc), grassC: B(0xc0c8f4),
+    grassA: B(0x9aaccc), grassB: B(0xd4dff0), grassC: B(0xa8b0e0),
     canopy: [B(0xe8f0ff), B(0xd8e4ff), B(0xf4f8ff)],
-    waterShallow: B(0xd8f8ff), waterDeep: B(0x8098e0), calm: 0.85,
-    fog: B(0xc8d8f8), fogK: 0.5, fogScale: 0.8, sunK: 1.0, hemiK: 1.1, hemiSky: B(0xe0ecff), glowAdd: 0.2, mistAdd: 0.25, exposureK: 1.0, grade: B(0xf2f6ff),
+    waterShallow: B(0xc0e8ff), waterDeep: B(0x6070c8), calm: 0.85,
+    // Snow is bright: a strong low key, a weak cool fill and less exposure keep it shaped, not flat white.
+    fog: B(0xb0c0e8), fogK: 0.35, fogScale: 0.9, sunK: 1.2, hemiK: 0.78, hemiSky: B(0xb8c8f0), glowAdd: 0.2, mistAdd: 0.15, exposureK: 0.88, grade: B(0xeef2ff),
   },
 };
 

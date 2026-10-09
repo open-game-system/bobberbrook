@@ -29,6 +29,7 @@ import { rng, vnoise } from "./noise";
 import { heightAt } from "./terrain";
 import type { TodState } from "./tod";
 import { flowMaterial, ribbon } from "./water";
+import { dressShore } from "./shores";
 import { buildPlaceLandmark, crystalKit, emberKit, frostKit, willowKit, type LandmarkKind } from "./biomes";
 
 /**
@@ -535,6 +536,8 @@ export function buildLandmark(a: PondPlace, style: LandmarkStyle, seed: number, 
   group.name = `landmark-${a.id}`;
   const c: Ctx = { a, seed, wood: [], glow: [], full, group, painted, tree, extra: [], flows: [] };
   BUILDERS[id](c);
+  // Generated places: their own shoreline by seed, then their landmark.
+  if (landmark) dressShore(c, id);
   if (landmark) buildPlaceLandmark(c, landmark);
   const glowMat = new MeshBasicMaterial({ vertexColors: true });
   if (c.wood.length) {

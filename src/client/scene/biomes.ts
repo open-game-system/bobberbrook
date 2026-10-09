@@ -2,6 +2,7 @@ import {
   BoxGeometry,
   BufferGeometry,
   Color,
+  Float32BufferAttribute,
   ConeGeometry,
   CylinderGeometry,
   OctahedronGeometry,
@@ -40,16 +41,34 @@ function put(g: BufferGeometry, x: number, z: number, ry: number, s = 1, dy = 0)
   return g;
 }
 
-/** A free spot on the far (north) side: clear of trails, docks and towers. */
-function farSpot(c: KitCtx, R: () => number, out: number): { x: number; z: number; th: number } {
+/**
+ * Where a place's landmark stands, by its seed: straight across the water, off on the east or west
+ * flank, or (giant trees and shrines) on an islet out in the pond. Clear of trails, docks and towers.
+ */
+function landmarkSpot(c: KitCtx, R: () => number, out: number, island: boolean): { x: number; z: number; th: number; island: boolean } {
+  const side = R();
+  const base = -Math.PI / 2 + (side < 0.4 ? 0 : side < 0.7 ? -1.05 : 1.05);
+  if (island && R() < 0.4) {
+    const th = base + (R() - 0.5) * 0.6;
+    const p = at(c.a, th, -Math.min(5.5, c.a.pond.r * 0.36));
+    const islet = paint(prep(new SphereGeometry(4.2, 16, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.26, 1)), 0x4a5a5a, 0x5a8a6a, (pp, _n, cc) => cc.multiplyScalar(0.85 + 0.25 * vnoise(pp.x, pp.z, 3)));
+    c.wood.push(put(islet, p.x, p.z, 0, 1, -heightAt(p.x, p.z) - 0.25));
+    return { ...p, th, island: true };
+  }
+  const f = farSpot(c, R, out, base);
+  return { ...f, island: false };
+}
+
+/** A free spot round `base` (default: the far, north side): clear of trails, docks and towers. */
+function farSpot(c: KitCtx, R: () => number, out: number, base = -Math.PI / 2): { x: number; z: number; th: number } {
   const a = c.a;
   const plats = platformsAround(a.center.x, a.center.z).filter((p) => p.place === a.id);
   const place = activeWorld().placeById(a.id);
   const tower = place && plats.some((p) => p.kind === "zeppelin") ? activeWorld().towerAt(place) : null;
-  let best = at(a, -Math.PI / 2, out);
-  let th = -Math.PI / 2;
+  let best = at(a, base, out);
+  let th = base;
   for (let i = 0; i < 12; i++) {
-    const t = -Math.PI / 2 + (R() - 0.5) * 2.2;
+    const t = base + (R() - 0.5) * (i < 6 ? 1.0 : 2.2);
     const p = at(a, t, out);
     if (!clearOfTrails(p.x, p.z, 4)) continue;
     if (plats.some((q) => Math.hypot(q.at.x - p.x, q.at.z - p.z) < 10)) continue;
@@ -211,13 +230,18 @@ export function emberKit(c: KitCtx): void {
 export function frostKit(c: KitCtx): void {
   const { a } = c;
   const R = rng(601 + c.seed);
-  // Ice: pale blue shards lying flat along the water's edge.
-  for (let i = 0; i < 40; i++) {
-    const th = (i / 40) * Math.PI * 2 + R() * 0.1;
-    const p = at(a, th, -0.4 - R() * 1.4);
-    const g = new CylinderGeometry(0.9 + R() * 0.7, 1.0 + R() * 0.7, 0.08, 5 + Math.floor(R() * 3));
-    jitter(g, 0.1, i);
-    c.wood.push(put(paint(prep(g), 0xc8e8ff, 0xf0faff), p.x, p.z, R() * 6, 1, -heightAt(p.x, p.z) + 0.03));
+  // A frozen rim: one sheet of ice hugging the shore, its inner edge ragged, snow banked on it.
+  c.wood.push(frozenRim(a, R));
+  // Snowy banks: soft drifts piled along the shore and against the trees.
+  for (let i = 0; i < 22; i++) {
+    const th = (i / 22) * Math.PI * 2 + R() * 0.2;
+    const p = at(a, th, 0.6 + R() * 2.2);
+    if (!clearOfTrails(p.x, p.z, 0.5)) continue;
+    const r = 1.2 + R() * 1.6;
+    const g = new SphereGeometry(r, 12, 5, 0, Math.PI * 2, 0, Math.PI / 2).scale(1.4, 0.32, 0.9);
+    jitter(g, 0.1 * r, i + 7);
+    g.computeVertexNormals();
+    c.wood.push(put(paint(prep(g), 0xb8c8e4, 0xffffff, (pp, n, cc) => cc.multiplyScalar(0.84 + 0.16 * Math.max(0, n.y))), p.x, p.z, th + Math.PI / 2, 1, -0.12));
   }
   const rocks: Inst[] = [];
   for (let i = 0; i < 14; i++) {
@@ -237,6 +261,41 @@ export function frostKit(c: KitCtx): void {
   }
 }
 
+/** The ice sheet round a frozen pond's edge: from 0.6 m up the bank to a ragged edge 1.5-3.5 m out. */
+function frozenRim(a: PondPlace, R: () => number): BufferGeometry {
+  const N = 96;
+  const pos: number[] = [];
+  const col: number[] = [];
+  const idx: number[] = [];
+  const seed = R() * 100;
+  const cIn = new Color(0xa8d8f0);
+  const cMid = new Color(0xd8f0ff);
+  const cOut = new Color(0xf6fbff);
+  for (let i = 0; i <= N; i++) {
+    const th = (i / N) * Math.PI * 2;
+    const r = pondRadius(a, th);
+    const inner = r - 1.5 - 2.0 * vnoise(th * 3 + seed, seed, 3) - 0.6 * vnoise(th * 11, seed + 1, 3);
+    const ring: [number, Color][] = [[inner, cIn], [inner + 0.5, cMid], [r - 0.2, cMid], [r + 0.6, cOut]];
+    for (const [rr, cc] of ring) {
+      pos.push(a.center.x + Math.cos(th) * rr, 0.035 + (rr > r - 0.3 ? 0.08 : 0), a.center.z + Math.sin(th) * rr);
+      col.push(cc.r, cc.g, cc.b);
+    }
+    if (i < N) for (let k = 0; k < 3; k++) {
+      const p = i * 4 + k;
+      idx.push(p, p + 4, p + 1, p + 1, p + 4, p + 5);
+    }
+  }
+  const g = new BufferGeometry();
+  g.setAttribute("position", new Float32BufferAttribute(pos, 3));
+  g.setAttribute("color", new Float32BufferAttribute(col, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  // Faces up whatever the winding.
+  const n = g.getAttribute("normal");
+  for (let i = 0; i < n.count; i++) n.setXYZ(i, 0, 1, 0);
+  return prep(g);
+}
+
 // ---------- landmarks ----------
 
 export const LANDMARKS = ["giant", "arch", "shrine", "spire"] as const;
@@ -244,8 +303,8 @@ export type LandmarkKind = (typeof LANDMARKS)[number];
 
 /** A huge ancient tree on the far shore, its roots spilling to the water. */
 function giant(c: KitCtx, R: () => number): void {
-  const p = farSpot(c, R, c.a.clearing * 0.7);
-  const g = put(giantGeometry(Math.floor(R() * 3)), p.x, p.z, R() * 6, 0.55 + R() * 0.15, -0.6);
+  const p = landmarkSpot(c, R, c.a.clearing * 0.7, true);
+  const g = put(giantGeometry(Math.floor(R() * 3)), p.x, p.z, R() * 6, (p.island ? 0.62 : 0.78) + R() * 0.14, p.island ? -heightAt(p.x, p.z) + 0.2 : -0.6);
   c.wood.push(g);
   // Glowing motes caught in its roots.
   for (let i = 0; i < 6; i++) {
@@ -256,7 +315,7 @@ function giant(c: KitCtx, R: () => number): void {
 
 /** A moon-gate: a round stone arch on the far shore, framing the forest beyond, with a soft rune ring. */
 function arch(c: KitCtx, R: () => number): void {
-  const p = farSpot(c, R, 1.6);
+  const p = landmarkSpot(c, R, 1.6, false);
   const face = Math.atan2(c.a.center.x - p.x, c.a.center.z - p.z);
   const ring = new TorusGeometry(2.6, 0.45, 8, 28, Math.PI * 1.16).rotateZ(-0.08 * Math.PI);
   jitter(ring, 0.06, 3);
@@ -266,18 +325,19 @@ function arch(c: KitCtx, R: () => number): void {
     if (n.y > 0.6) cc.lerp(new Color(0x3e8a6a), 0.6);
   });
   const feet = [-2.5, 2.5].map((x) => paint(prep(new BoxGeometry(1.1, 1.2, 1.0).translate(x, 0.3, 0)), 0x5a5478, 0x7a7498));
-  c.wood.push(put(merge([stone, ...feet]), p.x, p.z, face, 1.1));
+  c.wood.push(put(merge([stone, ...feet]), p.x, p.z, face, 1.5));
   const runes: BufferGeometry[] = [];
   for (let i = 0; i < 9; i++) {
     const t = 0.15 * Math.PI + (i / 8) * 0.7 * Math.PI;
     runes.push(paint(prep(new OctahedronGeometry(0.11).translate(Math.cos(t) * 2.6, 0.6 + Math.sin(t) * 2.6, 0.48)), 0xc8e8ff));
   }
-  c.glow.push(put(merge(runes), p.x, p.z, face, 1.1));
+  c.glow.push(put(merge(runes), p.x, p.z, face, 1.5));
 }
 
 /** A little lantern shrine: a stone plinth under a swept roof, a glowing orb inside. */
 function shrine(c: KitCtx, R: () => number): void {
-  const p = farSpot(c, R, 2.2);
+  const p = landmarkSpot(c, R, 2.6, true);
+  const dy = p.island ? -heightAt(p.x, p.z) + 0.1 : 0;
   const face = Math.atan2(c.a.center.x - p.x, c.a.center.z - p.z);
   const parts: BufferGeometry[] = [
     paint(prep(new CylinderGeometry(1.5, 1.7, 0.5, 8).translate(0, 0.25, 0)), 0x6a6488, 0x8a84a8),
@@ -287,24 +347,24 @@ function shrine(c: KitCtx, R: () => number): void {
   const roof = new ConeGeometry(2.1, 1.4, 8).translate(0, 3.7, 0);
   parts.push(paint(prep(roof), 0x3a2a7a, 0x8a6ad0));
   parts.push(paint(prep(new SphereGeometry(0.16, 8, 6).translate(0, 4.5, 0)), 0xe8b860));
-  c.wood.push(put(merge(parts), p.x, p.z, face + Math.PI / 8));
-  c.glow.push(put(paint(prep(new SphereGeometry(0.42, 12, 8).translate(0, 2.0, 0)), 0xfff0c8), p.x, p.z, 0));
-  void R;
+  c.wood.push(put(merge(parts), p.x, p.z, face + Math.PI / 8, 1.6, dy));
+  c.glow.push(put(paint(prep(new SphereGeometry(0.42, 12, 8).translate(0, 2.0, 0)), 0xfff0c8), p.x, p.z, 0, 1.6, dy));
 }
 
 /** A tall crystal spire rising from an islet, catching the light. */
 function spire(c: KitCtx, R: () => number): void {
-  const th = -Math.PI / 2 + (R() - 0.5) * 1.4;
+  const side = R();
+  const th = -Math.PI / 2 + (side < 0.4 ? 0 : side < 0.7 ? -1.0 : 1.0) + (R() - 0.5) * 0.6;
   const p = at(c.a, th, -Math.min(4, c.a.pond.r * 0.35));
   const parts: BufferGeometry[] = [];
   const hue = [0xc8f0ff, 0xe0c8ff, 0xc8ffe8][Math.floor(R() * 3)]!;
-  for (let i = 0; i < 7; i++) {
-    const h = i === 0 ? 7 + R() * 2 : 1.5 + R() * 3;
+  for (let i = 0; i < 9; i++) {
+    const h = i === 0 ? 11 + R() * 3 : i === 1 ? 6 + R() * 2 : 1.5 + R() * 3;
     const g = new OctahedronGeometry(0.5, 0).scale(i === 0 ? 1.3 : 0.8, h, i === 0 ? 1.3 : 0.8).rotateZ(i === 0 ? 0 : (R() - 0.5) * 0.9).rotateX(i === 0 ? 0 : (R() - 0.5) * 0.9).translate(i === 0 ? 0 : (R() - 0.5) * 2, h * 0.35, i === 0 ? 0 : (R() - 0.5) * 2);
     parts.push(paint(prep(g), new Color(hue).multiplyScalar(0.7), hue));
   }
   c.glow.push(put(merge(parts), p.x, p.z, R() * 6, 1, -heightAt(p.x, p.z) - 0.2));
-  const islet = paint(prep(new SphereGeometry(2.2, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.32, 1)), 0x4a5a6a, 0x6a8a7a);
+  const islet = paint(prep(new SphereGeometry(2.8, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.32, 1)), 0x4a5a6a, 0x6a8a7a);
   c.wood.push(put(islet, p.x, p.z, 0, 1, -heightAt(p.x, p.z) - 0.25));
 }
 
@@ -313,17 +373,20 @@ const LANDMARK_BUILD: Record<LandmarkKind, (c: KitCtx, R: () => number) => void>
 /** Which landmark a generated place gets: its biome leans the choice, its seed decides. */
 export function landmarkFor(biome: string, pick: number): LandmarkKind {
   const lean: Record<string, LandmarkKind[]> = {
-    marsh: ["giant", "shrine", "arch"],
+    marsh: ["shrine", "giant", "arch"],
     pools: ["arch", "shrine", "spire"],
+    // marsh: the lantern shrine pavilion; willow/ember/hollow: a giant ancient tree; tarn/crystal/frost: a spire.
     hollow: ["giant", "shrine", "arch"],
     tarn: ["spire", "arch", "shrine"],
-    willow: ["giant", "arch", "shrine"],
+    willow: ["arch", "giant", "shrine"],
     crystal: ["spire", "arch", "spire"],
     ember: ["giant", "shrine", "arch"],
-    frost: ["shrine", "spire", "arch"],
+    frost: ["spire", "shrine", "arch"],
   };
   const list = lean[biome] ?? [...LANDMARKS];
-  return list[Math.floor(pick * list.length) % list.length]!;
+  // Each biome's signature silhouette most of the time (readable from across the room), else a cousin.
+  if (pick < 0.6) return list[0]!;
+  return list[1 + (Math.floor(((pick - 0.6) / 0.4) * (list.length - 1)) % (list.length - 1))]!;
 }
 
 export function buildPlaceLandmark(c: KitCtx, kind: LandmarkKind): void {

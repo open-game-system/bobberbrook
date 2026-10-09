@@ -31,6 +31,7 @@ import { buildProps } from "./props";
 import { buildSky } from "./sky";
 import { SwirlViews } from "./swirls";
 import { buildGroundStream } from "./terrain";
+import { placeHash } from "./valley";
 import { newTodState, sampleTod } from "./tod";
 import type { LakeScene, SceneQuality } from "./types";
 import { buildWater } from "./water";
@@ -408,7 +409,10 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     fishers.forEachSeat((seat, x, _y, z) => { if (framed.has(seat)) { gx += x; gz += z; n++; } });
     const here = n > 0 ? activeWorld().areaAt({ x: gx / n, z: gz / n }) : null;
     const onTrail = n > 0 && here === null && !riding ? 1 : 0;
-    if (here) rig.anchor.set(here.center.x, 0, here.center.z);
+    if (here) {
+      rig.anchor.set(here.center.x, 0, here.center.z);
+      rig.placeYaw = here.home ? 0 : (placeHash(here.key, 11) - 0.5) * 0.9;
+    }
     trailW += (onTrail - trailW) * Math.min(1, dt * 1.5);
     const reveal = revealAge >= 0 && revealAge < 3.5 ? { x: revealArea.center.x, z: revealArea.center.z, age: revealAge } : null;
     rig.update(t, dt, lake?.campfire ?? false, cf, trailW, reveal);
