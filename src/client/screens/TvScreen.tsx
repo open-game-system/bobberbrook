@@ -18,7 +18,9 @@ import { shouldTeach, teachFor, type TeachMemory } from "../teach";
 import { thrashingAt } from "../../game/reel";
 import { createServerClock } from "../serverClock";
 import { SEAT_HEX } from "../components/MiniMap";
-import { ShellIcon } from "../components/Icons";
+import { BoatIcon, RodIcon, ShellIcon, ZeppelinIcon } from "../components/Icons";
+import { boardingProgress, todChanged } from "../tvHud";
+import type { TimeOfDay } from "../../game/daycycle";
 import { qualityFor, rendererName } from "../gpu";
 
 const TICK_MS = 250;
@@ -30,7 +32,9 @@ function qrDataUrl(text: string): string {
   return qr.createDataURL(6, 2);
 }
 
-type Toast = { id: number; kind: "new" | "upgrade" | "golden" | "place"; fishId?: string; seat?: number; tier?: number; place?: string; ride?: "boat" | "zeppelin" };
+type Toast = { id: number; kind: "new" | "upgrade" | "golden" | "place" | "tod"; fishId?: string; seat?: number; tier?: number; place?: string; ride?: "boat" | "zeppelin"; tod?: TimeOfDay };
+
+const TOD_NAMES: Record<TimeOfDay, string> = { morning: "Morning", golden: "Golden hour", night: "Night falls", dawn: "Dawn" };
 
 /**
  * The TV: the 3D lake (scene/), the room's clock (TICK at 4 Hz), the world's sound, and a small HUD at
@@ -50,6 +54,7 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
   const joinUi = useOgsTv();
   const [sound, setSound] = useState(autoSound);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const lastTod = useRef<TimeOfDay | null>(null);
   const toastId = useRef(0);
   const teachMem = useRef<TeachMemory>(new Map());
 
@@ -89,8 +94,12 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
       // After a few catches at home, nudge the family down a trail (once).
       if (events.some((e) => e.kind === "caught") && lake.catchSeq >= 3 && lake.discovered.length === 1 && shouldTeach("teach-explore", "all", teachMem.current)) voice.line("teach-explore");
     }
-    setTimeOfDayMood(todOf({ startedAt: lake.startedAt, now: clock.now() }));
+    const todNow = todOf({ startedAt: lake.startedAt, now: clock.now() });
+    setTimeOfDayMood(todNow);
     const fresh: Toast[] = [];
+    const turned = todChanged(lastTod.current, todNow);
+    lastTod.current = todNow;
+    if (turned) fresh.push({ id: ++toastId.current, kind: "tod", tod: turned });
     for (const e of events) {
       if (e.kind === "caught" && e.isNew) fresh.push({ id: ++toastId.current, kind: "new", fishId: e.fishId, seat: e.seat });
       if (e.kind === "upgrade") fresh.push({ id: ++toastId.current, kind: "upgrade", tier: e.tier });
@@ -188,6 +197,20 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
           <span className={`rod-tier tier-${lake.rodTier}`} />
         </div>
       </div>
+      {(() => {
+        const p = lake.ride ? null : boardingProgress(lake.boarding, clock.now());
+        if (p === null) return null;
+        const kind = lake.boarding ? worldFor(lake.worldSeed).platformsNear(lake.fishers[0]?.pos ?? { x: 0, z: 0 }, 1).find((q) => q.id === lake.boarding?.platformId)?.kind : undefined;
+        return (
+          <div className="all-aboard" aria-label="All aboard">
+            <svg viewBox="0 0 100 100" aria-hidden="true">
+              <circle cx="50" cy="50" r="44" fill="rgba(24,16,60,.85)" stroke="rgba(255,255,255,.2)" strokeWidth="8" />
+              <circle cx="50" cy="50" r="44" fill="none" stroke="#f0c96a" strokeWidth="8" strokeLinecap="round" pathLength={1} strokeDasharray={`${p} 1`} transform="rotate(-90 50 50)" />
+            </svg>
+            <span className="all-aboard-icon">{kind === "boat" ? <BoatIcon /> : <ZeppelinIcon />}</span>
+          </div>
+        );
+      })()}
       <div className="toasts">
         {toasts.slice(0, 1).map((t) => (
           <div key={t.id} className={`toast ${t.kind}`}>
@@ -203,7 +226,20 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
                 <span className="toast-star" aria-hidden="true">★</span>
               </>
             )}
-            {t.kind === "upgrade" && <span className="toast-text">{ROD_NAMES[t.tier ?? 0]} rods for everyone!</span>}
+            {t.kind === "upgrade" && (
+              <>
+                <span className="toast-icon">
+                  <RodIcon />
+                </span>
+                <span className="toast-text">{ROD_NAMES[t.tier ?? 0]} rods for everyone!</span>
+              </>
+            )}
+            {t.kind === "tod" && t.tod && (
+              <>
+                <span className={`tod-icon big ${t.tod}`} aria-hidden="true" />
+                <span className="toast-text">{TOD_NAMES[t.tod]}</span>
+              </>
+            )}
             {t.kind === "golden" && <span className="toast-text">Golden swirl!</span>}
             {t.kind === "place" && (
               <span className="toast-text">

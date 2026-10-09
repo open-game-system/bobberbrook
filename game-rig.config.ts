@@ -8,7 +8,7 @@ import type { GameRigInput, RigContext, SessionRig } from "../skills/game-rig/sr
 const URL_BASE = process.env.BB_URL ?? "http://127.0.0.1:8841";
 
 type V = { x: number; z: number };
-type FisherLite = { seat: number; pos: V; mode: string; biteAt: number; biteUntil: number; missAt: number | null; reel: { progress: number } | null };
+type FisherLite = { seat: number; pos: V; mode: string; biteAt: number; biteUntil: number; missAt: number | null; catch: { seq: number } | null; reel: { progress: number } | null };
 type LakeLite = { fishers: FisherLite[]; swirls: { pos: V; golden: boolean }[]; now: number; campfire: boolean };
 
 async function lakeOf(page: Page): Promise<{ lake: LakeLite; seat: number; now: number }> {
@@ -62,6 +62,7 @@ async function press(page: Page): Promise<void> {
 async function fishOnce(rig: SessionRig, page: Page, who: string, careful: boolean): Promise<void> {
   // Wait for the last catch card to finish (a press during it does nothing).
   for (let i = 0; i < 40 && (await me(page)).f.mode !== "walk"; i++) await page.waitForTimeout(150);
+  const before = (await me(page)).f.catch?.seq ?? -1;
   await press(page);
   rig.mark(`${who} casts`);
   const deadline = Date.now() + 25_000;
@@ -91,13 +92,13 @@ async function fishOnce(rig: SessionRig, page: Page, who: string, careful: boole
   }
   if (holding) await btn.dispatchEvent("pointerup");
   const end = (await me(page)).f;
-  if (end.mode === "catch") rig.mark(`${who} catch`);
+  if (end.mode === "catch" || (end.catch?.seq ?? -1) !== before) rig.mark(`${who} catch`);
   else rig.mark(`${who} no catch (${end.mode === "walk" ? "never cast" : end.missAt !== null ? "fish got away" : `still ${end.mode}`})`);
   await page.waitForTimeout(3600);
 }
 
-/** The TV page keeps loading fish art and voice clips after it is usable: wait for the DOM, not every asset (the shared Mac is loaded). */
-const LOAD: { waitUntil: "domcontentloaded"; timeout: number } = { waitUntil: "domcontentloaded", timeout: 90_000 };
+/** The TV page's big script (shader prewarm) can hold DOMContentLoaded for minutes on the loaded Mac: wait for the navigation to commit, then for the element each step needs. */
+const LOAD: { waitUntil: "commit"; timeout: number } = { waitUntil: "commit", timeout: 90_000 };
 
 type PageFor = { baseUrl: string; pageFor: (role: string) => Promise<Page> };
 const fromSetup = (rig: RigContext): PageFor => ({ baseUrl: rig.baseUrl, pageFor: async (role) => (rig.role === role ? rig.page : rig.open(role)) });
@@ -114,7 +115,7 @@ async function hostAndJoin(rig: PageFor): Promise<{ tv: Page; dad: Page; kid: Pa
   const { pageFor } = rig;
   const tv = await pageFor("tv");
   await tv.goto(`${rig.baseUrl}/?as=tv&record=1`, LOAD);
-  await tv.locator(".ticket-code").waitFor({ timeout: 60_000 });
+  await tv.locator(".ticket-code").waitFor({ timeout: 180_000 });
   const code = ((await tv.locator(".ticket-code").textContent()) ?? "").trim();
   const join = async (role: string, name: string | null) => {
     const page = await pageFor(role);
@@ -162,7 +163,7 @@ const config: GameRigInput = {
   holdSelector: "button.action.reel",
   screens: [
     { name: "tv-empty-lake", role: "tv", path: "/?as=tv", checks: ["overlay", "text", "safe-area"], settleMs: 4000, viewports: [TV] },
-    { name: "kid-hat-picker", role: "kid", setup: async (rig) => { const tv = await rig.open("tv"); await tv.goto(`${rig.baseUrl}/?as=tv`, LOAD); await tv.locator(".ticket-code").waitFor({ timeout: 60_000 }); const code = ((await tv.locator(".ticket-code").textContent()) ?? "").trim(); await rig.page.goto(`${rig.baseUrl}/join/${code}`, LOAD); }, focal: false, viewports: [IPAD] },
+    { name: "kid-hat-picker", role: "kid", setup: async (rig) => { const tv = await rig.open("tv"); await tv.goto(`${rig.baseUrl}/?as=tv`, LOAD); await tv.locator(".ticket-code").waitFor({ timeout: 180_000 }); const code = ((await tv.locator(".ticket-code").textContent()) ?? "").trim(); await rig.page.goto(`${rig.baseUrl}/join/${code}`, LOAD); }, focal: false, viewports: [IPAD] },
     { name: "phone-controller", role: "dad", setup: async (rig) => void (await hostAndJoin(fromSetup(rig))), focal: false, viewports: [PHONE, PHONE_SE] },
     { name: "ipad-controller", role: "kid", setup: async (rig) => void (await hostAndJoin(fromSetup(rig))), focal: false, viewports: [IPAD] },
     { name: "tv-two-fishers", role: "tv", setup: async (rig) => void (await hostAndJoin(fromSetup(rig))), checks: ["overlay", "text", "safe-area"], settleMs: 3000, viewports: [TV] },
