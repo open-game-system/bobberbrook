@@ -918,12 +918,17 @@ export function loadProgress(lake: Lake, progress: Progress): Lake {
     if (progress.worldSeed !== undefined) d.worldSeed = progress.worldSeed;
     addUnseen(d.revealed, progress.revealed ?? []);
     // Places found on earlier visits stay found (no second celebration), each with its swirl.
-    for (const id of progress.discovered ?? []) {
-      if (d.discovered.includes(id)) continue;
-      d.discovered.push(id);
-      spawnSwirl(d, d.now, false, id);
-    }
+    rediscover(d, progress.discovered ?? []);
   });
+}
+
+/** Marks each saved place found (if it isn't already) and gives it its swirl. */
+function rediscover(d: Draft<Lake>, ids: PlaceId[]): void {
+  for (const id of ids) {
+    if (d.discovered.includes(id)) continue;
+    d.discovered.push(id);
+    spawnSwirl(d, d.now, false, id);
+  }
 }
 
 /** A saved journal entry added onto this room's: counts add, best size wins, the saved first-catcher wins. */
