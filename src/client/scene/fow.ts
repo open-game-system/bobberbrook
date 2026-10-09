@@ -6,6 +6,7 @@ import {
   Mesh,
   ShaderMaterial,
   UniformsLib,
+  Vector4,
   UniformsUtils,
 } from "three";
 import { FOG_TILE } from "../../game/lake";
@@ -23,6 +24,13 @@ import type { Jobs } from "./stream";
 const N = 48;
 const VIOLET = new Color(0.16, 0.11, 0.3);
 const LAYERS = [1.2, 5.5, 10.5, 16];
+/** Veil walls: at most this many tile edges, each a curtain of WALL_COLS x WALL_ROWS vertices, WALL_H tall. */
+const WALL_MAX = 420;
+const WALL_COLS = 6;
+const WALL_ROWS = 4;
+const WALL_H = 34;
+/** How far into the unexplored tile the wall stands (m). */
+const WALL_IN = 3;
 
 const VERT = /* glsl */ `
 #include <fog_pars_vertex>
@@ -48,6 +56,9 @@ const FRAG = /* glsl */ `
 uniform float uTime;
 uniform vec3 uCol;
 uniform vec3 uTop;
+uniform vec4 uSight;
+uniform vec3 uWallLo;
+uniform vec3 uWallHi;
 varying vec3 vWorld;
 varying float vLayer;
 varying float vClear;
@@ -61,9 +72,26 @@ void main() {
   float wob = vn(vWorld.xz * 0.045 + uTime * 0.02) - 0.5;
   float veil = 1.0 - smoothstep(0.15, 0.7, vClear + wob * 0.45);
   float n = vn(vWorld.xz * 0.05 + vec2(uTime * 0.03, vLayer * 3.1)) * 0.6 + vn(vWorld.xz * 0.13 - uTime * 0.04) * 0.4;
-  float a = veil * mix(0.55, 1.0, n) * mix(0.95, 0.55, vLayer);
+  // vLayer 0..1: the blanket's layers; 1..2: up a veil wall (fading out at its top).
+  float wall = step(1.001, vLayer);
+  float up = clamp(vLayer - 1.0, 0.0, 1.0);
+  // Hanging folds drifting slowly upward, densest low down, thinning to nothing at the top.
+  float fold = 0.72 + 0.28 * sin((vWorld.x + vWorld.z) * 0.55 + vn(vWorld.xz * 0.08) * 6.0);
+  float curtain = (1.0 - pow(up, 2.6)) * fold * (0.75 + 0.25 * vn(vec2(vWorld.x + vWorld.z, vWorld.y * 0.3 - uTime * 0.35) * 0.3));
+  float a = veil * mix(mix(0.55, 1.0, n) * mix(0.95, 0.55, vLayer), 0.92 * curtain, wall);
+  // Never between the camera and the family: thin out along the line of sight.
+  vec2 sa = uSight.xy;
+  vec2 sb = uSight.zw;
+  vec2 sd = sb - sa;
+  float st = clamp(dot(vWorld.xz - sa, sd) / max(1e-3, dot(sd, sd)), 0.0, 1.0);
+  a *= smoothstep(5.0, 16.0, length(vWorld.xz - sa - sd * st));
   if (a < 0.004) discard;
   vec3 col = mix(uCol, uTop, vLayer * 0.7 + n * 0.3);
+  // The wall: a luminous violet foot rising into deep indigo.
+  vec3 wc = mix(uWallHi, uWallHi * 0.7 + uWallLo * 0.25, up) * (0.85 + 0.3 * n);
+  // A glowing seam along its foot: where the explored ground ends.
+  wc += uWallLo * (1.0 - smoothstep(0.0, 0.14, up));
+  col = mix(col, wc, wall);
   gl_FragColor = vec4(col, a);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -76,7 +104,7 @@ void main() {
 export type FogOfWar = {
   mesh: Mesh;
   /** revealed: the lake's tiles (null: no fog, e.g. before the first lake); found: place ids. */
-  update(tod: TodState, time: number, dt: number, fx: number, fz: number, revealed: readonly string[] | null, found: readonly string[]): void;
+  update(tod: TodState, time: number, dt: number, fx: number, fz: number, revealed: readonly string[] | null, found: readonly string[], camX?: number, camZ?: number): void;
   /** How veiled a world point is (0 clear .. 1 fogged), for other systems. */
   veilAt(x: number, z: number): number;
   stats(): Record<string, unknown>;
@@ -121,12 +149,39 @@ export function buildFogOfWar(jobs: Jobs): FogOfWar {
     uTime: { value: 0 },
     uCol: { value: new Color() },
     uTop: { value: new Color() },
+    uSight: { value: new Vector4() },
+    uWallLo: { value: new Color() },
+    uWallHi: { value: new Color() },
   });
   const mesh = new Mesh(geo, mat);
   mesh.name = "fog-of-war";
   mesh.frustumCulled = false;
   mesh.renderOrder = 7;
   mesh.visible = false;
+  // The veil wall: violet curtains standing on every edge between explored and unexplored ground,
+  // sinking as a tile clears (and rising on the next edge out). Same material: no extra program.
+  const cPos = new Float32Array(WALL_MAX * WALL_COLS * WALL_ROWS * 3);
+  const cLayer = new Float32Array(WALL_MAX * WALL_COLS * WALL_ROWS);
+  const cClear = new Float32Array(WALL_MAX * WALL_COLS * WALL_ROWS);
+  const cIdx: number[] = [];
+  for (let e = 0; e < WALL_MAX; e++) for (let c = 0; c < WALL_COLS - 1; c++) for (let r = 0; r < WALL_ROWS - 1; r++) {
+    const a = (e * WALL_COLS + c) * WALL_ROWS + r;
+    cIdx.push(a, a + WALL_ROWS, a + 1, a + 1, a + WALL_ROWS, a + WALL_ROWS + 1);
+  }
+  const cGeo = new BufferGeometry();
+  const cPosAttr = new BufferAttribute(cPos, 3);
+  const cLayerAttr = new BufferAttribute(cLayer, 1);
+  cGeo.setAttribute("position", cPosAttr);
+  cGeo.setAttribute("aLayer", cLayerAttr);
+  cGeo.setAttribute("aClear", new BufferAttribute(cClear, 1));
+  cGeo.setIndex(cIdx);
+  cGeo.setDrawRange(0, 0);
+  const wall = new Mesh(cGeo, mat);
+  wall.name = "fog-wall";
+  wall.frustumCulled = false;
+  wall.renderOrder = 7;
+  mesh.add(wall);
+  let walls = 0;
   // The grid's origin tile (lower corner), and the one being built.
   let oi = 1e9;
   let oj = 1e9;
@@ -182,6 +237,58 @@ export function buildFogOfWar(jobs: Jobs): FogOfWar {
       for (let l = 0; l < LAYERS.length; l++) clearA[l * V * V + j * V + i] = c;
     }
     clearAttr.needsUpdate = true;
+    buildWalls();
+  }
+
+  const groundAt = (i: number, j: number) => (i >= 0 && j >= 0 && i <= N && j <= N ? pos[(j * V + i) * 3 + 1]! - LAYERS[0]! : 0);
+  /** One curtain on the edge between an explored tile and a fogged one, standing just inside the fog. */
+  function curtain(x0: number, z0: number, x1: number, z1: number, nx: number, nz: number, h: number): void {
+    if (walls >= WALL_MAX || h < 0.3) return;
+    for (let c = 0; c < WALL_COLS; c++) {
+      const t = c / (WALL_COLS - 1);
+      // A wavy foot so the walls never read as tile edges.
+      const wob = Math.sin((x0 + z0) * 0.37 + t * 5.1) * 1.6;
+      const x = x0 + (x1 - x0) * t + nx * (WALL_IN + wob);
+      const z = z0 + (z1 - z0) * t + nz * (WALL_IN + wob);
+      const g0 = groundAt(Math.round(x0 / FOG_TILE) - oi, Math.round(z0 / FOG_TILE) - oj);
+      const g1 = groundAt(Math.round(x1 / FOG_TILE) - oi, Math.round(z1 / FOG_TILE) - oj);
+      const gy = g0 + (g1 - g0) * t - 1;
+      for (let r = 0; r < WALL_ROWS; r++) {
+        const u = r / (WALL_ROWS - 1);
+        const k = ((walls * WALL_COLS + c) * WALL_ROWS + r);
+        cPos[k * 3] = x;
+        cPos[k * 3 + 1] = gy + u * h;
+        cPos[k * 3 + 2] = z;
+        cLayer[k] = 1.0001 + u;
+      }
+    }
+    walls++;
+  }
+
+  function buildWalls(): void {
+    walls = 0;
+    const T = FOG_TILE;
+    const fogAt = (i: number, j: number) => (i >= 0 && j >= 0 && i < N && j < N ? 1 - level[j * N + i]! : 1);
+    for (let j = 0; j < N && walls < WALL_MAX; j++) for (let i = 0; i < N && walls < WALL_MAX; i++) {
+      const f = fogAt(i, j);
+      if (f > 0.98) continue;
+      const x = (oi + i) * T;
+      const z = (oj + j) * T;
+      // Each explored (or clearing) tile puts a wall on any side that faces more fog than itself.
+      const sides: [number, number, number, number, number, number, number, number][] = [
+        [i + 1, j, x + T, z, x + T, z + T, 1, 0],
+        [i - 1, j, x, z + T, x, z, -1, 0],
+        [i, j + 1, x + T, z + T, x, z + T, 0, 1],
+        [i, j - 1, x, z, x + T, z, 0, -1],
+      ];
+      for (const [ni, nj, ax, az, bx, bz, nx, nz] of sides) {
+        const d = fogAt(ni, nj) - f;
+        if (d > 0.02) curtain(ax, az, bx, bz, nx, nz, WALL_H * d);
+      }
+    }
+    cPosAttr.needsUpdate = true;
+    cLayerAttr.needsUpdate = true;
+    cGeo.setDrawRange(0, walls * (WALL_COLS - 1) * (WALL_ROWS - 1) * 6);
   }
 
   const sampleOpen = (x: number, z: number, found: Set<string>) => {
@@ -194,8 +301,11 @@ export function buildFogOfWar(jobs: Jobs): FogOfWar {
 
   return {
     mesh,
-    update(tod, time, dt, fx, fz, revealed, found) {
+    update(tod, time, dt, fx, fz, revealed, found, cx = fx, cz = fz) {
       mat.uniforms.uTime!.value = time;
+      (mat.uniforms.uSight!.value as Vector4).set(cx, cz, fx, fz);
+      (mat.uniforms.uWallLo!.value as Color).setRGB(0.55, 0.42, 0.95).multiplyScalar(0.45 + 0.55 * Math.max(tod.hemiI * 0.6, tod.glow));
+      (mat.uniforms.uWallHi!.value as Color).copy(VIOLET).multiplyScalar(0.9 + 0.5 * tod.hemiI * 0.6);
       (mat.uniforms.uCol!.value as Color).copy(tod.fog).lerp(tod.hemiSky, 0.25).multiplyScalar(0.25).lerp(VIOLET, 0.6);
       (mat.uniforms.uTop!.value as Color).copy(tod.fog).lerp(tod.hemiSky, 0.45).multiplyScalar(0.45).lerp(VIOLET, 0.4);
       haveFog = revealed !== null;
@@ -244,7 +354,7 @@ export function buildFogOfWar(jobs: Jobs): FogOfWar {
       }
       if (changed) push();
     },
-    stats: () => ({ zeros: data.filter((v, i) => i % 4 === 0 && v === 0).length, version: clearA.reduce((a, b) => a + b, 0) / clearA.length, origin: [oi, oj], p0: [pos[0], pos[1], pos[2]], vis: mesh.visible }),
+    stats: () => ({ walls, zeros: data.filter((v, i) => i % 4 === 0 && v === 0).length, version: clearA.reduce((a, b) => a + b, 0) / clearA.length, origin: [oi, oj], p0: [pos[0], pos[1], pos[2]], vis: mesh.visible }),
     veilAt(x, z) {
       if (!haveFog || oi > 1e8) return 0;
       const i = Math.floor(x / FOG_TILE) - oi;
@@ -261,6 +371,7 @@ export function buildFogOfWar(jobs: Jobs): FogOfWar {
     },
     dispose() {
       geo.dispose();
+      cGeo.dispose();
       mat.dispose();
     },
   };

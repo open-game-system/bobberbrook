@@ -453,7 +453,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     } else occ.uNear.value = 0;
     occ.uVP.value.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     mist.update(tod, t, veilOf, occ.uNear.value);
-    fow.update(tod, t, dt, rig.focus.x, rig.focus.z, lake ? lake.revealed : null, lake ? lake.discovered : []);
+    fow.update(tod, t, dt, rig.focus.x, rig.focus.z, lake ? lake.revealed : null, lake ? lake.discovered : [], camera.position.x, camera.position.z);
     stream(rig.focus.x, rig.focus.z, streamBudget);
     renderer.info.reset();
     if (post) post.render();

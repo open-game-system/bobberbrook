@@ -167,16 +167,30 @@ const LAZY: Record<string, () => Scenario> = {
   boarding: () => atPlatform(findPlatform("boat"), 0.4, (l) => l.boarding !== null && l.now - l.boarding.since > 1700, (_l, now, s) => now - s > 2600, true),
   // Arrival: the airship settling at the far tower, the family stepping off.
   arrival: () => atPlatform(findPlatform("zeppelin"), 0.3, (l) => rideK(l) > 0.86, (l, now, s) => now - s > 1500 && (l.ride === null || rideK(l) > 0.985)),
-  // The edge of what the family has explored: up the trail from Moonwell Lake toward the pools (not found yet).
-  fog: () => ({
-    phase: 0.34,
-    fishers: [
-      { seat: 0, name: "Dad", spot: onTrailAt(1, 0.42, 1), at: onTrailAt(1, 0.3, 1) },
-      { seat: 2, name: "Juneau", spot: onTrailAt(1, 0.45, -0.8), at: onTrailAt(1, 0.33, -0.8) },
-    ],
-    warmUntil: () => true,
-    hero: (_l, now, s) => now - s > 4000,
-  }),
+  // The edge of what the family has explored: out of Whisperfall Pools up the trail north into the
+  // unexplored world, the veil wall ahead peeling back as they walk.
+  fog: () => {
+    const tr = W.trailsNear(areaById("pools").center, 1).find((t) => [t.a, t.b].includes("0,-1") && [t.a, t.b].includes("0,-2"));
+    if (!tr) throw new Error("no trail north of the pools");
+    const from = tr.a === "0,-1" ? tr.from : tr.to;
+    const to = tr.a === "0,-1" ? tr.to : tr.from;
+    const along = (t: number, lat: number): Vec => {
+      const dx = to.x - from.x;
+      const dz = to.z - from.z;
+      const len = Math.hypot(dx, dz) || 1;
+      return { x: from.x + dx * t - (dz / len) * lat, z: from.z + dz * t + (dx / len) * lat };
+    };
+    return {
+      phase: 0.34,
+      fishers: [
+        { seat: 0, name: "Dad", spot: along(0.55, 1), at: along(0.12, 1) },
+        { seat: 2, name: "Juneau", spot: along(0.58, -0.8), at: along(0.15, -0.8) },
+      ],
+      setup: (l) => produce(l, (d) => { d.discovered = ["moonwell", "pools"]; }),
+      warmUntil: () => true,
+      hero: (_l, now, s) => now - s > 5000,
+    };
+  },
 };
 
 const SCENARIOS: Record<string, Scenario> = {
