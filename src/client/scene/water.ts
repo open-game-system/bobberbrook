@@ -160,18 +160,30 @@ void main() {
   vec3 H = normalize(uSunDir + V);
   float spec = pow(max(dot(N, H), 0.0), 220.0) * 2.2 + pow(max(dot(N, H), 0.0), 40.0) * 0.12;
   col += uSunCol * spec * smoothstep(-0.05, 0.15, uSunDir.y);
-  // Shore foam: a soft lapping line.
-  float lap = sin(uTime * 1.3 + th * 23.0 + vn(p * 2.0) * 4.0) * 0.12;
-  float foam = smoothstep(0.55, 0.05, depth + lap - (vn(p * 3.0 + uTime * 0.2) - 0.5) * 0.25);
+  // Shore foam, painted (round 07: one even white rim): a broken lip of foam dabs right at the bank and
+  // a second, thinner lapping line a little way out that comes and goes; between them the shallows show.
+  float lap = sin(uTime * 1.3 + th * 23.0 + vn(p * 2.0) * 4.0) * 0.08;
+  float edge = depth + lap;
+  float dabs = smoothstep(0.32, 0.68, vn(p * 1.9 + vec2(uTime * 0.07, 0.0))) * 0.7 + vn(p * 5.3 - uTime * 0.1) * 0.3;
+  float lip = smoothstep(0.42, 0.04, edge - (dabs - 0.5) * 0.3) * (0.4 + 0.6 * smoothstep(0.25, 0.75, dabs));
+  float out2 = 0.62 + 0.14 * sin(uTime * 0.8 + th * 5.0);
+  float line2 = (1.0 - smoothstep(0.0, 0.09, abs(edge - out2))) * smoothstep(0.45, 0.75, vn(vec2(th * 34.0, uTime * 0.25))) * 0.7;
+  float foam = max(lip, line2);
+  // The wet bank: right at the edge the water thins and darkens (wet stones and sand under it).
+  base = mix(base, base * vec3(0.55, 0.7, 0.72), (1.0 - smoothstep(0.0, 0.35, depth)) * 0.5);
+  // A hint of the violet canopy mirrored along the far banks.
+  float canopy = smoothstep(0.45, 0.8, vn(vec2(th * 6.0, 3.0) + g * 2.0)) * (1.0 - smoothstep(1.0, 6.0, depth)) * smoothstep(-4.0, 2.0, -lp.y);
+  col = mix(col, vec3(0.26, 0.16, 0.42) * (0.6 + 0.6 * uGlow), canopy * 0.28 * (1.0 - cosT * 0.5));
   // White water at the brook mouth under the falls.
   float mouth = smoothstep(3.2, 0.4, length(p - uFallsFoot)) * (0.55 + 0.45 * vn(p * 3.0 - vec2(0.0, uTime * 1.5)));
   foam = max(foam, mouth);
   foam = max(foam, clamp(ringFoam, 0.0, 1.0));
-  col = mix(col, vec3(0.97, 1.0, 1.0) * (0.85 + 0.15 * uGlow), clamp(foam, 0.0, 1.0) * 0.9);
+  vec3 foamCol = mix(vec3(0.78, 0.96, 1.0), vec3(1.0), dabs) * (0.85 + 0.15 * uGlow);
+  col = mix(col, foamCol, clamp(foam, 0.0, 1.0) * 0.85);
   // Undiscovered: veiled, darker, lost in a lilac haze.
   col = mix(col, uVeilCol * (0.55 + 0.25 * vn(p * 0.2 + uTime * 0.05)), uVeil * 0.7);
-  float alpha = mix(0.62, 0.96, smoothstep(0.0, 3.0, depth));
-  alpha = max(alpha, foam);
+  float alpha = mix(0.5, 0.96, smoothstep(0.0, 3.0, depth));
+  alpha = max(alpha, clamp(foam, 0.0, 1.0) * 0.9);
   gl_FragColor = vec4(max(col, vec3(0.0)), alpha);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>

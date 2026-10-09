@@ -39,14 +39,21 @@ void main() {
   vec2 p = gl_PointCoord * 2.0 - 1.0;
   float d = length(p);
   float a;
-  if (vShape > 0.5) {
+  vec3 col = vColor;
+  if (vShape > 1.5) {
+    // A painted water droplet: crisp round body, darker teal rim, a lit highlight up top-left, a pale core.
+    a = smoothstep(1.0, 0.78, d);
+    float rim = smoothstep(0.5, 0.95, d);
+    float hl = smoothstep(0.42, 0.0, length(p - vec2(-0.32, -0.38)));
+    col = mix(col, col * vec3(0.45, 0.78, 0.9), rim * 0.7) + vec3(1.0) * hl * 0.75;
+  } else if (vShape > 0.5) {
     float star = max(0.0, 1.0 - abs(p.x * p.y) * 18.0 - d * 0.6);
     a = clamp(star + smoothstep(0.45, 0.0, d), 0.0, 1.0);
   } else {
     a = smoothstep(1.0, 0.55, d);
   }
   if (a * vAlpha < 0.01) discard;
-  gl_FragColor = vec4(vColor, a * vAlpha);
+  gl_FragColor = vec4(col, a * vAlpha);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
 }`;
@@ -136,7 +143,8 @@ export class Particles {
     this.size[i] = o.size;
     this.alpha0[i] = o.alpha ?? 1;
     this.alpha[i] = o.alpha ?? 1;
-    this.shape[i] = o.shape ?? 0;
+    // Falling water (soft disc under gravity) is drawn as a painted droplet.
+    this.shape[i] = (o.shape ?? 0) === 0 && (o.gravity ?? 0) > 0 ? 2 : o.shape ?? 0;
     this.life[i] = o.life;
     this.maxLife[i] = o.life;
     this.gravity[i] = o.gravity ?? 0;

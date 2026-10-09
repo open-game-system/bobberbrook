@@ -731,6 +731,8 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
         place(rideLive.vehicle, pose);
       }
       rideLive = rl;
+      // The empty lake (the attract / opening shot): no airship hangs over the scene.
+      const attract = !lake || lake.fishers.length === 0;
       for (const l of live.values()) {
         // The far end's twin hides while its partner sails in.
         const twin = ride && rl && l !== rl && l.p.place === rl.p.toPlace && l.p.toPlace === rl.p.place;
@@ -740,7 +742,8 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
           const active = l === rl || l === boardLive;
           const busyHere = (boardLive !== null && boardLive !== l && boardLive.p.kind === "zeppelin" && boardLive.p.place === l.p.place)
             || (rl !== null && rl !== l && rl.p.kind === "zeppelin" && (rl.p.place === l.p.place || rl.p.toPlace === l.p.place));
-          const want = active ? 1 : !l.facesPlace && !busyHere ? 1 : 0;
+          const want = active ? 1 : !l.facesPlace && !busyHere && !attract ? 1 : 0;
+          if (attract && !active) l.shown = 0;
           l.shown = l === rl ? 1 : l.shown + (want - l.shown) * Math.min(1, dt * (active ? 1.6 : 0.9));
           if (Math.abs(want - l.shown) < 0.002) l.shown = want;
           if (l.base) l.base.visible = l.shown > 0.6;

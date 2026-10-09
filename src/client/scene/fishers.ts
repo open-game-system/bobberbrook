@@ -1,6 +1,7 @@
 import {
   BufferAttribute,
   BufferGeometry,
+  Color,
   DoubleSide,
   Group,
   Mesh,
@@ -83,11 +84,17 @@ function angleLerp(a: number, b: number, t: number): number {
 }
 
 function bobberGeometry(): BufferGeometry {
-  const top = paint(prep(new SphereGeometry(0.15, 14, 7, 0, Math.PI * 2, 0, Math.PI / 2)), 0xff3a2a, 0xff5a40);
-  const bottom = paint(prep(new SphereGeometry(0.15, 14, 7, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2)), 0xf4f4f4, 0xffffff);
-  const band = paint(prep(new CylinderGeometry(0.152, 0.152, 0.03, 14)), 0x2a2a2a);
-  const stick = paint(prep(new CylinderGeometry(0.018, 0.018, 0.16, 6).translate(0, 0.2, 0)), 0xffffff);
-  return merge([top, bottom, band, stick]);
+  // A painted float: a glossy red crown lit from above with a soft highlight, a dark band, a cream belly
+  // shaded underneath, a slim quill with a red tip (no face).
+  const top = paint(prep(new SphereGeometry(0.15, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2)), 0xb81e18, 0xff6a4a, (p, n, c) => {
+    const hl = Math.max(0, n.x * -0.5 + n.y * 0.7 + n.z * 0.5);
+    c.lerp(new Color(0xffd0b8), Math.pow(hl, 6) * 0.8);
+  });
+  const bottom = paint(prep(new SphereGeometry(0.15, 16, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2)), 0x9aa8b4, 0xfff6e8);
+  const band = paint(prep(new CylinderGeometry(0.153, 0.153, 0.035, 16)), 0x3a2418, 0x5a3a24);
+  const stick = paint(prep(new CylinderGeometry(0.014, 0.02, 0.18, 6).translate(0, 0.21, 0)), 0xf0e8d8, 0xffffff);
+  const tip = paint(prep(new SphereGeometry(0.03, 8, 6).translate(0, 0.31, 0)), 0xff3a2a, 0xff8a6a);
+  return merge([top, bottom, band, stick, tip]);
 }
 
 type Pose = { legL: number; legR: number; armLx: number; armLz: number; armRx: number; armRz: number; bodyY: number; lean: number; tilt: number; headX: number; headY: number; sq: number; bend: number; sit: number };
@@ -161,6 +168,9 @@ class FisherView {
   private readonly handA = new Vector3();
   private readonly handB = new Vector3();
   private readonly toCam = new Vector3();
+  /** How hard the line shivers (reeling: a fighting fish makes it thrash); time for its wave. */
+  private lineShake = 0;
+  private lineT = 0;
   private readonly tip = new Vector3();
   private readonly tmp = new Vector3();
   private readonly side = new Vector3();
@@ -343,6 +353,7 @@ class FisherView {
     let rodVisible = true;
     let showBobber = false;
     let sag = 0.5;
+    let shake = 0;
     const bob = this.bob;
     const mode = lake.campfire ? "walk" : f.mode;
     if (moving && mode === "walk") {
@@ -444,6 +455,7 @@ class FisherView {
       target.headY *= 0.25;
       target.bend = thrash ? 1.45 + Math.sin(t * 30) * 0.12 : hold ? 0.95 : 0.55;
       sag = 0;
+      shake = thrash ? 0.16 : hold ? 0.035 : 0.015;
       bob.y = thrash ? -0.12 + Math.sin(t * 26) * 0.08 : 0.02 + Math.sin(t * 5) * 0.03;
       if (thrash) {
         bob.x += Math.sin(t * 19) * 0.12;
@@ -571,6 +583,8 @@ class FisherView {
     if (inCatch && this.card.group.visible && t - this.catchStart < LEAP_S * 0.6 && rodVisible) lineTo = this.card.group.position;
     if (lineTo && rod.root.visible) {
       this.tipWorld();
+      this.lineShake += (shake - this.lineShake) * damp(10, dt);
+      this.lineT = t;
       this.updateLine(this.tip, lineTo, sag, camera);
       this.line.visible = true;
     } else this.line.visible = false;
@@ -686,13 +700,18 @@ class FisherView {
       const l = this.side.length();
       if (l > 1e-6) this.side.multiplyScalar(width / l);
       else this.side.set(width, 0, 0);
+      // A taut line shivers and, with a fighting fish, thrashes in a travelling wave (perpendicular to the view).
+      const wave = this.lineShake * Math.sin(s * Math.PI * 3 - this.lineT * 38) * 4 * s * (1 - s) / width;
+      const ox = this.side.x * wave;
+      const oy = this.side.y * wave;
+      const oz = this.side.z * wave;
       const k = i * 6;
-      p[k] = x - this.side.x;
-      p[k + 1] = y - this.side.y;
-      p[k + 2] = z - this.side.z;
-      p[k + 3] = x + this.side.x;
-      p[k + 4] = y + this.side.y;
-      p[k + 5] = z + this.side.z;
+      p[k] = x + ox - this.side.x;
+      p[k + 1] = y + oy - this.side.y;
+      p[k + 2] = z + oz - this.side.z;
+      p[k + 3] = x + ox + this.side.x;
+      p[k + 4] = y + oy + this.side.y;
+      p[k + 5] = z + oz + this.side.z;
     }
     this.lineGeo.attributes.position!.needsUpdate = true;
   }
