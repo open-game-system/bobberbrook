@@ -166,9 +166,15 @@ export type World = {
   walkable(p: Vec): boolean;
   advance(pos: Vec, vel: Vec, dt: number): Vec;
   castFrom(p: Vec): { bobber: Vec; water: Water; place: Place } | null;
+  /** The nearest spot within `range` to stand and cast from (just up the bank), or null when no water is that close. */
+  fishingSpot(p: Vec, range: number): Vec | null;
   /** Next point to head for on the way from `from` to `to` (round ponds, along trails). */
   navNext(from: Vec, to: Vec): Vec;
 };
+
+/** Fishing spots: tried every 7.5° round each pond, this far up the bank. */
+const SPOT_ANGLES = 48;
+const SPOT_BACK = 1.2;
 
 const worlds = new Map<number, World>();
 /** The world for a seed (cached: the room, the TV and every phone share one per seed). */
@@ -359,6 +365,25 @@ export function createWorld(seed: number): World {
     return null;
   }
 
+  function fishingSpot(p: Vec, range: number): Vec | null {
+    if (castFrom(p)) return p;
+    let best: Vec | null = null;
+    let bestD = range;
+    for (const a of placesNear(p, 1)) {
+      for (let k = 0; k < SPOT_ANGLES; k++) {
+        const theta = (k / SPOT_ANGLES) * 2 * Math.PI;
+        const r = pondRadius(a, theta) + SPOT_BACK;
+        const q = { x: a.center.x + Math.cos(theta) * r, z: a.center.z + Math.sin(theta) * r };
+        const d = distance(p, q);
+        if (d < bestD && walkable(q) && castFrom(q)) {
+          best = q;
+          bestD = d;
+        }
+      }
+    }
+    return best;
+  }
+
   function crossesWater(a: Vec, b: Vec): boolean {
     const n = Math.max(2, Math.ceil(distance(a, b) / 1.5));
     const near = placesNear(a, 1);
@@ -539,6 +564,7 @@ export function createWorld(seed: number): World {
     walkable,
     advance,
     castFrom,
+    fishingSpot,
     navNext,
   };
 

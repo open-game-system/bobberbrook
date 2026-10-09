@@ -12,9 +12,17 @@ const me = (l: Lake) => l.fishers[0]!;
 
 describe("the big button", () => {
   it("asks to walk to the water away from it, and offers a cast at the edge", () => {
-    const far = join(newLake(9, T0), { name: "J", ogsId: null }).lake;
+    // Far from any water (the spawn by the dock is 4 m from the bank, which now offers the rod and walks you down).
+    const spawned = join(newLake(9, T0), { name: "J", ogsId: null }).lake;
+    const far: Lake = { ...spawned, fishers: spawned.fishers.map((f) => ({ ...f, pos: { x: 0, z: 1000 } })) };
     expect(buttonState(far, me(far), T0).kind).toBe("walk-to-water");
     expect(buttonState(shore(), me(shore()), T0).kind).toBe("cast");
+  });
+  it("a few metres up the bank: the rod (pressing it walks the fisher down and casts); deep in the forest: walk to water", () => {
+    const back = (r: number): Lake => ({ ...shore(), fishers: shore().fishers.map((f) => ({ ...f, pos: { x: -(lakeRadius(WEST) + r), z: 0 } })) });
+    expect(buttonState(back(8), me(back(8)), T0).kind).toBe("cast");
+    const deep: Lake = { ...shore(), fishers: shore().fishers.map((f) => ({ ...f, pos: { x: 0, z: 1000 } })) };
+    expect(buttonState(deep, me(deep), T0).kind).toBe("walk-to-water");
   });
   it("waits, wiggles on nibbles, then shows the bite the moment it is due", () => {
     const l = step(action(shore(), 0, T0), T0 + 900);

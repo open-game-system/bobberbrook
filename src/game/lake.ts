@@ -53,6 +53,8 @@ export type Fisher = {
   lastInputAt: number;
   /** Walking over to the family by itself. */
   following: boolean;
+  /** Walking down to the water by itself after the big button was pressed away from it; casts on arrival. */
+  fishSpot: Vec | null;
   facing: number;
   mode: Mode;
   bobber: Vec | null;
@@ -282,7 +284,7 @@ export const FOLLOW_FAR = 9;
 export const FOLLOW_NEAR = 4;
 const FOLLOW_SPEED = WALK_SPEED * 0.85;
 
-type Tagger = Pick<Fisher, "pos" | "vel" | "mode" | "lastInputAt" | "following" | "movedAt" | "seat">;
+type Tagger = Pick<Fisher, "pos" | "vel" | "mode" | "lastInputAt" | "following" | "fishSpot" | "movedAt" | "seat">;
 
 /** Steers each idle, walking fisher toward the nearest other fisher, by trail and round the ponds, and stops them close by. */
 export function tagAlong(fishers: Tagger[], now: number, w: World = worldFor(HOME_WORLD_SEED)): void {
@@ -295,7 +297,7 @@ export function tagAlong(fishers: Tagger[], now: number, w: World = worldFor(HOM
 
 /** Not walking, or touched the controls lately: left alone. */
 function resting(f: Tagger, now: number): boolean {
-  return f.mode !== "walk" || now - f.lastInputAt < FOLLOW_AFTER_MS;
+  return f.mode !== "walk" || f.fishSpot !== null || now - f.lastInputAt < FOLLOW_AFTER_MS;
 }
 
 function nearestOf(f: Tagger, others: Tagger[]): Tagger {
@@ -591,6 +593,7 @@ export function step(lake: Lake, now: number): Lake {
       for (const f of d.fishers) stepFisher(d, f, now);
       keepApart(d.fishers, w);
       leash(d.fishers, w);
+      wadeIn(d, now, w);
       tagAlong(d.fishers, now, w);
       board(d, now, w);
     }
@@ -788,6 +791,7 @@ export function join(lake: Lake, input: { name: string | null; ogsId: string | n
       movedAt: d.now,
       lastInputAt: d.now,
       following: false,
+      fishSpot: null,
       facing: -Math.PI / 2,
       mode: "walk",
       bobber: null,
@@ -837,6 +841,7 @@ export function move(lake: Lake, seat: number, stick: { x: number; y: number }, 
     const vel = stickVelocity(stick);
     f.lastInputAt = now;
     f.following = false;
+    f.fishSpot = null;
     if (heldStill(f, now)) {
       f.vel = { x: 0, z: 0 };
       return;
@@ -870,9 +875,39 @@ export function action(lake: Lake, seat: number, now: number): Lake {
     f.lastInputAt = now;
     halt(f);
     if (f.mode === "bite") return hook(d, f, now);
-    const cast = canCast(f, now) ? worldFor(d.worldSeed).castFrom(f.pos) : null;
-    if (cast) startCast(d, f, cast, now);
+    if (!canCast(f, now)) return;
+    const w = worldFor(d.worldSeed);
+    const cast = w.castFrom(f.pos);
+    if (cast) return startCast(d, f, cast, now);
+    if (f.mode !== "walk") return;
+    f.fishSpot = w.fishingSpot(f.pos, WADE_RANGE);
+    if (f.fishSpot) steer(f, f.fishSpot, w, WALK_SPEED);
   });
+}
+
+/** How far from the water the big button still walks a fisher down to it. */
+export const WADE_RANGE = 16;
+
+/** Fishers walking down to the water: cast once they can, else keep heading for their spot. */
+function wadeIn(d: Draft<Lake>, now: number, w: World): void {
+  for (const f of d.fishers) {
+    if (!f.fishSpot) continue;
+    if (f.mode !== "walk") {
+      f.fishSpot = null;
+      continue;
+    }
+    const cast = w.castFrom(f.pos);
+    if (cast) {
+      f.fishSpot = null;
+      f.following = false;
+      startCast(d, f, cast, now);
+    } else if (distance(f.pos, f.fishSpot) < 0.4) {
+      f.fishSpot = null;
+      halt(f);
+    } else {
+      steer(f, f.fishSpot, w, WALK_SPEED);
+    }
+  }
 }
 
 /** The line goes out: onto a swirl when the cast lands on one, else where it fell. */

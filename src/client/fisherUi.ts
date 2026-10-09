@@ -1,4 +1,4 @@
-import { CATCH_SKIP_MS, PLATFORM_REACH, type Fisher, type Lake } from "../game/lake";
+import { CATCH_SKIP_MS, PLATFORM_REACH, WADE_RANGE, type Fisher, type Lake } from "../game/lake";
 import { fishById } from "../game/fish";
 import { thrashingAt } from "../game/reel";
 import { worldFor } from "../game/regions";
@@ -15,12 +15,13 @@ export type ButtonState =
   | { kind: "riding"; vehicle: "boat" | "zeppelin" }
   | { kind: "board"; vehicle: "boat" | "zeppelin" };
 
-/** Walking: at a dock or tower the button shows the ride (wait here for the family); at the water, the rod. */
+/** Walking: at a dock or tower the button shows the ride (wait here for the family); near the water, the rod. */
 function walkView(lake: Lake, me: Fisher): ButtonState {
   const w = worldFor(lake.worldSeed);
   const ride = w.platformsNear(me.pos, 0).find((p) => Math.hypot(p.at.x - me.pos.x, p.at.z - me.pos.z) <= PLATFORM_REACH);
   if (ride) return { kind: "board", vehicle: ride.kind };
-  return w.castFrom(me.pos) ? { kind: "cast" } : { kind: "walk-to-water" };
+  // Near the water the rod shows: a press walks the fisher down to the bank and casts.
+  return w.fishingSpot(me.pos, WADE_RANGE) ? { kind: "cast" } : { kind: "walk-to-water" };
 }
 
 type ModeView = (lake: Lake, me: Fisher, now: number) => ButtonState;
