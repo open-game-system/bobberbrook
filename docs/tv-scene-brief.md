@@ -16,6 +16,11 @@ by a cloud GPU Chrome and streamed to a Chromecast. References: `concept/web/*.j
   lakebed in world space; canopies are clumps of alpha leaf cards (leaves-violet, leaves-fern) round a
   dark core; trunks get bark, boulders and cliffs rock, tower stone the stone tiles. New surfaces get a
   painted texture, never flat vertex colour alone.
+- **Fewer, bigger, painted plants** (round 09-B): no carpet of small glossy props. Ground flora is a
+  few clumps of painted alpha-card plants (`src/client/scene/plants.ts`: ferns, bluebells, foxgloves,
+  glow-cap clusters, fallen-leaf drifts; canvas brushwork, matte, wind sway, only bell mouths and cap
+  rims glow) with open painted ground between them, especially in the band in front of the camera.
+  Mushrooms are matte painted (Lambert, baked light), glowing only at the rim (`matte.ts`).
 - **Not** the previous OGS games' looks (no papercraft, no ink outlines, no felt).
 - **No faces on objects** (bobbers, rods, boats, houses, the sun, the moon). Fishers have simple faces.
 - No text in the 3D world except fisher name tags.
