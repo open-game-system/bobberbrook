@@ -1,0 +1,60 @@
+{
+  "round": "01",
+  "shots": [
+    {
+      "label": "morning",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 37,
+      "programs": 37,
+      "calls": 1,
+      "triangles": 1,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 0
+    },
+    {
+      "label": "morning@0.97",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 37,
+      "programs": 37,
+      "calls": 1,
+      "triangles": 1,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 0
+    },
+    {
+      "label": "four-reel",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 37,
+      "programs": 37,
+      "calls": 1,
+      "triangles": 1,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 0
+    },
+    {
+      "label": "golden-swirl",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 37,
+      "programs": 37,
+      "calls": 1,
+      "triangles": 1,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 0
+    }
+  ],
+  "soak": {
+    "programsBefore": 37,
+    "programsAfter": 37,
+    "p50": 16.700000762939453,
+    "p95": 16.799999237060547,
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+    "frames": 82
+  },
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (File not found)"
+  ]
+}

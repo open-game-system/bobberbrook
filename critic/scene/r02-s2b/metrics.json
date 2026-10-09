@@ -1,0 +1,30 @@
+{
+  "round": "r02-s2b",
+  "shots": [
+    {
+      "label": "hollow",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 44,
+      "programs": 44,
+      "calls": 330,
+      "triangles": 2331475,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 125
+    },
+    {
+      "label": "tarn",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 44,
+      "programs": 44,
+      "calls": 279,
+      "triangles": 1770790,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 98
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (File not found)"
+  ]
+}

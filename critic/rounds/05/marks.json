@@ -1,0 +1,160 @@
+{
+  "videos": [
+    {
+      "role": "tv",
+      "path": "/Users/jonathanmumm/src/bobberbrook/critic/rounds/05/raw/page@03db8b37670b9696e6d47f0af305fb81.webm",
+      "startedAt": 1791507946557,
+      "label": "TV"
+    },
+    {
+      "role": "dad",
+      "path": "/Users/jonathanmumm/src/bobberbrook/critic/rounds/05/raw/page@ef500d87a6b14f9c588ae93dad3c1a66.webm",
+      "startedAt": 1791507946837,
+      "label": "Dad's phone"
+    },
+    {
+      "role": "kid",
+      "path": "/Users/jonathanmumm/src/bobberbrook/critic/rounds/05/raw/page@2a0dde6b990d1a3298c8c1f5454fecd4.webm",
+      "startedAt": 1791507947046,
+      "label": "Juneau's iPad (5)"
+    }
+  ],
+  "audio": {
+    "path": "critic/rounds/05/raw/tv-audio.webm",
+    "startedAt": 1791507949077.2
+  },
+  "marks": [
+    {
+      "label": "everyone in",
+      "t": 9.1
+    },
+    {
+      "label": "at the water",
+      "t": 57.3
+    },
+    {
+      "label": "Juneau casts",
+      "t": 57.7
+    },
+    {
+      "label": "Dad casts",
+      "t": 57.7
+    },
+    {
+      "label": "Dad hooks",
+      "t": 66
+    },
+    {
+      "label": "Dad catch",
+      "t": 76.8
+    },
+    {
+      "label": "Juneau no catch (cast failed or line still out)",
+      "t": 84.5
+    },
+    {
+      "label": "Juneau casts",
+      "t": 90.4
+    },
+    {
+      "label": "Dad casts",
+      "t": 90.8
+    },
+    {
+      "label": "Dad hooks",
+      "t": 100
+    },
+    {
+      "label": "Dad no catch (cast failed or line still out)",
+      "t": 102.2
+    },
+    {
+      "label": "Juneau no catch (cast failed or line still out)",
+      "t": 117.8
+    },
+    {
+      "label": "explore: trail to Mistmarsh",
+      "t": 121.4
+    },
+    {
+      "label": "found Mistmarsh",
+      "t": 256
+    },
+    {
+      "label": "Juneau tagged along",
+      "t": 256.3
+    },
+    {
+      "label": "Juneau casts",
+      "t": 279.7
+    },
+    {
+      "label": "Dad casts",
+      "t": 279.9
+    },
+    {
+      "label": "Juneau no catch (cast failed or line still out)",
+      "t": 305
+    },
+    {
+      "label": "Dad no catch (cast failed or line still out)",
+      "t": 305.2
+    },
+    {
+      "label": "Juneau casts",
+      "t": 308.9
+    },
+    {
+      "label": "Dad casts",
+      "t": 308.9
+    },
+    {
+      "label": "Juneau no catch (cast failed or line still out)",
+      "t": 334
+    },
+    {
+      "label": "Dad no catch (cast failed or line still out)",
+      "t": 334
+    },
+    {
+      "label": "explore: back to the zeppelin tower",
+      "t": 337.6
+    },
+    {
+      "label": "at the zeppelin",
+      "t": 386.9
+    },
+    {
+      "label": "zeppelin flying",
+      "t": 396.9
+    },
+    {
+      "label": "landed somewhere new",
+      "t": 411.7
+    },
+    {
+      "label": "Dad casts",
+      "t": 435.7
+    },
+    {
+      "label": "Juneau casts",
+      "t": 435.7
+    },
+    {
+      "label": "Dad no catch (cast failed or line still out)",
+      "t": 461
+    },
+    {
+      "label": "Juneau no catch (cast failed or line still out)",
+      "t": 461
+    },
+    {
+      "label": "campfire",
+      "t": 464.9
+    },
+    {
+      "label": "back to fishing",
+      "t": 472.1
+    }
+  ]
+}
