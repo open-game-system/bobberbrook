@@ -15,6 +15,7 @@ import { pondRadius, type Area, type PondPlace } from "../../game/world";
 import { instanced, giantGeometry, rockGeometry, type Inst } from "./kit";
 import { jitter, merge, paint, prep, puffNormals } from "./geo";
 import { attachFoliage, leafCards, type Puff } from "./foliage";
+import { barked } from "./surfaces";
 import { rng, vnoise } from "./noise";
 import { heightAt } from "./terrain";
 import { clearOfTrails } from "./valley";
@@ -109,7 +110,7 @@ export function paleOakGeometry(seed: number): BufferGeometry {
     if (n.y > 0.5) c.lerp(new Color(0xffffff).multiplyScalar(0.6), (n.y - 0.5) * 0.4);
   });
   const cards = leafCards(puffs, { cx: 0, cy: 4.3, cz: 0, size: 1.2, density: 2.2, inner: 0x8a8090, outer: 0xf4f0f8, top: 0xffffff, seed: seed * 5 + 2 });
-  return attachFoliage(merge([trunk, canopy]), cards, "violet");
+  return attachFoliage(barked([trunk], [canopy]), cards, "violet");
 }
 
 /** A pine heavy with snow. */

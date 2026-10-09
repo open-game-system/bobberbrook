@@ -29,6 +29,7 @@ import { BOARD_MS, type Lake } from "../../game/lake";
 import type { Platform } from "../../game/regions";
 import { blob } from "./kit";
 import { jitter, merge, paint, prep, puffNormals } from "./geo";
+import { surfaceMaterial, tiled } from "./surfaces";
 import { rng, vnoise } from "./noise";
 import { SEA_Y, heightAt } from "./terrain";
 import type { TodState } from "./tod";
@@ -289,13 +290,14 @@ function towerGeometry(): { body: BufferGeometry; glow: BufferGeometry } {
     const v = vnoise(p.x * 1.3 + p.y * 0.7, p.z * 1.3, 17);
     c.multiplyScalar(0.84 + 0.3 * v);
   };
-  // A round stone dais with three steps all round it.
-  parts.push(paint(prep(new CylinderGeometry(DECK_R + 0.05, DECK_R + 0.25, DECK_H + 1.2, 28).translate(0, (DECK_H + 1.2) / 2 - 1.3, 0)), 0x6a5e86, 0x8a7ea8, stone));
+  // A round stone dais with three steps all round it (painted stone tiles: its own group).
+  const stoneParts: BufferGeometry[] = [];
+  stoneParts.push(paint(prep(new CylinderGeometry(DECK_R + 0.05, DECK_R + 0.25, DECK_H + 1.2, 28).translate(0, (DECK_H + 1.2) / 2 - 1.3, 0)), 0x6a5e86, 0x8a7ea8, stone));
   const steps = 3;
   for (let i = 0; i < steps; i++) {
     const r = STEPS_R - (i * (STEPS_R - DECK_R)) / steps;
     const h = (DECK_H * (i + 1)) / (steps + 1);
-    parts.push(paint(prep(new CylinderGeometry(r, r + 0.08, h + 1.2, 32).translate(0, (h + 1.2) / 2 - 1.2, 0)), 0x7a6e98, 0xa89cc8, stone));
+    stoneParts.push(paint(prep(new CylinderGeometry(r, r + 0.08, h + 1.2, 32).translate(0, (h + 1.2) / 2 - 1.2, 0)), 0x7a6e98, 0xa89cc8, stone));
   }
   // The wooden deck: planks round the centre.
   parts.push(paint(prep(new CylinderGeometry(DECK_R + 0.2, DECK_R + 0.2, 0.22, 40).translate(0, DECK_H - 0.08, 0)), 0xb88a58, 0xd0a070, (p, _n, c) => {
@@ -346,7 +348,7 @@ function towerGeometry(): { body: BufferGeometry; glow: BufferGeometry } {
     paint(prep(new SphereGeometry(0.55, 12, 8).translate(0, DECK_H + MH - 0.4, 0)), 0xffc878),
     ...lampAt.map(([x, z]) => paint(prep(new SphereGeometry(0.2, 8, 6).translate(x, DECK_H + 2.7, z)), 0xffc070)),
   ]);
-  return { body: merge(parts), glow };
+  return { body: tiled(stoneParts, parts), glow };
 }
 
 /** A plank bridge from the deck's edge out to a moored gondola (along +x, deck height). */
@@ -591,7 +593,7 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
       if (!towers.has(p.place)) {
         const tg = new Group();
         tg.name = `tower-${p.place}`;
-        const tb = new Mesh(tower.body, painted);
+        const tb = new Mesh(tower.body, surfaceMaterial(tower.body, painted));
         tb.castShadow = full;
         tb.receiveShadow = true;
         tg.add(tb, new Mesh(tower.glow, glowMat));

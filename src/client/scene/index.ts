@@ -34,6 +34,7 @@ import { buildGroundStream } from "./terrain";
 import { loadPaintKit } from "./paintkit";
 import { groundMaterial } from "./groundmat";
 import { leafMaterial, setFoliageMaterials } from "./foliage";
+import { barkMaterial, rockMaterial, setSurfaceMaterials, tilesMaterial } from "./surfaces";
 import { placeHash } from "./valley";
 import { buildEscape } from "./escape";
 import { newTodState, rideTwilight, sampleTod } from "./tod";
@@ -179,6 +180,9 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   // Leaf cards for every canopy built from here on (one program for both leaf sheets).
   const leafMats = { violet: leafMaterial(kit.leavesViolet, occ, time), fern: leafMaterial(kit.leavesFern, occ, time) };
   setFoliageMaterials(leafMats);
+  // Painted rock on every boulder and cliff, painted bark on trunks, stone tiles on the tower dais.
+  const surfMats = { rock: rockMaterial(kit.rock), bark: barkMaterial(kit.bark, occ), tiles: tilesMaterial(kit.tiles) };
+  setSurfaceMaterials(surfMats);
   const props = buildProps(opts.quality, sway, treeMat);
   scene.add(props.group);
   const painted = paintedMaterial();
@@ -247,7 +251,9 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   // Every dissolving tree casts its shadow through the same fade (no shadow without its tree).
   const treeDepth = occluderDepthMaterial(occ);
   scene.traverse((o) => {
-    if ((o as Mesh).isMesh && (o as Mesh).material === treeMat) o.customDepthMaterial = treeDepth;
+    if (!(o instanceof Mesh)) return;
+    const m = o.material;
+    if (m === treeMat || (Array.isArray(m) && m.includes(treeMat))) o.customDepthMaterial = treeDepth;
   });
 
   let post: Post | null = full ? buildPost(renderer, scene, camera, w, h) : null;
@@ -678,6 +684,8 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       leafMats.violet.dispose();
       leafMats.fern.dispose();
       setFoliageMaterials(null);
+      for (const m of Object.values(surfMats)) m.dispose();
+      setSurfaceMaterials(null);
       water.dispose();
       rays.dispose();
       props.dispose();

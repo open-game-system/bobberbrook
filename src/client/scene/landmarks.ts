@@ -26,6 +26,7 @@ import { pondRadius, type Area, type AreaId, type PondPlace } from "../../game/w
 import { cliffRockGeometry, instanced, rockGeometry, type Inst } from "./kit";
 import { jitter, merge, paint, prep, puffNormals } from "./geo";
 import { attachFoliage, hangingCards, leafCards, type Puff, type Strand } from "./foliage";
+import { barked } from "./surfaces";
 import { rng, vnoise } from "./noise";
 import { heightAt } from "./terrain";
 import type { TodState } from "./tod";
@@ -71,6 +72,7 @@ export function willowGeometry(seed: number): BufferGeometry {
     const br = new CylinderGeometry(0.18, 0.4, 4, 6).translate(0, 2, 0).rotateZ(0.9).rotateY(a).translate(0.4, 4.8, 0);
     parts.push(paint(prep(br), 0x2e2232, 0x4a3a48));
   }
+  const wood = parts.splice(0, parts.length);
   const domes: BufferGeometry[] = [];
   const puffs: Puff[] = [];
   for (let i = 0; i < 6; i++) {
@@ -103,7 +105,7 @@ export function willowGeometry(seed: number): BufferGeometry {
     r();
     strands.push({ x: Math.cos(a) * rr, y: 6.9 - (rr - 3.4) * 0.35, z: Math.sin(a) * rr, len, w, ox: Math.cos(a), oz: Math.sin(a) });
   }
-  return attachFoliage(merge(parts), merge([cards, hangingCards(strands, 0x4a3478, 0xd0b4ff, seed * 17)]), "violet");
+  return attachFoliage(barked(wood, parts), merge([cards, hangingCards(strands, 0x4a3478, 0xd0b4ff, seed * 17)]), "violet");
 }
 
 /** A birch: a slim white trunk with dark marks, a light lavender crown. */

@@ -18,6 +18,7 @@ import {
 import { rng, vnoise } from "./noise";
 import { jitter, merge, paint, prep, puffNormals } from "./geo";
 import { attachFoliage, foliageOf, hangingCards, leafCards, type Puff, type Strand } from "./foliage";
+import { barked, markRock, surfaceMaterial } from "./surfaces";
 
 /** The shared set-dressing kit: trees, rocks, plants and buildings every place draws from. */
 
@@ -27,7 +28,7 @@ const m4 = new Matrix4();
 export const dummy = new Object3D();
 
 export function instanced(geo: BufferGeometry, mat: Material, list: Inst[], shadows: boolean): InstancedMesh {
-  const mesh = new InstancedMesh(geo, mat, Math.max(1, list.length));
+  const mesh = new InstancedMesh(geo, surfaceMaterial(geo, mat), Math.max(1, list.length));
   list.forEach((it, i) => {
     dummy.position.set(it.x, it.y, it.z);
     dummy.rotation.set(it.tilt ?? 0, it.ry, 0);
@@ -98,7 +99,7 @@ export function oakGeometry(variant = 0): BufferGeometry {
   const cards = leafCards(blobs.map(([x, y, z, r]): Puff => [x, y, z, r]), {
     cx: 0, cy: 4.0, cz: 0, size: 1.15, density: 2.2, inner: CANOPY[variant]![0]!, outer: CANOPY[variant]![1]!, top: CANOPY[variant]![2]!, seed: 11 + variant,
   });
-  return attachFoliage(merge([trunk, roots, canopy]), cards, "violet");
+  return attachFoliage(barked([trunk, roots], [canopy]), cards, "violet");
 }
 
 /** A colossal ancient tree: flared roots, a leaning trunk, a mushroom-like canopy, hanging leaf strands. */
@@ -134,6 +135,7 @@ export function giantGeometry(variant: number): BufferGeometry {
     paint(bp, 0x2e2434, 0x52404e);
     parts.push(bp);
   }
+  const wood = parts.splice(0, parts.length);
   const [c0, c1, c2] = CANOPY[variant]!;
   const blobs: BufferGeometry[] = [];
   const puffs: Puff[] = [];
@@ -170,7 +172,7 @@ export function giantGeometry(variant: number): BufferGeometry {
     r();
     strands.push({ x: Math.cos(a) * rr, y: 16.9 - rr * 0.08, z: Math.sin(a) * rr, len, w, ox: Math.cos(a), oz: Math.sin(a) });
   }
-  return attachFoliage(merge(parts), merge([cards, hangingCards(strands, 0x5a3a8a, 0xd8b8ff, 900 + variant)]), "violet");
+  return attachFoliage(barked(wood, parts), merge([cards, hangingCards(strands, 0x5a3a8a, 0xd8b8ff, 900 + variant)]), "violet");
 }
 
 export function mushroomGeometry(): BufferGeometry {
@@ -251,7 +253,7 @@ export function rockGeometry(seed: number): BufferGeometry {
     c.multiplyScalar(0.88 + 0.22 * vnoise(pp.x * 3 + seed, pp.z * 3, 2));
     if (n.y > 0.55) c.lerp(new Color(0x3e8a6c), Math.min(1, (n.y - 0.55) * 2.2) * 0.8);
   });
-  return p;
+  return markRock(p);
 }
 
 /** Faceted cliff stone: flat-shaded planes, dark violet-grey with strata and mossy tops. */
@@ -265,7 +267,7 @@ export function cliffRockGeometry(seed: number): BufferGeometry {
     c.multiplyScalar(0.82 + 0.18 * Math.abs(Math.sin(pp.y * 5.5 + pp.x * 0.8)));
     if (n.y > 0.6) c.lerp(new Color(0x3e8a6a), Math.min(1, (n.y - 0.6) * 2.5) * 0.85);
   });
-  return p;
+  return markRock(p);
 }
 
 export function bushGeometry(): BufferGeometry {
