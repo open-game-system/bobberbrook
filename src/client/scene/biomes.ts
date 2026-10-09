@@ -14,6 +14,7 @@ import {
 import { pondRadius, type Area, type PondPlace } from "../../game/world";
 import { instanced, giantGeometry, rockGeometry, type Inst } from "./kit";
 import { jitter, merge, paint, prep, puffNormals } from "./geo";
+import { attachFoliage, leafCards, type Puff } from "./foliage";
 import { rng, vnoise } from "./noise";
 import { heightAt } from "./terrain";
 import { clearOfTrails } from "./valley";
@@ -88,22 +89,27 @@ export function paleOakGeometry(seed: number): BufferGeometry {
   const trunk = prep(new CylinderGeometry(0.28, 0.5, 3.4, 7).translate(0, 1.7, 0));
   paint(trunk, 0x3a2c30, 0x6a5458);
   const blobs: BufferGeometry[] = [];
+  const puffs: Puff[] = [];
   for (let i = 0; i < 5; i++) {
     const a = (i / 5) * Math.PI * 2 + r();
     const rr = i === 0 ? 0 : 1.3;
-    const g = new SphereGeometry(i === 0 ? 2.1 : 1.45, 9, 7);
+    const rad = i === 0 ? 2.1 : 1.45;
+    const g = new SphereGeometry(rad * 0.86, 9, 7);
     jitter(g, 0.16, seed + i);
     g.computeVertexNormals();
-    g.translate(Math.cos(a) * rr, 4.3 + (i === 0 ? 0.4 : -0.1 + r() * 0.5), Math.sin(a) * rr);
+    const py = 4.3 + (i === 0 ? 0.4 : -0.1 + r() * 0.5);
+    g.translate(Math.cos(a) * rr, py, Math.sin(a) * rr);
     blobs.push(prep(g));
+    puffs.push([Math.cos(a) * rr, py, Math.sin(a) * rr, rad]);
   }
   const canopy = merge(blobs);
   puffNormals(canopy, 0, 4.3, 0, 0.8);
   paint(canopy, 0x8a8090, 0xf4f0f8, (p, n, c) => {
-    c.multiplyScalar(0.85 + 0.25 * vnoise(p.x * 2, p.z * 2 + p.y, 4));
-    if (n.y > 0.5) c.lerp(new Color(0xffffff), (n.y - 0.5) * 0.5);
+    c.multiplyScalar((0.85 + 0.25 * vnoise(p.x * 2, p.z * 2 + p.y, 4)) * 0.62);
+    if (n.y > 0.5) c.lerp(new Color(0xffffff).multiplyScalar(0.6), (n.y - 0.5) * 0.4);
   });
-  return merge([trunk, canopy]);
+  const cards = leafCards(puffs, { cx: 0, cy: 4.3, cz: 0, size: 1.2, density: 2.2, inner: 0x8a8090, outer: 0xf4f0f8, top: 0xffffff, seed: seed * 5 + 2 });
+  return attachFoliage(merge([trunk, canopy]), cards, "violet");
 }
 
 /** A pine heavy with snow. */
@@ -304,8 +310,13 @@ export type LandmarkKind = (typeof LANDMARKS)[number];
 /** A huge ancient tree on the far shore, its roots spilling to the water. */
 function giant(c: KitCtx, R: () => number): void {
   const p = landmarkSpot(c, R, c.a.clearing * 0.7, true);
-  const g = put(giantGeometry(Math.floor(R() * 3)), p.x, p.z, R() * 6, (p.island ? 0.62 : 0.78) + R() * 0.14, p.island ? -heightAt(p.x, p.z) + 0.2 : -0.6);
-  c.wood.push(g);
+  // Instanced (one instance) so its leaf cards and bark come along; it dissolves like every tree.
+  const v = Math.floor(R() * 3);
+  const ry = R() * 6;
+  const s = (p.island ? 0.62 : 0.78) + R() * 0.14;
+  const gm = instanced(giantGeometry(v), c.tree, [{ x: p.x, y: p.island ? 0.2 : heightAt(p.x, p.z) - 0.6, z: p.z, s, ry }], c.full);
+  gm.name = "landmark-giant";
+  c.group.add(gm);
   // Glowing motes caught in its roots.
   for (let i = 0; i < 6; i++) {
     const a = R() * Math.PI * 2;

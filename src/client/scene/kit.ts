@@ -17,6 +17,7 @@ import {
 } from "three";
 import { rng, vnoise } from "./noise";
 import { jitter, merge, paint, prep, puffNormals } from "./geo";
+import { attachFoliage, foliageOf, hangingCards, leafCards, type Puff, type Strand } from "./foliage";
 
 /** The shared set-dressing kit: trees, rocks, plants and buildings every place draws from. */
 
@@ -40,6 +41,23 @@ export function instanced(geo: BufferGeometry, mat: Material, list: Inst[], shad
   mesh.receiveShadow = true;
   mesh.computeBoundingSphere();
   void m4;
+  // Leaf cards ride along as a child sharing the same instances.
+  const f = foliageOf(geo);
+  if (f) {
+    const leaf = new InstancedMesh(f.cards, f.mat, Math.max(1, list.length));
+    leaf.instanceMatrix = mesh.instanceMatrix;
+    leaf.instanceColor = mesh.instanceColor;
+    leaf.count = mesh.count;
+    leaf.castShadow = false;
+    // No shadow-map lookups on the cards (they overlap a lot; the crown's own shading carries it).
+    leaf.receiveShadow = false;
+    leaf.name = "leaves";
+    // After the opaque set (cores, trunks, ground): alpha-tested cards behind them never get shaded.
+    leaf.renderOrder = 1;
+    leaf.computeBoundingSphere();
+    mesh.add(leaf);
+    mesh.addEventListener("dispose", () => leaf.dispose());
+  }
   return mesh;
 }
 
@@ -69,64 +87,21 @@ export function oakGeometry(variant = 0): BufferGeometry {
     [0, 3.9, 0, 1.8], [1.35, 3.4, 0.35, 1.3], [-1.25, 3.5, -0.2, 1.35], [0.25, 3.4, 1.25, 1.25],
     [-0.35, 3.5, -1.2, 1.3], [0.55, 4.8, -0.25, 1.35], [-0.65, 4.6, 0.55, 1.2], [0.9, 4.3, 0.9, 1.0],
   ];
-  const canopy = merge(blobs.map(([x, y, z, r], i) => blob(r, x, y, z, i * 1.7)));
+  // A dark leafy core (the silhouette and the shadow) under clumps of painted leaf cards.
+  const canopy = merge(blobs.map(([x, y, z, r], i) => blob(r * 0.86, x, y, z, i * 1.7)));
   puffNormals(canopy, 0, 4.0, 0, 0.8);
   paint(canopy, CANOPY[variant]![0]!, CANOPY[variant]![1]!, (p, n, c) => {
     const k = vnoise(p.x * 2.2 + 10, p.z * 2.2 + p.y, 4);
-    c.multiplyScalar(0.86 + 0.28 * k);
-    // A moonlit top.
-    if (n.y > 0.55) c.lerp(new Color(CANOPY[variant]![2]!), (n.y - 0.55) * 0.6);
+    c.multiplyScalar((0.86 + 0.28 * k) * 0.62);
+    if (n.y > 0.55) c.lerp(new Color(CANOPY[variant]![2]!).multiplyScalar(0.6), (n.y - 0.55) * 0.5);
   });
-  return merge([trunk, roots, canopy]);
+  const cards = leafCards(blobs.map(([x, y, z, r]): Puff => [x, y, z, r]), {
+    cx: 0, cy: 4.0, cz: 0, size: 1.15, density: 2.2, inner: CANOPY[variant]![0]!, outer: CANOPY[variant]![1]!, top: CANOPY[variant]![2]!, seed: 11 + variant,
+  });
+  return attachFoliage(merge([trunk, roots, canopy]), cards, "violet");
 }
 
-/** A colossal ancient tree: flared roots, a leaning trunk, a mushroom-like canopy, hanging moss. */
-/**
- * A soft hanging moss card (round 05: cone strands read as spikes): two crossed, two-sided ribbons
- * with a scalloped, rounded hem, dark where it hangs from the canopy and pale lavender at the tips.
- * Hangs from (0, 0, 0) down; normals face outward from `out` (x, z) so it shades like the canopy edge.
- */
-export function mossGeometry(w: number, len: number, seed: number, top: number, tip: number, outX = 0, outZ = 1): BufferGeometry {
-  const r = rng(seed);
-  const COLS = 4;
-  const ROWS = 2;
-  const pos: number[] = [];
-  const nor: number[] = [];
-  const ol = Math.hypot(outX, outZ) || 1;
-  const nx = outX / ol;
-  const nz = outZ / ol;
-  const hem = Array.from({ length: COLS + 1 }, (_, i) => {
-    const u = i / COLS;
-    // Longest in the middle, rounded at the sides, a few strands hanging lower.
-    return len * (0.72 + 0.28 * Math.sin(Math.PI * u)) * (0.85 + 0.25 * r());
-  });
-  for (const rot of [0, Math.PI / 2]) {
-    const cx = Math.cos(rot);
-    const cz = Math.sin(rot);
-    const vtx = (i: number, j: number): [number, number, number] => {
-      const u = i / COLS;
-      const v = j / ROWS;
-      const x = (u - 0.5) * w * (1 - 0.25 * v);
-      const y = -hem[i]! * v;
-      // A gentle sway outward lower down, so it drapes rather than hangs ruler-straight.
-      const d = 0.25 * v * v;
-      return [x * cx + nx * d, y, x * cz + nz * d];
-    };
-    for (let i = 0; i < COLS; i++) for (let j = 0; j < ROWS; j++) {
-      const a = vtx(i, j), b = vtx(i + 1, j), c = vtx(i, j + 1), d = vtx(i + 1, j + 1);
-      // Both windings: seen from either side.
-      for (const tri of [[a, c, b], [b, c, d], [a, b, c], [b, d, c]]) for (const q of tri) {
-        pos.push(q[0], q[1], q[2]);
-        nor.push(nx * 0.8, 0.45, nz * 0.8);
-      }
-    }
-  }
-  const g = new BufferGeometry();
-  g.setAttribute("position", new BufferAttribute(new Float32Array(pos), 3));
-  g.setAttribute("normal", new BufferAttribute(new Float32Array(nor), 3));
-  return paint(g, tip, top, (p, _n, c) => c.multiplyScalar(0.88 + 0.24 * vnoise(p.x * 3, p.z * 3, seed)));
-}
-
+/** A colossal ancient tree: flared roots, a leaning trunk, a mushroom-like canopy, hanging leaf strands. */
 export function giantGeometry(variant: number): BufferGeometry {
   const r = rng(77 + variant);
   const parts: BufferGeometry[] = [];
@@ -161,34 +136,41 @@ export function giantGeometry(variant: number): BufferGeometry {
   }
   const [c0, c1, c2] = CANOPY[variant]!;
   const blobs: BufferGeometry[] = [];
+  const puffs: Puff[] = [];
   for (let i = 0; i < 9; i++) {
     const a = (i / 9) * Math.PI * 2;
     const rr = i === 0 ? 0 : 5 + r() * 3;
-    const g = new SphereGeometry(i === 0 ? 8.5 : 5.2 + r() * 2.2, 14, 9);
+    const rad = i === 0 ? 8.5 : 5.2 + r() * 2.2;
+    const g = new SphereGeometry(rad * 0.88, 14, 9);
     g.scale(1, 0.48, 1);
     jitter(g, 0.12, i * 1.3 + variant);
     g.computeVertexNormals();
-    g.translate(Math.cos(a) * rr, 18 + (i === 0 ? 2.5 : r() * 2.5 - (rr > 0 ? 1.5 : 0)), Math.sin(a) * rr);
+    const px = Math.cos(a) * rr;
+    const py = 18 + (i === 0 ? 2.5 : r() * 2.5 - (rr > 0 ? 1.5 : 0));
+    const pz = Math.sin(a) * rr;
+    g.translate(px, py, pz);
     blobs.push(prep(g));
+    puffs.push([px, py, pz, rad, 0.48]);
   }
   const canopy = merge(blobs);
   puffNormals(canopy, 0, 17, 0, 0.7);
   paint(canopy, c0, c1, (p, n, c) => {
-    c.multiplyScalar(0.85 + 0.3 * vnoise(p.x * 0.5, p.z * 0.5 + p.y, 6));
-    if (n.y > 0.5) c.lerp(new Color(c2), (n.y - 0.5) * 0.7);
+    c.multiplyScalar((0.85 + 0.3 * vnoise(p.x * 0.5, p.z * 0.5 + p.y, 6)) * 0.62);
+    if (n.y > 0.5) c.lerp(new Color(c2).multiplyScalar(0.6), (n.y - 0.5) * 0.6);
   });
   parts.push(canopy);
-  // Hanging moss.
+  const cards = leafCards(puffs, { cx: 0, cy: 18, cz: 0, size: 2.6, density: 2.0, inner: c0, outer: c1, top: c2, seed: 401 + variant });
+  // Hanging leaf strands (wisteria-like) under the rim.
+  const strands: Strand[] = [];
   for (let i = 0; i < 14; i++) {
     const a = r() * Math.PI * 2;
     const rr = 4 + r() * 7;
-    const len = 1.3 + r() * 1.5;
-    const g = mossGeometry(1.6 + r() * 1.2, len, variant * 31 + i, 0x5a3a8a, 0xc8a8f0, Math.cos(a), Math.sin(a));
-    g.rotateY(r() * Math.PI);
-    g.translate(Math.cos(a) * rr, 16.6 - rr * 0.08, Math.sin(a) * rr);
-    parts.push(g);
+    const len = 1.6 + r() * 2.0;
+    const w = 1.0 + r() * 0.5;
+    r();
+    strands.push({ x: Math.cos(a) * rr, y: 16.9 - rr * 0.08, z: Math.sin(a) * rr, len, w, ox: Math.cos(a), oz: Math.sin(a) });
   }
-  return merge(parts);
+  return attachFoliage(merge(parts), merge([cards, hangingCards(strands, 0x5a3a8a, 0xd8b8ff, 900 + variant)]), "violet");
 }
 
 export function mushroomGeometry(): BufferGeometry {
@@ -287,11 +269,12 @@ export function cliffRockGeometry(seed: number): BufferGeometry {
 }
 
 export function bushGeometry(): BufferGeometry {
-  const parts = [blob(0.75, 0, 0.55, 0, 1, 9, 7), blob(0.6, 0.6, 0.45, 0.2, 2, 9, 7), blob(0.55, -0.55, 0.42, -0.1, 3, 9, 7), blob(0.5, 0.1, 0.9, -0.35, 4, 9, 7)];
-  const g = merge(parts);
+  const puffs: Puff[] = [[0, 0.55, 0, 0.75], [0.6, 0.45, 0.2, 0.6], [-0.55, 0.42, -0.1, 0.55], [0.1, 0.9, -0.35, 0.5]];
+  const g = merge(puffs.map(([x, y, z, r], i) => blob(r * 0.82, x, y, z, i + 1, 9, 7)));
   puffNormals(g, 0, 0.5, 0, 0.8);
-  paint(g, 0x1a3a50, 0x4a8a8a, (p, _n, c) => c.multiplyScalar(0.88 + 0.24 * vnoise(p.x * 3, p.z * 3, 7)));
-  return g;
+  paint(g, 0x1a3a50, 0x4a8a8a, (p, _n, c) => c.multiplyScalar((0.88 + 0.24 * vnoise(p.x * 3, p.z * 3, 7)) * 0.62));
+  const cards = leafCards(puffs, { cx: 0, cy: 0.5, cz: 0, size: 0.75, density: 2.4, inner: 0x1a3a50, outer: 0x4a8a8a, top: 0x8ad0c0, seed: 77 });
+  return attachFoliage(g, cards, "fern");
 }
 
 export function tuftGeometry(): BufferGeometry {

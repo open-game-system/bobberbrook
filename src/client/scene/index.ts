@@ -33,6 +33,7 @@ import { SwirlViews } from "./swirls";
 import { buildGroundStream } from "./terrain";
 import { loadPaintKit } from "./paintkit";
 import { groundMaterial } from "./groundmat";
+import { leafMaterial, setFoliageMaterials } from "./foliage";
 import { placeHash } from "./valley";
 import { buildEscape } from "./escape";
 import { newTodState, rideTwilight, sampleTod } from "./tod";
@@ -175,6 +176,9 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     uVP: { value: new Matrix4() },
   };
   const treeMat = occluderMaterial(occ);
+  // Leaf cards for every canopy built from here on (one program for both leaf sheets).
+  const leafMats = { violet: leafMaterial(kit.leavesViolet, occ, time), fern: leafMaterial(kit.leavesFern, occ, time) };
+  setFoliageMaterials(leafMats);
   const props = buildProps(opts.quality, sway, treeMat);
   scene.add(props.group);
   const painted = paintedMaterial();
@@ -671,6 +675,9 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       paintedDouble.dispose();
       groundMat.dispose();
       kit.dispose();
+      leafMats.violet.dispose();
+      leafMats.fern.dispose();
+      setFoliageMaterials(null);
       water.dispose();
       rays.dispose();
       props.dispose();

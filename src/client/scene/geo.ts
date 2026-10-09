@@ -159,31 +159,51 @@ function bindOcc(shader: { uniforms: Record<string, unknown> }, u: OccluderUnifo
   shader.uniforms.uVP = u.uVP;
 }
 
+/** Adds the occluder fade to a compiling shader (see occluderMaterial); the material needs alphaToCoverage. */
+export function applyOccluder(shader: { uniforms: Record<string, unknown>; vertexShader: string; fragmentShader: string }, u: OccluderUniforms): void {
+  bindOcc(shader, u);
+  shader.vertexShader = shader.vertexShader
+    .replace("#include <common>", `#include <common>\n${OCC_VERT_PARS}`)
+    .replace("#include <project_vertex>", `#include <project_vertex>${OCC_VERT}`);
+  shader.fragmentShader = shader.fragmentShader
+    .replace("#include <common>", `#include <common>${OCC_FRAG_PARS}`)
+    .replace(
+      "#include <clipping_planes_fragment>",
+      `#include <clipping_planes_fragment>
+  // Faded with alpha-to-coverage (multisampled, smooth) rather than a screen-door pattern.
+  float occA = 1.0 - min(1.0, occAmount() * 1.25);
+  if (occA < 0.02) discard;`,
+    )
+    .replace(
+      "#include <alphatest_fragment>",
+      `#include <alphatest_fragment>
+  diffuseColor.a *= occA;`,
+    );
+}
+
+/**
+ * The occluder fade worked out per vertex (for small, many-layered leaf cards: the fade is smooth over
+ * a card, and the fragment work stays light).
+ */
+export function applyOccluderPerVertex(shader: { uniforms: Record<string, unknown>; vertexShader: string; fragmentShader: string }, u: OccluderUniforms): void {
+  bindOcc(shader, u);
+  const pars = OCC_FRAG_PARS.replace("varying vec3 vOccW;", "vec3 vOccW;");
+  shader.vertexShader = shader.vertexShader
+    .replace("#include <common>", `#include <common>\n${pars}\nvarying float vOccA;`)
+    .replace("#include <project_vertex>", `#include <project_vertex>${OCC_VERT}\n  vOccA = 1.0 - min(1.0, occAmount() * 1.25);`);
+  shader.fragmentShader = shader.fragmentShader
+    .replace("#include <common>", "#include <common>\nvarying float vOccA;")
+    .replace("#include <clipping_planes_fragment>", "#include <clipping_planes_fragment>\n  if (vOccA < 0.02) discard;")
+    .replace("#include <alphatest_fragment>", "#include <alphatest_fragment>\n  diffuseColor.a *= vOccA;");
+}
+
 /**
  * Painted material for trees and bushes that dissolve where they stand between the camera and the
  * action, so a canopy never hides a fisher.
  */
 export function occluderMaterial(u: OccluderUniforms): MeshLambertMaterial {
   const m = new MeshLambertMaterial({ vertexColors: true });
-  m.onBeforeCompile = (shader) => {
-    bindOcc(shader, u);
-    shader.vertexShader = shader.vertexShader
-      .replace("#include <common>", `#include <common>\n${OCC_VERT_PARS}`)
-      .replace("#include <project_vertex>", `#include <project_vertex>${OCC_VERT}`);
-    shader.fragmentShader = shader.fragmentShader
-      .replace("#include <common>", `#include <common>${OCC_FRAG_PARS}`)
-      .replace(
-        "#include <clipping_planes_fragment>",
-        `#include <clipping_planes_fragment>
-  // Faded with alpha-to-coverage (multisampled, smooth) rather than a screen-door pattern.
-  float occA = 1.0 - min(1.0, occAmount() * 1.25);
-  if (occA < 0.02) discard;`,
-      )
-      .replace(
-        "#include <alphatest_fragment>",
-        `#include <alphatest_fragment>
-  diffuseColor.a *= occA;`,      );
-  };
+  m.onBeforeCompile = (shader) => applyOccluder(shader, u);
   m.alphaToCoverage = true;
   m.customProgramCacheKey = () => "bobber-occluder";
   return m;

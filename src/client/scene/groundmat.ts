@@ -77,8 +77,8 @@ float pkBlend(float w, vec3 over) {
     det = mix(det, bd, smoothstep(0.2, 0.8, vSurf.w));
     // Snow and pale frost ground keep a quieter brushwork (the grass sheet's flowers read as confetti on white).
     float pale = smoothstep(0.35, 0.8, pkLum(diffuseColor.rgb));
-    det = mix(det, vec3(pkLum(det)), pale * 0.7);
-    diffuseColor.rgb *= mix(vec3(1.0), det, 0.85 - 0.45 * pale);
+    det = mix(det, vec3(pkLum(det)), pale);
+    diffuseColor.rgb *= mix(vec3(1.0), det, 0.85 - 0.6 * pale);
   }`,
       );
   };

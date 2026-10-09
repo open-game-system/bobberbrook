@@ -23,8 +23,9 @@ import {
   type ShaderMaterial as SM,
 } from "three";
 import { pondRadius, type Area, type AreaId, type PondPlace } from "../../game/world";
-import { cliffRockGeometry, instanced, mossGeometry, rockGeometry, type Inst } from "./kit";
+import { cliffRockGeometry, instanced, rockGeometry, type Inst } from "./kit";
 import { jitter, merge, paint, prep, puffNormals } from "./geo";
+import { attachFoliage, hangingCards, leafCards, type Puff, type Strand } from "./foliage";
 import { rng, vnoise } from "./noise";
 import { heightAt } from "./terrain";
 import type { TodState } from "./tod";
@@ -71,33 +72,38 @@ export function willowGeometry(seed: number): BufferGeometry {
     parts.push(paint(prep(br), 0x2e2232, 0x4a3a48));
   }
   const domes: BufferGeometry[] = [];
+  const puffs: Puff[] = [];
   for (let i = 0; i < 6; i++) {
     const a = (i / 6) * Math.PI * 2;
     const rr = i === 0 ? 0 : 2.6;
-    const g = new SphereGeometry(i === 0 ? 3.6 : 2.4, 10, 7).scale(1, 0.55, 1);
+    const rad = i === 0 ? 3.6 : 2.4;
+    const g = new SphereGeometry(rad * 0.86, 10, 7).scale(1, 0.55, 1);
     jitter(g, 0.14, i + seed);
     g.computeVertexNormals();
-    g.translate(Math.cos(a) * rr, 7.0 + (i === 0 ? 0.6 : -0.2), Math.sin(a) * rr);
+    const py = 7.0 + (i === 0 ? 0.6 : -0.2);
+    g.translate(Math.cos(a) * rr, py, Math.sin(a) * rr);
     domes.push(prep(g));
+    puffs.push([Math.cos(a) * rr, py, Math.sin(a) * rr, rad, 0.55]);
   }
   const dome = merge(domes);
   puffNormals(dome, 0, 6.5, 0, 0.75);
   paint(dome, 0x3a2a6a, 0x9a7ad8, (p, n, c) => {
-    c.multiplyScalar(0.85 + 0.3 * vnoise(p.x * 1.4, p.z * 1.4 + p.y, 5));
-    if (n.y > 0.5) c.lerp(new Color(0xd8b8ff), (n.y - 0.5) * 0.7);
+    c.multiplyScalar((0.85 + 0.3 * vnoise(p.x * 1.4, p.z * 1.4 + p.y, 5)) * 0.62);
+    if (n.y > 0.5) c.lerp(new Color(0xd8b8ff).multiplyScalar(0.6), (n.y - 0.5) * 0.6);
   });
   parts.push(dome);
-  // Curtains of hanging moss round the rim.
+  const cards = leafCards(puffs, { cx: 0, cy: 6.8, cz: 0, size: 1.4, density: 2.1, inner: 0x3a2a6a, outer: 0x9a7ad8, top: 0xd8b8ff, seed: seed * 7 + 3 });
+  // Curtains of hanging leaf strands round the rim (wisteria-like, not flat moss sheets).
+  const strands: Strand[] = [];
   for (let i = 0; i < 12; i++) {
     const a = (i / 12) * Math.PI * 2 + r() * 0.3;
     const rr = 3.4 + r() * 1.6;
-    const len = 1.4 + r() * 1.8;
-    const g = mossGeometry(1.2 + r() * 0.9, len, seed * 17 + i, 0x4a3478, 0xc0a0f4, Math.cos(a), Math.sin(a));
-    g.rotateY(r() * Math.PI);
-    g.translate(Math.cos(a) * rr, 6.7 - (rr - 3.4) * 0.35, Math.sin(a) * rr);
-    parts.push(g);
+    const len = 1.6 + r() * 2.0;
+    const w = 0.8 + r() * 0.4;
+    r();
+    strands.push({ x: Math.cos(a) * rr, y: 6.9 - (rr - 3.4) * 0.35, z: Math.sin(a) * rr, len, w, ox: Math.cos(a), oz: Math.sin(a) });
   }
-  return merge(parts);
+  return attachFoliage(merge(parts), merge([cards, hangingCards(strands, 0x4a3478, 0xd0b4ff, seed * 17)]), "violet");
 }
 
 /** A birch: a slim white trunk with dark marks, a light lavender crown. */
@@ -110,7 +116,7 @@ export function birchGeometry(seed: number): BufferGeometry {
   parts.push(trunk);
   const blobs = [[0, 6.2, 0, 1.5], [0.8, 5.4, 0.3, 1.1], [-0.7, 5.6, -0.2, 1.15], [0.1, 7.1, 0.2, 1.0], [0.2, 4.8, -0.8, 0.9]];
   const crown = merge(blobs.map(([x, y, z, rr], i) => {
-    const g = new SphereGeometry(rr!, 9, 7);
+    const g = new SphereGeometry(rr! * 0.86, 9, 7);
     jitter(g, 0.2, i + seed);
     g.computeVertexNormals();
     g.translate(x!, y!, z!);
@@ -118,11 +124,12 @@ export function birchGeometry(seed: number): BufferGeometry {
   }));
   puffNormals(crown, 0, 5.8, 0, 0.8);
   paint(crown, 0x7a5ab8, 0xd0b0ff, (p, n, c) => {
-    c.multiplyScalar(0.88 + 0.24 * vnoise(p.x * 2.5, p.z * 2.5 + p.y, 8));
-    if (n.y > 0.55) c.lerp(new Color(0xf0dcff), (n.y - 0.55) * 0.8);
+    c.multiplyScalar((0.88 + 0.24 * vnoise(p.x * 2.5, p.z * 2.5 + p.y, 8)) * 0.62);
+    if (n.y > 0.55) c.lerp(new Color(0xf0dcff).multiplyScalar(0.6), (n.y - 0.55) * 0.6);
   });
   parts.push(crown);
-  return merge(parts);
+  const cards = leafCards(blobs.map(([x = 0, y = 0, z = 0, rr = 1]): Puff => [x, y, z, rr]), { cx: 0, cy: 5.8, cz: 0, size: 1.0, density: 2.2, inner: 0x7a5ab8, outer: 0xd0b0ff, top: 0xf0dcff, seed: seed * 13 + 1 });
+  return attachFoliage(merge(parts), cards, "violet");
 }
 
 /** A tall wooden post with a hanging amber lantern; the glass is a separate glow part. */
