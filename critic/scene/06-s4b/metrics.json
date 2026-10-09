@@ -1,0 +1,97 @@
+{
+  "round": "06-s4b",
+  "shots": [
+    {
+      "label": "moonwell",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 59,
+      "programs": 59,
+      "calls": 489,
+      "triangles": 3238736,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 104
+    },
+    {
+      "label": "far-place",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 57,
+      "programs": 57,
+      "calls": 430,
+      "triangles": 2420134,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 75
+    },
+    {
+      "label": "biome-willow",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 56,
+      "programs": 56,
+      "calls": 318,
+      "triangles": 2794555,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 85
+    },
+    {
+      "label": "tower",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 59,
+      "programs": 59,
+      "calls": 546,
+      "triangles": 3838270,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 88
+    },
+    {
+      "label": "zeppelin-ride",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 57,
+      "programs": 58,
+      "calls": 316,
+      "triangles": 1605701,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 136
+    },
+    {
+      "label": "hollow",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 59,
+      "programs": 59,
+      "calls": 432,
+      "triangles": 3171529,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 118
+    },
+    {
+      "label": "pools",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 59,
+      "programs": 59,
+      "calls": 418,
+      "triangles": 3212895,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 111
+    },
+    {
+      "label": "discovery",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 59,
+      "programs": 59,
+      "calls": 535,
+      "triangles": 4335290,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 82
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}

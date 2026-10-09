@@ -81,6 +81,52 @@ export function oakGeometry(variant = 0): BufferGeometry {
 }
 
 /** A colossal ancient tree: flared roots, a leaning trunk, a mushroom-like canopy, hanging moss. */
+/**
+ * A soft hanging moss card (round 05: cone strands read as spikes): two crossed, two-sided ribbons
+ * with a scalloped, rounded hem, dark where it hangs from the canopy and pale lavender at the tips.
+ * Hangs from (0, 0, 0) down; normals face outward from `out` (x, z) so it shades like the canopy edge.
+ */
+export function mossGeometry(w: number, len: number, seed: number, top: number, tip: number, outX = 0, outZ = 1): BufferGeometry {
+  const r = rng(seed);
+  const COLS = 4;
+  const ROWS = 2;
+  const pos: number[] = [];
+  const nor: number[] = [];
+  const ol = Math.hypot(outX, outZ) || 1;
+  const nx = outX / ol;
+  const nz = outZ / ol;
+  const hem = Array.from({ length: COLS + 1 }, (_, i) => {
+    const u = i / COLS;
+    // Longest in the middle, rounded at the sides, a few strands hanging lower.
+    return len * (0.72 + 0.28 * Math.sin(Math.PI * u)) * (0.85 + 0.25 * r());
+  });
+  for (const rot of [0, Math.PI / 2]) {
+    const cx = Math.cos(rot);
+    const cz = Math.sin(rot);
+    const vtx = (i: number, j: number): [number, number, number] => {
+      const u = i / COLS;
+      const v = j / ROWS;
+      const x = (u - 0.5) * w * (1 - 0.25 * v);
+      const y = -hem[i]! * v;
+      // A gentle sway outward lower down, so it drapes rather than hangs ruler-straight.
+      const d = 0.25 * v * v;
+      return [x * cx + nx * d, y, x * cz + nz * d];
+    };
+    for (let i = 0; i < COLS; i++) for (let j = 0; j < ROWS; j++) {
+      const a = vtx(i, j), b = vtx(i + 1, j), c = vtx(i, j + 1), d = vtx(i + 1, j + 1);
+      // Both windings: seen from either side.
+      for (const tri of [[a, c, b], [b, c, d], [a, b, c], [b, d, c]]) for (const q of tri) {
+        pos.push(q[0], q[1], q[2]);
+        nor.push(nx * 0.8, 0.45, nz * 0.8);
+      }
+    }
+  }
+  const g = new BufferGeometry();
+  g.setAttribute("position", new BufferAttribute(new Float32Array(pos), 3));
+  g.setAttribute("normal", new BufferAttribute(new Float32Array(nor), 3));
+  return paint(g, tip, top, (p, _n, c) => c.multiplyScalar(0.88 + 0.24 * vnoise(p.x * 3, p.z * 3, seed)));
+}
+
 export function giantGeometry(variant: number): BufferGeometry {
   const r = rng(77 + variant);
   const parts: BufferGeometry[] = [];
@@ -133,16 +179,14 @@ export function giantGeometry(variant: number): BufferGeometry {
   });
   parts.push(canopy);
   // Hanging moss.
-  for (let i = 0; i < 18; i++) {
+  for (let i = 0; i < 14; i++) {
     const a = r() * Math.PI * 2;
-    const rr = 3 + r() * 8;
-    const len = 2.5 + r() * 4;
-    const g = new ConeGeometry(0.18, len, 4);
-    g.rotateX(Math.PI);
-    g.translate(Math.cos(a) * rr, 16.2 - len / 2, Math.sin(a) * rr);
-    const mp = prep(g);
-    paint(mp, 0xc8a0ff, 0x7a4ac8);
-    parts.push(mp);
+    const rr = 4 + r() * 7;
+    const len = 1.3 + r() * 1.5;
+    const g = mossGeometry(1.6 + r() * 1.2, len, variant * 31 + i, 0x5a3a8a, 0xc8a8f0, Math.cos(a), Math.sin(a));
+    g.rotateY(r() * Math.PI);
+    g.translate(Math.cos(a) * rr, 16.6 - rr * 0.08, Math.sin(a) * rr);
+    parts.push(g);
   }
   return merge(parts);
 }

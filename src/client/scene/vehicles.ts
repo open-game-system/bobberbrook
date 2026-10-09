@@ -173,25 +173,31 @@ function zeppelinGeometry(): { body: BufferGeometry; prop: BufferGeometry; glow:
   }
   const env = new LatheGeometry(prof, 48).rotateZ(-Math.PI / 2).translate(0, ENV_Y, 0);
   env.computeVertexNormals();
-  const rose = new Color(0xd86f92);
-  const cream = new Color(0xf8e6cc);
-  const seam = new Color(0x6a2f55);
-  const envP = paint(prep(env), 0xd86f92, 0xd86f92, (p, _n, c) => {
+  // Ashenvale colours (round 05: rose/cream gores read as a Mario Party candy stripe): a deep violet
+  // envelope, gores told apart only by a hint of tone, a teal belly, gold-stitched seams.
+  const rose = new Color(0x45337e);
+  const cream = new Color(0x3c2f72);
+  const belly = new Color(0x2a7480);
+  const seam = new Color(0xe0b45a);
+  const envP = paint(prep(env), 0x45337e, 0x45337e, (p, _n, c) => {
     const phi = Math.atan2(p.z, p.y - ENV_Y) + Math.PI;
     const g = (phi / (Math.PI * 2)) * 8;
     const gore = Math.floor(g + 1e-4) % 2;
     const f = g - Math.floor(g + 1e-4);
     c.copy(gore === 0 ? rose : cream);
-    // Light from above, a warmer belly.
-    c.multiplyScalar(0.86 + 0.2 * Math.max(0, (p.y - ENV_Y) / ENV_R));
+    const up = (p.y - ENV_Y) / ENV_R;
+    c.lerp(belly, Math.max(0, Math.min(1, (-up - 0.25) * 1.6)));
+    // Light from above: a moonlit lavender sheen along the top.
+    c.lerp(new Color(0x8a78d0), Math.max(0, up - 0.55) * 0.9);
+    c.multiplyScalar(0.92 + 0.16 * Math.max(0, up));
     // Stitched seams: dashes along every gore edge.
     const t = (p.x + ENV_L / 2) / ENV_L;
-    if ((f < 0.02 || f > 0.98) && Math.floor(t * 40) % 2 === 0) c.lerp(seam, 0.65);
+    if ((f < 0.02 || f > 0.98) && Math.floor(t * 40) % 2 === 0) c.lerp(seam, 0.55);
   });
   const ribs: BufferGeometry[] = [];
-  for (const t of [0.16, 0.34, 0.52, 0.7, 0.86]) {
+  for (const t of [0.2, 0.5, 0.8]) {
     const r = envR(t) + 0.03;
-    ribs.push(paint(prep(new TorusGeometry(r, 0.075, 6, 40).rotateY(Math.PI / 2).translate(-ENV_L / 2 + ENV_L * t, ENV_Y, 0)), 0xb98a3a, 0xf0c870));
+    ribs.push(paint(prep(new TorusGeometry(r, 0.055, 6, 40).rotateY(Math.PI / 2).translate(-ENV_L / 2 + ENV_L * t, ENV_Y, 0)), 0xb98a3a, 0xf0c870));
   }
   // A gold nose cap and a tail cone.
   ribs.push(paint(prep(new SphereGeometry(0.42, 12, 8).translate(ENV_L / 2 - 0.12, ENV_Y, 0)), 0xd8a848, 0xf8d880));
@@ -487,6 +493,7 @@ function mooringFacesPlace(p: Platform): boolean {
 }
 /** How high a parked airship lifts off when it makes way. */
 const PARK_LIFT = 40;
+const WHITE = new Color(1, 1, 1);
 
 export function buildVehicles(full: boolean, painted: Material, paintedDouble: Material, fadeMat: Material = painted, fadeDouble: Material = paintedDouble): Vehicles {
   const group = new Group();
@@ -512,7 +519,7 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
   ring.visible = false;
   group.add(ring);
   // Clouds round a zeppelin's flight.
-  const cloudGeo = merge([blob(2.4, 0, 0, 0, 1, 10, 7), blob(1.8, 2.2, -0.3, 0.4, 2, 9, 6), blob(1.7, -2.1, -0.4, -0.3, 3, 9, 6), blob(1.4, 0.6, 0.9, -0.6, 4, 8, 6)]);
+  const cloudGeo = merge([blob(2.4, 0, 0, 0, 1, 18, 11), blob(1.8, 2.2, -0.3, 0.4, 2, 16, 10), blob(1.7, -2.1, -0.4, -0.3, 3, 16, 10), blob(1.4, 0.6, 0.9, -0.6, 4, 14, 9)]);
   puffNormals(cloudGeo, 0, 0, 0, 0.85);
   paint(cloudGeo, 0xd8d0f0, 0xffffff);
   const cloudMat = new MeshLambertMaterial({ vertexColors: true, emissive: new Color(0x3a3450) });
@@ -810,6 +817,8 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
             clouds.setMatrixAt(i, m4);
           });
           clouds.instanceMatrix.needsUpdate = true;
+          // Lavender cloud banks in the twilight (not sunset-pink lumps).
+          cloudMat.color.copy(tod.cloud).lerp(WHITE, 0.25);
           cloudMat.emissive.copy(tod.hemiSky).multiplyScalar(0.35);
         }
       }

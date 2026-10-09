@@ -103,8 +103,9 @@ varying float vH;
 varying float vShade;
 void main() {
   vec3 c = uCol * (0.82 + 0.3 * vShade);
-  c = mix(c, uCol * 1.45 + 0.08, smoothstep(0.78, 0.92, vH));
-  c = mix(uFog, c, 0.45 + 0.4 * vH);
+  // A faint lit rim on the crowns; mist banks pooled in the valleys between ridges.
+  c = mix(c, uCol * 1.2 + 0.03, smoothstep(0.8, 1.0, vH) * 0.5);
+  c = mix(uFog, c, smoothstep(0.0, 0.75, vH) * 0.7 + 0.15);
   c = mix(c, uFog, uFar);
   gl_FragColor = vec4(c, 1.0);
   #include <tonemapping_fragment>
@@ -118,45 +119,57 @@ export type Sky = {
   dispose(): void;
 };
 
+/**
+ * The far horizon: layered forested ridges (rounded hills whose skyline is a row of tree crowns, a few
+ * taller spires to the north), not cone peaks (round 05: "pink cones"). Each ridge is a two-sided strip
+ * facing the valley; aH is the height fraction for the shader's gradient.
+ */
 function buildMountains(): BufferGeometry {
   const r = rng(91);
   const pos: number[] = [];
   const hs: number[] = [];
   const idx: number[] = [];
-  const peaks = 26;
-  for (let layer = 0; layer < 2; layer++) {
-    const R = layer === 0 ? 230 : 300;
-    for (let p = 0; p < peaks; p++) {
-      const th = (p / peaks) * Math.PI * 2 + r() * 0.2 + layer * 0.12;
-      // Leave the south open behind the camera; mountains crowd the north.
+  const COLS = 22;
+  const LAYERS: [number, number, number][] = [
+    [215, 30, 0.8],
+    [265, 30, 1.05],
+    [320, 24, 1.35],
+  ];
+  LAYERS.forEach(([R, ridges, hk], layer) => {
+    for (let p = 0; p < ridges; p++) {
+      const th = (p / ridges) * Math.PI * 2 + r() * 0.15 + layer * 0.37;
       const north = 0.5 - 0.5 * Math.sin(th);
-      // A low saddle due north, so the moon can rise over the falls between the peaks.
       let gap = Math.abs(th + Math.PI / 2) % (Math.PI * 2);
       if (gap > Math.PI) gap = Math.PI * 2 - gap;
-      const saddle = 1 - 0.8 * Math.exp(-((gap / 0.2) ** 2));
-      const H = (25 + r() * 35) * (0.55 + 0.75 * north) * (layer === 0 ? 1 : 1.35) * saddle;
-      const W = 40 + r() * 40;
-      const base = pos.length / 3;
+      const saddle = 1 - 0.75 * Math.exp(-((gap / 0.2) ** 2));
+      const H = (14 + r() * 16) * (0.6 + 0.6 * north) * hk * saddle;
+      // A spire now and then in the north, slim and tall like the reference's far rocks.
+      const spire = layer === 2 && north > 0.6 && r() < 0.35;
+      const W = spire ? 14 + r() * 8 : 34 + r() * 30;
       const cx = Math.cos(th) * R;
       const cz = Math.sin(th) * R;
       const tx = -Math.sin(th);
       const tz = Math.cos(th);
-      // A peak: apex + ring of 7 base points with a jagged profile.
-      const k = 7;
-      pos.push(cx + (r() - 0.5) * 10, H - 6, cz + (r() - 0.5) * 10);
-      hs.push(1);
-      for (let i = 0; i < k; i++) {
-        const a = (i / k) * Math.PI * 2;
-        const rr = W * (0.6 + 0.4 * r());
-        const mid = i % 2 === 0 ? 0 : H * (0.25 + 0.2 * r());
-        const lx = Math.cos(a) * rr;
-        const lz = Math.sin(a) * rr * 0.6;
-        pos.push(cx + tx * lx + Math.cos(th) * lz, mid - 6, cz + tz * lx + Math.sin(th) * lz);
-        hs.push(mid / H);
+      const base = pos.length / 3;
+      for (let i = 0; i <= COLS; i++) {
+        const u = (i / COLS) * 2 - 1;
+        const lx = u * W;
+        const hump = Math.pow(Math.max(0, 1 - u * u), spire ? 1.6 : 0.6);
+        // Tree crowns along the skyline: rounded bumps, bigger near the top of the hill.
+        const crowns = spire ? 0 : (0.55 + 0.45 * Math.abs(Math.sin(i * 1.9 + p * 3.1))) * 3.2 * hump;
+        const top = (spire ? H * 2.1 : H) * hump + crowns;
+        pos.push(cx + tx * lx, -6, cz + tz * lx);
+        hs.push(0);
+        pos.push(cx + tx * lx, top - 6, cz + tz * lx);
+        hs.push(top / Math.max(1, H * (spire ? 2.1 : 1) + 3.2));
       }
-      for (let i = 0; i < k; i++) idx.push(base, base + 1 + ((i + 1) % k), base + 1 + i);
+      for (let i = 0; i < COLS; i++) {
+        const a = base + i * 2;
+        idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
+        idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+      }
     }
-  }
+  });
   const g = new BufferGeometry();
   g.setAttribute("position", new BufferAttribute(new Float32Array(pos), 3));
   g.setAttribute("aH", new BufferAttribute(new Float32Array(hs), 1));

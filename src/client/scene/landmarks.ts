@@ -23,7 +23,7 @@ import {
   type ShaderMaterial as SM,
 } from "three";
 import { pondRadius, type Area, type AreaId, type PondPlace } from "../../game/world";
-import { cliffRockGeometry, instanced, rockGeometry, type Inst } from "./kit";
+import { cliffRockGeometry, instanced, mossGeometry, rockGeometry, type Inst } from "./kit";
 import { jitter, merge, paint, prep, puffNormals } from "./geo";
 import { rng, vnoise } from "./noise";
 import { heightAt } from "./terrain";
@@ -88,12 +88,14 @@ export function willowGeometry(seed: number): BufferGeometry {
   });
   parts.push(dome);
   // Curtains of hanging moss round the rim.
-  for (let i = 0; i < 46; i++) {
-    const a = r() * Math.PI * 2;
-    const rr = 2.2 + r() * 3.2;
-    const len = 2.2 + r() * 3.4;
-    const g = new ConeGeometry(0.16 + r() * 0.1, len, 4).rotateX(Math.PI).translate(Math.cos(a) * rr, 6.6 - len / 2 - (rr - 2.2) * 0.3, Math.sin(a) * rr);
-    parts.push(paint(prep(g), 0xb890ff, 0x6a48b8));
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2 + r() * 0.3;
+    const rr = 3.4 + r() * 1.6;
+    const len = 1.4 + r() * 1.8;
+    const g = mossGeometry(1.2 + r() * 0.9, len, seed * 17 + i, 0x4a3478, 0xc0a0f4, Math.cos(a), Math.sin(a));
+    g.rotateY(r() * Math.PI);
+    g.translate(Math.cos(a) * rr, 6.7 - (rr - 3.4) * 0.35, Math.sin(a) * rr);
+    parts.push(g);
   }
   return merge(parts);
 }

@@ -1,0 +1,76 @@
+{
+  "round": "06-s4d",
+  "shots": [
+    {
+      "label": "tower",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 59,
+      "programs": 59,
+      "calls": 546,
+      "triangles": 3617652,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 93
+    },
+    {
+      "label": "mistmarsh",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 59,
+      "programs": 59,
+      "calls": 547,
+      "triangles": 4007066,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 59
+    },
+    {
+      "label": "four-reel",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 59,
+      "programs": 59,
+      "calls": 487,
+      "triangles": 3269482,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 115
+    }
+  ],
+  "soaks": {
+    "four-reel": {
+      "programsBefore": 59,
+      "programsAfter": 59,
+      "p50": 10.199999809265137,
+      "p95": 30.299999237060547,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 1919
+    },
+    "tower": {
+      "programsBefore": 59,
+      "programsAfter": 59,
+      "p50": 12.100000381469727,
+      "p95": 46.29999923706055,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 1654
+    },
+    "boarding": {
+      "programsBefore": 57,
+      "programsAfter": 57,
+      "p50": 10.5,
+      "p95": 31.600000381469727,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 2531
+    }
+  },
+  "soak": {
+    "programsBefore": 59,
+    "programsAfter": 59,
+    "p50": 10.199999809265137,
+    "p95": 30.299999237060547,
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+    "frames": 1919
+  },
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}

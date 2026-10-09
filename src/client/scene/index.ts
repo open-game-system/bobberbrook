@@ -33,7 +33,7 @@ import { SwirlViews } from "./swirls";
 import { buildGroundStream } from "./terrain";
 import { placeHash } from "./valley";
 import { buildEscape } from "./escape";
-import { newTodState, sampleTod } from "./tod";
+import { newTodState, rideTwilight, sampleTod } from "./tod";
 import type { LakeScene, SceneQuality } from "./types";
 import { buildWater } from "./water";
 import { buildRays } from "./rays";
@@ -266,9 +266,12 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   const tmpO = new Vector3();
   const catchBuf: CatchFocus = { x: 0, y: 0, z: 0, age: 0 };
 
+  /** 0..1: how far the sky has gone over to the zeppelin's twilight (eased; last frame's ride). */
+  let rideSky = 0;
   const applyTod = (phase: number) => {
     sampleTod(phase, tod);
     mood.apply(tod);
+    rideTwilight(tod, rideSky);
     sun.color.copy(tod.sun);
     sun.intensity = tod.sunI;
     // The shadow frustum follows the action (snapped to its texels so shadows do not crawl).
@@ -392,6 +395,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     const sp = splitFocus.update(members, sn / 1000);
     framed = sp.framed;
     const riding = vehicles.riding();
+    rideSky += ((riding === 2 ? 1 : 0) - rideSky) * Math.min(1, dt * 0.8);
     rig.rateK += ((riding ? 3.2 : 1) - rig.rateK) * Math.min(1, dt * 2);
     rig.ride = riding ? { heading: vehicles.heading(), kind: riding } : null;
     rig.minDist += ((riding === 2 ? 24 : riding === 1 ? 22 : sp.split ? 23 : 17) - rig.minDist) * Math.min(1, dt * (riding ? 0.8 : 2));

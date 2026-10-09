@@ -192,3 +192,33 @@ export function sampleTod(phase: number, out: TodState): TodState {
   out.discDir.set(Math.cos(dAz) * Math.cos(dEl), Math.sin(dEl), Math.sin(dAz) * Math.cos(dEl)).normalize();
   return out;
 }
+
+const TW = {
+  skyTop: new Color(0x221c5c),
+  skyHorizon: new Color(0xb488c8),
+  skyGlow: new Color(0xf2a8c4),
+  cloud: new Color(0xbcaee6),
+  cloudShade: new Color(0x5a4a92),
+  fog: new Color(0x7c6ab4),
+  hemiSky: new Color(0x8a80d4),
+  mountain: new Color(0x2a2656),
+};
+
+/**
+ * The zeppelin's sky: whatever the hour, a ride above the clouds blends toward Ashenvale twilight
+ * (indigo overhead, a rose-violet glow on the horizon, first stars, lavender cloud banks) instead of
+ * the flat pink of a dusk key (round 05). w: 0..1.
+ */
+export function rideTwilight(tod: TodState, w: number): void {
+  if (w <= 0.001) return;
+  tod.skyTop.lerp(TW.skyTop, w);
+  tod.skyHorizon.lerp(TW.skyHorizon, w);
+  tod.skyGlow.lerp(TW.skyGlow, w);
+  tod.cloud.lerp(TW.cloud, w);
+  tod.cloudShade.lerp(TW.cloudShade, w);
+  tod.fog.lerp(TW.fog, w);
+  tod.hemiSky.lerp(TW.hemiSky, w * 0.6);
+  tod.mountain.lerp(TW.mountain, w);
+  tod.stars = Math.max(tod.stars, 0.45 * w);
+  tod.glow = Math.max(tod.glow, 0.6 * w);
+}

@@ -1,7 +1,7 @@
 import { Color, Group, InstancedMesh, MeshBasicMaterial, MeshLambertMaterial, type Camera, type Material } from "three";
-import { pondRadius, type Area, type PondPlace } from "../../game/world";
+import { pondRadius, segmentDistance, type Area, type PondPlace } from "../../game/world";
 import type { Biome, Place } from "../../game/regions";
-import { bellGeometry, fernGeometry, flowerGeometry, instanced, lilyGeometry, lupineGeometry, mushroomGeometry, padGeometry, reedGeometry, rockGeometry, tuftGeometry, type Inst } from "./kit";
+import { bellGeometry, fernGeometry, flowerGeometry, giantGeometry, instanced, lilyGeometry, lupineGeometry, mushroomGeometry, padGeometry, reedGeometry, rockGeometry, tuftGeometry, type Inst } from "./kit";
 import { rng, vnoise } from "./noise";
 import { heightAt, trailWear } from "./terrain";
 import type { TodState } from "./tod";
@@ -11,7 +11,7 @@ import { buildLandmark, type Landmark, type LandmarkStyle } from "./landmarks";
 const HOME_STYLES: readonly LandmarkStyle[] = ["mistmarsh", "pools", "hollow", "tarn"];
 import { placeHash } from "./valley";
 import { LANDMARKS, landmarkFor, type LandmarkKind } from "./biomes";
-import { placesWithin } from "./worldQuery";
+import { dockDist, placesWithin, seaDist, towerDist, trailsAround } from "./worldQuery";
 import type { Jobs } from "./stream";
 
 /**
@@ -232,9 +232,40 @@ export function buildAreaDressing(full: boolean, m: AreaMats, jobs: Jobs): AreaD
       return;
     }
     g.add(lm.group);
+    yield;
+    const co = colossi(a, m.tree, full);
+    if (co) g.add(co);
     l.g = g;
     l.lm = lm;
     group.add(g);
+  }
+
+  /**
+   * Ashenvale's colossal ancient trees: two or three framing each place from behind (the side away from
+   * its group camera), on the forest edge, clear of trails, docks, towers and the sea.
+   */
+  function colossi(a: Place, tree: Material, shadows: boolean): InstancedMesh | null {
+    const yaw = a.home ? 0 : (placeHash(a.key, 11) - 0.5) * 0.9;
+    // The camera sits at (sin yaw, cos yaw) from the place: the back is the other way.
+    const back = Math.atan2(-Math.cos(yaw), -Math.sin(yaw));
+    const r0 = a.pond.r + a.clearing + 5;
+    const list: Inst[] = [];
+    const trails = trailsAround(a.center.x, a.center.z);
+    for (const k of [-1.15, -0.4, 0.4, 1.15]) {
+      const th = back + k + (placeHash(a.key, 40 + list.length) - 0.5) * 0.25;
+      const rr = r0 + placeHash(a.key, 50 + list.length) * 6;
+      const x = a.center.x + Math.cos(th) * rr;
+      const z = a.center.z + Math.sin(th) * rr;
+      let td = Infinity;
+      for (const t of trails) td = Math.min(td, segmentDistance({ x, z }, t.from, t.to));
+      if (td < 11 || seaDist(x, z) < 8 || dockDist(x, z) < 16 || towerDist(x, z, (px, pz) => heightAt(px, pz)) < 26) continue;
+      list.push({ x, y: heightAt(x, z) - 0.8, z, s: 1.05 + placeHash(a.key, 60 + list.length) * 0.3, ry: placeHash(a.key, 70 + list.length) * 6.28 });
+      if (list.length >= 3) break;
+    }
+    if (list.length === 0) return null;
+    const mesh = instanced(giantGeometry(Math.floor(placeHash(a.key, 80) * 3)), tree, list, shadows);
+    mesh.name = `colossi-${a.id}`;
+    return mesh;
   }
 
   function disposeGroup(g: Group): void {
