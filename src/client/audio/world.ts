@@ -112,15 +112,16 @@ function chirp(ctx: AudioContext, out: AudioNode, t: number): void {
   const g = ctx.createGain();
   const p = ctx.createStereoPanner();
   p.pan.value = Math.random() * 1.6 - 0.8;
-  const base = 2600 + Math.random() * 1600;
+  // A mellow warbler (1.7–2.5 kHz, soft attack): 2.6–7 kHz chirps read as harsh ticks on TV speakers.
+  const base = 1700 + Math.random() * 800;
   const n = 2 + Math.floor(Math.random() * 4);
   for (let i = 0; i < n; i++) {
     const s = t + i * 0.11;
     o.frequency.setValueAtTime(base, s);
-    o.frequency.exponentialRampToValueAtTime(base * (1.3 + Math.random() * 0.4), s + 0.06);
+    o.frequency.exponentialRampToValueAtTime(base * (1.15 + Math.random() * 0.25), s + 0.07);
     g.gain.setValueAtTime(0.0001, s);
-    g.gain.exponentialRampToValueAtTime(0.03, s + 0.015);
-    g.gain.exponentialRampToValueAtTime(0.0001, s + 0.08);
+    g.gain.exponentialRampToValueAtTime(0.018, s + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, s + 0.1);
   }
   o.connect(g).connect(p).connect(out);
   o.start(t);
@@ -307,7 +308,7 @@ export function startWorld(): void {
       scheduleBar(ctx, bar++, next);
       next += BEAT * 4;
     }
-    if (tod !== "night" && Math.random() < 0.18) chirp(ctx, out, ctx.currentTime + Math.random());
+    if (tod !== "night" && Math.random() < 0.1) chirp(ctx, out, ctx.currentTime + Math.random());
     if (tod === "night" && Math.random() < 0.02) owl(ctx, out, ctx.currentTime + Math.random());
     if (night && (tod === "night" || tod === "dawn") && Math.random() < 0.45) cricket(ctx, night.gain, ctx.currentTime + Math.random() * 0.4);
   };
