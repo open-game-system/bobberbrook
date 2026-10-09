@@ -110,7 +110,9 @@ export const sfx = {
   },
   catch: (o: Opts = {}) => {
     whoosh(0.45, 950, 400, { gain: 0.28, q: 1.1, ...o });
-    [0, 2, 4, 7].forEach((n, i) => tone(note(n), 0.4, { gain: 0.24, type: "sine", attack: 0.015, ...o, at: (o.at ?? 0) + 0.1 + i * 0.07 }));
+    // A warm, clearly audible sting (round 08: after the octave drop a catch only lifted the mix 1–3 dB).
+    [0, 2, 4, 7].forEach((n, i) => tone(note(n), 0.5, { gain: 0.34, type: "sine", attack: 0.015, ...o, at: (o.at ?? 0) + 0.1 + i * 0.07 }));
+    tone(note(-5), 0.7, { gain: 0.22, type: "triangle", attack: 0.02, ...o, at: (o.at ?? 0) + 0.1 });
   },
   newFish: (o: Opts = {}) => {
     [2, 4, 5, 7, 9, 12].forEach((n, i) => tone(note(n), 0.55, { gain: 0.2, type: "sine", attack: 0.015, ...o, at: (o.at ?? 0) + 0.45 + i * 0.08 }));
