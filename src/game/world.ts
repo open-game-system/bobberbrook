@@ -102,14 +102,18 @@ export function advance(pos: Vec, vel: Vec, dt: number): Vec {
   while (left > 1e-9) {
     const h = Math.min(STEP_S, left);
     left -= h;
-    // Straight on; a tree or rock in the way: veer round it; the shore: slide along it on one axis.
-    const ahead = { x: p.x + vel.x * h, z: p.z + vel.z * h };
-    const heads = walkable(ahead) ? [vel] : hitsObstacle(ahead) ? STEER_HEADINGS.map((a) => turned(vel, a)) : [{ x: vel.x, z: 0 }, { x: 0, z: vel.z }];
-    const next = heads.map((v) => ({ x: p.x + v.x * h, z: p.z + v.z * h })).find(walkable);
+    const next = stepOnce(p, vel, h);
     if (!next) break;
     p = next;
   }
   return p;
+}
+
+/** One small step: straight on; a tree or rock in the way: veer round it; the shore: slide along it on one axis. Undefined when stuck. */
+function stepOnce(p: Vec, vel: Vec, h: number): Vec | undefined {
+  const ahead = { x: p.x + vel.x * h, z: p.z + vel.z * h };
+  const heads = walkable(ahead) ? [vel] : hitsObstacle(ahead) ? STEER_HEADINGS.map((a) => turned(vel, a)) : [{ x: vel.x, z: 0 }, { x: 0, z: vel.z }];
+  return heads.map((v) => ({ x: p.x + v.x * h, z: p.z + v.z * h })).find(walkable);
 }
 
 /** Where the bobber lands from here, and which water it is in; null when too far from the water. */

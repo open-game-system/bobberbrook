@@ -618,12 +618,7 @@ function board(d: Draft<Lake>, now: number, w: World): void {
     d.boarding = null;
     return;
   }
-  const mid = { x: d.fishers.reduce((a, f) => a + f.pos.x, 0) / d.fishers.length, z: d.fishers.reduce((a, f) => a + f.pos.z, 0) / d.fishers.length };
-  const platform = w
-    .platformsNear(mid, 1)
-    .filter((p) => d.fishers.every((f) => distance(f.pos, p.at) <= PLATFORM_REACH))
-    // The mooring everyone stands closest to, all together (moorings round one tower sit side by side).
-    .sort((a, b) => d.fishers.reduce((t, f) => t + distance(f.pos, a.at), 0) - d.fishers.reduce((t, f) => t + distance(f.pos, b.at), 0))[0];
+  const platform = familyMooring(d.fishers, w);
   if (!platform) {
     d.boarding = null;
     return;
@@ -633,6 +628,20 @@ function board(d: Draft<Lake>, now: number, w: World): void {
     return;
   }
   if (now - d.boarding.since < BOARD_MS) return;
+  depart(d, platform, now);
+}
+
+/** The mooring everyone stands on, all together: the one they stand closest to in sum (moorings round one tower sit side by side). */
+function familyMooring(fishers: { pos: Vec }[], w: World): Platform | undefined {
+  const mid = { x: fishers.reduce((a, f) => a + f.pos.x, 0) / fishers.length, z: fishers.reduce((a, f) => a + f.pos.z, 0) / fishers.length };
+  return w
+    .platformsNear(mid, 1)
+    .filter((p) => fishers.every((f) => distance(f.pos, p.at) <= PLATFORM_REACH))
+    .sort((a, b) => fishers.reduce((t, f) => t + distance(f.pos, a.at), 0) - fishers.reduce((t, f) => t + distance(f.pos, b.at), 0))[0];
+}
+
+/** Everyone aboard: the ride sets off from the platform. */
+function depart(d: Draft<Lake>, platform: Platform, now: number): void {
   const ms = Math.max(RIDE_MIN_MS, Math.min(RIDE_MAX_MS, (distance(platform.at, platform.to) / RIDE_SPEED[platform.kind]) * 1000));
   d.ride = { platformId: platform.id, kind: platform.kind, from: platform.at, to: platform.to, toPlace: platform.toPlace, departAt: now, arriveAt: now + ms, seats: d.fishers.map((f) => f.seat) };
   d.boarding = null;
@@ -681,15 +690,22 @@ function reveal(d: Draft<Lake>): void {
   const seen = new Set(d.revealed);
   const radius = d.ride?.kind === "zeppelin" ? 3 : 2;
   for (const f of d.fishers)
-    for (let dx = -radius; dx <= radius; dx++)
-      for (let dz = -radius; dz <= radius; dz++) {
-        if (dx * dx + dz * dz > radius * radius + 1) continue;
-        const k = tileKey({ x: f.pos.x + dx * FOG_TILE, z: f.pos.z + dz * FOG_TILE });
-        if (!seen.has(k)) {
-          seen.add(k);
-          d.revealed.push(k);
-        }
-      }
+    for (const k of fogTilesAround(f.pos, radius)) {
+      if (seen.has(k)) continue;
+      seen.add(k);
+      d.revealed.push(k);
+    }
+}
+
+/** The fog tiles in a rough circle of `radius` tiles round a point, row by row. */
+export function fogTilesAround(p: Vec, radius: number): string[] {
+  const out: string[] = [];
+  for (let dx = -radius; dx <= radius; dx++)
+    for (let dz = -radius; dz <= radius; dz++) {
+      if (dx * dx + dz * dz > radius * radius + 1) continue;
+      out.push(tileKey({ x: p.x + dx * FOG_TILE, z: p.z + dz * FOG_TILE }));
+    }
+  return out;
 }
 
 export function isRevealed(lake: Pick<Lake, "revealed">, p: Vec): boolean {
@@ -725,21 +741,22 @@ export const FISHER_SPACE = 1.8;
 
 /** Nudges any two fishers standing closer than FISHER_SPACE apart, each half the way, onto walkable ground. */
 export function keepApart(fishers: { pos: Vec; seat: number }[], w: World = worldFor(HOME_WORLD_SEED)): void {
-  for (let i = 0; i < fishers.length; i++)
-    for (let j = i + 1; j < fishers.length; j++) {
-      const a = fishers[i]!;
-      const b = fishers[j]!;
-      const dx = b.pos.x - a.pos.x;
-      const dz = b.pos.z - a.pos.z;
-      const dist = Math.hypot(dx, dz);
-      if (dist >= FISHER_SPACE) continue;
-      // Exactly on top of each other: part them by seat, east–west.
-      const ux = dist > 1e-6 ? dx / dist : b.seat > a.seat ? 1 : -1;
-      const uz = dist > 1e-6 ? dz / dist : 0;
-      const push = (FISHER_SPACE - dist) / 2;
-      a.pos = w.advance(a.pos, { x: -ux, z: -uz }, push);
-      b.pos = w.advance(b.pos, { x: ux, z: uz }, push);
-    }
+  for (let i = 0; i < fishers.length; i++) for (let j = i + 1; j < fishers.length; j++) nudgeApart(fishers[i]!, fishers[j]!, w);
+}
+
+function nudgeApart(a: { pos: Vec; seat: number }, b: { pos: Vec; seat: number }, w: World): void {
+  const dist = distance(a.pos, b.pos);
+  if (dist >= FISHER_SPACE) return;
+  const u = partWay(a, b, dist);
+  const push = (FISHER_SPACE - dist) / 2;
+  a.pos = w.advance(a.pos, { x: -u.x, z: -u.z }, push);
+  b.pos = w.advance(b.pos, u, push);
+}
+
+/** The unit direction from a to b; exactly on top of each other: part them by seat, east–west. */
+export function partWay(a: { pos: Vec; seat: number }, b: { pos: Vec; seat: number }, dist: number): Vec {
+  if (dist > 1e-6) return { x: (b.pos.x - a.pos.x) / dist, z: (b.pos.z - a.pos.z) / dist };
+  return { x: b.seat > a.seat ? 1 : -1, z: 0 };
 }
 
 // ---------- what players do ----------

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FOLLOW_FAR, FOLLOW_NEAR, PLATFORM_REACH, arrivalSpeed, boardingTarget, closeEnough } from "./lake";
+import { FOG_TILE, FOLLOW_FAR, FOLLOW_NEAR, PLATFORM_REACH, arrivalSpeed, boardingTarget, closeEnough, fogTilesAround, partWay } from "./lake";
 import { WALK_SPEED } from "./world";
 import type { Platform } from "./regions";
 
@@ -52,5 +52,22 @@ describe("closeEnough", () => {
   });
   it("past FOLLOW_FAR: never", () => {
     expect(closeEnough({ following: false }, FOLLOW_FAR + 0.01)).toBe(false);
+  });
+});
+
+describe("fogTilesAround", () => {
+  it("a rough circle of tiles: 21 at radius 2, 37 at radius 3, row by row", () => {
+    expect(fogTilesAround({ x: 0, z: 0 }, 2)).toHaveLength(21);
+    expect(fogTilesAround({ x: 0, z: 0 }, 3)).toHaveLength(37);
+    expect(fogTilesAround({ x: 0, z: 0 }, 1)[0]).toBe("-1,-1");
+    expect(fogTilesAround({ x: FOG_TILE * 5 + 1, z: 0 }, 0)).toEqual(["5,0"]);
+  });
+});
+
+describe("partWay", () => {
+  it("the unit way from a to b, or by seat east–west when exactly on top of each other", () => {
+    expect(partWay({ pos: { x: 0, z: 0 }, seat: 0 }, { pos: { x: 0, z: 2 }, seat: 1 }, 2)).toEqual({ x: 0, z: 1 });
+    expect(partWay({ pos: { x: 0, z: 0 }, seat: 0 }, { pos: { x: 0, z: 0 }, seat: 1 }, 0)).toEqual({ x: 1, z: 0 });
+    expect(partWay({ pos: { x: 0, z: 0 }, seat: 2 }, { pos: { x: 0, z: 0 }, seat: 1 }, 0)).toEqual({ x: -1, z: 0 });
   });
 });
