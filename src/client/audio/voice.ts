@@ -42,7 +42,12 @@ async function play(id: string, delay = 0): Promise<void> {
   deEss.type = "highshelf";
   deEss.frequency.value = 4200;
   deEss.gain.value = -10;
-  src.connect(deEss).connect(g).connect(a.out);
+  // And no air above ~6.5 kHz: speech stays clear, the 8–12 kHz sibilant bursts go (round 09).
+  const air = a.ctx.createBiquadFilter();
+  air.type = "lowpass";
+  air.frequency.value = 6500;
+  air.Q.value = 0.6;
+  src.connect(deEss).connect(air).connect(g).connect(a.out);
   src.start(start);
   window.setTimeout(() => duckMusic(buf.duration + 0.2), Math.max(0, (start - a.ctx.currentTime) * 1000));
   busyUntil = start + buf.duration + 0.15;
