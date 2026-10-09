@@ -1,6 +1,8 @@
-"""Cuts the painted texture sheet (3x3, black gutters) into game textures: tiling swatches made
-seamless by cross-fading each with its half-offset copy, leaf cards keyed off black into alpha.
-Usage: python3 scripts/slice-textures.py assets-src/textures/atlas-a.png public/art/textures"""
+"""Cuts a painted texture sheet (3x3; black gutters, or plain thirds when the cards sit on black) into
+game textures: tiling swatches made seamless by cross-fading each with its half-offset copy, cards keyed
+off black into alpha.
+Usage: python3 scripts/slice-textures.py SHEET OUTDIR [name,name,... (9)] [cards: all | name,name]
+Default names and cards: the first sheet (atlas-a)."""
 import sys
 import numpy as np
 from PIL import Image, ImageFilter
@@ -24,9 +26,14 @@ def runs(mask):
 
 cols = runs(dark.mean(axis=0) > 0.9)
 rows = runs(dark.mean(axis=1) > 0.9)
-assert len(cols) == 3 and len(rows) == 3, (cols, rows)
-NAMES = ["grass", "moss", "path", "bark", "rock", "stone-tiles", "leaves-violet", "leaves-fern", "lakebed"]
-CARDS = {"leaves-violet", "leaves-fern"}
+if len(cols) != 3 or len(rows) != 3:
+    # Cards on black hide the gutters: split into equal thirds.
+    h, w = dark.shape
+    cols = [(w * i // 3, w * (i + 1) // 3) for i in range(3)]
+    rows = [(h * i // 3, h * (i + 1) // 3) for i in range(3)]
+NAMES = sys.argv[3].split(",") if len(sys.argv) > 3 else ["grass", "moss", "path", "bark", "rock", "stone-tiles", "leaves-violet", "leaves-fern", "lakebed"]
+assert len(NAMES) == 9, NAMES
+CARDS = set(NAMES) if len(sys.argv) > 4 and sys.argv[4] == "all" else set(sys.argv[4].split(",")) if len(sys.argv) > 4 and sys.argv[4] else {"leaves-violet", "leaves-fern"} if len(sys.argv) <= 3 else set()
 SIZE = 512
 
 def seamless(img):

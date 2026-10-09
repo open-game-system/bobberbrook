@@ -332,5 +332,44 @@
       ]
     },
     "date": "2026-10-09"
+  },
+  {
+    "files": [
+      "assets-src/textures/atlas-d.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "A texture sheet for a 3D game in the hand-painted style of World of Warcraft's Ashenvale zone (Blizzard hand-painted diffuse textures: visible confident brush strokes, painted-in soft light from the top-left, rich saturated violets, teals and mossy greens, no photo detail, no hard outlines). A perfect 3x3 grid of nine square swatches filling the whole image edge to edge, separated by thin pure black gutters. No text, no labels, no numbers, no characters, no faces. Each swatch is an isolated element on pure black background (for alpha cut-out), lit from the top-left: 1) a tall warm orange-gold campfire flame lick, 2) a second flame lick leaning left, 3) a cluster of rising glowing embers, 4) a soft lilac-cream painted cumulus cloud, 5) a long thin wispy painted cloud streak in pink-lilac, 6) a cluster of glowing blue-capped mushrooms, 7) a cluster of glowing violet-capped mushrooms with luminous gills, 8) a soft round warm lamplight glow pool seen from above, 9) a soft cool moonlight glow pool seen from above.",
+      "references": [
+        "concept/ashenvale/ref-night.jpg"
+      ]
+    },
+    "date": "2026-10-09"
+  },
+  {
+    "files": [
+      "assets-src/textures/atlas-c.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "A texture sheet for a 3D game in the hand-painted style of World of Warcraft's Ashenvale zone (Blizzard hand-painted diffuse textures: visible confident brush strokes, painted-in soft light from the top-left, rich saturated violets, teals and mossy greens, no photo detail, no hard outlines). A perfect 3x3 grid of nine square swatches filling the whole image edge to edge, separated by thin pure black gutters. No text, no labels, no numbers, no characters, no faces. Each swatch is an isolated plant or foliage card on pure black background (for alpha cut-out), lit from the top-left: 1) dark green conifer needle spray, 2) conifer needle spray dusted with snow, 3) cluster of teal leaves lit by moonlight, 4) cluster of violet-magenta leaves with glowing rims, 5) hanging wisteria blossom strand in lilac, 6) tall foxglove stalk with pink-violet bells, 7) fern frond fan in teal-green, 8) bluebell cluster on thin stems, 9) tuft of long painted grass blades in teal-green.",
+      "references": [
+        "concept/ashenvale/ref-day.jpg"
+      ]
+    },
+    "date": "2026-10-09"
+  },
+  {
+    "files": [
+      "assets-src/textures/atlas-b.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "A texture sheet for a 3D game in the hand-painted style of World of Warcraft's Ashenvale zone (Blizzard hand-painted diffuse textures: visible confident brush strokes, painted-in soft light from the top-left, rich saturated violets, teals and mossy greens, no photo detail, no hard outlines). A perfect 3x3 grid of nine square swatches filling the whole image edge to edge, separated by thin pure black gutters. No text, no labels, no numbers, no characters, no faces. Each swatch flat-on, evenly lit, designed to tile seamlessly: 1) deep violet stitched airship canvas with gold-thread seams and soft folds, 2) weathered blue-grey wooden planks with nail heads, 3) curved purple night-elf roof shingles with gold edging, 4) carved grey standing-stone surface with faint glowing teal runes, 5) faceted teal-blue crystal surface with inner glow, 6) soft snow surface with blue brush shadows, 7) dark violet forest-floor litter with tiny glowing flowers, 8) mossy green-teal ground with small blue glowing mushrooms, 9) warm charred campfire logs bark.",
+      "references": [
+        "concept/ashenvale/ref-night.jpg"
+      ]
+    },
+    "date": "2026-10-09"
   }
 ]
