@@ -151,7 +151,7 @@ const c = (h: number) => new Color(h);
 
 export const LOOKS: Record<AreaId, AreaLook> = {
   moonwell: {
-    grassA: c(0x40885a), grassB: c(0x68ac74), grassC: c(0x9a90d8),
+    grassA: c(0x2c6a62), grassB: c(0x4c907e), grassC: c(0x9284d8),
     canopy: [c(0xffffff), c(0xf0f4ff), c(0xfff0f8)],
     waterShallow: c(0xffffff), waterDeep: c(0xffffff), calm: 0,
     fog: c(0xffffff), fogK: 0, fogScale: 1, sunK: 1, hemiK: 1, hemiSky: c(0xffffff), glowAdd: 0, mistAdd: 0, exposureK: 1, grade: c(0xffffff),
