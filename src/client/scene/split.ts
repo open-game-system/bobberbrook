@@ -60,3 +60,30 @@ export class SplitFocus {
     return { split: this.split, lead: this.lead, framed: this.framed };
   }
 }
+
+/**
+ * Round 09 critic: a family split between the trail and a pond was shown as one fisher plus an edge
+ * marker. While the widest pair stays within FRAME_ALL_MAX the camera frames everyone (zooming out);
+ * only past FRAME_ALL_RELEASE does SplitFocus pick one place and mark the rest at the screen edge.
+ */
+export const FRAME_ALL_MAX = 34;
+export const FRAME_ALL_RELEASE = 38;
+
+export class FamilyFrame {
+  private all = true;
+  /** The widest distance between two fishers at the last update (metres). */
+  spread = 0;
+
+  /** true: frame the whole family; false: past the cap (use SplitFocus). */
+  update(members: readonly Member[]): boolean {
+    let spread = 0;
+    for (let i = 0; i < members.length; i++) {
+      for (let j = i + 1; j < members.length; j++) {
+        spread = Math.max(spread, Math.hypot(members[i]!.x - members[j]!.x, members[i]!.z - members[j]!.z));
+      }
+    }
+    this.spread = spread;
+    this.all = this.all ? spread <= FRAME_ALL_RELEASE : spread <= FRAME_ALL_MAX;
+    return this.all;
+  }
+}

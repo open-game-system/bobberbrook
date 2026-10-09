@@ -50,7 +50,7 @@ import { paintedMaterial } from "./geo";
 import { Mood } from "./mood";
 import { buildMist } from "./mist";
 import { Splashes } from "./splash";
-import { SplitFocus, type Member } from "./split";
+import { FamilyFrame, SplitFocus, type Member } from "./split";
 import { EdgeMarkers, type Marker } from "./markers";
 import { BufferAttribute, DoubleSide, PlaneGeometry, PointLight } from "three";
 import type { Place } from "../../game/regions";
@@ -253,6 +253,8 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   const world = new Group();
   scene.add(world);
   const splitFocus = new SplitFocus();
+  const familyFrame = new FamilyFrame();
+  const allSeats = new Set<number>();
   const members: Member[] = [];
   const markerList: Marker[] = [];
   let framed: ReadonlySet<number> = new Set();
@@ -425,13 +427,20 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       const activity = m === "bite" || m === "reel" || m === "catch" ? "hot" : m === "cast" || m === "wait" ? "line" : "idle";
       members.push({ seat, x, z, activity, inputAt: (f?.lastInputAt ?? 0) / 1000, place: activeWorld().areaAt({ x, z })?.id ?? null });
     });
-    const sp = splitFocus.update(members, sn / 1000);
+    // Within the cap the whole family shares the shot (zoomed out); only past it does the camera pick a
+    // place and mark the rest at the screen edge. SplitFocus still runs, so its lead and hold stay current.
+    const sp0 = splitFocus.update(members, sn / 1000);
+    const whole = familyFrame.update(members);
+    allSeats.clear();
+    for (const mm of members) allSeats.add(mm.seat);
+    const sp = whole ? { split: false, lead: sp0.lead, framed: allSeats } : sp0;
+    const wide = whole && familyFrame.spread > 18;
     framed = sp.framed;
     const riding = vehicles.riding();
     rideSky += ((riding === 2 ? 1 : 0) - rideSky) * Math.min(1, dt * 0.8);
     rig.rateK += ((riding ? 3.2 : 1) - rig.rateK) * Math.min(1, dt * 2);
     rig.ride = riding ? { heading: vehicles.heading(), kind: riding } : null;
-    rig.minDist += ((riding === 2 ? 24 : riding === 1 ? 22 : sp.split ? 23 : 17) - rig.minDist) * Math.min(1, dt * (riding ? 0.8 : 2));
+    rig.minDist += ((riding === 2 ? 24 : riding === 1 ? 22 : sp.split || wide ? 23 : 17) - rig.minDist) * Math.min(1, dt * (riding ? 0.8 : 2));
     rig.beginFocus();
     fishers.forEachSeat((seat, x, y, z, _c, bob) => {
       if (!framed.has(seat)) return;

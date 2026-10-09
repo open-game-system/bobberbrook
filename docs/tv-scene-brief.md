@@ -43,7 +43,9 @@ by a cloud GPU Chrome and streamed to a Chromecast. References: `concept/web/*.j
 
 Morning (clear, warm-white sun, blue sky), golden hour (low orange sun, long shadows, pink clouds),
 night (deep blue, stars, moon, fireflies, glowing windows and lanterns, the dock lantern), dawn (mist,
-pastel). Lerp continuously; the light count stays fixed (no shader recompiles).
+pastel). Night (round 10) keeps the indigo mood but reads: a silver moon key, a teal bounce from the
+glowing water, warm pools of lamplight on the ground round lamps and cottages (`pools.ts`), a moon road
+on the water, and a warm fill plus a cool rim on the fishers so their faces read on the TV. Lerp continuously; the light count stays fixed (no shader recompiles).
 
 ## Fishers (from `lake.fishers`)
 
@@ -82,6 +84,9 @@ appear and fade (`since`, `until`), never pop.
   pool concept). Frames every fisher with margin, eases (no jumps), zooms in when everyone is close
   together, out when spread, within limits. Yaw stays roughly fixed (north is always "up" on the
   joystick). With no fishers: a slow establishing drift over the whole lake.
+- **Split family** (round 10): while the widest pair of fishers is within 34 m (released at 38 m) the
+  camera frames everyone, zooming out; only past that does it follow the active place and put the others
+  on screen-edge markers (`FamilyFrame` / `SplitFocus` in `split.ts`).
 - **Catch moment**: an eased push toward the catcher for ~2 s then back (only when one catch at a time).
 - **Campfire** (`lake.campfire`): the camera settles on the campfire; fishers sit around it.
 
