@@ -111,15 +111,12 @@ const fromSession = (rig: SessionRig): PageFor => ({
   },
 });
 
-async function hostAndJoin(rig: PageFor): Promise<{ tv: Page; dad: Page; kid: Page; code: string }> {
+/** Dad joins by name, the kid by the blue hat, and Dad names him "Juneau" from Fishers. */
+async function joinFamily(rig: PageFor, code: string, dadPage?: Page): Promise<{ dad: Page; kid: Page }> {
   const { pageFor } = rig;
-  const tv = await pageFor("tv");
-  await tv.goto(`${rig.baseUrl}/?as=tv&record=1`, LOAD);
-  await tv.locator(".ticket-code").waitFor({ timeout: 180_000 });
-  const code = ((await tv.locator(".ticket-code").textContent()) ?? "").trim();
-  const join = async (role: string, name: string | null) => {
-    const page = await pageFor(role);
-    await page.goto(`${rig.baseUrl}/join/${code}?rig=1`, LOAD);
+  const join = async (role: string, name: string | null, ready?: Page) => {
+    const page = ready ?? (await pageFor(role));
+    if (!ready) await page.goto(`${rig.baseUrl}/join/${code}?rig=1`, LOAD);
     if (name === null) {
       // The kid taps the blue hat (no words on his iPad).
       await page.getByRole("button", { name: "blue hat" }).click({ timeout: 60_000, force: true });
@@ -128,17 +125,38 @@ async function hostAndJoin(rig: PageFor): Promise<{ tv: Page; dad: Page; kid: Pa
       await page.locator(".name-input").fill(name);
       await page.getByRole("button", { name: "Join" }).click();
     }
-    await page.locator("button.action").waitFor({ timeout: 20_000 });
+    await page.locator("button.action").waitFor({ timeout: 60_000 });
     return page;
   };
-  const dad = await join("dad", "Dad");
+  const dad = await join("dad", "Dad", dadPage);
   const kid = await join("kid", null);
   // Dad names the kid from Fishers (the iPad joined with a hat, no typing).
   await dad.getByRole("button", { name: "Fishers" }).click({ timeout: 30_000 });
   await dad.locator(".rename-input").nth(1).fill("Juneau");
   await dad.locator(".rename-input").nth(1).press("Enter");
   await dad.getByRole("button", { name: "Close" }).click();
+  return { dad, kid };
+}
+
+async function hostAndJoin(rig: PageFor): Promise<{ tv: Page; dad: Page; kid: Page; code: string }> {
+  const tv = await rig.pageFor("tv");
+  await tv.goto(`${rig.baseUrl}/?as=tv&record=1`, LOAD);
+  await tv.locator(".ticket-code").waitFor({ timeout: 180_000 });
+  const code = ((await tv.locator(".ticket-code").textContent()) ?? "").trim();
+  const { dad, kid } = await joinFamily(rig, code);
   return { tv, dad, kid, code };
+}
+
+/**
+ * The controller screens without a TV: Dad's phone starts the room from /host (as in the OGS app).
+ * A 3D TV in the same browser starves the shared GPU process and every other page with it.
+ */
+async function phonesOnly(rig: PageFor): Promise<void> {
+  const dad = await rig.pageFor("dad");
+  await dad.goto(`${rig.baseUrl}/host`, LOAD);
+  await dad.waitForURL(/\/join\//, { timeout: 60_000 });
+  const code = new URL(dad.url()).pathname.split("/")[2] ?? "";
+  await joinFamily(rig, code, dad);
 }
 
 // One viewport per screen: the shared Mac runs several games' rigs at once, and every extra page load
@@ -164,8 +182,8 @@ const config: GameRigInput = {
   screens: [
     { name: "tv-empty-lake", role: "tv", path: "/?as=tv", checks: ["overlay", "text", "safe-area"], settleMs: 4000, viewports: [TV] },
     { name: "kid-hat-picker", role: "kid", setup: async (rig) => { const tv = await rig.open("tv"); await tv.goto(`${rig.baseUrl}/?as=tv`, LOAD); await tv.locator(".ticket-code").waitFor({ timeout: 180_000 }); const code = ((await tv.locator(".ticket-code").textContent()) ?? "").trim(); await rig.page.goto(`${rig.baseUrl}/join/${code}`, LOAD); }, focal: false, viewports: [IPAD] },
-    { name: "phone-controller", role: "dad", setup: async (rig) => void (await hostAndJoin(fromSetup(rig))), focal: false, viewports: [PHONE, PHONE_SE] },
-    { name: "ipad-controller", role: "kid", setup: async (rig) => void (await hostAndJoin(fromSetup(rig))), focal: false, viewports: [IPAD] },
+    { name: "phone-controller", role: "dad", setup: async (rig) => phonesOnly(fromSetup(rig)), focal: false, viewports: [PHONE, PHONE_SE] },
+    { name: "ipad-controller", role: "kid", setup: async (rig) => phonesOnly(fromSetup(rig)), focal: false, viewports: [IPAD] },
     { name: "tv-two-fishers", role: "tv", setup: async (rig) => void (await hostAndJoin(fromSetup(rig))), checks: ["overlay", "text", "safe-area"], settleMs: 3000, viewports: [TV] },
   ],
   session: async (rig) => {
