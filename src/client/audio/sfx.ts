@@ -77,7 +77,7 @@ function whoosh(dur: number, from: number, to: number, opts: Opts & { q?: number
 export const sfx = {
   tap: (o: Opts = {}) => tone(note(7), 0.08, { gain: 0.18, type: "triangle", ...o }),
   nope: (o: Opts = {}) => tone(note(2), 0.14, { gain: 0.12, type: "triangle", bend: 0.8, ...o }),
-  cast: (o: Opts = {}) => whoosh(0.45, 600, 2400, { gain: 0.25, q: 0.8, ...o }),
+  cast: (o: Opts = {}) => whoosh(0.45, 500, 1300, { gain: 0.22, q: 1.2, ...o }),
   plop: (o: Opts = {}) => {
     tone(420, 0.16, { gain: 0.35, bend: 2.2, ...o });
     whoosh(0.18, 1200, 500, { gain: 0.12, ...o, at: (o.at ?? 0) + 0.02 });

@@ -64,8 +64,10 @@ const freshCatch: Rule = (lake, _mySeat, now) => {
   return f?.catch ? catchLine(lake, nameOf(lake, f.seat), f.catch) : null;
 };
 
-const goldenSwirl: Rule = (lake) => {
-  const golden = lake.swirls.find((s) => s.golden);
+const goldenSwirl: Rule = (lake, mySeat) => {
+  // Only a golden swirl the family can reach soon (not one far behind them).
+  const me = lake.fishers.find((f) => f.seat === mySeat)?.pos ?? { x: 0, z: 0 };
+  const golden = lake.swirls.find((s) => s.golden && Math.hypot(s.pos.x - me.x, s.pos.z - me.z) < 130);
   if (!golden) return null;
   const where = golden.area === "moonwell" ? WATER_NAME[waterAt(golden.theta)] : `at ${worldFor(lake.worldSeed).placeById(golden.area)?.name ?? "a place nearby"}`;
   return `A golden swirl ${where}! Race there, everyone!`;

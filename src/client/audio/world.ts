@@ -79,33 +79,32 @@ function startWater(ctx: AudioContext, out: AudioNode): Layer {
   return { gain };
 }
 
+/** The night layer: a bus the cricket chirps play through (faded in at night, out by day). */
 function startNight(ctx: AudioContext, out: AudioNode): Layer {
   const gain = ctx.createGain();
   gain.gain.value = 0;
-  // Crickets: a high tone chopped by a fast pulse.
-  const cricket = ctx.createOscillator();
-  cricket.frequency.value = 4400;
-  const chop = ctx.createOscillator();
-  chop.type = "square";
-  chop.frequency.value = 28;
-  const chopGain = ctx.createGain();
-  chopGain.gain.value = 0.5;
-  const amp = ctx.createGain();
-  amp.gain.value = 0.5;
-  chop.connect(chopGain).connect(amp.gain);
-  const slow = ctx.createOscillator();
-  slow.frequency.value = 0.7;
-  const slowGain = ctx.createGain();
-  slowGain.gain.value = 0.4;
-  slow.connect(slowGain).connect(amp.gain);
-  const lvl = ctx.createGain();
-  lvl.gain.value = 0.012;
-  cricket.connect(amp).connect(lvl).connect(gain);
   gain.connect(out);
-  cricket.start();
-  chop.start();
-  slow.start();
   return { gain };
+}
+
+/** One cricket: three quick soft pulses (a steady tone reads as a whine; round 04 heard one). */
+function cricket(ctx: AudioContext, out: AudioNode, t: number): void {
+  const freq = 3800 + Math.random() * 900;
+  const pan = ctx.createStereoPanner();
+  pan.pan.value = Math.random() * 1.6 - 0.8;
+  pan.connect(out);
+  for (let k = 0; k < 3; k++) {
+    const s = t + k * 0.06;
+    const o = ctx.createOscillator();
+    o.frequency.value = freq;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, s);
+    g.gain.exponentialRampToValueAtTime(0.006, s + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, s + 0.04);
+    o.connect(g).connect(pan);
+    o.start(s);
+    o.stop(s + 0.05);
+  }
 }
 
 function chirp(ctx: AudioContext, out: AudioNode, t: number): void {
@@ -306,6 +305,7 @@ export function startWorld(): void {
     }
     if (tod !== "night" && Math.random() < 0.18) chirp(ctx, out, ctx.currentTime + Math.random());
     if (tod === "night" && Math.random() < 0.02) owl(ctx, out, ctx.currentTime + Math.random());
+    if (night && (tod === "night" || tod === "dawn") && Math.random() < 0.45) cricket(ctx, night.gain, ctx.currentTime + Math.random() * 0.4);
   };
   timers.push(window.setInterval(loop, 400));
   loop();

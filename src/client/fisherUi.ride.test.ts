@@ -18,3 +18,15 @@ describe("the button while riding", () => {
     expect(needsTick(me, 1e12)).toBe(false);
   });
 });
+
+describe("at a zeppelin mooring", () => {
+  it("shows the zeppelin on the button while waiting for the family", async () => {
+    const { buttonState } = await import("./fisherUi");
+    const { join, newLake } = await import("../game/lake");
+    const { worldFor } = await import("../game/regions");
+    const l0 = join(newLake(1, 0), { name: "A", ogsId: null }).lake;
+    const zep = worldFor(l0.worldSeed).platformsNear({ x: 0, z: 0 }, 0).find((p) => p.kind === "zeppelin")!;
+    const l = { ...l0, fishers: l0.fishers.map((f) => ({ ...f, pos: { ...zep.at } })) };
+    expect(buttonState(l, l.fishers[0]!, 0)).toEqual({ kind: "board", vehicle: "zeppelin" });
+  });
+});

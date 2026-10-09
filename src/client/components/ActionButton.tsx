@@ -53,7 +53,7 @@ export function ActionButton({ state, onPress, onHold }: { state: ButtonState; o
         {state.kind === "reel" && <ReelIcon spinning={state.holding} />}
         {state.kind === "caught" && (state.canRecast ? <RodIcon /> : <img src={`/art/fish/${state.fishId}.webp`} alt="" draggable={false} />)}
         {state.kind === "campfire" && <CampfireIcon />}
-        {state.kind === "riding" && (state.vehicle === "zeppelin" ? <ZeppelinIcon /> : <BoatIcon />)}
+        {(state.kind === "riding" || state.kind === "board") && (state.vehicle === "zeppelin" ? <ZeppelinIcon /> : <BoatIcon />)}
       </span>
     </button>
   );
