@@ -142,7 +142,7 @@ export function waterAt(theta: number): Water {
 
 /** Where a seat's fisher starts: in a row at the foot of the dock. */
 export function spawnPoint(seat: number): Vec {
-  return { x: -3.3 + 2.2 * seat, z: DOCK.rootZ + 2.5 };
+  return { x: -4.5 + 3.0 * seat, z: DOCK.rootZ + 2.5 };
 }
 
 /** A point on the bobber line (the ring a straight cast lands on) at an angle: swirls float there. */

@@ -743,7 +743,7 @@ export function wantsSwirl(d: Pick<Lake, "discovered" | "swirls">, place: Place 
 }
 
 /** How close two fishers may stand (metres). */
-export const FISHER_SPACE = 1.8;
+export const FISHER_SPACE = 2.8;
 
 /** Nudges any two fishers standing closer than FISHER_SPACE apart, each half the way, onto walkable ground. */
 export function keepApart(fishers: { pos: Vec; seat: number }[], w: World = worldFor(HOME_WORLD_SEED)): void {

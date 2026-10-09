@@ -24,9 +24,9 @@ describe("walking, in detail", () => {
     const inWater = { x: 0, z: 0 };
     expect(advance(inWater, { x: 1, z: 1 }, 1)).toBe(inWater);
   });
-  it("spawns seats 2.2 m apart from the left", () => {
-    expect(spawnPoint(0)).toEqual({ x: -3.3, z: DOCK.rootZ + 2.5 });
-    expect(spawnPoint(1).x).toBeCloseTo(-1.1, 12);
+  it("spawns seats 3 m apart from the left (wider than FISHER_SPACE, so nobody is nudged on arrival)", () => {
+    expect(spawnPoint(0)).toEqual({ x: -4.5, z: DOCK.rootZ + 2.5 });
+    expect(spawnPoint(1).x).toBeCloseTo(-1.5, 12);
   });
 });
 
