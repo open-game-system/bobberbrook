@@ -57,3 +57,13 @@
 .all-aboard-icon svg { position: static; }
 .toast-icon { width: 5vh; height: 5vh; display: grid; }
 .tod-icon.big { width: 4.6vh; height: 4.6vh; }
+/* Campfire: today's catches pop up one by one along the bottom edge (the fire stays clear in the middle). */
+.recap { position: absolute; left: 50%; bottom: 4.5vh; translate: -50% 0; display: flex; gap: 1.2vh; pointer-events: none; }
+.recap-card { position: relative; width: 11vh; height: 11vh; border-radius: 2vh; border: 0.5vh solid; background: radial-gradient(circle at 50% 35%, rgba(255, 220, 160, 0.35), rgba(28, 20, 66, 0.85) 70%); display: grid; place-items: center; animation: recap-pop 0.5s cubic-bezier(.2,1.6,.4,1); box-shadow: 0 0 2vh rgba(255, 170, 90, 0.35); }
+.recap-card img { width: 85%; height: auto; }
+.recap-card.new { box-shadow: 0 0 2.6vh rgba(255, 210, 90, 0.8); }
+.recap-star { position: absolute; top: -1.4vh; right: -1vh; color: #ffd25a; font-size: 3.4vh; text-shadow: 0 0 1vh rgba(0,0,0,.5); }
+@keyframes recap-pop { from { scale: 0.2; translate: 0 4vh; opacity: 0; } to { scale: 1; translate: 0 0; opacity: 1; } }
+/* The rod upgrade is a moment for everyone: bigger, gold, glowing. */
+.toast.upgrade { max-height: 8vh; font-size: 3.6vh; border-color: #fff2a0; background: linear-gradient(90deg, rgba(120, 80, 10, 0.85), rgba(60, 36, 110, 0.85)); box-shadow: 0 0 3vh rgba(255, 210, 90, 0.7); }
+.toast.upgrade .toast-icon { width: 6.5vh; height: 6.5vh; }

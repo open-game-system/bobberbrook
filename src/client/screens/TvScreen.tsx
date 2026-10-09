@@ -19,7 +19,7 @@ import { thrashingAt } from "../../game/reel";
 import { createServerClock } from "../serverClock";
 import { SEAT_HEX } from "../components/MiniMap";
 import { BoatIcon, RodIcon, ShellIcon, ZeppelinIcon } from "../components/Icons";
-import { boardingProgress, todChanged } from "../tvHud";
+import { boardingProgress, campfireRecap, todChanged } from "../tvHud";
 import type { TimeOfDay } from "../../game/daycycle";
 import { qualityFor, rendererName } from "../gpu";
 
@@ -32,7 +32,7 @@ function qrDataUrl(text: string): string {
   return qr.createDataURL(6, 2);
 }
 
-type Toast = { id: number; kind: "new" | "upgrade" | "golden" | "place" | "tod"; fishId?: string; seat?: number; tier?: number; place?: string; ride?: "boat" | "zeppelin"; tod?: TimeOfDay };
+type Toast = { id: number; kind: "new" | "upgrade" | "golden" | "place" | "tod"; fishId?: string; seat?: number; tier?: number; place?: string; ride?: "boat" | "zeppelin"; tod?: TimeOfDay; star?: boolean };
 
 const TOD_NAMES: Record<TimeOfDay, string> = { morning: "Morning", golden: "Golden hour", night: "Night falls", dawn: "Dawn" };
 
@@ -54,6 +54,7 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
   const joinUi = useOgsTv();
   const [sound, setSound] = useState(autoSound);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [campfireSince, setCampfireSince] = useState<number | null>(null);
   const lastTod = useRef<TimeOfDay | null>(null);
   const toastId = useRef(0);
   const teachMem = useRef<TeachMemory>(new Map());
@@ -94,6 +95,7 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
       // After a few catches at home, nudge the family down a trail (once).
       if (events.some((e) => e.kind === "caught") && lake.catchSeq >= 3 && lake.discovered.length === 1 && shouldTeach("teach-explore", "all", teachMem.current)) voice.line("teach-explore");
     }
+    if (lake.campfire !== (campfireSince !== null)) setCampfireSince(lake.campfire ? clock.now() : null);
     const todNow = todOf({ startedAt: lake.startedAt, now: clock.now() });
     setTimeOfDayMood(todNow);
     const fresh: Toast[] = [];
@@ -101,14 +103,15 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
     lastTod.current = todNow;
     if (turned) fresh.push({ id: ++toastId.current, kind: "tod", tod: turned });
     for (const e of events) {
-      if (e.kind === "caught" && e.isNew) fresh.push({ id: ++toastId.current, kind: "new", fishId: e.fishId, seat: e.seat });
+      // Every catch gets its banner (two at once queue, one after the other); a new species gets the star.
+      if (e.kind === "caught") fresh.push({ id: ++toastId.current, kind: "new", fishId: e.fishId, seat: e.seat, star: e.isNew });
       if (e.kind === "upgrade") fresh.push({ id: ++toastId.current, kind: "upgrade", tier: e.tier });
       if (e.kind === "golden-swirl") fresh.push({ id: ++toastId.current, kind: "golden" });
       if (e.kind === "discovered") fresh.unshift({ id: ++toastId.current, kind: "place", place: worldFor(lake.worldSeed).placeById(e.area)?.name ?? "A new place", seat: e.seat });
       if (e.kind === "ride") fresh.unshift({ id: ++toastId.current, kind: "place", place: e.to, seat: 0, ride: e.vehicle });
     }
     if (fresh.length > 0) setToasts((t) => [...t, ...fresh].slice(-4));
-  }, [lake, sound, clock]);
+  }, [lake, sound, clock, campfireSince]);
 
   // One banner at a time: the first in the queue shows for 3.2 s, then the next.
   const showing = toasts[0];
@@ -211,6 +214,16 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
           </div>
         );
       })()}
+      {lake.campfire && (
+        <div className="recap" aria-label="Today's catches">
+          {campfireRecap(lake.log, campfireSince, clock.now()).map((e, i) => (
+            <div key={`${e.at}-${i}`} className={`recap-card ${e.isNew ? "new" : ""}`} style={{ borderColor: SEAT_HEX[lake.fishers.find((f) => f.seat === e.seat)?.color ?? "green"] }}>
+              <img src={`/art/fish/${e.fishId}.webp`} alt="" />
+              {e.isNew && <span className="recap-star" aria-hidden="true">★</span>}
+            </div>
+          ))}
+        </div>
+      )}
       <div className="toasts">
         {toasts.slice(0, 1).map((t) => (
           <div key={t.id} className={`toast ${t.kind}`}>
@@ -223,7 +236,7 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
                   </b>{" "}
                   {fishById(t.fishId)?.name}
                 </span>
-                <span className="toast-star" aria-hidden="true">★</span>
+                {t.star && <span className="toast-star" aria-hidden="true">★</span>}
               </>
             )}
             {t.kind === "upgrade" && (

@@ -11,3 +11,13 @@ export function boardingProgress(boarding: Lake["boarding"], now: number): numbe
 export function todChanged(prev: TimeOfDay | null, next: TimeOfDay): TimeOfDay | null {
   return prev !== null && prev !== next ? next : null;
 }
+
+/** The campfire recap: one catch pops up every RECAP_EVERY_MS, the day's last RECAP_MAX, oldest first. */
+export const RECAP_EVERY_MS = 700;
+export const RECAP_MAX = 8;
+
+export function campfireRecap(log: Lake["log"], since: number | null, now: number): Lake["log"] {
+  if (since === null) return [];
+  const shown = Math.floor((now - since) / RECAP_EVERY_MS);
+  return log.slice(-RECAP_MAX).slice(0, Math.max(0, shown));
+}
