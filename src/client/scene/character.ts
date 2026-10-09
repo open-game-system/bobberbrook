@@ -19,6 +19,7 @@ import {
   type Material,
   type MeshLambertMaterial,
 } from "three";
+import { TAG_LAYER } from "./post";
 import { merge, paint, prep, surf } from "./geo";
 import { PK, type PaintKind } from "./painter";
 import { SEAT_HEX } from "./types";
@@ -326,6 +327,8 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials)
   const tagMat = new SpriteMaterial({ map: tex, depthTest: false, depthWrite: false, sizeAttenuation: false, transparent: true });
   const tag = new Sprite(tagMat);
   tag.renderOrder = 30;
+  // Drawn after the painterly post chain (see post.ts), so names stay sharp.
+  tag.layers.set(TAG_LAYER);
   tag.center.set(0.5, 0);
   let lastName: string | null | undefined;
   const rig = {

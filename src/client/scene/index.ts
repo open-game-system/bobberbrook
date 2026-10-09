@@ -26,7 +26,7 @@ import { FishShadows, FishTextures, sharedCardGeometry } from "./fishviz";
 import { Fx } from "./fx";
 import { MAX_FOCUS, occluderDepthMaterial, occluderMaterial, patchLambertWrap } from "./geo";
 import { makeParticles } from "./particles";
-import { buildPost, type Post } from "./post";
+import { CRISP_SPOTS, TAG_LAYER, buildPost, type Post } from "./post";
 import { buildProps } from "./props";
 import { buildSky } from "./sky";
 import { SwirlViews } from "./swirls";
@@ -87,6 +87,8 @@ export type SceneDebug = {
   toggle?(name: string): number;
   /** Names of the scene's top-level objects (for toggle). */
   names?(): string[];
+  /** Turns the painterly post (contact shadow, knee, Kuwahara) off or on, for an in-page perf A/B. */
+  painterly?(on: boolean): boolean;
 };
 
 declare global {
@@ -258,6 +260,9 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   });
 
   let post: Post | null = full ? buildPost(renderer, scene, camera, w, h) : null;
+  // Without the post chain the name tags draw in the main pass.
+  if (!post) camera.layers.enable(TAG_LAYER);
+  else post.overlay = (draw) => fishers.forEachTag(draw);
   const pr = renderer.getPixelRatio();
   post?.setSize(w, h);
   parts.water.setScale(h * pr, camera.fov);
@@ -302,7 +307,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     fog.far = tod.fogFar;
     renderer.toneMappingExposure = tod.exposure;
     scene.background = tod.skyHorizon;
-    if (post) (post.grade.uniforms.uGain!.value as Color).copy(tod.grade);
+    if (post) post.gain.copy(tod.grade);
   };
 
   const serverNow = (now: number) => now + offset;
@@ -493,6 +498,21 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     mist.update(tod, t, veilOf, near < Infinity ? far + 1.5 : 0);
     fow.update(tod, t, dt, rig.focus.x, rig.focus.z, lake ? lake.revealed : null, lake ? lake.discovered : [], camera.position.x, camera.position.z, farDist);
     stream(rig.focus.x, rig.focus.z, streamBudget);
+    if (post) {
+      // The fishers' heads and faces stay crisp under the painterly filter.
+      const spots = post.crisp;
+      let si = 0;
+      const halfH = Math.tan((camera.fov * Math.PI) / 360) * 2;
+      fishers.forEachSeat((_seat, x, y, z) => {
+        if (si >= CRISP_SPOTS) return;
+        tmpO.set(x, y + 1.3, z);
+        const dist = tmpO.distanceTo(camera.position);
+        tmpO.project(camera);
+        if (tmpO.z > 1 || Math.abs(tmpO.x) > 1.2 || Math.abs(tmpO.y) > 1.2) return;
+        spots[si++]!.set(tmpO.x * 0.5 + 0.5, tmpO.y * 0.5 + 0.5, 1.5 / Math.max(0.5, dist * halfH), 0);
+      });
+      while (si < CRISP_SPOTS) spots[si++]!.set(0, 0, 0, 0);
+    }
     renderer.info.reset();
     if (post) post.render();
     else renderer.render(scene, camera);
@@ -591,6 +611,11 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       return name;
     },
     debug: () => ({ split: { framed: [...framed], markers: markers.debug() }, fishers: fishers.debug(), camera: camera.position.toArray(), rig: rig.debug(), trees: forest.count, chunks: ground.count(), jobs: jobs.pending(), world: activeWorld().seed, progs: (renderer.info.programs ?? []).map((pr) => `${pr.name}#${pr.cacheKey}`), ride: (() => { const o = { x: 0, y: 0, z: 0, facing: 0 }; const ok = vehicles.rideSeat(0, o); const n = vehicles.rideFocus(rideFocus); return { kind: vehicles.riding(), ok, seat0: [o.x, o.y, o.z].map(Math.round), focus: rideFocus.slice(0, n).map((v) => v.toArray().map(Math.round)) }; })(), fow: { on: fow.mesh.visible, ...fow.stats(), map: Array.from({ length: 11 }, (_, j) => Array.from({ length: 11 }, (_, i) => fow.veilAt(rig.focus.x + (i - 5) * 24, rig.focus.z + (j - 5) * 24)).join('')).join('/'), ahead: [fow.veilAt(rig.focus.x, rig.focus.z), fow.veilAt(rig.focus.x + 100, rig.focus.z), fow.veilAt(rig.focus.x - 100, rig.focus.z - 100)] }, near: nearPlaces.map((p) => `${p.id}:${p.biome}`), veil: Object.fromEntries(veil), mood: mood.debug() }),
+    painterly(on) {
+      post?.setPainterly(on);
+      frameN = 0;
+      return post !== null;
+    },
     pick(x, y) {
       const rc = new Raycaster();
       rc.setFromCamera(new Vector2(x * 2 - 1, 1 - y * 2), camera);

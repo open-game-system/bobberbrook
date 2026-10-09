@@ -12,6 +12,7 @@ import {
   type ShaderMaterial,
   type Camera,
   type PlaneGeometry,
+  type Object3D,
 } from "three";
 import { CAST_FLIGHT_MS, CATCH_SHOW_MS, type Fisher, type Lake } from "../../game/lake";
 import { REEL_START, thrashingAt } from "../../game/reel";
@@ -909,6 +910,11 @@ export class FisherViews {
   /** Every present fisher by seat, with their colour name and bobber (null when none is out). */
   forEachSeat(fn: (seat: number, x: number, y: number, z: number, color: string, bob: Vector3 | null) => void): void {
     for (const v of this.views) if (v.present) fn(v.seat, v.x, v.y, v.z, v.color, v.bobberVisible ? v.bob : null);
+  }
+
+  /** Every shown name tag (drawn over the finished frame, after the painterly post chain). */
+  forEachTag(fn: (tag: Object3D) => void): void {
+    for (const v of this.views) if (v.rig.tag.visible && v.rig.tag.parent) fn(v.rig.tag);
   }
 
   forEachFisher(fn: (x: number, y: number, z: number) => void): void {

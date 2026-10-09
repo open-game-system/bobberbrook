@@ -158,8 +158,10 @@ void main() {
   }
   vec3 col = mix(base, sky, fres * 0.65 + mirror * 0.4);
   vec3 H = normalize(uSunDir + V);
-  float spec = pow(max(dot(N, H), 0.0), 220.0) * 2.2 + pow(max(dot(N, H), 0.0), 40.0) * 0.12;
-  col += uSunCol * spec * smoothstep(-0.05, 0.15, uSunDir.y);
+  // Painted glints: soft-edged dabs, capped (never a white-hot speck that blooms the frame out).
+  float nh = max(dot(N, H), 0.0);
+  float spec = smoothstep(0.35, 0.8, pow(nh, 120.0)) * 0.45 + pow(nh, 30.0) * 0.06;
+  col += uSunCol * vec3(1.0, 0.93, 0.82) * spec * smoothstep(-0.05, 0.15, uSunDir.y);
   // Shore foam, painted (round 07: one even white rim): a broken lip of foam dabs right at the bank and
   // a second, thinner lapping line a little way out that comes and goes; between them the shallows show.
   float lap = sin(uTime * 1.3 + th * 23.0 + vn(p * 2.0) * 4.0) * 0.08;
@@ -178,7 +180,8 @@ void main() {
   float mouth = smoothstep(3.2, 0.4, length(p - uFallsFoot)) * (0.55 + 0.45 * vn(p * 3.0 - vec2(0.0, uTime * 1.5)));
   foam = max(foam, mouth);
   foam = max(foam, clamp(ringFoam, 0.0, 1.0));
-  vec3 foamCol = mix(vec3(0.78, 0.96, 1.0), vec3(1.0), dabs) * (0.85 + 0.15 * uGlow);
+  // Foam is pale painted teal-white, never paper white (round 08: bloom white-outs at the falls' foot).
+  vec3 foamCol = mix(vec3(0.66, 0.88, 0.92), vec3(0.86, 0.95, 0.96), dabs) * (0.85 + 0.12 * uGlow);
   col = mix(col, foamCol, clamp(foam, 0.0, 1.0) * 0.85);
   // Undiscovered: veiled, darker, lost in a lilac haze.
   col = mix(col, uVeilCol * (0.55 + 0.25 * vn(p * 0.2 + uTime * 0.05)), uVeil * 0.7);
@@ -222,7 +225,7 @@ void main() {
   float streak = smoothstep(0.35, 0.85, s1 * 0.6 + s2 * 0.5);
   float edge = smoothstep(0.0, 0.12, vFlow.x) * smoothstep(1.0, 0.88, vFlow.x);
   vec3 col = mix(uDeep, uTint, 0.35 + 0.65 * streak * mix(0.6, 1.0, uSheet));
-  col = mix(col, vec3(1.0), smoothstep(0.75, 1.0, s2) * 0.6);
+  col = mix(col, vec3(0.82, 0.94, 0.96), smoothstep(0.75, 1.0, s2) * 0.45);
   float a = edge * mix(0.75, 0.92, streak);
   gl_FragColor = vec4(col, a);
   #include <tonemapping_fragment>
@@ -306,7 +309,8 @@ void main() {
   }
   vec3 col = mix(base, sky, fres * 0.75);
   vec3 H = normalize(uSunDir + V);
-  col += uSunCol * (pow(max(dot(N, H), 0.0), 180.0) * 2.4 + pow(max(dot(N, H), 0.0), 30.0) * 0.1) * smoothstep(-0.05, 0.15, uSunDir.y);
+  float nh = max(dot(N, H), 0.0);
+  col += uSunCol * vec3(1.0, 0.93, 0.82) * (smoothstep(0.35, 0.8, pow(nh, 120.0)) * 0.45 + pow(nh, 26.0) * 0.06) * smoothstep(-0.05, 0.15, uSunDir.y);
   // Soft lapping foam along the coast.
   float lap = sin(uTime * 1.1 + vSea.y * 1.4 + vn(p * 0.4) * 5.0) * 0.18;
   float foam = smoothstep(0.45, 0.0, depth + lap - (vn(p * 1.5 + uTime * 0.15) - 0.5) * 0.3);
@@ -412,7 +416,7 @@ export function flowMaterial(speed: number, sheet: number): ShaderMaterial {
       {
         uTime: { value: 0 },
         uSpeed: { value: speed },
-        uTint: { value: new Color(0xeaffff) },
+        uTint: { value: new Color(0xc4eef0) },
         uDeep: { value: new Color(0x4fb8c8) },
         uSheet: { value: sheet },
       },
