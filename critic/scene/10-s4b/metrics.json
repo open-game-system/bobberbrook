@@ -1,0 +1,54 @@
+{
+  "round": "10-s4b",
+  "shots": [
+    {
+      "label": "four-reel",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 78,
+      "programs": 78,
+      "calls": 728,
+      "triangles": 3277000,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 100
+    }
+  ],
+  "soaks": {
+    "four-reel": {
+      "programsBefore": 78,
+      "programsAfter": 78,
+      "p50": 17,
+      "p95": 35.79999923706055,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 1154
+    },
+    "tower": {
+      "programsBefore": 78,
+      "programsAfter": 78,
+      "p50": 15.300000190734863,
+      "p95": 32.099998474121094,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 1426
+    },
+    "boarding": {
+      "programsBefore": 74,
+      "programsAfter": 74,
+      "p50": 14.600000381469727,
+      "p95": 19.700000762939453,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 1554
+    }
+  },
+  "soak": {
+    "programsBefore": 78,
+    "programsAfter": 78,
+    "p50": 17,
+    "p95": 35.79999923706055,
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+    "frames": 1154
+  },
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}

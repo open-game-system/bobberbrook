@@ -38,6 +38,8 @@ const TUCK_AT = 2.75;
 const TUCK_S = 0.45;
 /** Half the fisher's head width with the hat brim (world units, at FISHER_SCALE). */
 const HEAD_HALF = 0.3 * FISHER_SCALE;
+/** How much longer the arms reach while holding up a catch (near arm under the belly, far arm across). */
+const HOLD_REACH = { near: 0.75, far: 0.5 };
 
 const scratch: Vec = { x: 0, z: 0 };
 const predicted: Vec = { x: 0, z: 0 };
@@ -128,6 +130,9 @@ class FisherView {
   private walkPhase = 0;
   /** 0..1: how far the whole fisher turns to face the camera (showing off a catch). */
   private turnToCamera = 0;
+  /** Arm reach while holding up a catch (1 = normal; the arms stretch a little to get under the fish). */
+  private reachTarget = { l: 1, r: 1 };
+  private reach = { l: 1, r: 1 };
   private turnW = 0;
   speed = 0;
   private pose = zeroPose();
@@ -509,6 +514,8 @@ class FisherView {
       }
     }
     this.turnToCamera = 0;
+    this.reachTarget.l = 1;
+    this.reachTarget.r = 1;
     const inCatch = this.catchStart >= 0;
     if (inCatch) {
       const age = t - this.catchStart;
@@ -535,6 +542,12 @@ class FisherView {
           const fz = near * 0.55 * up;
           if (near > 0) { target.armLx = nx; target.armLz = nz; target.armRx = fx2; target.armRz = fz; }
           else { target.armRx = nx; target.armRz = nz; target.armLx = fx2; target.armLz = fz; }
+          // Round 09: the stubby arms only reached the fish's corner (held out, not gripped). The near arm
+          // reaches out under the belly, the far arm across to the near end: both hands on the lower edge.
+          const nearReach = 1 + HOLD_REACH.near * up;
+          const farReach = 1 + HOLD_REACH.far * up;
+          this.reachTarget.l = near > 0 ? nearReach : farReach;
+          this.reachTarget.r = near > 0 ? farReach : nearReach;
           target.lean = -0.08 * up;
           target.headX = -0.15 * up;
           target.headY = 0;
@@ -566,6 +579,10 @@ class FisherView {
     rig.legR.rotation.x = pz2.legR;
     rig.armL.rotation.set(pz2.armLx, 0, pz2.armLz);
     rig.armR.rotation.set(pz2.armRx, 0, pz2.armRz);
+    this.reach.l += (this.reachTarget.l - this.reach.l) * kk;
+    this.reach.r += (this.reachTarget.r - this.reach.r) * kk;
+    rig.armL.scale.set(1, this.reach.l, 1);
+    rig.armR.scale.set(1, this.reach.r, 1);
     rig.body.position.y = pz2.bodyY - pz2.sit * 0.16;
     rig.body.rotation.set(pz2.lean, 0, pz2.tilt);
     rig.head.rotation.set(pz2.headX, pz2.headY, 0);

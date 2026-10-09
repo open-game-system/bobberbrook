@@ -34,12 +34,23 @@ export const MIN_SCREEN_SHARE = 0.085;
 /** ...but never more than this many times its own base size (no giant minnows). */
 export const MAX_GROW = 1.6;
 
+/**
+ * Caps (round 09: a 96 cm Moonfin, new and legendary, was shown 3.8 m wide and covered the catcher):
+ * the visible fish is at most MAX_FISH_W wide (about 1.2 fisher heights) and MAX_FISH_H tall (it stays
+ * beside the head, never towering over it), and never more than MAX_SCREEN_SHARE of the screen width.
+ */
+export const MAX_FISH_W = 2.8;
+export const MAX_FISH_H = 1.7;
+export const MAX_SCREEN_SHARE = 0.2;
+
 export function holdCard(i: HoldIn): Hold {
   const k = FISH_PX / CARD_PX;
   const want = i.screenW > 0 ? (MIN_SCREEN_SHARE * i.screenW) / k : 0;
-  const size = Math.min(i.base * MAX_GROW, Math.max(i.base, want));
+  const aspect = Math.max(0.3, i.aspect);
+  const cap = Math.min(MAX_FISH_W, MAX_FISH_H * aspect, i.screenW > 0 ? MAX_SCREEN_SHARE * i.screenW : Infinity) / k;
+  const size = Math.min(cap, i.base * MAX_GROW, Math.max(i.base, want));
   const halfW = (size * k) / 2;
-  const halfH = halfW / Math.max(0.3, i.aspect);
+  const halfH = halfW / aspect;
   // The fish's near end just clears the head (its tip is a tail or a snout, the near hand sits under
   // the belly a little further out).
   const lateral = i.headHalf + 0.03 * size + halfW;

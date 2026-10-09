@@ -68,7 +68,7 @@ on the water, and a warm fill plus a cool rim on the fishers so their faces read
   (`thrashingAt(fishDef.fight, reel, now)` from `src/game/reel.ts`) a splashing white-water burst; the
   bobber drifts toward the fisher with `reel.progress`.
 - `catch`: the fish (its painted sprite as a camera-facing card, with a wiggle) leaps out of the water
-  on an arc into the fisher's hands, held up high, with sparkles; `catch.isNew` → a bigger golden burst
+  on an arc into the fisher's hands, held up beside the head (both arms reach to its lower edge; the visible fish is capped at 2.8 m wide, 1.7 m tall and 20 % of the screen, so a legend never covers its catcher, `holdCard.ts`), with sparkles; `catch.isNew` → a bigger golden burst
   and rays; `catch.golden` → gold confetti; junk (boot/teapot) gets a comic plop.
 - `missSeq` grew: the fish splashes away (a small "got away" splash).
 

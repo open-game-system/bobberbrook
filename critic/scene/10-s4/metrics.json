@@ -1,0 +1,42 @@
+{
+  "round": "10-s4",
+  "shots": [
+    {
+      "label": "night-tarn",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 78,
+      "programs": 79,
+      "calls": 490,
+      "triangles": 3080206,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 59
+    },
+    {
+      "label": "double-catch",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 78,
+      "programs": 78,
+      "calls": 596,
+      "triangles": 3153962,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 107
+    },
+    {
+      "label": "night-catch",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 78,
+      "programs": 78,
+      "calls": 609,
+      "triangles": 3161770,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 78
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}
