@@ -45,6 +45,7 @@ import { buildRays } from "./rays";
 import { buildForest } from "./forest";
 import { buildTrails } from "./trails";
 import { buildAreaDressing } from "./areas";
+import { plantMaterial, plantSheet } from "./plants";
 import { paintedMaterial } from "./geo";
 import { Mood } from "./mood";
 import { buildMist } from "./mist";
@@ -184,7 +185,10 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   // Painted rock on every boulder and cliff, painted bark on trunks, stone tiles on the tower dais.
   const surfMats = { rock: rockMaterial(kit.rock), bark: barkMaterial(kit.bark, occ), tiles: tilesMaterial(kit.tiles) };
   setSurfaceMaterials(surfMats);
-  const props = buildProps(opts.quality, sway, treeMat);
+  // Painted alpha-card plants (one sheet, one program) for Moonwell and every place.
+  const plantTex = plantSheet();
+  const plantMat = plantMaterial(plantTex, time);
+  const props = buildProps(opts.quality, sway, treeMat, plantMat);
   scene.add(props.group);
   const painted = paintedMaterial();
   const paintedDouble = paintedMaterial({ side: DoubleSide });
@@ -192,7 +196,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   scene.add(forest.group);
   const trails = buildTrails(full, painted, jobs);
   scene.add(trails.group);
-  const areas = buildAreaDressing(full, { painted, paintedDouble, sway, tree: treeMat }, jobs);
+  const areas = buildAreaDressing(full, { painted, paintedDouble, sway, tree: treeMat, plant: plantMat }, jobs);
   scene.add(areas.group);
   const mood = new Mood();
   const mist = buildMist(full);
@@ -693,6 +697,8 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       rays.dispose();
       props.dispose();
       sway.dispose();
+      plantMat.dispose();
+      plantTex.dispose();
       treeMat.dispose();
       treeMatDouble.dispose();
       treeDepth.dispose();

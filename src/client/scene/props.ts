@@ -35,7 +35,9 @@ import { PK } from "./painter";
 import type { TodState } from "./tod";
 import type { SceneQuality } from "./types";
 
-import { CANOPY, blob, bushGeometry, cliffRockGeometry, cottageGeometry, dummy, fernGeometry, flowerGeometry, giantGeometry, instanced, lilyGeometry, lupineGeometry, mushroomGeometry, oakGeometry, padGeometry, pineGeometry, reedGeometry, rockGeometry, tuftGeometry, bellGeometry, type Inst } from "./kit";
+import { CANOPY, blob, bushGeometry, cliffRockGeometry, cottageGeometry, dummy, flowerGeometry, giantGeometry, instanced, lilyGeometry, mushroomGeometry, oakGeometry, padGeometry, pineGeometry, reedGeometry, rockGeometry, tuftGeometry, type Inst } from "./kit";
+import { matteTint, plantMeshes, type PlantKind } from "./plants";
+import { matteGlowMaterial } from "./matte";
 
 // ---------- the set ----------
 
@@ -56,7 +58,7 @@ export type Props = {
   dispose(): void;
 };
 
-export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, treeMat: MeshLambertMaterial): Props {
+export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, treeMat: MeshLambertMaterial, plantMat: MeshLambertMaterial): Props {
   const full = quality === "full";
   const group = new Group();
   group.name = "props";
@@ -164,12 +166,11 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   }
   add(instanced(bushGeometry(), treeMat, bushes, true)).name = "bushes";
 
-  // --- grass, flowers, lupines (swaying) ---
+  // --- grass and a few flowers (swaying); foxgloves where the lupine spikes stood ---
   const tufts: Inst[] = [];
   const flowers: Inst[] = [];
-  const lupines: Inst[] = [];
+  const foxgloves: Inst[] = [];
   const flowerCols = [0xffffff, 0xc9a6ff, 0x9ad8ff, 0xb08aff, 0xff9ee0, 0x7ae8e0].map((h) => new Color(h));
-  const lupineCols = [0x7a5ad8, 0x9a6ae8, 0xc070e0, 0x5a8ae8].map((h) => new Color(h));
   const tuftN = full ? 5200 : 1800;
   for (let i = 0; i < tuftN * 3 && tufts.length < tuftN; i++) {
     const th = R() * Math.PI * 2;
@@ -180,12 +181,15 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     const z = Math.sin(th) * r;
     if (Math.abs(x) <= DOCK.halfWidth + 0.3 && z > DOCK.tipZ && z < DOCK.rootZ + 0.5) continue;
     if (Math.abs(d - PATH_D) < 0.7 && R() < 0.85) continue;
+    // Round 09-B: the camera's foreground keeps open painted ground between the tufts.
+    if (angleGap(th, SOUTH) < 1.2 && d < 18 && R() < 0.55) continue;
     if (Math.abs(x) < 2 && z < -edge + 1 && z > FALLS.topZ) continue;
     const dens = fbm(x * 0.15, z * 0.15, 2, 5);
     if (dens < 0.38 && R() < 0.6) continue;
     tufts.push({ x, y: heightAt(x, z) - 0.03, z, s: 0.8 + R() * 0.9, ry: R() * 6, tint: tint(0.8, 1.15) });
   }
-  const flowerN = full ? 1100 : 400;
+  // Round 09-B: a third of the old carpet, and almost none in the band in front of the camera.
+  const flowerN = full ? 330 : 130;
   for (let i = 0; i < flowerN * 4 && flowers.length < flowerN; i++) {
     const th = R() * Math.PI * 2;
     const edge = lakeRadius(th);
@@ -194,35 +198,37 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     const x = Math.cos(th) * r;
     const z = Math.sin(th) * r;
     if (Math.abs(d - PATH_D) < 0.8) continue;
+    if (angleGap(th, SOUTH) < 1.2 && d < 16 && R() < 0.85) continue;
     if (Math.abs(x) <= DOCK.halfWidth + 0.3 && z > DOCK.tipZ && z < DOCK.rootZ + 0.5) continue;
     const patch = vnoise(x * 0.18, z * 0.18, 31);
     if (patch < 0.55) continue;
     const col = flowerCols[Math.floor(vnoise(x * 0.07, z * 0.07, 8) * flowerCols.length * 0.999 + R() * 1.4) % flowerCols.length]!;
     flowers.push({ x, y: heightAt(x, z) - 0.02, z, s: 0.9 + R() * 0.7, ry: R() * 6, tint: col });
   }
-  for (let i = 0; i < 600 && lupines.length < (full ? 190 : 80); i++) {
+  const foxCol = () => new Color(1, 1, 1).lerp(new Color(0xd8c0ff), R() * 0.5).multiplyScalar(0.85 + R() * 0.2);
+  for (let i = 0; i < 600 && foxgloves.length < (full ? 50 : 24); i++) {
     const th = R() * Math.PI * 2;
     const outer = outerRadius(th);
     const r = outer - 3 + R() * 9;
     const x = Math.cos(th) * r;
     const z = Math.sin(th) * r;
-    if (vnoise(x * 0.12, z * 0.12, 41) < 0.5) continue;
+    if (vnoise(x * 0.12, z * 0.12, 41) < 0.55) continue;
     if (Math.abs(x) < 2.5 && z < 0) continue;
+    if (angleGap(th, SOUTH) < 0.6) continue;
     if (!clearOfTrails(x, z, 0.3)) continue;
-    lupines.push({ x, y: heightAt(x, z) - 0.03, z, s: 0.9 + R() * 0.8, ry: R() * 6, tint: lupineCols[Math.floor(R() * lupineCols.length)]! });
+    foxgloves.push({ x, y: heightAt(x, z) - 0.03, z, s: 0.9 + R() * 0.6, ry: R() * 6, tint: foxCol() });
   }
-  // Lupine clusters round the obstacles and the camp.
-  for (const o of [...OBSTACLES, { x: CAMPFIRE.x + 3, z: CAMPFIRE.z - 2, r: 1, kind: "rock" as const }]) {
-    for (let k = 0; k < 6; k++) {
+  // A pair round each obstacle (the camp keeps its own clearing).
+  for (const o of OBSTACLES) {
+    for (let k = 0; k < 2; k++) {
       const a = R() * 6.28;
-      const x = o.x + Math.cos(a) * (o.r + 0.4 + R() * 1.2);
-      const z = o.z + Math.sin(a) * (o.r + 0.4 + R() * 1.2);
-      lupines.push({ x, y: heightAt(x, z) - 0.03, z, s: 0.9 + R() * 0.6, ry: R() * 6, tint: lupineCols[Math.floor(R() * lupineCols.length)]! });
+      const x = o.x + Math.cos(a) * (o.r + 0.5 + R() * 1.0);
+      const z = o.z + Math.sin(a) * (o.r + 0.5 + R() * 1.0);
+      foxgloves.push({ x, y: heightAt(x, z) - 0.03, z, s: 0.85 + R() * 0.5, ry: R() * 6, tint: foxCol() });
     }
   }
   add(instanced(tuftGeometry(), swayMat, tufts, false)).name = "grass";
   add(instanced(flowerGeometry(), swayMat, flowers, false)).name = "flowers";
-  add(instanced(lupineGeometry(), swayMat, lupines, false)).name = "lupines";
 
   // --- reeds (east) and cattails ---
   const reeds: Inst[] = [];
@@ -275,60 +281,70 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   add(instanced(padGeometry(), matDouble, pads, false)).name = "pads";
   add(instanced(lilyGeometry(), mat, lilies, false)).name = "lilies";
 
-  // --- glowing mushrooms along the shore and round the giants ---
+  // --- glowing mushrooms along the shore and round the giants (matte, rims glow) ---
+  // Round 09-B: about a third of the old count, none in the camera's foreground (painted glow-caps there).
   const shrooms: Inst[] = [];
-  const shroomsNear: Inst[] = [];
-  const shroomCols = [new Color(0.5, 1.6, 2.2), new Color(0.9, 0.8, 2.4), new Color(0.4, 2.0, 1.8), new Color(1.6, 0.9, 2.2)];
-  for (let i = 0; i < (full ? 110 : 60); i++) {
+  const shroomCols = [new Color(0.5, 1.6, 2.2), new Color(0.9, 0.8, 2.4), new Color(0.4, 2.0, 1.8), new Color(1.6, 0.9, 2.2)].map(matteTint);
+  for (let i = 0; i < (full ? 40 : 24); i++) {
     const th = R() * Math.PI * 2;
-    if (angleGap(th, SOUTH) < 0.15) continue;
+    if (angleGap(th, SOUTH) < 1.0) continue;
     const d = 0.4 + Math.pow(R(), 1.5) * 9;
     const r = lakeRadius(th) + d;
     const x = Math.cos(th) * r;
     const z = Math.sin(th) * r;
     if (vnoise(x * 0.3, z * 0.3, 55) < 0.45) continue;
-    shrooms.push({ x, y: heightAt(x, z) - 0.02, z, s: 0.8 + R() * 1.2, ry: R() * 6, tint: shroomCols[Math.floor(R() * shroomCols.length)]! });
+    shrooms.push({ x, y: heightAt(x, z) - 0.02, z, s: 0.9 + R() * 1.2, ry: R() * 6, tint: shroomCols[Math.floor(R() * shroomCols.length)]! });
   }
-  for (const list of giants) for (const gt of list) for (let k = 0; k < 6; k++) {
+  for (const list of giants) for (const gt of list) for (let k = 0; k < 2; k++) {
     const a = R() * 6.28;
     const rr = 3 + R() * 4;
     const x = gt.x + Math.cos(a) * rr;
     const z = gt.z + Math.sin(a) * rr;
-    shrooms.push({ x, y: heightAt(x, z) - 0.02, z, s: 1.5 + R() * 1.8, ry: R() * 6, tint: shroomCols[Math.floor(R() * shroomCols.length)]! });
+    shrooms.push({ x, y: heightAt(x, z) - 0.02, z, s: 1.6 + R() * 1.6, ry: R() * 6, tint: shroomCols[Math.floor(R() * shroomCols.length)]! });
   }
-  // The near grass (the camera's foreground): clusters of glowing mushrooms, ferns and bellflowers.
-  const ferns: Inst[] = [];
-  const bells: Inst[] = [];
-  const bellCols = [new Color(0.55, 1.5, 2.0), new Color(1.3, 0.8, 2.2), new Color(0.6, 2.0, 1.6), new Color(1.8, 0.9, 1.9)];
-  for (let i = 0; i < 1400 && ferns.length < (full ? 220 : 110); i++) {
+  // The near grass (the camera's foreground): a few clumps of painted plants with open painted ground
+  // between them (ferns mostly, some bluebells and glow-caps, foxgloves off to the sides).
+  const plants: Record<PlantKind, Inst[]> = { fern: [], bluebell: [], foxglove: foxgloves, glowcap: [], litter: [] };
+  const capCols = shroomCols;
+  const plantTint = (k: PlantKind) => (k === "glowcap" ? capCols[Math.floor(R() * capCols.length)]!.clone() : new Color(1, 1, 1).multiplyScalar(0.82 + R() * 0.25));
+  let clumps = 0;
+  for (let i = 0; i < 600 && clumps < (full ? 40 : 20); i++) {
     const th = SOUTH + (R() - 0.5) * 3.4;
     const edge = lakeRadius(th);
-    const d = 1.2 + R() * 22;
+    const d = 1.5 + R() * 21;
     const r = edge + d;
-    const x = Math.cos(th) * r;
-    const z = Math.sin(th) * r;
-    if (Math.abs(d - PATH_D) < 1.0) continue;
-    if (Math.abs(x) <= DOCK.halfWidth + 0.8 && z > DOCK.tipZ && z < DOCK.rootZ + 1.5) continue;
-    if (Math.hypot(x - CAMPFIRE.x, z - CAMPFIRE.z) < 3.2) continue;
-    const cl = vnoise(x * 0.22, z * 0.22, 63);
-    if (cl < 0.5) continue;
-    const y = heightAt(x, z) - 0.03;
-    if (R() < 0.55) ferns.push({ x, y, z, s: 0.8 + R() * 0.9, ry: R() * 6, tint: tint(0.8, 1.15) });
-    else if (R() < 0.6) bells.push({ x, y, z, s: 0.9 + R() * 0.8, ry: R() * 6, tint: bellCols[Math.floor(R() * bellCols.length)]! });
-    else shroomsNear.push({ x, y: y + 0.01, z, s: 1.0 + R() * 1.4, ry: R() * 6 });
+    const cx = Math.cos(th) * r;
+    const cz = Math.sin(th) * r;
+    if (Math.abs(d - PATH_D) < 1.6) continue;
+    if (Math.abs(cx) <= DOCK.halfWidth + 1.5 && cz > DOCK.tipZ && cz < DOCK.rootZ + 2.5) continue;
+    if (Math.hypot(cx - CAMPFIRE.x, cz - CAMPFIRE.z) < 4.2) continue;
+    if (vnoise(cx * 0.22, cz * 0.22, 63) < 0.52) continue;
+    const side = angleGap(th, SOUTH) > 0.55;
+    const roll = R();
+    const main: PlantKind = roll < 0.5 ? "fern" : roll < 0.72 ? "bluebell" : roll < 0.9 || !side ? "glowcap" : "foxglove";
+    const n = main === "fern" ? 2 + Math.floor(R() * 3) : 3 + Math.floor(R() * 4);
+    for (let k = 0; k < n; k++) {
+      const a = R() * 6.28;
+      const rr = (main === "fern" ? 0.7 : 0.45) * Math.sqrt(R()) * (1 + n * 0.25);
+      const x = cx + Math.cos(a) * rr;
+      const z = cz + Math.sin(a) * rr;
+      const kind: PlantKind = k > 0 && R() < 0.25 ? (main === "fern" ? "bluebell" : "fern") : main;
+      const s = kind === "fern" ? 0.85 + R() * 0.5 : 0.8 + R() * 0.5;
+      plants[kind].push({ x, y: heightAt(x, z) - 0.03, z, s, ry: R() * 6, tint: plantTint(kind) });
+    }
+    clumps++;
   }
-  add(instanced(fernGeometry(), swayMat, ferns, false)).name = "ferns";
-  const shroomMat = new MeshBasicMaterial({ vertexColors: true });
+  for (const m of plantMeshes(plants, plantMat)) add(m);
+  const shroomMat = matteGlowMaterial();
   disposables.push(shroomMat);
-  for (const it of shroomsNear) shrooms.push({ ...it, tint: shroomCols[Math.floor(R() * shroomCols.length)]! });
   add(instanced(mushroomGeometry(), shroomMat, shrooms, false)).name = "mushrooms";
-  add(instanced(bellGeometry(), shroomMat, bells, false)).name = "bellflowers";
 
   // --- little amber lanterns along the path (warm accents) ---
   const lamps: Inst[] = [];
   for (let i = 0; i < 16; i++) {
     const th = (i / 16) * Math.PI * 2 + 0.2;
-    if (angleGap(th, NORTH) < 0.3) continue;
+    // Not on the near shore either: a post there stands between the camera and the family.
+    if (angleGap(th, NORTH) < 0.3 || angleGap(th, SOUTH) < 0.55) continue;
     const r = lakeRadius(th) + PATH_D + 1.0;
     const x = Math.cos(th) * r;
     const z = Math.sin(th) * r;
@@ -578,7 +594,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   fallen.castShadow = true;
 
   const winCol = windowMat.color;
-  const shroomCol = shroomMat.color;
+  const shroomGlow = shroomMat.emissive;
   // Warm lamp-lit windows (the reference's cottages glow amber against the violet dusk).
   const day = new Color(1.0, 0.82, 0.55);
   const night = new Color(2.8, 1.9, 0.95);
@@ -590,7 +606,8 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     update(tod, time, campfire) {
       winCol.copy(day).lerp(night, tod.glow);
       lampGlassMat.color.setScalar(0.9 + 2.2 * tod.glow);
-      shroomCol.setScalar(0.3 + 0.75 * tod.glow);
+      shroomGlow.setScalar(0.35 + 2.2 * tod.glow);
+      plantMat.emissive.setScalar(0.3 + 1.9 * tod.glow);
       const g = tod.glow;
       glassMat.color.setRGB(0.5 + 0.8 * g, 1.1 + 1.6 * g, 1.3 + 1.8 * g);
       lanternLight.intensity = 1 + 5 * g;
