@@ -29,7 +29,8 @@ import { CAMPFIRE, DOCK, EAST, OBSTACLES, SOUTH, WEST, NORTH, angleGap, lakeRadi
 import { FALLS, PATH_D, heightAt } from "./terrain";
 import { clearOfTrails } from "./valley";
 import { fbm, rng, vnoise } from "./noise";
-import { jitter, merge, paint, paintedMaterial, prep, puffNormals } from "./geo";
+import { jitter, merge, paint, paintedMaterial, prep, puffNormals, surf } from "./geo";
+import { PK } from "./painter";
 import type { TodState } from "./tod";
 import type { SceneQuality } from "./types";
 
@@ -333,9 +334,11 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     lamps.push({ x, y: heightAt(x, z) - 0.05, z, s: 1, ry: R() * 6 });
   }
   const lampPost = prep(new CylinderGeometry(0.05, 0.07, 1.3, 6).translate(0, 0.65, 0));
-  paint(lampPost, 0x3a2c38);
+  paint(lampPost, 0x3a2c38, 0x5a4652);
+  surf(lampPost, PK.grain);
   const lampHook = prep(new BoxGeometry(0.32, 0.04, 0.04).translate(0.14, 1.28, 0));
   paint(lampHook, 0x3a2c38);
+  surf(lampHook, PK.grain, 1);
   const lampCap = prep(new ConeGeometry(0.13, 0.12, 6).translate(0.28, 1.2, 0));
   paint(lampCap, 0x2a2228);
   add(instanced(merge([lampPost, lampHook, lampCap]), mat, lamps, true)).name = "lamp-posts";
@@ -353,29 +356,30 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     g.rotateY((R() - 0.5) * 0.03);
     g.translate((R() - 0.5) * 0.08, deckY - 0.06 + (R() - 0.5) * 0.02, z + 0.2);
     const p = prep(g);
-    paint(p, plankCols[Math.floor(R() * plankCols.length)]!, 0xffffff, (pp, n, c) => {
+    const pc = plankCols[Math.floor(R() * plankCols.length)]!;
+    paint(p, pc, new Color(pc).lerp(new Color(0xffe8c8), 0.3), (pp, n, c) => {
       c.multiplyScalar(0.92 + 0.12 * vnoise(pp.x * 8, pp.z * 2, 3));
       if (n.y < 0.5) c.multiplyScalar(0.65);
     });
-    dockParts.push(p);
+    dockParts.push(surf(p, PK.planks));
   }
   for (const sx of [-0.85, 0.85]) {
     const g = prep(new BoxGeometry(0.2, 0.22, DOCK.rootZ - DOCK.tipZ + 0.5).translate(sx, deckY - 0.22, (DOCK.rootZ + DOCK.tipZ) / 2));
     paint(g, 0x5a3e28);
-    dockParts.push(g);
+    dockParts.push(surf(g, PK.planks));
   }
   const posts: [number, number][] = [];
   for (let z = DOCK.tipZ + 0.15; z < DOCK.rootZ; z += 2.1) for (const sx of [-1, 1]) posts.push([sx * (DOCK.halfWidth + 0.08), z]);
   for (const [px, pz] of posts) {
     const g = prep(new CylinderGeometry(0.15, 0.17, 2.4, 8).translate(px, deckY + 0.55 - 1.2, pz));
     paint(g, 0x4a3220, 0x7a5636);
-    dockParts.push(g);
+    dockParts.push(surf(g, PK.grain));
     const cap = prep(new CylinderGeometry(0.16, 0.15, 0.06, 8).translate(px, deckY + 0.58, pz));
     paint(cap, 0x8a6642);
-    dockParts.push(cap);
+    dockParts.push(surf(cap, PK.grain));
     const rope = prep(new TorusGeometry(0.17, 0.035, 5, 12).rotateX(Math.PI / 2).translate(px, deckY + 0.42, pz));
     paint(rope, 0xd8b878);
-    dockParts.push(rope);
+    dockParts.push(surf(rope, PK.cloth));
   }
   // Ropes sagging between posts along each side.
   for (const sx of [-1, 1]) {
@@ -390,16 +394,18 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
       ]);
       const t = prep(new TubeGeometry(curve, 10, 0.03, 4, false));
       paint(t, 0xd2b070);
-      dockParts.push(t);
+      dockParts.push(surf(t, PK.cloth));
     }
   }
   // Lantern post at the tip.
   const lx = DOCK.halfWidth + 0.08;
   const lz = DOCK.tipZ + 0.15;
   const lpost = prep(new CylinderGeometry(0.09, 0.11, 1.5, 7).translate(lx, deckY + 1.2, lz));
-  paint(lpost, 0x4a3220);
+  paint(lpost, 0x4a3220, 0x6a4a30);
+  surf(lpost, PK.grain);
   const arm = prep(new BoxGeometry(0.6, 0.07, 0.07).translate(lx - 0.28, deckY + 1.9, lz));
   paint(arm, 0x4a3220);
+  surf(arm, PK.grain, 1);
   const lanternFrame = prep(new BoxGeometry(0.3, 0.36, 0.3).translate(lx - 0.5, deckY + 1.62, lz));
   paint(lanternFrame, 0x2a2420);
   const lanternTop = prep(new ConeGeometry(0.24, 0.18, 4).rotateY(Math.PI / 4).translate(lx - 0.5, deckY + 1.89, lz));
@@ -408,8 +414,10 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   // Crates and a bucket on the deck.
   const crate = prep(new BoxGeometry(0.55, 0.45, 0.55).translate(-0.6, deckY + 0.22, DOCK.rootZ - 1.6));
   paint(crate, 0x8a5a32, 0xb07a48);
+  surf(crate, PK.planks);
   const bucket = prep(new CylinderGeometry(0.2, 0.16, 0.3, 10).translate(-0.75, deckY + 0.15, DOCK.rootZ - 2.5));
   paint(bucket, 0x8a96a0, 0xb8c4cc);
+  surf(bucket, PK.grain);
   dockParts.push(crate, bucket);
   const dock = add(new Mesh(merge(dockParts), mat));
   dock.name = "dock";
@@ -429,19 +437,24 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   paint(hull, 0x2f6f84, 0x3f93a4, (_p, n, c) => {
     if (n.y > 0.2) c.setHex(0xa77a4c);
   });
+  surf(hull, PK.planks);
   const rim = prep(new TorusGeometry(1, 0.06, 5, 24).rotateX(Math.PI / 2).scale(0.75, 1, 1.85));
   paint(rim, 0xe8dcc0);
   const bench1 = prep(new BoxGeometry(1.35, 0.06, 0.28).translate(0, -0.08, 0.45));
   const bench2 = prep(new BoxGeometry(1.2, 0.06, 0.28).translate(0, -0.08, -0.65));
   paint(bench1, 0x9a6a40);
   paint(bench2, 0x9a6a40);
+  surf(bench1, PK.planks);
+  surf(bench2, PK.planks);
   const oar = prep(new CylinderGeometry(0.03, 0.03, 2.0, 5).rotateZ(1.35).rotateY(0.25).translate(0.2, 0.0, 0.0));
   paint(oar, 0xc49a62);
+  surf(oar, PK.grain, 1);
   boatParts.push(hull, rim, bench1, bench2, oar);
   const boatInner = merge(boatParts);
   const boat = add(new Mesh(boatInner, matDouble));
   boat.name = "boat";
-  boat.position.set(DOCK.halfWidth + 1.35, 0.12, (DOCK.rootZ + DOCK.tipZ) / 2 - 0.5);
+  // Riding high enough that its painted planks show above the water line.
+  boat.position.set(DOCK.halfWidth + 1.35, 0.3, (DOCK.rootZ + DOCK.tipZ) / 2 - 0.5);
   boat.rotation.y = 0.08;
   boat.castShadow = true;
 
@@ -487,6 +500,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
       const lz2 = CAMPFIRE.z + Math.sin(a + 0.55) * 2.5;
       const log = prep(new CylinderGeometry(0.22, 0.24, 1.6, 9).rotateZ(Math.PI / 2).rotateY(-(a + 0.55) + Math.PI / 2).translate(lx2, heightAt(lx2, lz2) + 0.18, lz2));
       paint(log, 0x6a4628, 0x8a6038);
+      surf(log, PK.grain, 1);
       campParts.push(log);
     }
   });
@@ -494,7 +508,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     const a = (i / 4) * Math.PI * 2 + 0.3;
     const g = prep(new CylinderGeometry(0.07, 0.09, 0.9, 6).rotateZ(1.1).rotateY(a).translate(CAMPFIRE.x, heightAt(CAMPFIRE.x, CAMPFIRE.z) + 0.22, CAMPFIRE.z));
     paint(g, 0x3a2416, 0x6a4628);
-    campParts.push(g);
+    campParts.push(surf(g, PK.grain));
   }
   // String-light poles.
   const poleA = new Vector3(CAMPFIRE.x - 3.4, 0, CAMPFIRE.z - 1.6);
@@ -503,7 +517,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     p.y = heightAt(p.x, p.z);
     const g = prep(new CylinderGeometry(0.07, 0.09, 3.0, 6).translate(p.x, p.y + 1.5, p.z));
     paint(g, 0x5a3e28);
-    campParts.push(g);
+    campParts.push(surf(g, PK.grain));
   }
   add(new Mesh(merge(campParts), mat)).castShadow = true;
   const bulbN = 15;
@@ -560,6 +574,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   paint(fl, 0x5a3c24, 0x7a5434, (_p, n, c) => {
     if (n.y > 0.6) c.lerp(new Color(0x6f9a3c), 0.7);
   });
+  surf(fl, PK.grain, 1);
   const fallen = add(new Mesh(fl, mat));
   const fth = EAST + 0.42;
   const fr = lakeRadius(fth) + 0.1;

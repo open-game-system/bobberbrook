@@ -28,7 +28,8 @@ import {
 import { BOARD_MS, type Lake } from "../../game/lake";
 import type { Platform } from "../../game/regions";
 import { blob } from "./kit";
-import { jitter, merge, paint, prep, puffNormals } from "./geo";
+import { jitter, merge, paint, prep, puffNormals, surf } from "./geo";
+import { PK } from "./painter";
 import { surfaceMaterial, tiled } from "./surfaces";
 import { rng, vnoise } from "./noise";
 import { SEA_Y, heightAt } from "./terrain";
@@ -87,19 +88,19 @@ function along(g: BufferGeometry, dir: Vector3): BufferGeometry {
 
 function boatGeometry(): { body: BufferGeometry; sail: BufferGeometry; glow: BufferGeometry } {
   const hull = new SphereGeometry(1, 20, 10, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2).scale(3.6, 1.15, 1.35);
-  const hullP = paint(prep(hull), 0x5a2a4a, 0x8a3a5a, (p, _n, c) => {
+  const hullP = paint(prep(surf(hull, PK.planks)), 0x5a2a4a, 0x8a3a5a, (p, _n, c) => {
     // A gold stripe under the rim, deep plum below.
     if (p.y > -0.32 && p.y < -0.16) c.setHex(0xe8b860);
     if (p.y > -0.16) c.setHex(0x3a7a8a);
   });
-  const deck = paint(prep(new BoxGeometry(6.4, 0.14, 2.3).translate(0, -0.02, 0)), 0xc89a68, 0xd8aa78, (p, _n, c) => {
+  const deck = paint(prep(surf(new BoxGeometry(6.4, 0.14, 2.3).translate(0, -0.02, 0), PK.planks)), 0xc89a68, 0xd8aa78, (p, _n, c) => {
     if (Math.abs(((p.z + 3) * 2.2) % 1) < 0.08) c.multiplyScalar(0.8);
   });
   const rim = paint(prep(new TorusGeometry(1, 0.09, 6, 28).rotateX(Math.PI / 2).scale(3.55, 1, 1.32).translate(0, 0.1, 0)), 0xe8b860);
   const bow = paint(prep(new ConeGeometry(0.22, 1.2, 6).rotateZ(-Math.PI / 2 - 0.5).translate(3.7, 0.55, 0)), 0xe8b860);
-  const mast = paint(prep(new CylinderGeometry(0.09, 0.12, 6.2, 8).translate(0.4, 3.1, 0)), 0x5a3a28, 0x7a5a38);
-  const yard = paint(prep(new CylinderGeometry(0.06, 0.06, 3.4, 6).rotateX(Math.PI / 2).translate(0.4, 5.6, 0)), 0x5a3a28);
-  const cabin = paint(prep(new BoxGeometry(1.4, 0.9, 1.6).translate(-2.3, 0.5, 0)), 0xa87a50, 0xc89a68);
+  const mast = paint(prep(surf(new CylinderGeometry(0.09, 0.12, 6.2, 8).translate(0.4, 3.1, 0), PK.grain)), 0x5a3a28, 0x7a5a38);
+  const yard = paint(prep(surf(new CylinderGeometry(0.06, 0.06, 3.4, 6).rotateX(Math.PI / 2).translate(0.4, 5.6, 0), PK.grain, 1)), 0x5a3a28);
+  const cabin = paint(prep(surf(new BoxGeometry(1.4, 0.9, 1.6).translate(-2.3, 0.5, 0), PK.planks)), 0xa87a50, 0xc89a68);
   const roof = paint(prep(new ConeGeometry(1.25, 0.8, 4).rotateY(Math.PI / 4).scale(1, 1, 1.15).translate(-2.3, 1.35, 0)), 0x5a3a9a, 0x8a6ad0);
   const pole = paint(prep(new CylinderGeometry(0.04, 0.05, 1.3, 6).translate(3.2, 0.7, 0)), 0x3a2a28);
   const body = merge([hullP, deck, rim, bow, mast, yard, cabin, roof, pole]);
@@ -129,14 +130,14 @@ function dockGeometry(): { body: BufferGeometry; glow: BufferGeometry } {
   // Planks from the land (x = -1) out to the boat (x = 7), on posts.
   for (let x = -1.2; x < 7.2; x += 0.42) {
     const g = new BoxGeometry(0.38, 0.12, 2.4 + (R() - 0.5) * 0.2).rotateY((R() - 0.5) * 0.05).translate(x, 0.75 + (R() - 0.5) * 0.03, 0);
-    parts.push(paint(prep(g), [0xa0714a, 0x8f6440, 0xb07e52][Math.floor(R() * 3)]!));
+    parts.push(paint(prep(surf(g, PK.planks, 1)), [0xa0714a, 0x8f6440, 0xb07e52][Math.floor(R() * 3)]!));
   }
   for (const x of [-0.6, 2.4, 5.2, 7.0]) for (const z of [-1.15, 1.15]) {
-    parts.push(paint(prep(new CylinderGeometry(0.13, 0.15, 3.2, 7).translate(x, -0.6, z)), 0x4a3220, 0x6a4a30));
+    parts.push(paint(prep(surf(new CylinderGeometry(0.13, 0.15, 3.2, 7).translate(x, -0.6, z), PK.grain)), 0x4a3220, 0x6a4a30));
   }
   parts.push(paint(prep(new TorusGeometry(0.16, 0.05, 6, 10).translate(7.0, 1.0, 1.15)), 0xd8c8a0));
   // The lantern post at the end.
-  parts.push(paint(prep(new CylinderGeometry(0.08, 0.1, 2.6, 7).translate(6.6, 2.05, -1.0)), 0x4a3220, 0x6a4a30));
+  parts.push(paint(prep(surf(new CylinderGeometry(0.08, 0.1, 2.6, 7).translate(6.6, 2.05, -1.0), PK.grain)), 0x4a3220, 0x6a4a30));
   parts.push(paint(prep(new BoxGeometry(0.5, 0.06, 0.06).translate(6.82, 3.32, -1.0)), 0x4a3220));
   parts.push(paint(prep(new BoxGeometry(0.3, 0.36, 0.3).translate(7.05, 3.05, -1.0)), 0x2a2420));
   parts.push(paint(prep(new ConeGeometry(0.26, 0.2, 4).rotateY(Math.PI / 4).translate(7.05, 3.3, -1.0)), 0x2a2420));
@@ -180,7 +181,7 @@ function zeppelinGeometry(): { body: BufferGeometry; prop: BufferGeometry; glow:
   const cream = new Color(0x3c2f72);
   const belly = new Color(0x2a7480);
   const seam = new Color(0xe0b45a);
-  const envP = paint(prep(env), 0x45337e, 0x45337e, (p, _n, c) => {
+  const envP = paint(prep(surf(env, PK.canvas, 8, 3)), 0x45337e, 0x45337e, (p, _n, c) => {
     const phi = Math.atan2(p.z, p.y - ENV_Y) + Math.PI;
     const g = (phi / (Math.PI * 2)) * 8;
     const gore = Math.floor(g + 1e-4) % 2;
@@ -193,7 +194,7 @@ function zeppelinGeometry(): { body: BufferGeometry; prop: BufferGeometry; glow:
     c.multiplyScalar(0.92 + 0.16 * Math.max(0, up));
     // Stitched seams: dashes along every gore edge.
     const t = (p.x + ENV_L / 2) / ENV_L;
-    if ((f < 0.02 || f > 0.98) && Math.floor(t * 40) % 2 === 0) c.lerp(seam, 0.55);
+    if ((f < 0.012 || f > 0.988) && Math.floor(t * 40) % 2 === 0) c.lerp(seam, 0.45);
   });
   const ribs: BufferGeometry[] = [];
   for (const t of [0.2, 0.5, 0.8]) {
@@ -220,25 +221,25 @@ function zeppelinGeometry(): { body: BufferGeometry; prop: BufferGeometry; glow:
     fins.push(paint(prep(flap), 0xd8a848, 0xf0c870));
   }
   // The gondola: a little wooden boat with railings and four lanterns.
-  const hull = paint(prep(new SphereGeometry(1, 20, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2).scale(2.35, 0.8, 1.15)), 0x5a3020, 0x8a5a38, (p, _n, c) => {
+  const hull = paint(prep(surf(new SphereGeometry(1, 20, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2).scale(2.35, 0.8, 1.15), PK.planks)), 0x5a3020, 0x8a5a38, (p, _n, c) => {
     if (Math.abs(((p.y + 1) * 6) % 1) < 0.12) c.multiplyScalar(0.75);
     if (p.y > -0.18) c.setHex(0xd8a848);
   });
-  const floor = paint(prep(new BoxGeometry(4.3, 0.12, 2.15).translate(0, 0.02, 0)), 0xc89a68, 0xd8aa78, (p, _n, c) => {
+  const floor = paint(prep(surf(new BoxGeometry(4.3, 0.12, 2.15).translate(0, 0.02, 0), PK.planks)), 0xc89a68, 0xd8aa78, (p, _n, c) => {
     if (Math.abs(((p.x + 3) * 2.4) % 1) < 0.08) c.multiplyScalar(0.82);
   });
   const rails: BufferGeometry[] = [];
   const RX = 2.05;
   const RZ = 1.02;
   const RH = 0.78;
-  for (const z of [-RZ, RZ]) rails.push(paint(prep(new CylinderGeometry(0.06, 0.06, RX * 2, 6).rotateZ(Math.PI / 2).translate(0, RH, z)), 0x7a4a28, 0xa87a50));
-  for (const x of [-RX, RX]) rails.push(paint(prep(new CylinderGeometry(0.06, 0.06, RZ * 2, 6).rotateX(Math.PI / 2).translate(x, RH, 0)), 0x7a4a28, 0xa87a50));
-  for (let x = -RX; x <= RX + 1e-3; x += RX / 5) for (const z of [-RZ, RZ]) rails.push(paint(prep(new CylinderGeometry(0.035, 0.035, RH, 5).translate(x, RH / 2, z)), 0x5a3a28));
-  for (let z = -RZ + RZ / 2; z < RZ; z += RZ / 2) for (const x of [-RX, RX]) rails.push(paint(prep(new CylinderGeometry(0.035, 0.035, RH, 5).translate(x, RH / 2, z)), 0x5a3a28));
+  for (const z of [-RZ, RZ]) rails.push(paint(prep(surf(new CylinderGeometry(0.06, 0.06, RX * 2, 6).rotateZ(Math.PI / 2).translate(0, RH, z), PK.grain, 1)), 0x7a4a28, 0xa87a50));
+  for (const x of [-RX, RX]) rails.push(paint(prep(surf(new CylinderGeometry(0.06, 0.06, RZ * 2, 6).rotateX(Math.PI / 2).translate(x, RH, 0), PK.grain, 1)), 0x7a4a28, 0xa87a50));
+  for (let x = -RX; x <= RX + 1e-3; x += RX / 5) for (const z of [-RZ, RZ]) rails.push(paint(prep(surf(new CylinderGeometry(0.035, 0.035, RH, 5).translate(x, RH / 2, z), PK.grain)), 0x5a3a28));
+  for (let z = -RZ + RZ / 2; z < RZ; z += RZ / 2) for (const x of [-RX, RX]) rails.push(paint(prep(surf(new CylinderGeometry(0.035, 0.035, RH, 5).translate(x, RH / 2, z), PK.grain)), 0x5a3a28));
   // Lantern posts at the four corners: post, little cage, swept cap.
   const lamps: [number, number][] = [[RX, RZ], [RX, -RZ], [-RX, RZ], [-RX, -RZ]];
   for (const [x, z] of lamps) {
-    rails.push(paint(prep(new CylinderGeometry(0.05, 0.06, 1.35, 6).translate(x, 0.68, z)), 0x4a3220));
+    rails.push(paint(prep(surf(new CylinderGeometry(0.05, 0.06, 1.35, 6).translate(x, 0.68, z), PK.grain)), 0x4a3220, 0x6a4a30));
     rails.push(paint(prep(new CylinderGeometry(0.2, 0.2, 0.06, 6).translate(x, 1.36, z)), 0x2a2420));
     rails.push(paint(prep(new ConeGeometry(0.24, 0.26, 6).translate(x, 1.78, z)), 0x4a2f88, 0x8a6ad0));
   }
@@ -300,7 +301,7 @@ function towerGeometry(): { body: BufferGeometry; glow: BufferGeometry } {
     stoneParts.push(paint(prep(new CylinderGeometry(r, r + 0.08, h + 1.2, 32).translate(0, (h + 1.2) / 2 - 1.2, 0)), 0x7a6e98, 0xa89cc8, stone));
   }
   // The wooden deck: planks round the centre.
-  parts.push(paint(prep(new CylinderGeometry(DECK_R + 0.2, DECK_R + 0.2, 0.22, 40).translate(0, DECK_H - 0.08, 0)), 0xb88a58, 0xd0a070, (p, _n, c) => {
+  parts.push(paint(prep(surf(new CylinderGeometry(DECK_R + 0.2, DECK_R + 0.2, 0.22, 40).translate(0, DECK_H - 0.08, 0), PK.planks)), 0xb88a58, 0xd0a070, (p, _n, c) => {
     const a = Math.atan2(p.z, p.x);
     if (Math.abs(((a / (Math.PI * 2)) * 48) % 1) < 0.1) c.multiplyScalar(0.78);
     if (Math.hypot(p.x, p.z) > DECK_R - 0.2) c.setHex(0x8a5a38);
@@ -311,10 +312,10 @@ function towerGeometry(): { body: BufferGeometry; glow: BufferGeometry } {
   for (let k = 0; k < 8; k++) {
     const a0 = (k * Math.PI) / 4 + gap;
     const arc = Math.PI / 4 - 2 * gap;
-    parts.push(paint(prep(new TorusGeometry(RAIL, 0.07, 5, 10, arc).rotateX(Math.PI / 2).rotateY(-a0 - arc).translate(0, DECK_H + 0.95, 0)), 0x5a3a28, 0x8a6a40));
+    parts.push(paint(prep(surf(new TorusGeometry(RAIL, 0.07, 5, 10, arc).rotateX(Math.PI / 2).rotateY(-a0 - arc).translate(0, DECK_H + 0.95, 0), PK.grain, 1)), 0x5a3a28, 0x8a6a40));
     for (let j = 0; j <= 3; j++) {
       const a = a0 + (arc * j) / 3;
-      parts.push(paint(prep(new CylinderGeometry(0.06, 0.07, 0.95, 6).translate(Math.cos(a) * RAIL, DECK_H + 0.48, Math.sin(a) * RAIL)), 0x5a3a28));
+      parts.push(paint(prep(surf(new CylinderGeometry(0.06, 0.07, 0.95, 6).translate(Math.cos(a) * RAIL, DECK_H + 0.48, Math.sin(a) * RAIL), PK.grain)), 0x5a3a28));
     }
   }
   // Lantern posts at four of the arcs' middles.
@@ -323,7 +324,7 @@ function towerGeometry(): { body: BufferGeometry; glow: BufferGeometry } {
     const a = (k * Math.PI) / 4 + Math.PI / 8;
     const x = Math.cos(a) * (RAIL - 0.1);
     const z = Math.sin(a) * (RAIL - 0.1);
-    parts.push(paint(prep(new CylinderGeometry(0.09, 0.12, 2.4, 7).translate(x, DECK_H + 1.2, z)), 0x4a3220, 0x6a4a30));
+    parts.push(paint(prep(surf(new CylinderGeometry(0.09, 0.12, 2.4, 7).translate(x, DECK_H + 1.2, z), PK.grain)), 0x4a3220, 0x6a4a30));
     parts.push(paint(prep(new CylinderGeometry(0.3, 0.3, 0.07, 6).translate(x, DECK_H + 2.4, z)), 0x2a2420));
     parts.push(paint(prep(new ConeGeometry(0.36, 0.4, 6).translate(x, DECK_H + 3.05, z)), 0x4a2f88, 0x8a6ad0));
     lampAt.push([x, z]);
@@ -331,7 +332,7 @@ function towerGeometry(): { body: BufferGeometry; glow: BufferGeometry } {
   // The mooring mast: a slender carved trunk with a lantern crown under a swept elven roof.
   const MH = 17;
   parts.push(paint(prep(new CylinderGeometry(1.25, 1.4, 0.55, 16).translate(0, DECK_H + 0.27, 0)), 0x8a5a38, 0xa87a50));
-  parts.push(paint(prep(new CylinderGeometry(0.32, 0.55, MH, 10).translate(0, DECK_H + MH / 2, 0)), 0x4a3220, 0x7a5a38));
+  parts.push(paint(prep(surf(new CylinderGeometry(0.32, 0.55, MH, 10).translate(0, DECK_H + MH / 2, 0), PK.grain)), 0x4a3220, 0x7a5a38));
   for (const y of [4, 8.5, 12.5]) parts.push(paint(prep(new TorusGeometry(0.5 - y * 0.012, 0.09, 5, 14).rotateX(Math.PI / 2).translate(0, DECK_H + y, 0)), 0xd8a848));
   parts.push(paint(prep(new CylinderGeometry(1.5, 1.2, 0.25, 14).translate(0, DECK_H + MH - 1.2, 0)), 0x8a5a38, 0xa87a50));
   for (let k = 0; k < 8; k++) {
@@ -356,7 +357,7 @@ function gangplankGeometry(): BufferGeometry {
   const parts: BufferGeometry[] = [];
   const x0 = DECK_R - 0.3;
   const x1 = ZEP_OUT - 1.15 * SIZE + 0.1;
-  for (let x = x0; x < x1; x += 0.36) parts.push(paint(prep(new BoxGeometry(0.32, 0.1, 1.7).translate(x + 0.16, DECK_H + 0.02, 0)), [0xa0714a, 0xb07e52][Math.round(x * 3) % 2]!));
+  for (let x = x0; x < x1; x += 0.36) parts.push(paint(prep(surf(new BoxGeometry(0.32, 0.1, 1.7).translate(x + 0.16, DECK_H + 0.02, 0), PK.planks, 1)), [0xa0714a, 0xb07e52][Math.round(x * 3) % 2]!));
   for (const z of [-0.85, 0.85]) {
     parts.push(paint(prep(new CylinderGeometry(0.045, 0.045, x1 - x0, 5).rotateZ(Math.PI / 2).translate((x0 + x1) / 2, DECK_H + 0.9, z)), 0xe8d8b0));
     for (const x of [x0 + 0.1, x1 - 0.1]) parts.push(paint(prep(new CylinderGeometry(0.06, 0.06, 0.95, 5).translate(x, DECK_H + 0.45, z)), 0x5a3a28));

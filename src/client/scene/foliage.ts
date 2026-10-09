@@ -1,6 +1,7 @@
 import { BufferAttribute, BufferGeometry, Color, DoubleSide, MeshLambertMaterial, Vector3, type Material } from "three";
 import { rng } from "./noise";
-import { applyOccluderPerVertex, type OccluderUniforms } from "./geo";
+import { applyOccluderPerVertex, surf, type OccluderUniforms } from "./geo";
+import { PK } from "./painter";
 import { PAINT_GLSL, type PaintTex } from "./paintkit";
 
 /**
@@ -32,6 +33,8 @@ const registry = new WeakMap<BufferGeometry, Foliage>();
 let mats: Record<LeafKind, Material> | null = null;
 
 export function attachFoliage(geo: BufferGeometry, cards: BufferGeometry, kind: LeafKind): BufferGeometry {
+  // The dark core under the leaf cards needs no painted detail (and the trees are many: keep them cheap).
+  surf(geo, PK.none);
   registry.set(geo, { cards, kind });
   return geo;
 }

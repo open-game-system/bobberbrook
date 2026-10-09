@@ -1,5 +1,6 @@
 import { BufferAttribute, BufferGeometry, Color, Matrix4, MeshDepthMaterial, MeshLambertMaterial, ShaderChunk, Vector3, Vector4, type Side } from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import { PK, applyPaint, type PaintKind } from "./painter";
 
 let patched = false;
 /**
@@ -15,11 +16,33 @@ export function patchLambertWrap(): void {
   );
 }
 
-export function paintedMaterial(opts: { side?: Side; emissive?: number } = {}): MeshLambertMaterial {
+/** Painted props: vertex colours with hand-painted detail by surface kind (see painter.ts). */
+export function paintedMaterial(opts: { side?: Side; emissive?: number; /** Object units per metre (fishers are built ~1 unit tall). */ pkScale?: number } = {}): MeshLambertMaterial {
   const m = new MeshLambertMaterial({ vertexColors: true });
   if (opts.side !== undefined) m.side = opts.side;
   if (opts.emissive !== undefined) m.emissive.setHex(opts.emissive);
+  const scale = { value: opts.pkScale ?? 1 };
+  m.onBeforeCompile = (shader) => applyPaint(shader, scale);
+  m.customProgramCacheKey = () => "bobber-painted";
   return m;
+}
+
+/**
+ * Says what a geometry's surface is made of (wood, cloth, canvas...): the painted materials pick their
+ * brushwork by it. u/v: the planks' turn (u = 1 turns the boards 90 degrees on top), or explicit
+ * texture coordinates (canvas, from the geometry's own uv times su/sv).
+ */
+export function surf(g: BufferGeometry, kind: PaintKind, su = 0, sv = 0): BufferGeometry {
+  const n = g.getAttribute("position").count;
+  const a = new Float32Array(n * 3);
+  const uv = kind === PK.canvas ? g.getAttribute("uv") : undefined;
+  for (let i = 0; i < n; i++) {
+    a[i * 3] = kind;
+    a[i * 3 + 1] = uv ? uv.getX(i) * su : su;
+    a[i * 3 + 2] = uv ? uv.getY(i) * sv : sv;
+  }
+  g.setAttribute("aPaint", new BufferAttribute(a, 3));
+  return g;
 }
 
 /** Non-indexed, position + normal only, so different primitives merge. */
@@ -97,6 +120,10 @@ export function jitter(g: BufferGeometry, amount: number, seed: number): BufferG
 }
 
 export function merge(parts: BufferGeometry[]): BufferGeometry {
+  // A part with no surface kind is plain painted brushwork (kind 0) when merged with kinded parts.
+  if (parts.some((p) => p.getAttribute("aPaint")) && parts.some((p) => !p.getAttribute("aPaint"))) {
+    for (const p of parts) if (!p.getAttribute("aPaint")) surf(p, PK.brush);
+  }
   const m = mergeGeometries(parts, false);
   for (const p of parts) p.dispose();
   if (!m) throw new Error("merge failed: mismatched attributes");
@@ -203,7 +230,11 @@ export function applyOccluderPerVertex(shader: { uniforms: Record<string, unknow
  */
 export function occluderMaterial(u: OccluderUniforms): MeshLambertMaterial {
   const m = new MeshLambertMaterial({ vertexColors: true });
-  m.onBeforeCompile = (shader) => applyOccluder(shader, u);
+  const scale = { value: 1 };
+  m.onBeforeCompile = (shader) => {
+    applyOccluder(shader, u);
+    applyPaint(shader, scale);
+  };
   m.alphaToCoverage = true;
   m.customProgramCacheKey = () => "bobber-occluder";
   return m;

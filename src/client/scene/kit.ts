@@ -13,6 +13,7 @@ import {
   SphereGeometry,
   TorusGeometry,
   Vector2,
+  Vector3,
   type Material,
 } from "three";
 import { rng, vnoise } from "./noise";
@@ -176,15 +177,30 @@ export function giantGeometry(variant: number): BufferGeometry {
 }
 
 export function mushroomGeometry(): BufferGeometry {
-  const stem = prep(new CylinderGeometry(0.05, 0.07, 0.3, 6).translate(0, 0.15, 0));
-  paint(stem, 0x9ab8d0, 0xe0f0ff);
-  const cap = prep(new SphereGeometry(0.17, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.75, 1).translate(0, 0.27, 0));
-  paint(cap, 0xffffff, 0xd8ecff);
-  const small = prep(new SphereGeometry(0.09, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2).translate(0.16, 0.12, 0.05));
-  const sstem = prep(new CylinderGeometry(0.03, 0.04, 0.13, 5).translate(0.16, 0.06, 0.05));
-  paint(small, 0xffffff);
-  paint(sstem, 0xc0d8f0);
-  return merge([stem, cap, small, sstem]);
+  // Painted like the reference's glowing toadstools: a pale stem darkening to the ground, a cap deep in
+  // the middle and brightening to a glowing rim, darker gills underneath, a few pale spots.
+  const stem = prep(new CylinderGeometry(0.045, 0.075, 0.3, 7).translate(0, 0.15, 0));
+  paint(stem, 0x4a5a78, 0xe8f4ff);
+  const capPaint = (r0: number, y0: number) => (p: Vector3, n: Vector3, c: Color) => {
+    const rim = Math.min(1, Math.hypot(p.x, p.z) / r0);
+    const k = 0.5 + 0.62 * Math.pow(rim, 2.2);
+    c.setScalar(k);
+    // Soft pale spots on the crown.
+    const sp = vnoise(p.x * 34 + 3, p.z * 34 + (p.y - y0) * 20, 41);
+    if (sp > 0.72 && rim < 0.8) c.lerp(new Color(1.2, 1.2, 1.2), (sp - 0.72) * 2.6);
+    if (n.y < -0.2) c.setScalar(0.3);
+  };
+  const cap = prep(new SphereGeometry(0.17, 12, 7, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.75, 1).translate(0, 0.27, 0));
+  paint(cap, 0xffffff, 0xffffff, capPaint(0.17, 0.27));
+  const gills = prep(new CylinderGeometry(0.03, 0.165, 0.035, 18, 1, true).translate(0, 0.255, 0));
+  paint(gills, 0xffffff, 0xffffff, (p, _n, c) => c.setScalar(0.26 + 0.12 * (Math.sin(Math.atan2(p.z, p.x) * 18) > 0 ? 1 : 0)));
+  const small = prep(new SphereGeometry(0.09, 9, 5, 0, Math.PI * 2, 0, Math.PI / 2).translate(0.16, 0.12, 0.05));
+  paint(small, 0xffffff, 0xffffff, (p, n, c) => capPaint(0.09, 0.12)(new Vector3(p.x - 0.16, p.y, p.z - 0.05), n, c));
+  const sgills = prep(new CylinderGeometry(0.015, 0.088, 0.02, 12, 1, true).translate(0.16, 0.115, 0.05));
+  paint(sgills, 0x505868);
+  const sstem = prep(new CylinderGeometry(0.025, 0.045, 0.13, 6).translate(0.16, 0.06, 0.05));
+  paint(sstem, 0x4a5a78, 0xd0e4f8);
+  return merge([stem, cap, gills, small, sgills, sstem]);
 }
 
 /** A fern: arching fronds from a centre (sways with the grass). */

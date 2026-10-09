@@ -55,7 +55,8 @@ const SHOTS = [
   ["empty", 0.65, false],
 ];
 const only = typeof args.only === "string" ? args.only.split(",") : null;
-const shots = SHOTS.filter(([s]) => !only || only.includes(s)).slice(0, args.quick ? 4 : undefined);
+// --soak: only the uncapped soaks (A/B perf), no stills.
+const shots = args.soak ? [] : SHOTS.filter(([s]) => !only || only.includes(s)).slice(0, args.quick ? 4 : undefined);
 
 // Real GPU: full Chromium (not the headless shell, which renders on SwiftShader).
 const flags = ["--use-angle=metal", "--enable-gpu", "--ignore-gpu-blocklist"];
@@ -84,7 +85,7 @@ for (const [scenario, phase, hero] of shots) {
   if (phase !== null) q.set("phase", String(phase));
   if (args.lite) q.set("lite", "1");
   const label = `${scenario}${phase !== null ? `@${phase}` : ""}`;
-  await page.goto(`${base}/scene-lab.html?${q}`);
+  await page.goto(`${base}/scene-lab.html?${q}`, { timeout: 120_000 });
   await page.waitForFunction(() => window.__lab?.ready === true, null, { timeout: 60_000 });
   const before = await page.evaluate(() => window.__scene.info());
   if (hero) {
@@ -119,8 +120,8 @@ for (const [scenario, phase, hero] of shots) {
 }
 
 // Motion pair + a 20 s soak on four-reel (programs must not grow).
-if (!only || only.includes("four-reel")) {
-  await page.goto(`${base}/scene-lab.html?scenario=four-reel${args.lite ? "&lite=1" : ""}`);
+if (!only || only.includes("four-reel") || args.soak) {
+  await page.goto(`${base}/scene-lab.html?scenario=four-reel${args.lite ? "&lite=1" : ""}`, { timeout: 120_000 });
   await page.waitForFunction(() => window.__lab?.ready === true, null, { timeout: 60_000 });
   await page.screenshot({ path: join(out, "motion_a.png") });
   await page.waitForTimeout(100);
@@ -131,7 +132,7 @@ if (!only || only.includes("four-reel")) {
   metrics.soaks = {};
   for (const sc of SOAKS) {
     const pp = await perf.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
-    await pp.goto(`${base}/scene-lab.html?scenario=${sc}${args.lite ? "&lite=1" : ""}`);
+    await pp.goto(`${base}/scene-lab.html?scenario=${sc}${args.lite ? "&lite=1" : ""}`, { timeout: 120_000 });
     await pp.waitForFunction(() => window.__lab?.ready === true, null, { timeout: 60_000 });
     await pp.waitForTimeout(1500);
     const p0 = await pp.evaluate(() => window.__scene.info().programs);

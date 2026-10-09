@@ -1,0 +1,64 @@
+{
+  "round": "08-s1",
+  "shots": [
+    {
+      "label": "moonwell",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 68,
+      "programs": 68,
+      "calls": 638,
+      "triangles": 3209288,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 101
+    },
+    {
+      "label": "tower",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 68,
+      "programs": 68,
+      "calls": 676,
+      "triangles": 3863058,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 92
+    },
+    {
+      "label": "zeppelin-ride",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 65,
+      "programs": 65,
+      "calls": 313,
+      "triangles": 1331419,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 131
+    },
+    {
+      "label": "double-catch",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 68,
+      "programs": 68,
+      "calls": 553,
+      "triangles": 3385386,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 116
+    },
+    {
+      "label": "campfire",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 68,
+      "programs": 68,
+      "calls": 566,
+      "triangles": 3382575,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 53
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}

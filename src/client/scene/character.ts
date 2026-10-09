@@ -19,7 +19,8 @@ import {
   type Material,
   type MeshLambertMaterial,
 } from "three";
-import { merge, paint, prep } from "./geo";
+import { merge, paint, prep, surf } from "./geo";
+import { PK, type PaintKind } from "./painter";
 import { SEAT_HEX } from "./types";
 
 /** World scale of a fisher (model is built ~1 unit tall). */
@@ -54,8 +55,17 @@ const TROUSERS = [0x7a6a44, 0x6a5a3a, 0x5a6a8a, 0x8a5a4a];
 const SKIN = 0xffd0ae;
 const HAT_STYLE = ["green", "yellow", "blue", "pink"];
 
-function part(g: BufferGeometry, color: number, top?: number): BufferGeometry {
-  return paint(prep(g), color, top);
+function part(g: BufferGeometry, color: number, top?: number, kind?: PaintKind): BufferGeometry {
+  const p = paint(prep(g), color, top);
+  return kind === undefined ? p : surf(p, kind);
+}
+/** Clothes and hats: soft painted cloth. */
+function cloth(g: BufferGeometry, color: number, top?: number): BufferGeometry {
+  return part(g, color, top, PK.cloth);
+}
+/** Skin and the face: no painted detail (clean, readable faces). */
+function skin(g: BufferGeometry, color: number, top?: number): BufferGeometry {
+  return part(g, color, top, PK.none);
 }
 
 function hatGeometry(seat: number, color: number): BufferGeometry {
@@ -65,30 +75,30 @@ function hatGeometry(seat: number, color: number): BufferGeometry {
   const parts: BufferGeometry[] = [];
   if (seat === 0) {
     // Bucket hat.
-    parts.push(part(new CylinderGeometry(0.17, 0.215, 0.15, 14).translate(0, 0.37, 0), dark, light));
-    parts.push(part(new CylinderGeometry(0.22, 0.31, 0.07, 16, 1, true).translate(0, 0.28, 0), color, light));
-    parts.push(part(new CylinderGeometry(0.175, 0.175, 0.008, 14).translate(0, 0.445, 0), light));
-    parts.push(part(new TorusGeometry(0.205, 0.022, 5, 16).rotateX(Math.PI / 2).translate(0, 0.32, 0), 0x6a4a2a));
+    parts.push(cloth(new CylinderGeometry(0.17, 0.215, 0.15, 14).translate(0, 0.37, 0), dark, light));
+    parts.push(cloth(new CylinderGeometry(0.22, 0.31, 0.07, 16, 1, true).translate(0, 0.28, 0), color, light));
+    parts.push(cloth(new CylinderGeometry(0.175, 0.175, 0.008, 14).translate(0, 0.445, 0), light));
+    parts.push(cloth(new TorusGeometry(0.205, 0.022, 5, 16).rotateX(Math.PI / 2).translate(0, 0.32, 0), 0x6a4a2a));
   } else if (seat === 1) {
     // Rain hat: a dome and a brim longer at the back.
-    parts.push(part(new SphereGeometry(0.215, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.85, 1).translate(0, 0.28, -0.01), color, light));
-    parts.push(part(new CylinderGeometry(0.22, 0.29, 0.08, 16, 1, true).scale(1, 1, 1.1).translate(0, 0.25, -0.04), dark, color));
-    parts.push(part(new CylinderGeometry(0.02, 0.02, 0.02, 6).translate(0, 0.47, 0), dark));
+    parts.push(cloth(new SphereGeometry(0.215, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.85, 1).translate(0, 0.28, -0.01), color, light));
+    parts.push(cloth(new CylinderGeometry(0.22, 0.29, 0.08, 16, 1, true).scale(1, 1, 1.1).translate(0, 0.25, -0.04), dark, color));
+    parts.push(cloth(new CylinderGeometry(0.02, 0.02, 0.02, 6).translate(0, 0.47, 0), dark));
   } else if (seat === 2) {
     // Wide sun hat with a band (the blue one; Juneau's in the concept art).
-    parts.push(part(new CylinderGeometry(0.16, 0.2, 0.17, 14).translate(0, 0.38, 0), color, light));
-    parts.push(part(new CylinderGeometry(0.2, 0.32, 0.05, 18).translate(0, 0.29, 0), dark, color));
-    parts.push(part(new TorusGeometry(0.195, 0.026, 5, 16).rotateX(Math.PI / 2).translate(0, 0.32, 0), 0x1f3a7a));
+    parts.push(cloth(new CylinderGeometry(0.16, 0.2, 0.17, 14).translate(0, 0.38, 0), color, light));
+    parts.push(cloth(new CylinderGeometry(0.2, 0.32, 0.05, 18).translate(0, 0.29, 0), dark, color));
+    parts.push(cloth(new TorusGeometry(0.195, 0.026, 5, 16).rotateX(Math.PI / 2).translate(0, 0.32, 0), 0x1f3a7a));
   } else {
     // Flower hat.
-    parts.push(part(new SphereGeometry(0.2, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.9, 1).translate(0, 0.29, 0), color, light));
-    parts.push(part(new CylinderGeometry(0.21, 0.3, 0.05, 18).translate(0, 0.28, 0), dark, color));
-    parts.push(part(new TorusGeometry(0.2, 0.024, 5, 16).rotateX(Math.PI / 2).translate(0, 0.31, 0), 0xffffff));
+    parts.push(cloth(new SphereGeometry(0.2, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.9, 1).translate(0, 0.29, 0), color, light));
+    parts.push(cloth(new CylinderGeometry(0.21, 0.3, 0.05, 18).translate(0, 0.28, 0), dark, color));
+    parts.push(cloth(new TorusGeometry(0.2, 0.024, 5, 16).rotateX(Math.PI / 2).translate(0, 0.31, 0), 0xffffff));
     for (let i = 0; i < 5; i++) {
       const a = (i / 5) * Math.PI * 2;
-      parts.push(part(new SphereGeometry(0.045, 7, 5).scale(1, 0.6, 1).translate(0.15 + Math.cos(a) * 0.05, 0.38 + Math.sin(a) * 0.05, 0.12).rotateY(0.3), 0xffffff, 0xffe8f2));
+      parts.push(cloth(new SphereGeometry(0.045, 7, 5).scale(1, 0.6, 1).translate(0.15 + Math.cos(a) * 0.05, 0.38 + Math.sin(a) * 0.05, 0.12).rotateY(0.3), 0xffffff, 0xffe8f2));
     }
-    parts.push(part(new SphereGeometry(0.03, 6, 4).translate(0.15, 0.38, 0.14).rotateY(0.3), 0xffcc33));
+    parts.push(cloth(new SphereGeometry(0.03, 6, 4).translate(0.15, 0.38, 0.14).rotateY(0.3), 0xffcc33));
   }
   return merge(parts);
 }
@@ -191,7 +201,7 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials)
   const mkLeg = (sx: number) => {
     const pivot = new Group();
     pivot.position.set(sx * 0.085, 0.2, 0);
-    const leg = part(new CylinderGeometry(0.062, 0.058, 0.12, 9).translate(0, -0.06, 0), TROUSERS[seat]!);
+    const leg = cloth(new CylinderGeometry(0.062, 0.058, 0.12, 9).translate(0, -0.06, 0), TROUSERS[seat]!);
     const boot = part(new SphereGeometry(0.078, 12, 8).scale(1, 0.72, 1.3).translate(0, -0.145, 0.025), 0x5a3420, 0x8a5634);
     const sole = part(new CylinderGeometry(0.075, 0.08, 0.025, 12).scale(1, 1, 1.3).translate(0, -0.19, 0.025), 0x3a2418);
     pivot.add(mesh(merge([leg, boot, sole])));
@@ -202,22 +212,22 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials)
   const legR = mkLeg(-1);
 
   // Body: a rounded bean in the fisher's colour, cream collar, belt, a little backpack.
-  const torso = part(new SphereGeometry(0.205, 18, 12).scale(1, 1.08, 0.92).translate(0, 0.36, 0), shade(vest.getHex(), 0.78), lighten(vest.getHex(), 0.12));
-  const tummy = part(new SphereGeometry(0.13, 12, 8).scale(1, 1.05, 0.5).translate(0, 0.33, 0.13), lighten(vest.getHex(), 0.35));
-  const collar = part(new TorusGeometry(0.11, 0.035, 6, 16).rotateX(Math.PI / 2).translate(0, 0.555, 0.01), 0xf4ead2);
+  const torso = cloth(new SphereGeometry(0.205, 18, 12).scale(1, 1.08, 0.92).translate(0, 0.36, 0), shade(vest.getHex(), 0.78), lighten(vest.getHex(), 0.12));
+  const tummy = cloth(new SphereGeometry(0.13, 12, 8).scale(1, 1.05, 0.5).translate(0, 0.33, 0.13), lighten(vest.getHex(), 0.35));
+  const collar = cloth(new TorusGeometry(0.11, 0.035, 6, 16).rotateX(Math.PI / 2).translate(0, 0.555, 0.01), 0xf4ead2);
   const belt = part(new TorusGeometry(0.19, 0.026, 6, 20).rotateX(Math.PI / 2).scale(1, 1, 0.93).translate(0, 0.25, 0), 0x5a3a22);
   const buckle = part(new BoxGeometry(0.06, 0.05, 0.025).translate(0, 0.25, 0.185), 0xe8c050);
   const pack = part(new SphereGeometry(0.13, 10, 8).scale(1, 1.05, 0.62).translate(0, 0.4, -0.18), 0x8a5a32, 0xb07a48);
-  const roll = part(new CylinderGeometry(0.05, 0.05, 0.26, 10).rotateZ(Math.PI / 2).translate(0, 0.54, -0.18), 0xd8c49a);
+  const roll = cloth(new CylinderGeometry(0.05, 0.05, 0.26, 10).rotateZ(Math.PI / 2).translate(0, 0.54, -0.18), 0xd8c49a);
   body.add(mesh(merge([torso, tummy, collar, belt, buckle, pack, roll])));
 
   // Arms (pivot at the shoulder; hang along -y): stubby sleeves and round mittens.
   const mkArm = (sx: number) => {
     const pivot = new Group();
     pivot.position.set(sx * 0.195, 0.49, 0);
-    const sleeve = part(new CylinderGeometry(0.056, 0.05, 0.15, 9).translate(0, -0.07, 0), shade(vest.getHex(), 0.9));
-    const shoulder = part(new SphereGeometry(0.058, 9, 6), shade(vest.getHex(), 0.95));
-    const hand = part(new SphereGeometry(0.058, 10, 7).translate(0, -0.18, 0), SKIN);
+    const sleeve = cloth(new CylinderGeometry(0.056, 0.05, 0.15, 9).translate(0, -0.07, 0), shade(vest.getHex(), 0.9));
+    const shoulder = cloth(new SphereGeometry(0.058, 9, 6), shade(vest.getHex(), 0.95));
+    const hand = skin(new SphereGeometry(0.058, 10, 7).translate(0, -0.18, 0), SKIN);
     pivot.add(mesh(merge([shoulder, sleeve, hand])));
     body.add(pivot);
     return pivot;
@@ -233,16 +243,16 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials)
   head.position.set(0, 0.56, 0);
   body.add(head);
   const HR = 0.25;
-  const skull = part(new SphereGeometry(HR, 22, 16).translate(0, 0.24, 0), SKIN, lighten(SKIN, 0.1));
+  const skull = skin(new SphereGeometry(HR, 22, 16).translate(0, 0.24, 0), SKIN, lighten(SKIN, 0.1));
   const hair = part(new SphereGeometry(HR + 0.012, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.6).rotateX(-0.75).translate(0, 0.25, -0.02), HAIR[seat]!);
   // The fringe sits low on the brow, under the hat's brim (it used to poke through it).
   const fringe = part(new SphereGeometry(0.1, 10, 6).scale(1.5, 0.45, 0.7).translate(0, 0.375, 0.19), HAIR[seat]!);
-  const ears = [1, -1].map((sx) => part(new SphereGeometry(0.05, 8, 6).scale(0.55, 1, 0.9).translate(sx * HR, 0.22, 0), SKIN));
-  const eyes = [1, -1].map((sx) => part(new SphereGeometry(0.038, 10, 8).scale(0.85, 1.2, 0.45).translate(sx * 0.088, 0.255, 0.226), 0x24160f));
-  const shines = [1, -1].map((sx) => part(new SphereGeometry(0.013, 6, 4).translate(sx * 0.088 + 0.012, 0.272, 0.244), 0xffffff));
-  const cheeks = [1, -1].map((sx) => part(new SphereGeometry(0.042, 9, 6).scale(1, 0.62, 0.35).translate(sx * 0.145, 0.185, 0.2), 0xff8a86));
-  const smile = part(new TorusGeometry(0.045, 0.012, 5, 12, Math.PI).rotateZ(Math.PI).rotateX(-0.35).translate(0, 0.18, 0.236), 0x8a3a2a);
-  const nose = part(new SphereGeometry(0.024, 8, 6).translate(0, 0.215, 0.25), 0xffb896);
+  const ears = [1, -1].map((sx) => skin(new SphereGeometry(0.05, 8, 6).scale(0.55, 1, 0.9).translate(sx * HR, 0.22, 0), SKIN));
+  const eyes = [1, -1].map((sx) => skin(new SphereGeometry(0.038, 10, 8).scale(0.85, 1.2, 0.45).translate(sx * 0.088, 0.255, 0.226), 0x24160f));
+  const shines = [1, -1].map((sx) => skin(new SphereGeometry(0.013, 6, 4).translate(sx * 0.088 + 0.012, 0.272, 0.244), 0xffffff));
+  const cheeks = [1, -1].map((sx) => skin(new SphereGeometry(0.042, 9, 6).scale(1, 0.62, 0.35).translate(sx * 0.145, 0.185, 0.2), 0xff8a86));
+  const smile = skin(new TorusGeometry(0.045, 0.012, 5, 12, Math.PI).rotateZ(Math.PI).rotateX(-0.35).translate(0, 0.18, 0.236), 0x8a3a2a);
+  const nose = skin(new SphereGeometry(0.024, 8, 6).translate(0, 0.215, 0.25), 0xffb896);
   // The hat style follows the colour the player picked (blue is always the sun hat), not the seat.
   const style = Math.max(0, HAT_STYLE.indexOf(colorName));
   // Scaled up for the bigger head and tipped back so the brim never hides the face.
@@ -259,15 +269,15 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials)
     traits.push(part(new SphereGeometry(0.04, 8, 6).scale(1.8, 0.8, 0.6).translate(0.09, -0.17, -0.3), color));
   } else if (colorName === "yellow") {
     // Round glasses.
-    for (const sx of [1, -1]) traits.push(part(new TorusGeometry(0.058, 0.011, 6, 18).translate(sx * 0.088, 0.255, 0.238), 0x3a2a24));
-    traits.push(part(new CylinderGeometry(0.008, 0.008, 0.06, 5).rotateZ(Math.PI / 2).translate(0, 0.262, 0.245), 0x3a2a24));
+    for (const sx of [1, -1]) traits.push(skin(new TorusGeometry(0.058, 0.011, 6, 18).translate(sx * 0.088, 0.255, 0.238), 0x3a2a24));
+    traits.push(skin(new CylinderGeometry(0.008, 0.008, 0.06, 5).rotateZ(Math.PI / 2).translate(0, 0.262, 0.245), 0x3a2a24));
   } else if (colorName === "blue") {
     // Freckles across the cheeks and nose.
     for (const [fx, fy] of [[0.13, 0.215], [0.165, 0.2], [0.12, 0.19], [0.05, 0.225]] as [number, number][]) {
       for (const sx of [1, -1]) {
         const x = sx * fx;
         const z = Math.sqrt(Math.max(0, HR * HR - x * x - (fy - 0.24) * (fy - 0.24))) + 0.002;
-        traits.push(part(new SphereGeometry(0.009, 5, 4).translate(x, fy, z), 0xb0603a));
+        traits.push(skin(new SphereGeometry(0.009, 5, 4).translate(x, fy, z), 0xb0603a));
       }
     }
   }
