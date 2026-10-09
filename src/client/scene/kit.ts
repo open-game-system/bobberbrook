@@ -17,8 +17,9 @@ import {
   type Material,
 } from "three";
 import { rng, vnoise } from "./noise";
-import { jitter, merge, paint, prep, puffNormals } from "./geo";
-import { attachFoliage, foliageOf, hangingCards, leafCards, type Puff, type Strand } from "./foliage";
+import { jitter, merge, paint, prep, puffNormals, surf } from "./geo";
+import { PK } from "./painter";
+import { attachFoliage, coniferCards, foliageOf, hangingCards, leafCards, type Puff, type Strand, type Tier } from "./foliage";
 import { barked, markRock, surfaceMaterial } from "./surfaces";
 
 /** The shared set-dressing kit: trees, rocks, plants and buildings every place draws from. */
@@ -241,22 +242,25 @@ export function bellGeometry(): BufferGeometry {
 }
 
 export function pineGeometry(): BufferGeometry {
-  const trunk = prep(new CylinderGeometry(0.16, 0.3, 1.6, 7).translate(0, 0.8, 0));
+  // A leaf-card conifer (round 07: stacked smooth cones read as vinyl): a barked trunk, a slim dark core
+  // for the silhouette and the shadow, and tiers of painted needle-spray boughs drooping from it.
+  const trunk = prep(new CylinderGeometry(0.1, 0.3, 4.6, 7).translate(0, 2.3, 0));
   paint(trunk, 0x3a2c38, 0x5a4652);
-  const layers: [number, number, number][] = [
-    [1.3, 1.75, 2.3], [2.35, 1.4, 2.0], [3.3, 1.05, 1.75], [4.15, 0.68, 1.4],
+  const tiers: Tier[] = [
+    { y: 1.15, r: 1.85, h: 1.25 }, { y: 1.95, r: 1.6, h: 1.15 }, { y: 2.7, r: 1.32, h: 1.05 }, { y: 3.4, r: 1.02, h: 0.95 }, { y: 4.05, r: 0.7, h: 0.85 },
   ];
-  const cones = layers.map(([y, r, h], i) => {
-    const g = new ConeGeometry(r, h, 10, 2);
-    jitter(g, 0.08, i * 3.3);
+  const cones = tiers.map(({ y, r, h }, i) => {
+    const g = new ConeGeometry(r * 0.62, h * 1.25, 9, 1);
+    jitter(g, 0.06, i * 3.3);
     g.computeVertexNormals();
-    g.translate(0, y + h / 2, 0);
+    g.translate(0, y + h * 0.62, 0);
     const p = prep(g);
-    puffNormals(p, 0, y + h * 0.2, 0, 0.55);
-    paint(p, 0x102e40, 0x2f6e78, (pp, _n, c) => c.multiplyScalar(0.9 + 0.2 * vnoise(pp.x * 3, pp.z * 3 + pp.y, 9)));
+    puffNormals(p, 0, y + h * 0.3, 0, 0.55);
+    paint(p, 0x081c28, 0x123a44);
     return p;
   });
-  return merge([trunk, ...cones]);
+  const cards = coniferCards(tiers, { inner: 0x0e2a34, outer: 0x2e7a78, top: 0x6ab8a0, seed: 313 });
+  return attachFoliage(barked([trunk], cones), cards, "needle");
 }
 
 export function rockGeometry(seed: number): BufferGeometry {
@@ -430,7 +434,7 @@ export function cottageGeometry(seed: number): { body: BufferGeometry; windows: 
   const beams: BufferGeometry[] = [];
   for (let i = 0; i < 7; i++) {
     const a = (i / 7) * Math.PI * 2 + 0.2;
-    const g = prep(new BoxGeometry(0.14, h, 0.1).translate(0, h / 2, R + 0.02).rotateY(a));
+    const g = surf(prep(new BoxGeometry(0.14, h, 0.1).translate(0, h / 2, R + 0.02).rotateY(a)), PK.grain);
     paint(g, 0x4a3226, 0x6a4632);
     beams.push(g);
   }
@@ -438,34 +442,67 @@ export function cottageGeometry(seed: number): { body: BufferGeometry; windows: 
   paint(band, 0x4a3226);
   const base = prep(new CylinderGeometry(R + 0.12, R + 0.2, 0.3, 14).translate(0, 0.15, 0));
   paint(base, 0x6a6280, 0x8a84a0);
-  // Swept roof: concave profile from a flared, upturned eave to a tall point.
-  const roofH = 2.8 + r() * 0.8;
-  const eave = R + 0.95;
-  const prof: Vector2[] = [new Vector2(eave + 0.15, 0.32), new Vector2(eave, 0.0)];
-  for (let i = 1; i <= 12; i++) {
-    const t = i / 12;
-    prof.push(new Vector2(Math.max(0.02, eave * Math.pow(1 - t, 2.1)), roofH * t));
-  }
-  const roofG = new LatheGeometry(prof.reverse(), 16);
-  const roof = prep(roofG.translate(0, h - 0.05, 0));
+  // A swooping night-elf roof: an upturned, curled eave lip, a concave sweep up to a tall point, a
+  // second smaller tier above it, gold trim on both eaves and a gold finial. Profiles run from the eave
+  // up to the tip (outward-facing lathe; round 07's reversed profile drew the roof inside out).
+  const roofH = 3.4 + r() * 0.9;
+  const eave = R + 0.6;
+  const sweep = (e: number, H: number, y0: number, lip: number): Vector2[] => {
+    const prof: Vector2[] = [new Vector2(e + lip, y0 + lip * 0.9), new Vector2(e + lip * 0.35, y0 + lip * 0.15), new Vector2(e, y0)];
+    for (let i = 1; i <= 14; i++) {
+      const t = i / 14;
+      prof.push(new Vector2(Math.max(0.03, e * Math.pow(1 - t, 1.45)), y0 + H * t));
+    }
+    return prof;
+  };
   const roofCols = [0x5a3ea8, 0x6a48b8, 0x4e3a9a, 0x7650c0];
   const rc = roofCols[Math.floor(r() * roofCols.length)]!;
-  paint(roof, rc, 0xa88ae8, (p, _n, c) => c.multiplyScalar(0.82 + 0.16 * Math.abs(Math.sin((p.y - h) * 7.5))));
-  const tip = prep(new ConeGeometry(0.08, 0.7, 6).translate(0, h + roofH + 0.25, 0));
-  paint(tip, 0xd8c070);
+  const roofPaint = (y0: number, H: number) => (p: Vector3, n: Vector3, c: Color) => {
+    const t = Math.max(0, Math.min(1, (p.y - y0) / H));
+    c.setHex(rc).lerp(new Color(0xb89af0), t * 0.55);
+    // Painted shingle rows: darker under each row's lip, a lit edge above it.
+    const row = ((p.y - y0) * 4.2) % 1;
+    c.multiplyScalar(0.78 + 0.3 * Math.min(1, row * 1.6));
+    if (n.y < -0.1) c.multiplyScalar(0.55);
+  };
+  const roof = surf(prep(new LatheGeometry(sweep(eave, roofH, h - 0.05, 0.32), 20)), PK.planks);
+  paint(roof, rc, rc, roofPaint(h - 0.05, roofH));
+  const y2 = h - 0.05 + roofH * 0.42;
+  const e2 = eave * Math.pow(1 - 0.42, 1.45) + 0.35;
+  const roof2 = surf(prep(new LatheGeometry(sweep(e2, roofH * 0.62, y2, 0.22), 16)), PK.planks);
+  paint(roof2, rc, rc, roofPaint(y2, roofH * 0.62));
+  const gold = (g: BufferGeometry) => paint(prep(g), 0xb88a30, 0xf0d080);
+  const trim1 = gold(new TorusGeometry(eave + 0.32, 0.06, 5, 32).rotateX(Math.PI / 2).translate(0, h - 0.05 + 0.29, 0));
+  const trim2 = gold(new TorusGeometry(e2 + 0.22, 0.05, 5, 24).rotateX(Math.PI / 2).translate(0, y2 + 0.2, 0));
+  const tipY = Math.max(h - 0.05 + roofH, y2 + roofH * 0.62);
+  const tip = gold(new ConeGeometry(0.07, 0.9, 6).translate(0, tipY + 0.4, 0));
+  const orb = gold(new SphereGeometry(0.12, 8, 6).translate(0, tipY + 0.05, 0));
   // Door: an arched dark-wood door with a lamp-lit frame.
-  const door = prep(new BoxGeometry(0.62, 0.95, 0.12).translate(0, 0.62, R - 0.02));
+  const door = surf(prep(new BoxGeometry(0.62, 0.95, 0.12).translate(0, 0.62, R - 0.02)), PK.planks);
   const arch = prep(new CylinderGeometry(0.31, 0.31, 0.12, 12, 1, false, 0, Math.PI).rotateX(Math.PI / 2).rotateZ(Math.PI / 2).translate(0, 1.09, R - 0.02));
   paint(door, 0x4a2c4a, 0x6a3c5a);
   paint(arch, 0x6a3c5a);
+  // Tall arched windows (lit glass) in carved dark-wood frames.
   const wins: BufferGeometry[] = [];
+  const frames: BufferGeometry[] = [];
   for (const a of [-0.75, 0.75, 2.2, -2.2]) {
-    const g = prep(new CylinderGeometry(0.22, 0.22, 0.08, 12).rotateX(Math.PI / 2).scale(1, 1.35, 1).translate(0, h * 0.58, R + 0.01).rotateY(a));
-    paint(g, 0xffffff);
-    wins.push(g);
+    const glass = merge([
+      prep(new BoxGeometry(0.36, 0.42, 0.06).translate(0, h * 0.5, R + 0.02)),
+      prep(new CylinderGeometry(0.18, 0.18, 0.06, 10, 1, false, 0, Math.PI).rotateX(Math.PI / 2).rotateZ(Math.PI / 2).translate(0, h * 0.5 + 0.21, R + 0.02)),
+    ].map((g) => paint(g, 0xffffff)));
+    wins.push(glass.rotateY(a));
+    const fr = merge([
+      prep(new BoxGeometry(0.5, 0.06, 0.1).translate(0, h * 0.5 - 0.24, R + 0.04)),
+      prep(new BoxGeometry(0.06, 0.46, 0.1).translate(-0.22, h * 0.5, R + 0.04)),
+      prep(new BoxGeometry(0.06, 0.46, 0.1).translate(0.22, h * 0.5, R + 0.04)),
+      prep(new BoxGeometry(0.03, 0.5, 0.08).translate(0, h * 0.5 + 0.02, R + 0.05)),
+      prep(new TorusGeometry(0.2, 0.035, 4, 10, Math.PI).translate(0, h * 0.5 + 0.21, R + 0.04)),
+    ].map((g) => paint(g, 0x3a2430, 0x5a3a40)));
+    frames.push(fr.rotateY(a));
   }
-  // A small round attic window high in the roof.
-  wins.push(paint(prep(new CylinderGeometry(0.16, 0.16, 0.08, 10).rotateX(Math.PI / 2).translate(0, h + 0.75, eave * 0.62)), 0xffffff));
-  return { body: merge([walls, ...beams, band, base, roof, tip, door, arch]), windows: merge(wins) };
+  // A small round attic window in the lower roof.
+  const atR = eave * Math.pow(1 - 0.6 / roofH, 1.45) + 0.02;
+  wins.push(paint(prep(new CylinderGeometry(0.15, 0.15, 0.08, 10).rotateX(Math.PI / 2 - 0.5).translate(0, h + 0.55, atR)), 0xffffff));
+  return { body: merge([walls, ...beams, band, base, roof, roof2, trim1, trim2, tip, orb, door, arch, ...frames]), windows: merge(wins) };
 }
 

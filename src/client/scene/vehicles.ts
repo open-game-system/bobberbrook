@@ -30,6 +30,7 @@ import type { Platform } from "../../game/regions";
 import { blob } from "./kit";
 import { jitter, merge, paint, prep, puffNormals, surf } from "./geo";
 import { PK } from "./painter";
+import { buildCloudCards } from "./clouds";
 import { surfaceMaterial, tiled } from "./surfaces";
 import { rng, vnoise } from "./noise";
 import { SEA_Y, heightAt } from "./terrain";
@@ -521,15 +522,11 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
   ring.renderOrder = 5;
   ring.visible = false;
   group.add(ring);
-  // Clouds round a zeppelin's flight.
-  const cloudGeo = merge([blob(2.4, 0, 0, 0, 1, 18, 11), blob(1.8, 2.2, -0.3, 0.4, 2, 16, 10), blob(1.7, -2.1, -0.4, -0.3, 3, 16, 10), blob(1.4, 0.6, 0.9, -0.6, 4, 14, 9)]);
-  puffNormals(cloudGeo, 0, 0, 0, 0.85);
-  paint(cloudGeo, 0xd8d0f0, 0xffffff);
-  const cloudMat = new MeshLambertMaterial({ vertexColors: true, emissive: new Color(0x3a3450) });
+  // Clouds round a zeppelin's flight: painted cloud-card banks.
   const CLOUDS = 16;
-  const clouds = new InstancedMesh(cloudGeo, cloudMat, CLOUDS);
+  const cloudCards = buildCloudCards(CLOUDS);
+  const clouds = cloudCards.mesh;
   clouds.name = "clouds";
-  clouds.frustumCulled = false;
   clouds.visible = false;
   group.add(clouds);
   const cloudR = rng(4242);
@@ -821,8 +818,8 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
           });
           clouds.instanceMatrix.needsUpdate = true;
           // Lavender cloud banks in the twilight (not sunset-pink lumps).
-          cloudMat.color.copy(tod.cloud).lerp(WHITE, 0.25);
-          cloudMat.emissive.copy(tod.hemiSky).multiplyScalar(0.35);
+          cloudCards.lit.copy(tod.cloud).lerp(WHITE, 0.6).multiplyScalar(1.35);
+          cloudCards.shade.copy(tod.cloudShade).lerp(tod.hemiSky, 0.3);
         }
       }
     },
@@ -922,11 +919,11 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
       lastX = 1e9;
     },
     dispose() {
-      for (const g of [boat.body, boat.sail, boat.glow, dock.body, dock.glow, zep.body, zep.prop, zep.glow, tower.body, tower.glow, plank, wakeGeo, ringGeo, cloudGeo]) g.dispose();
+      for (const g of [boat.body, boat.sail, boat.glow, dock.body, dock.glow, zep.body, zep.prop, zep.glow, tower.body, tower.glow, plank, wakeGeo, ringGeo]) g.dispose();
       wakeMat.dispose();
       glowMat.dispose();
       ringMat.dispose();
-      cloudMat.dispose();
+      cloudCards.dispose();
       clouds.dispose();
     },
   };

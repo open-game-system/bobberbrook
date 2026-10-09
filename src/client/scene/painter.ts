@@ -359,3 +359,161 @@ export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexSh
   }`,
     );
 }
+
+/** One needle spray in a quadrant (base at the bottom centre, tip at the top): a twig, side twigs, needles. */
+function needleSpray(ctx: Ctx, R: Rand, x0: number, y0: number, q: number): void {
+  const pt = (t: number, bend: number) => ({ x: x0 + q / 2 + Math.sin(t * Math.PI) * bend, y: y0 + q - 4 - t * (q - 10) });
+  const bend = (R() - 0.5) * q * 0.12;
+  const needles = (ax: number, ay: number, bx: number, by: number, len: number, n: number, dark: boolean) => {
+    const dx = bx - ax;
+    const dy = by - ay;
+    const L = Math.hypot(dx, dy) || 1;
+    const ux = dx / L;
+    const uy = dy / L;
+    for (let i = 0; i < n; i++) {
+      const t = i / n;
+      const px = ax + dx * t;
+      const py = ay + dy * t;
+      const l = len * (1 - t * 0.55) * (0.75 + R() * 0.5);
+      for (const side of [-1, 1]) {
+        const ang = Math.atan2(uy, ux) + side * (0.55 + R() * 0.45);
+        const ex = px + Math.cos(ang) * l;
+        const ey = py + Math.sin(ang) * l;
+        const k = 0.3 + 0.7 * t;
+        const lit = side < 0 ? 1.12 : 0.9;
+        ctx.strokeStyle = dark ? rgb(14, 36, 44, 0.95) : rgb((40 + 80 * k) * lit + R() * 20, (90 + 100 * k) * lit + R() * 20, (90 + 70 * k) * lit + R() * 16, 1);
+        ctx.lineWidth = dark ? 3.2 : 1.6 + R() * 1.2;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.quadraticCurveTo((px + ex) / 2 + uy * side * 2, (py + ey) / 2 - ux * side * 2, ex, ey);
+        ctx.stroke();
+      }
+    }
+  };
+  const twigs: [number, number, number, number, number][] = [];
+  const base = pt(0, bend);
+  const tip = pt(1, bend);
+  twigs.push([base.x, base.y, tip.x, tip.y, q * 0.2]);
+  for (let k = 0; k < 5; k++) {
+    const t = 0.15 + k * 0.15;
+    const p = pt(t, bend);
+    const side = k % 2 === 0 ? -1 : 1;
+    const len = q * (0.34 - t * 0.22);
+    const ang = -Math.PI / 2 + side * (0.75 + R() * 0.3);
+    twigs.push([p.x, p.y, p.x + Math.cos(ang) * len, p.y + Math.sin(ang) * len, q * 0.13]);
+  }
+  for (const dark of [true, false]) {
+    for (const [ax, ay, bx, by, len] of twigs) {
+      if (!dark) {
+        ctx.strokeStyle = rgb(52, 36, 40, 1);
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(bx, by);
+        ctx.stroke();
+      }
+      needles(ax, ay, bx, by, len, Math.round(Math.hypot(bx - ax, by - ay) / 4.5), dark);
+    }
+  }
+}
+
+function alphaMean(cv: HTMLCanvasElement): Vector3 {
+  const S2 = 32;
+  const c = canvas(S2);
+  if (!c) return new Vector3(1, 1, 1);
+  c.ctx.drawImage(cv, 0, 0, S2, S2);
+  const d = c.ctx.getImageData(0, 0, S2, S2).data;
+  const lin = (v: number) => (v / 255 <= 0.04045 ? v / 255 / 12.92 : Math.pow((v / 255 + 0.055) / 1.055, 2.4));
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  let w = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    const a = d[i + 3]! / 255;
+    if (a < 0.5) continue;
+    r += lin(d[i]!) * a;
+    g += lin(d[i + 1]!) * a;
+    b += lin(d[i + 2]!) * a;
+    w += a;
+  }
+  return w > 0 ? new Vector3(r / w, g / w, b / w) : new Vector3(1, 1, 1);
+}
+
+/** The conifer needle-spray sheet: four sprays in a 2x2 sheet (RGBA), with its mean colour. */
+export function needleSheet(): { tex: Texture; inv: Vector3 } {
+  const size = 512;
+  const c = canvas(size);
+  if (!c) return { tex: new Texture(), inv: new Vector3(1, 1, 1) };
+  const R = rng(5150);
+  for (let i = 0; i < 4; i++) needleSpray(c.ctx, R, (i % 2) * (size / 2), Math.floor(i / 2) * (size / 2), size / 2);
+  const m = alphaMean(c.cv);
+  const t = new CanvasTexture(c.cv);
+  t.colorSpace = SRGBColorSpace;
+  t.minFilter = LinearMipmapLinearFilter;
+  t.magFilter = LinearFilter;
+  t.generateMipmaps = true;
+  t.anisotropy = 4;
+  return { tex: t, inv: new Vector3(1 / Math.max(m.x, 1e-3), 1 / Math.max(m.y, 1e-3), 1 / Math.max(m.z, 1e-3)) };
+}
+
+/** A painted cumulus in a quadrant: soft lit domes over a flatter, shaded base, brushy tops (R = light, A = cover). */
+function cloudPuff(ctx: Ctx, R: Rand, x0: number, y0: number, q: number): void {
+  const base = y0 + q * 0.7;
+  const domes = 6 + Math.floor(R() * 4);
+  const items: [number, number, number][] = [];
+  for (let i = 0; i < domes; i++) {
+    const t = (i + 0.5) / domes;
+    const bell = Math.sin(t * Math.PI);
+    const r = q * (0.1 + 0.13 * bell) * (0.8 + R() * 0.4);
+    items.push([x0 + q * (0.1 + 0.8 * t) + (R() - 0.5) * q * 0.05, base - r * 0.35 - bell * q * 0.18 * (0.6 + R() * 0.6), r]);
+  }
+  for (let i = 0; i < 26; i++) {
+    const t = R();
+    const bell = Math.sin(t * Math.PI);
+    const r = q * (0.06 + 0.08 * bell) * (0.8 + R() * 0.5);
+    items.push([x0 + q * (0.12 + 0.76 * t), base - r * 0.2 - R() * bell * q * 0.2, r]);
+  }
+  // Shaded underlayer first, lit domes over it.
+  for (const pass of [0, 1]) {
+    for (const [x, y, r] of items) {
+      const k = Math.max(0, Math.min(1, (base - y) / (q * 0.4)));
+      const light = pass === 0 ? 0.42 + 0.2 * k : 0.62 + 0.36 * k;
+      const ox = pass === 0 ? 0 : -r * 0.22;
+      const oy = pass === 0 ? r * 0.15 : -r * 0.3;
+      const rr = pass === 0 ? r * 1.08 : r * 0.82;
+      const g = ctx.createRadialGradient(x + ox, y + oy, 0, x, y, rr);
+      g.addColorStop(0, grey(light, pass === 0 ? 0.9 : 0.75));
+      g.addColorStop(0.65, grey(light * 0.92, pass === 0 ? 0.75 : 0.45));
+      g.addColorStop(1, grey(light * 0.85, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, rr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  // Brushwork along the lit tops.
+  for (let i = 0; i < 70; i++) {
+    const [x, y, r] = items[Math.floor(R() * items.length)]!;
+    const a = -Math.PI / 2 + (R() - 0.5) * 2.2;
+    const px = x + Math.cos(a) * r * 0.7;
+    const py = y + Math.sin(a) * r * 0.7;
+    stroke(ctx, R, 1e6, px, py, r * (0.4 + R() * 0.5), r * 0.16, a + Math.PI / 2, grey(0.97, 0.06), 0.3);
+  }
+  // A flatter base: fade the cover out under the base line.
+  ctx.save();
+  ctx.globalCompositeOperation = "destination-out";
+  const fg = ctx.createLinearGradient(0, base - q * 0.02, 0, base + q * 0.16);
+  fg.addColorStop(0, "rgba(0,0,0,0)");
+  fg.addColorStop(1, "rgba(0,0,0,1)");
+  ctx.fillStyle = fg;
+  ctx.fillRect(x0, base - q * 0.02, q, y0 + q - base + q * 0.02);
+  ctx.restore();
+}
+
+/** Four painted cumulus clouds in a 2x2 sheet (red = painted light, alpha = cover). */
+export function cloudSheet(): Texture {
+  return paintedCard(512, 7272, (ctx, R, size) => {
+    for (let i = 0; i < 4; i++) cloudPuff(ctx, R, (i % 2) * (size / 2), Math.floor(i / 2) * (size / 2), size / 2);
+  });
+}

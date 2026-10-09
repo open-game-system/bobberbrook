@@ -483,7 +483,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   village.name = "village";
   village.castShadow = true;
   village.receiveShadow = true;
-  const windowMat = new MeshBasicMaterial({ vertexColors: true, color: 0x8ab8c8 });
+  const windowMat = new MeshBasicMaterial({ vertexColors: true, color: 0xffd090 });
   disposables.push(windowMat);
   add(new Mesh(merge(winParts), windowMat)).name = "windows";
 
@@ -583,9 +583,9 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
 
   const winCol = windowMat.color;
   const shroomCol = shroomMat.color;
-  // Soft cyan-white elven lamps.
-  const day = new Color(0.75, 0.95, 1.05);
-  const night = new Color(1.5, 2.4, 2.7);
+  // Warm lamp-lit windows (the reference's cottages glow amber against the violet dusk).
+  const day = new Color(1.0, 0.82, 0.55);
+  const night = new Color(2.8, 1.9, 0.95);
   return {
     group,
     lanternLight,

@@ -78,10 +78,14 @@ void main() {
   // vLayer 0..1: the blanket's layers; 1..2: up a mist bank (soft at its foot, merging into the blanket at its top).
   float wall = step(1.001, vLayer);
   float up = clamp(vLayer - 1.0, 0.0, 1.0);
-  // Hanging folds drifting slowly upward, densest low down, thinning to nothing at the top.
-  float fold = 0.72 + 0.28 * sin((vWorld.x + vWorld.z) * 0.55 + vn(vWorld.xz * 0.08) * 6.0);
-  float curtain = smoothstep(0.0, 0.3, up) * (1.0 - smoothstep(0.5, 1.0, up)) * fold * (0.75 + 0.25 * vn(vec2(vWorld.x + vWorld.z, vWorld.y * 0.3 - uTime * 0.35) * 0.3));
-  float a = veil * mix(mix(0.55, 1.0, n) * mix(0.95, 0.55, vLayer), 0.92 * curtain, wall);
+  // The bank is an opaque painted matte ridge (round 07: translucent curtains read as see-through fog
+  // cards): a forested hill whose skyline is a row of tree crowns, mist pooled at its foot.
+  float along = vWorld.x * 0.7 + vWorld.z * 0.71;
+  // Height up the bank (the slope rises fast near its foot).
+  float hf = 1.0 - (1.0 - up) * (1.0 - up);
+  float crown = 0.84 + 0.09 * vn(vec2(along * 0.32, 1.0)) + 0.06 * vn(vec2(along * 1.3, 5.0));
+  float ridgeA = (1.0 - smoothstep(crown - 0.03, crown, hf)) * mix(0.7, 1.0, smoothstep(0.0, 0.12, hf));
+  float a = veil * mix(mix(0.55, 1.0, n) * mix(0.95, 0.55, vLayer), ridgeA, wall);
   // Never between the camera and the family: thin out along the line of sight.
   vec2 sa = uSight.xy;
   vec2 sb = uSight.zw;
@@ -93,9 +97,14 @@ void main() {
   if (a < 0.004) discard;
   vec3 col = mix(uCol, uTop, vLayer * 0.7 + n * 0.3);
   // The wall: a luminous violet foot rising into deep indigo.
-  vec3 wc = mix(uWallHi, uWallHi * 0.7 + uWallLo * 0.25, up) * (0.85 + 0.3 * n);
-  // A glowing seam along its foot: where the explored ground ends.
-  wc += uWallLo * 0.6 * (1.0 - smoothstep(0.0, 0.25, up));
+  float strokes = vn(vec2(along * 0.55, vWorld.y * 0.12)) * 0.6 + vn(vec2(along * 1.7, vWorld.y * 0.35)) * 0.4;
+  // (linear light: a distant forest mass at night is ~0.02-0.15, so the body sits well under the veil colours)
+  // A far hill layer: the ridge's painted mass seen through the air (aerial perspective toward the
+  // scene's fog colour), so it sits back by day and goes deep indigo by night.
+  vec3 wc = mix(fogColor, uWallHi * 0.1 + uTop * 0.32, 0.6) * (0.62 + 0.55 * strokes);
+  // Crowns catch the sky; a soft glowing mist seam only at the very foot.
+  wc = mix(wc, uWallHi * 0.55 + uWallLo * 0.1, smoothstep(crown - 0.1, crown, hf) * (0.35 + 0.4 * strokes));
+  wc = mix(wc, uWallLo * 0.55 + uWallHi * 0.15, (1.0 - smoothstep(0.0, 0.12, hf)) * 0.75);
   col = mix(col, wc, wall);
   gl_FragColor = vec4(col, a);
   #include <tonemapping_fragment>

@@ -63,9 +63,17 @@ void main() {
   // Sun or moon disc (no face): a soft-edged disc; the moon is big, with a wide silver halo.
   float disc = mix(smoothstep(0.9988, 0.9993, sd), smoothstep(0.9938, 0.9946, sd), uMoon);
   col += vec3(0.5, 0.58, 1.0) * (pow(sd, 300.0) * 0.9 + pow(sd, 40.0) * 0.22) * uMoon;
-  vec2 mp = (d.xz - uSunDir.xz) * 60.0;
-  float maria = smoothstep(0.55, 0.75, vn(mp * 1.3 + 4.0)) * 0.12 + smoothstep(0.6, 0.8, vn(mp * 3.1)) * 0.06;
-  vec3 discCol = mix(uSunCol * 2.2 + 0.6, vec3(1.0, 1.0, 1.05) * (1.0 - maria * 1.4), uMoon);
+  // The disc's own plane (a basis round the disc direction): the old xz projection stretched the maria
+  // into vertical stripes whenever the moon stood high.
+  vec3 mt1 = normalize(cross(uSunDir, abs(uSunDir.y) > 0.99 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0)));
+  vec3 mt2 = cross(mt1, uSunDir);
+  vec2 mp = vec2(dot(d, mt1), dot(d, mt2)) * 60.0;
+  float maria = smoothstep(0.45, 0.8, fbm(mp * 0.9 + 4.0)) * 0.22 + smoothstep(0.62, 0.85, vn(mp * 3.1 + 1.7)) * 0.07;
+  // Painted limb: a touch darker and cooler toward the edge, lit a little from the upper left.
+  float limb = smoothstep(0.9938, 0.99995, sd);
+  float side = dot(normalize(mp + 1e-4), normalize(vec2(-0.6, 0.8))) * (1.0 - limb);
+  vec3 moonCol = vec3(1.0, 0.99, 1.04) * (1.0 - maria) * (0.86 + 0.14 * limb + 0.06 * side);
+  vec3 discCol = mix(uSunCol * 2.2 + 0.6, moonCol, uMoon);
   col = mix(col, discCol, disc * smoothstep(-0.02, 0.02, h));
   // Painted cumulus clouds over the horizon.
   vec2 cuv = d.xz / (h + 0.18) * 1.6 + vec2(uTime * 0.004, 0.0);
@@ -86,11 +94,16 @@ void main() {
 
 const MTN_VERT = /* glsl */ `
 attribute float aH;
+attribute float aL;
 varying float vH;
+varying float vL;
 varying float vShade;
+varying vec2 vP;
 void main() {
   vH = aH;
+  vL = aL;
   vShade = normal.x * 0.5 + 0.5;
+  vP = vec2(atan(position.z, position.x) * 160.0, position.y);
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 }`;
 
@@ -100,13 +113,26 @@ uniform vec3 uFog;
 uniform vec3 uLight;
 uniform float uFar;
 varying float vH;
+varying float vL;
 varying float vShade;
+varying vec2 vP;
+float h21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+float vn(vec2 p) {
+  vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), f.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), f.x), f.y);
+}
 void main() {
-  vec3 c = uCol * (0.82 + 0.3 * vShade);
-  // A faint lit rim on the crowns; mist banks pooled in the valleys between ridges.
-  c = mix(c, uCol * 1.2 + 0.03, smoothstep(0.8, 1.0, vH) * 0.5);
-  c = mix(uFog, c, smoothstep(0.0, 0.75, vH) * 0.7 + 0.15);
-  c = mix(c, uFog, uFar);
+  // Opaque painted matte ridges: each layer one flat painted value (nearer = deeper and richer,
+  // farther = paler, aerial perspective by layer), brushy vertical tree-mass strokes, a lit crown rim,
+  // and mist only pooled at the foot (round 07: the whole hill faded into fog and read as a see-through card).
+  float far = vL / 2.0;
+  vec3 body = uCol * (0.62 + 0.22 * vShade) * (1.0 - far * 0.18);
+  float strokes = vn(vec2(vP.x * 0.9, vP.y * 0.08 + vL * 7.0)) * 0.6 + vn(vec2(vP.x * 2.3, vP.y * 0.2)) * 0.4;
+  body *= 0.84 + 0.3 * strokes;
+  // Darker tree masses in bands, lighter crowns catching the sky.
+  body = mix(body, uCol * 1.25 + uFog * 0.15, smoothstep(0.78, 1.0, vH) * (0.35 + 0.3 * strokes));
+  vec3 c = mix(body, uFog, 0.18 + far * 0.32 + uFar * 0.35);
+  c = mix(c, uFog, (1.0 - smoothstep(0.0, 0.32, vH)) * 0.7);
   gl_FragColor = vec4(c, 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -128,6 +154,7 @@ function buildMountains(): BufferGeometry {
   const r = rng(91);
   const pos: number[] = [];
   const hs: number[] = [];
+  const ls: number[] = [];
   const idx: number[] = [];
   const COLS = 22;
   const LAYERS: [number, number, number][] = [
@@ -162,6 +189,7 @@ function buildMountains(): BufferGeometry {
         hs.push(0);
         pos.push(cx + tx * lx, top - 6, cz + tz * lx);
         hs.push(top / Math.max(1, H * (spire ? 2.1 : 1) + 3.2));
+        ls.push(layer, layer);
       }
       for (let i = 0; i < COLS; i++) {
         const a = base + i * 2;
@@ -173,6 +201,7 @@ function buildMountains(): BufferGeometry {
   const g = new BufferGeometry();
   g.setAttribute("position", new BufferAttribute(new Float32Array(pos), 3));
   g.setAttribute("aH", new BufferAttribute(new Float32Array(hs), 1));
+  g.setAttribute("aL", new BufferAttribute(new Float32Array(ls), 1));
   g.setIndex(idx);
   g.computeVertexNormals();
   return g;

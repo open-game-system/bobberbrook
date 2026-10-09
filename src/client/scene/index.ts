@@ -34,6 +34,7 @@ import { buildGroundStream } from "./terrain";
 import { loadPaintKit } from "./paintkit";
 import { groundMaterial } from "./groundmat";
 import { leafMaterial, setFoliageMaterials } from "./foliage";
+import { needleSheet } from "./painter";
 import { barkMaterial, rockMaterial, setSurfaceMaterials, tilesMaterial } from "./surfaces";
 import { placeHash } from "./valley";
 import { buildEscape } from "./escape";
@@ -178,7 +179,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   };
   const treeMat = occluderMaterial(occ);
   // Leaf cards for every canopy built from here on (one program for both leaf sheets).
-  const leafMats = { violet: leafMaterial(kit.leavesViolet, occ, time), fern: leafMaterial(kit.leavesFern, occ, time) };
+  const leafMats = { violet: leafMaterial(kit.leavesViolet, occ, time), fern: leafMaterial(kit.leavesFern, occ, time), needle: leafMaterial(needleSheet(), occ, time) };
   setFoliageMaterials(leafMats);
   // Painted rock on every boulder and cliff, painted bark on trunks, stone tiles on the tower dais.
   const surfMats = { rock: rockMaterial(kit.rock), bark: barkMaterial(kit.bark, occ), tiles: tilesMaterial(kit.tiles) };
@@ -683,6 +684,8 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       kit.dispose();
       leafMats.violet.dispose();
       leafMats.fern.dispose();
+      leafMats.needle.map?.dispose();
+      leafMats.needle.dispose();
       setFoliageMaterials(null);
       for (const m of Object.values(surfMats)) m.dispose();
       setSurfaceMaterials(null);

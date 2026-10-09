@@ -11,7 +11,7 @@ import { PAINT_GLSL, type PaintTex } from "./paintkit";
  * and `instanced()` draws them as a child instanced mesh with the same instances.
  */
 
-export type LeafKind = "violet" | "fern";
+export type LeafKind = "violet" | "fern" | "needle";
 /** A canopy puff: centre, radius, vertical squash. */
 export type Puff = [x: number, y: number, z: number, r: number, sy?: number];
 
@@ -113,6 +113,91 @@ export function leafCards(puffs: Puff[], o: CardOpts): BufferGeometry {
         col.push(c.r, c.g, c.b);
       }
     }
+  }
+  const g = new BufferGeometry();
+  g.setAttribute("position", new BufferAttribute(new Float32Array(pos), 3));
+  g.setAttribute("normal", new BufferAttribute(new Float32Array(nor), 3));
+  g.setAttribute("uv", new BufferAttribute(new Float32Array(uv), 2));
+  g.setAttribute("color", new BufferAttribute(new Float32Array(col), 3));
+  g.computeBoundingSphere();
+  return g;
+}
+
+/** A conifer tier: boughs from the trunk at height y + h, out to radius r, drooping to y. */
+export type Tier = { y: number; r: number; h: number };
+
+/**
+ * Conifer boughs: per tier a ring of needle-spray cards from the trunk out and down (some twisted up,
+ * some down, a second shorter ring between them), darker inside and lower, lighter at the tips and up
+ * top, normals out and up from the trunk; a crossed pair of sprays at the crown.
+ */
+export function coniferCards(tiers: Tier[], o: { inner: number | Color; outer: number | Color; top: number | Color; seed: number }): BufferGeometry {
+  const r = rng(o.seed);
+  const pos: number[] = [];
+  const nor: number[] = [];
+  const uv: number[] = [];
+  const col: number[] = [];
+  const ci = new Color(o.inner);
+  const co = new Color(o.outer);
+  const ct = new Color(o.top);
+  const c = new Color();
+  const yMax = Math.max(...tiers.map((t) => t.y + t.h));
+  const quad = (bx: number, by: number, bz: number, tx: number, ty: number, tz: number, sx: number, sy: number, sz: number, w: number, nx: number, ny: number, nz: number, cb: Color, ctip: Color) => {
+    const u0 = Math.floor(r() * 2) * 0.5;
+    const v0 = Math.floor(r() * 2) * 0.5;
+    // Corners: base-left, base-right, tip-right, tip-left (the spray's base at the bottom of its quadrant).
+    const P = [
+      [bx - sx * w * 0.35, by - sy * w * 0.35, bz - sz * w * 0.35, u0, v0, 0],
+      [bx + sx * w * 0.35, by + sy * w * 0.35, bz + sz * w * 0.35, u0 + 0.5, v0, 0],
+      [tx + sx * w * 0.5, ty + sy * w * 0.5, tz + sz * w * 0.5, u0 + 0.5, v0 + 0.5, 1],
+      [tx - sx * w * 0.5, ty - sy * w * 0.5, tz - sz * w * 0.5, u0, v0 + 0.5, 1],
+    ];
+    for (const k of [0, 1, 2, 0, 2, 3]) {
+      const q = P[k]!;
+      pos.push(q[0]!, q[1]!, q[2]!);
+      uv.push(q[3]!, q[4]!);
+      nor.push(nx, ny, nz);
+      const cc = q[5]! > 0.5 ? ctip : cb;
+      col.push(cc.r, cc.g, cc.b);
+    }
+  };
+  const cb = new Color();
+  tiers.forEach((t, ti) => {
+    const rings = [{ n: Math.round(7 + t.r * 4), k: 1, off: 0 }, { n: Math.round(5 + t.r * 3), k: 0.72, off: 0.5 }];
+    for (const ring of rings) {
+      for (let i = 0; i < ring.n; i++) {
+        const a = ((i + ring.off) / ring.n) * Math.PI * 2 + r() * 0.35;
+        const ca = Math.cos(a);
+        const sa = Math.sin(a);
+        const reach = t.r * ring.k * (0.9 + r() * 0.25);
+        const by = t.y + t.h * (ring.k < 1 ? 0.6 : 0.78) + (r() - 0.5) * 0.1;
+        const ty = t.y + t.h * (ring.k < 1 ? 0.18 : 0.02) + (r() - 0.5) * 0.15;
+        const bx = ca * 0.12;
+        const bz = sa * 0.12;
+        const tx = ca * reach;
+        const tz = sa * reach;
+        // The card's width runs round the tree, twisted a little about the bough.
+        const tw = (r() - 0.5) * 0.9;
+        const sx = -sa * Math.cos(tw);
+        const sz = ca * Math.cos(tw);
+        const sy = Math.sin(tw);
+        const w = reach * (0.85 + r() * 0.3);
+        const hf = (t.y + t.h) / yMax;
+        cb.copy(ci).multiplyScalar(0.85 + r() * 0.2);
+        c.copy(co).lerp(ct, Math.max(0, hf - 0.45) * 0.9).multiplyScalar((0.9 + r() * 0.2) * (ring.k < 1 ? 0.85 : 1));
+        const nl = Math.hypot(ca, 0.7, sa);
+        quad(bx, by, bz, tx, ty, tz, sx, sy, sz, w, ca / nl, 0.7 / nl, sa / nl, cb, c);
+      }
+    }
+    void ti;
+  });
+  // The crown: two crossed upright sprays.
+  const top = tiers[tiers.length - 1]!;
+  const yc = top.y + top.h;
+  for (const a of [0, Math.PI / 2]) {
+    c.copy(ct);
+    cb.copy(co);
+    quad(0, yc - 0.55, 0, 0, yc + 0.5, 0, Math.cos(a), 0, Math.sin(a), 0.8, 0, 1, 0, cb, c);
   }
   const g = new BufferGeometry();
   g.setAttribute("position", new BufferAttribute(new Float32Array(pos), 3));
