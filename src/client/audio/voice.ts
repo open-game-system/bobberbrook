@@ -40,8 +40,8 @@ async function play(id: string, delay = 0): Promise<void> {
   // A gentle de-ess: TTS sibilants read as harsh clicks on TV speakers.
   const deEss = a.ctx.createBiquadFilter();
   deEss.type = "highshelf";
-  deEss.frequency.value = 5000;
-  deEss.gain.value = -6;
+  deEss.frequency.value = 4200;
+  deEss.gain.value = -10;
   src.connect(deEss).connect(g).connect(a.out);
   src.start(start);
   window.setTimeout(() => duckMusic(buf.duration + 0.2), Math.max(0, (start - a.ctx.currentTime) * 1000));

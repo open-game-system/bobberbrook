@@ -149,12 +149,13 @@ function pluck(ctx: AudioContext, out: AudioNode, freq: number, t: number, gain:
   o.frequency.value = freq;
   const o2 = ctx.createOscillator();
   o2.type = "sine";
-  o2.frequency.value = freq * 4;
+  // The bright partial stays under ~2.4 kHz: higher, it reads as a harsh tick on TV speakers.
+  o2.frequency.value = freq * (freq > 500 ? 2 : 4);
   const g2 = ctx.createGain();
   g2.gain.value = 0.12;
   const f = ctx.createBiquadFilter();
   f.type = "lowpass";
-  f.frequency.value = 900 + bright * 1800;
+  f.frequency.value = 800 + bright * 1400;
   const e = ctx.createGain();
   e.gain.setValueAtTime(0.0001, t);
   e.gain.exponentialRampToValueAtTime(gain, t + 0.01);
@@ -198,12 +199,14 @@ function choir(ctx: AudioContext, out: AudioNode, freqs: number[], t: number, du
 
 function shaker(ctx: AudioContext, out: AudioNode, t: number): void {
   const src = noiseSource(ctx, 1, false);
+  // A soft seed shaker in the mid band (a 5 kHz high-passed hiss read as harsh ticks on every off-beat).
   const hp = ctx.createBiquadFilter();
-  hp.type = "highpass";
-  hp.frequency.value = 5000;
+  hp.type = "bandpass";
+  hp.frequency.value = 1600;
+  hp.Q.value = 1.2;
   const e = ctx.createGain();
   e.gain.setValueAtTime(0.0001, t);
-  e.gain.exponentialRampToValueAtTime(0.012, t + 0.02);
+  e.gain.exponentialRampToValueAtTime(0.016, t + 0.025);
   e.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
   src.connect(hp).connect(e).connect(out);
   src.start(t);
@@ -259,7 +262,7 @@ function scheduleBar(ctx: AudioContext, bar: number, t: number): void {
   }
   [2.75, 3.25].forEach((s) => {
     if (Math.random() < 0.4) return;
-    pluck(ctx, musicBus!, note(chord[Math.floor(Math.random() * 3)]! + 10), t + s * BEAT, 0.035, bright);
+    pluck(ctx, musicBus!, note(chord[Math.floor(Math.random() * 3)]! + 5), t + s * BEAT, 0.035, bright);
   });
 }
 
