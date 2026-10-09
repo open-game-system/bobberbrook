@@ -6,7 +6,7 @@ import { ROD_AT, ROD_NAMES, speciesCount, todOf, type Lake } from "../../game/la
 import { createLakeScene, type LakeScene } from "../scene";
 import { lakeEvents } from "../lakeEvents";
 import { createLiveSounds, playLakeEvents } from "../tvSounds";
-import { startWorld, setTimeOfDayMood, setTraveling } from "../audio/world";
+import { startWorld, setPlaceMood, setRiding, setTimeOfDayMood, setTraveling } from "../audio/world";
 import { unlockAudio } from "../audio/engine";
 import { voice } from "../audio/voice";
 import { sfx } from "../audio/sfx";
@@ -96,6 +96,10 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
       if (events.some((e) => e.kind === "caught") && lake.catchSeq >= 3 && lake.discovered.length === 1 && shouldTeach("teach-explore", "all", teachMem.current)) voice.line("teach-explore");
     }
     if (lake.campfire !== (campfireSince !== null)) setCampfireSince(lake.campfire ? clock.now() : null);
+    setRiding(lake.ride?.kind ?? null);
+    const lead = lake.fishers[0]?.pos;
+    const here = lead ? worldFor(lake.worldSeed).areaAt(lead) : null;
+    if (here) setPlaceMood(here.biome);
     const todNow = todOf({ startedAt: lake.startedAt, now: clock.now() });
     setTimeOfDayMood(todNow);
     const fresh: Toast[] = [];

@@ -1,6 +1,8 @@
 import type { TimeOfDay } from "../../game/daycycle";
 import { audio } from "./engine";
 import { note } from "./sfx";
+import { moodFor, type Mood } from "./moods";
+import type { Biome } from "../../game/regions";
 
 /**
  * The TV's soundscape: the lake (soft lapping water, the waterfall far off), birds by day, crickets and
@@ -19,6 +21,30 @@ export function setTraveling(on: boolean): void {
   traveling = on;
 }
 let timers: number[] = [];
+/** The place the family is at sets the music's mode, pace and brightness (moods.ts). */
+let mood: Mood = moodFor("moonwell");
+export function setPlaceMood(biome: Biome): void {
+  mood = moodFor(biome);
+}
+/** On a boat or zeppelin: wind (and the zeppelin's louder) under the music. */
+let wind: Layer | null = null;
+export function setRiding(kind: "boat" | "zeppelin" | null): void {
+  const a = audio();
+  if (!a || !wind) return;
+  wind.gain.gain.setTargetAtTime(kind === "zeppelin" ? 0.09 : kind === "boat" ? 0.04 : 0, a.ctx.currentTime, 1.2);
+}
+
+function startWind(ctx: AudioContext, out: AudioNode): Layer {
+  const src = noiseSource(ctx, 4, true);
+  const lp = ctx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 420;
+  const gain = ctx.createGain();
+  gain.gain.value = 0;
+  src.connect(lp).connect(gain).connect(out);
+  src.start();
+  return { gain };
+}
 
 /** A generated hall: decaying stereo noise, so the harp and pad bloom like a forest glade at dusk. */
 function reverb(ctx: AudioContext, seconds: number): ConvolverNode {
@@ -242,13 +268,15 @@ const CHORDS = [
   [3, 5, 7],
   [1, 3, 6],
 ];
-const BEAT = 60 / 66;
+const BEAT0 = 60 / 66;
+const beat = () => BEAT0 / mood.tempo;
 
 function scheduleBar(ctx: AudioContext, bar: number, t: number): void {
   if (!musicBus) return;
-  const chord = CHORDS[bar % CHORDS.length]!;
+  const chord = CHORDS[bar % CHORDS.length]!.map((n) => n + mood.shift);
   const isNight = tod === "night";
-  const bright = tod === "golden" ? 0.6 : isNight ? 0.1 : 0.9;
+  const bright = Math.min(1.1, (tod === "golden" ? 0.6 : isNight ? 0.1 : 0.9) * mood.bright);
+  const BEAT = beat();
   pad(ctx, musicBus, chord.map((n) => note(n - 5) / 2), t, BEAT * 4, isNight ? 0.014 : 0.01);
   if (bar % 2 === 0) choir(ctx, musicBus, chord.map((n) => note(n)), t, BEAT * 8, isNight ? 0.016 : 0.011);
   // A rising harp arpeggio every bar, and a few melody notes above it.
@@ -282,12 +310,13 @@ export function startWorld(): void {
   const { ctx, out } = a;
   water = startWater(ctx, out);
   night = startNight(ctx, out);
+  wind = startWind(ctx, out);
   musicBus = ctx.createGain();
   // The bed sits under the effects but must read as music between catches (round 01: too faint;
   // round 05: still −23 dBFS between events, lifted ~2 dB).
   musicBus.gain.value = MUSIC_LEVEL;
   const delay = ctx.createDelay();
-  delay.delayTime.value = BEAT * 0.75;
+  delay.delayTime.value = BEAT0 * 0.75;
   const fb = ctx.createGain();
   fb.gain.value = 0.28;
   const wet = ctx.createGain();
@@ -306,7 +335,7 @@ export function startWorld(): void {
     // Schedule a little ahead so a busy frame never makes the music stumble.
     while (next < ctx.currentTime + 1.5) {
       scheduleBar(ctx, bar++, next);
-      next += BEAT * 4;
+      next += beat() * 4;
     }
     if (tod !== "night" && Math.random() < 0.1) chirp(ctx, out, ctx.currentTime + Math.random());
     if (tod === "night" && Math.random() < 0.02) owl(ctx, out, ctx.currentTime + Math.random());
@@ -333,6 +362,8 @@ export function stopWorld(): void {
   timers = [];
   water?.gain.disconnect();
   night?.gain.disconnect();
+  wind?.gain.disconnect();
+  wind = null;
   musicBus?.disconnect();
   started = false;
 }
