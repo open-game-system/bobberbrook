@@ -224,13 +224,13 @@ function paintFoxglove(ctx: Ctx, glow: Ctx, R: Rand, x0: number, y0: number): vo
 
 /** A cluster of glow-caps: pale stems, brushy caps (shaded crown, a glowing rim), dark gills. */
 function paintGlowcap(ctx: Ctx, glow: Ctx, R: Rand, x0: number, y0: number): void {
-  const caps: [number, number, number][] = [[0.04, 0.95, 1], [-0.26, 0.6, 0.72], [0.27, 0.42, 0.55]];
+  const caps: [number, number, number][] = [[0.02, 1.0, 0.95], [-0.27, 0.62, 0.62], [0.28, 0.45, 0.5]];
   // Back to front: the biggest at the back.
   for (const [ox, hk, rk] of caps) {
     const cx = x0 + CS / 2 + ox * CS;
     const groundY = y0 + CS - 8 - (1 - hk) * 20;
-    const h = CS * 0.62 * hk;
-    const r = CS * 0.2 * rk;
+    const h = CS * 0.42 * hk;
+    const r = CS * 0.27 * rk;
     const capY = groundY - h;
     // Stem: dark at the root, pale under the cap, a soft shaded side.
     const sg = ctx.createLinearGradient(0, groundY, 0, capY);

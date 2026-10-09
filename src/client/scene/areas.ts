@@ -134,7 +134,7 @@ function* dress(a: PondPlace, r0: Recipe, full: boolean, m: AreaMats, glow: Mesh
     const p = land(0.6, 30);
     if (trailWear(p.x, p.z) > 0.5 && R() < 0.85) continue;
     if (vnoise(p.x * 0.15, p.z * 0.15, 5) < 0.35 && R() < 0.6) continue;
-    if (foreground(p) && R() < 0.55) continue;
+    if (foreground(p) && R() < 0.72) continue;
     tufts.push({ x: p.x, y: heightAt(p.x, p.z) - 0.03, z: p.z, s: 0.8 + R() * 0.9, ry: R() * 6, tint: new Color(1, 1, 1).multiplyScalar(0.8 + R() * 0.35) });
   }
   yield;

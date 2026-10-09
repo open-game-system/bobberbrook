@@ -182,7 +182,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     if (Math.abs(x) <= DOCK.halfWidth + 0.3 && z > DOCK.tipZ && z < DOCK.rootZ + 0.5) continue;
     if (Math.abs(d - PATH_D) < 0.7 && R() < 0.85) continue;
     // Round 09-B: the camera's foreground keeps open painted ground between the tufts.
-    if (angleGap(th, SOUTH) < 1.2 && d < 18 && R() < 0.55) continue;
+    if (angleGap(th, SOUTH) < 1.2 && d < 18 && R() < 0.72) continue;
     if (Math.abs(x) < 2 && z < -edge + 1 && z > FALLS.topZ) continue;
     const dens = fbm(x * 0.15, z * 0.15, 2, 5);
     if (dens < 0.38 && R() < 0.6) continue;
