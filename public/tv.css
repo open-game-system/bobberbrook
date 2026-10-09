@@ -31,9 +31,9 @@
 @keyframes toast-in { from { translate: 0 -3vh; opacity: 0; scale: 0.8; } }
 @keyframes toast-out { to { opacity: 0; translate: 0 -2vh; } }
 .ticket { position: absolute; left: 5.5vw; bottom: 6vh; display: flex; gap: 1vw; align-items: center; padding: 1vh 1.2vw; border-radius: 2vh; background: rgba(28, 20, 66, 0.72); border: 0.35vh solid rgba(190, 170, 255, 0.6); }
-.ticket img { width: 13vh; height: 13vh; border-radius: 1vh; image-rendering: pixelated; }
+.ticket img { width: 11vh; height: 11vh; border-radius: 1vh; image-rendering: pixelated; }
 .ticket-kicker { margin: 0; font-size: 2.4vh; opacity: 0.85; }
-.ticket-code { margin: 0; font-size: 5vh; font-weight: 800; letter-spacing: 0.1em; }
+.ticket-code { margin: 0; font-size: 4.4vh; font-weight: 800; letter-spacing: 0.1em; }
 .sound-chip { position: absolute; right: 5.5vw; bottom: 6vh; border: 0; border-radius: 2vh; padding: 1vh 1.6vw; font-size: 2.6vh; font-weight: 800; background: #ffd25a; color: #102426; cursor: pointer; }
 .ticket.compact { padding: 0.6vh 0.8vw; gap: 0.6vw; opacity: 0.85; }
 .ticket.compact img { width: 7vh; height: 7vh; }
