@@ -467,3 +467,21 @@ export function cottageGeometry(seed: number): { body: BufferGeometry; windows: 
   return { body: merge([walls, ...beams, band, base, roof, roof2, trim1, trim2, tip, orb, door, arch, ...frames]), windows: merge(wins) };
 }
 
+
+/**
+ * A faceted crystal shard (round 09: flat white paper octahedra): a six-sided prism with a point, glowing
+ * from inside (deep at the root to pale at the tip), each facet its own value, a violet turned side.
+ * Base at y = 0, pointing up; height hh, radius r0. For the unlit glow material (vertex colours carry it).
+ */
+export function crystalShard(hh: number, r0: number, facet: number, deep: Color, tip: Color): BufferGeometry {
+  const prism = new CylinderGeometry(r0 * 0.82, r0, hh * 0.68, 6, 1).translate(0, hh * 0.34, 0);
+  const point = new ConeGeometry(r0 * 0.82, hh * 0.42, 6, 1).translate(0, hh * 0.68 + hh * 0.21, 0);
+  const g = merge([prep(prism), prep(point)]).rotateY(facet);
+  return paint(g, deep, tip, (p, n, c) => {
+    // Inner glow: brightest a third of the way up (light caught inside), facets by their turn.
+    const t = p.y / hh;
+    c.multiplyScalar(0.7 + 0.45 * Math.exp(-((t - 0.45) * (t - 0.45)) * 6));
+    c.multiplyScalar(0.62 + 0.5 * Math.abs(Math.sin(n.x * 3.1 + n.z * 2.3 + facet * 7)));
+    if (n.x + n.z < -0.3) c.lerp(new Color(0x6a3ab0), 0.28);
+  });
+}

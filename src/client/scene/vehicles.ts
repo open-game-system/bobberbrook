@@ -176,50 +176,83 @@ function zeppelinGeometry(): { body: BufferGeometry; prop: BufferGeometry; glow:
   }
   const env = new LatheGeometry(prof, 48).rotateZ(-Math.PI / 2).translate(0, ENV_Y, 0);
   env.computeVertexNormals();
-  // Ashenvale colours (round 05: rose/cream gores read as a Mario Party candy stripe): a deep violet
-  // envelope, gores told apart only by a hint of tone, a teal belly, gold-stitched seams.
-  const rose = new Color(0x45337e);
-  const cream = new Color(0x3c2f72);
-  const belly = new Color(0x2a7480);
-  const seam = new Color(0xe0b45a);
-  const envP = paint(prep(surf(env, PK.canvas, 8, 3)), 0x45337e, 0x45337e, (p, _n, c) => {
+  // Ashenvale colours (round 05: rose/cream gores read as a Mario Party candy stripe): a dusky violet
+  // envelope, a teal belly. Round 09: the gold seam dashes painted into the vertex colours smeared across
+  // whole triangles into tape stripes, and the flat colour read as vinyl. Now each gore is a stitched
+  // canvas panel (the canvas brush layer carries the seams and stitches), shaded like cloth stretched
+  // over a frame: lit in the middle, sinking into soft folds at the seams and between the ribs.
+  const panel = new Color(0x4e4282);
+  const belly = new Color(0x2c6a78);
+  const sheen = new Color(0x9a8cd0);
+  const RIB_T = [0.2, 0.5, 0.8];
+  const envP = paint(prep(surf(env, PK.canvas, 8, 3)), 0x4e4282, 0x4e4282, (p, _n, c) => {
     const phi = Math.atan2(p.z, p.y - ENV_Y) + Math.PI;
     const g = (phi / (Math.PI * 2)) * 8;
-    const gore = Math.floor(g + 1e-4) % 2;
     const f = g - Math.floor(g + 1e-4);
-    c.copy(gore === 0 ? rose : cream);
+    const t = (p.x + ENV_L / 2) / ENV_L;
+    c.copy(panel);
     const up = (p.y - ENV_Y) / ENV_R;
     c.lerp(belly, Math.max(0, Math.min(1, (-up - 0.25) * 1.6)));
-    // Light from above: a moonlit lavender sheen along the top.
-    c.lerp(new Color(0x8a78d0), Math.max(0, up - 0.55) * 0.9);
-    c.multiplyScalar(0.92 + 0.16 * Math.max(0, up));
-    // Stitched seams: dashes along every gore edge.
-    const t = (p.x + ENV_L / 2) / ENV_L;
-    if ((f < 0.012 || f > 0.988) && Math.floor(t * 40) % 2 === 0) c.lerp(seam, 0.45);
+    // Moonlit lavender sheen along the top.
+    c.lerp(sheen, Math.max(0, up - 0.5) * 0.7);
+    // Cloth over a frame: each gore bellies out (lit middle), each rib pinches it in (a soft fold).
+    const bellyOut = Math.sin(Math.PI * Math.min(1, Math.max(0, f)));
+    let pinch = 1;
+    for (const rt of RIB_T) pinch = Math.min(pinch, Math.min(1, Math.abs(t - rt) * 18));
+    c.multiplyScalar((0.8 + 0.2 * bellyOut) * (0.86 + 0.14 * pinch) * (0.92 + 0.16 * Math.max(0, up)));
+    // Long soft wrinkles running nose to tail, a little lighter and darker.
+    c.multiplyScalar(0.96 + 0.06 * Math.sin(g * 9.0 + t * 3.0) * Math.sin(t * 23.0 + g));
   });
   const ribs: BufferGeometry[] = [];
-  for (const t of [0.2, 0.5, 0.8]) {
+  // Painted gold trim: slim bands, dark old gold in the shade to a pale lit edge on top.
+  const trim = (p: Vector3, _n: Vector3, c: Color) => { c.multiplyScalar(0.8 + 0.3 * Math.max(0, (p.y - ENV_Y) / ENV_R)); };
+  for (const t of RIB_T) {
     const r = envR(t) + 0.03;
-    ribs.push(paint(prep(new TorusGeometry(r, 0.055, 6, 40).rotateY(Math.PI / 2).translate(-ENV_L / 2 + ENV_L * t, ENV_Y, 0)), 0xb98a3a, 0xf0c870));
+    ribs.push(paint(prep(new TorusGeometry(r, 0.04, 6, 48).rotateY(Math.PI / 2).translate(-ENV_L / 2 + ENV_L * t, ENV_Y, 0)), 0x9a7434, 0xe6c47a, trim));
   }
   // A gold nose cap and a tail cone.
-  ribs.push(paint(prep(new SphereGeometry(0.42, 12, 8).translate(ENV_L / 2 - 0.12, ENV_Y, 0)), 0xd8a848, 0xf8d880));
-  ribs.push(paint(prep(new ConeGeometry(0.3, 0.9, 10).rotateZ(Math.PI / 2).translate(-ENV_L / 2 - 0.2, ENV_Y, 0)), 0xb98a3a));
+  ribs.push(paint(prep(new SphereGeometry(0.42, 12, 8).translate(ENV_L / 2 - 0.12, ENV_Y, 0)), 0xa88038, 0xecd08a));
+  ribs.push(paint(prep(new ConeGeometry(0.3, 0.9, 10).rotateZ(Math.PI / 2).translate(-ENV_L / 2 - 0.2, ENV_Y, 0)), 0x9a7434, 0xd8b468));
   // A spine along the top and a belly keel the gondola hangs from.
-  ribs.push(paint(prep(new BoxGeometry(ENV_L * 0.62, 0.16, 0.5).translate(0.3, ENV_Y - ENV_R + 0.12, 0)), 0x6a4a30, 0x8a6a40));
-  // Tail: a tall fin with a rudder on top and below, elevators either side (violet, gold-edged).
+  ribs.push(paint(prep(surf(new BoxGeometry(ENV_L * 0.62, 0.16, 0.5).translate(0.3, ENV_Y - ENV_R + 0.12, 0), PK.planks)), 0x6a4a30, 0x8a6a40));
+  // Tail: canvas fins stretched on painted wooden ribs (round 09: flat violet slabs with cardboard
+  // gold flaps): a round spar on the leading edge, three ribs root to tip, a canvas rudder/elevator.
   const fins: BufferGeometry[] = [];
   const tailX = -ENV_L / 2 + 2.6;
+  const wood = (a: Vector3, b: Vector3, r: number): BufferGeometry => {
+    const len = a.distanceTo(b);
+    const g = along(new CylinderGeometry(r, r, len, 6).translate(0, len / 2, 0), b.clone().sub(a));
+    return paint(prep(surf(g.translate(a.x, a.y, a.z), PK.grain)), 0x5a3a24, 0x8a6240);
+  };
   for (let k = 0; k < 4; k++) {
     const rot = (k * Math.PI) / 2;
     const span = k % 2 === 0 ? 2.3 : 1.9;
-    const fin = finGeometry(2.6, 1.3, span, 0.6);
+    const rootL = 2.6;
+    const tipL = 1.3;
+    const sweep = 0.6;
+    const fin = finGeometry(rootL, tipL, span, sweep);
     const root = envR(0.2) - 0.25;
-    const g = fin.translate(0, root, 0).rotateX(rot).translate(tailX, ENV_Y, 0);
-    fins.push(paint(prep(g), 0x4a2f88, 0x8a6ad0));
-    // The rudder / elevator: a hinged flap on the trailing edge, turned a little.
-    const flap = new BoxGeometry(0.8, span * 0.8, 0.12).translate(-0.4, root + span * 0.45, 0).rotateY(k % 2 === 0 ? 0.22 : 0).translate(-2.6, 0, 0).rotateX(rot).translate(tailX, ENV_Y, 0);
-    fins.push(paint(prep(flap), 0xd8a848, 0xf0c870));
+    const placeFin = (g: BufferGeometry) => g.translate(0, root, 0).rotateX(rot).translate(tailX, ENV_Y, 0);
+    fins.push(paint(prep(surf(placeFin(fin), PK.canvas, 0.42, 0.42)), 0x3e3472, 0x6c5ea6, (p, _n, c) => {
+      // Canvas sags a little between the ribs.
+      c.multiplyScalar(0.9 + 0.1 * Math.abs(Math.sin(p.x * 2.4)));
+    }));
+    const lead0 = new Vector3(0, 0, 0);
+    const leadS = new Vector3(-rootL + sweep + tipL * 0.85, span, 0);
+    const trail0 = new Vector3(-rootL, 0, 0);
+    const trailS = new Vector3(-rootL + sweep - tipL * 0.15, span, 0);
+    const spars: BufferGeometry[] = [wood(lead0, leadS, 0.1), wood(leadS, trailS, 0.08)];
+    for (const cf of [0.3, 0.62, 0.95]) spars.push(wood(lead0.clone().lerp(trail0, cf), leadS.clone().lerp(trailS, cf), 0.075));
+    for (const sp of spars) fins.push(placeFin(sp));
+    // The rudder / elevator: a canvas flap on a wooden frame, hinged on the trailing edge, turned a little.
+    const flap = surf(new BoxGeometry(0.8, span * 0.8, 0.1).translate(-0.4, root + span * 0.45, 0), PK.canvas, 1, 1);
+    const flapP = paint(prep(flap), 0x4a3e80, 0x7a6cb4);
+    const flapFrame = [
+      wood(new Vector3(0, root + span * 0.05, 0), new Vector3(0, root + span * 0.85, 0), 0.07),
+      wood(new Vector3(-0.8, root + span * 0.05, 0), new Vector3(-0.8, root + span * 0.85, 0), 0.06),
+      wood(new Vector3(0, root + span * 0.85, 0), new Vector3(-0.8, root + span * 0.85, 0), 0.06),
+    ];
+    for (const g of [flapP, ...flapFrame]) fins.push(g.rotateY(k % 2 === 0 ? 0.22 : 0).translate(-2.6, 0, 0).rotateX(rot).translate(tailX, ENV_Y, 0));
   }
   // The gondola: a little wooden boat with railings and four lanterns.
   const hull = paint(prep(surf(new SphereGeometry(1, 20, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2).scale(2.35, 0.8, 1.15), PK.planks)), 0x5a3020, 0x8a5a38, (p, _n, c) => {

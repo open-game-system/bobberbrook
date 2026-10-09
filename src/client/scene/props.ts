@@ -631,7 +631,8 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
       bulbMat.color.setScalar(0.75 + 1.9 * Math.max(g, campfire));
       const fire = 0.55 + 0.45 * Math.max(g, campfire);
       const fl1 = 0.85 + 0.15 * Math.sin(time * 13.0) * Math.sin(time * 7.3 + 1.0);
-      fireLight.intensity = (2 + 10 * Math.max(g, campfire) + 8 * campfire) * fl1;
+      // Round 10: the night exposure rose 1.32 -> 1.7, so the fire's light is scaled to keep faces warm, not orange.
+      fireLight.intensity = (2 + 8 * Math.max(g, campfire) + 5 * campfire) * fl1;
       flames.update(time, fire * (1 + 0.3 * campfire));
     },
     dispose() {

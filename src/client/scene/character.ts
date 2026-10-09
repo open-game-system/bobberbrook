@@ -214,7 +214,8 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials)
 
   // Body: a rounded bean in the fisher's colour, cream collar, belt, a little backpack.
   const torso = cloth(new SphereGeometry(0.205, 18, 12).scale(1, 1.08, 0.92).translate(0, 0.36, 0), shade(vest.getHex(), 0.78), lighten(vest.getHex(), 0.12));
-  const tummy = cloth(new SphereGeometry(0.13, 12, 8).scale(1, 1.05, 0.5).translate(0, 0.33, 0.13), lighten(vest.getHex(), 0.35));
+  // A belly panel only a shade lighter (round 09: at 35 % toward white it read as a white paint blotch).
+  const tummy = cloth(new SphereGeometry(0.13, 12, 8).scale(1, 1.05, 0.5).translate(0, 0.33, 0.135), lighten(vest.getHex(), 0.12));
   const collar = cloth(new TorusGeometry(0.11, 0.035, 6, 16).rotateX(Math.PI / 2).translate(0, 0.555, 0.01), 0xf4ead2);
   const belt = part(new TorusGeometry(0.19, 0.026, 6, 20).rotateX(Math.PI / 2).scale(1, 1, 0.93).translate(0, 0.25, 0), 0x5a3a22);
   const buckle = part(new BoxGeometry(0.06, 0.05, 0.025).translate(0, 0.25, 0.185), 0xe8c050);

@@ -12,7 +12,7 @@ import {
   type Material,
 } from "three";
 import { pondRadius, type Area, type PondPlace } from "../../game/world";
-import { instanced, giantGeometry, rockGeometry, type Inst } from "./kit";
+import { crystalShard, instanced, giantGeometry, rockGeometry, type Inst } from "./kit";
 import { jitter, merge, paint, prep, puffNormals } from "./geo";
 import { attachFoliage, leafCards, type Puff } from "./foliage";
 import { barked } from "./surfaces";
@@ -202,8 +202,8 @@ export function crystalKit(c: KitCtx): void {
     const hue = hues[Math.floor(R() * hues.length)]!;
     for (let j = 0; j < k; j++) {
       const hh = 0.6 + R() * (inWater ? 1.2 : 2.2);
-      const g = new OctahedronGeometry(0.32, 0).scale(1, (hh / 0.32) * 0.5, 1).rotateZ((R() - 0.5) * 0.8).rotateX((R() - 0.5) * 0.8).translate((R() - 0.5) * 0.8, hh * 0.35, (R() - 0.5) * 0.8);
-      cl.push(paint(prep(g), new Color(hue).multiplyScalar(0.75), hue));
+      const g = crystalShard(hh, 0.28 + R() * 0.1, R() * 6, new Color(hue).multiplyScalar(0.3).lerp(new Color(0x2e2c8a), 0.5), new Color(hue).multiplyScalar(0.72));
+      cl.push(g.rotateZ((R() - 0.5) * 0.8).rotateX((R() - 0.5) * 0.8).translate((R() - 0.5) * 0.8, -hh * 0.12, (R() - 0.5) * 0.8));
     }
     c.glow.push(put(merge(cl), p.x, p.z, R() * 6, 1, inWater ? -heightAt(p.x, p.z) - 0.2 : -0.05));
   }
@@ -380,8 +380,8 @@ function spire(c: KitCtx, R: () => number): void {
   const hue = [0xc8f0ff, 0xe0c8ff, 0xc8ffe8][Math.floor(R() * 3)]!;
   for (let i = 0; i < 9; i++) {
     const h = i === 0 ? 11 + R() * 3 : i === 1 ? 6 + R() * 2 : 1.5 + R() * 3;
-    const g = new OctahedronGeometry(0.5, 0).scale(i === 0 ? 1.3 : 0.8, h, i === 0 ? 1.3 : 0.8).rotateZ(i === 0 ? 0 : (R() - 0.5) * 0.9).rotateX(i === 0 ? 0 : (R() - 0.5) * 0.9).translate(i === 0 ? 0 : (R() - 0.5) * 2, h * 0.35, i === 0 ? 0 : (R() - 0.5) * 2);
-    parts.push(paint(prep(g), new Color(hue).multiplyScalar(0.7), hue));
+    const g = crystalShard(h, i === 0 ? 0.7 : 0.42, R() * 6, new Color(hue).multiplyScalar(0.3).lerp(new Color(0x2e2c8a), 0.5), new Color(hue).multiplyScalar(0.72));
+    parts.push(g.rotateZ(i === 0 ? 0 : (R() - 0.5) * 0.9).rotateX(i === 0 ? 0 : (R() - 0.5) * 0.9).translate(i === 0 ? 0 : (R() - 0.5) * 2, -h * 0.12, i === 0 ? 0 : (R() - 0.5) * 2));
   }
   c.glow.push(put(merge(parts), p.x, p.z, R() * 6, 1, -heightAt(p.x, p.z) - 0.2));
   const islet = paint(prep(new SphereGeometry(2.8, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.32, 1)), 0x4a5a6a, 0x6a8a7a);

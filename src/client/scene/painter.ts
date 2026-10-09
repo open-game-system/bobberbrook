@@ -377,7 +377,10 @@ export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexSh
       vec3 d = tx * iPk[ki];
       float l = dot(d, vec3(0.3, 0.55, 0.15));
       float str = pk < 0.5 ? 0.55 : (pk < 2.5 ? 0.92 : (pk < 3.5 ? 0.9 : 0.95));
-      diffuseColor.rgb *= mix(vec3(1.0), clamp(mix(vec3(l), d, 0.55), 0.0, 2.4), str);
+      // Cloth (the fishers' clothes and hats) keeps a narrow value range: its broad fold strokes read as
+      // white paint blotches on a 1 m figure (round 09 critic), so only the weave and soft folds show.
+      vec2 rng = pk > 2.5 && pk < 3.5 ? vec2(0.74, 1.24) : vec2(0.0, 2.4);
+      diffuseColor.rgb *= mix(vec3(1.0), clamp(mix(vec3(l), d, 0.55), rng.x, rng.y), str);
       // Baked top light: painted surfaces are lit from above, shaded underneath.
       diffuseColor.rgb *= mix(0.82, 1.1, smoothstep(-0.6, 0.85, n.y));
     }

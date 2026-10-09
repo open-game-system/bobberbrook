@@ -23,7 +23,7 @@ import {
   type ShaderMaterial as SM,
 } from "three";
 import { pondRadius, type Area, type AreaId, type PondPlace } from "../../game/world";
-import { cliffRockGeometry, instanced, rockGeometry, type Inst } from "./kit";
+import { cliffRockGeometry, crystalShard, instanced, rockGeometry, type Inst } from "./kit";
 import { poolMesh } from "./pools";
 import { jitter, merge, paint, prep, puffNormals } from "./geo";
 import { attachFoliage, hangingCards, leafCards, type Puff, type Strand } from "./foliage";
@@ -479,12 +479,32 @@ function tarn(c: Ctx): void {
     const p = at(a, th, -1.2);
     const h = 3.2 + R() * 2.2;
     const face = Math.atan2(a.center.x - p.x, a.center.z - p.z);
-    const st = new BoxGeometry(1.25, h, 0.75, 2, 4, 2);
-    jitter(st, 0.12, i);
+    // Carved standing stones (round 09: they read as black boxes): a tapered, rounded slab with a slanted
+    // worn top, chiselled bevels, pale lichen and moss on the shoulders, lit grey-lilac stone.
+    const st = new BoxGeometry(1.25, h, 0.75, 4, 8, 3);
+    const sa = st.getAttribute("position");
+    const lean = (R() - 0.5) * 0.5;
+    for (let v = 0; v < sa.count; v++) {
+      const vx = sa.getX(v), vy = sa.getY(v), vz = sa.getZ(v);
+      const t = vy / h + 0.5;
+      const taper = 1 - 0.32 * t;
+      // Round the vertical edges (a worn slab, not a box).
+      const ex = Math.abs(vx) / 0.625, ez = Math.abs(vz) / 0.375;
+      const round = ex > 0.7 && ez > 0.7 ? 0.82 : 1;
+      // A slanted, domed top.
+      const top = t > 0.98 ? (vx / 0.625) * 0.28 + lean - 0.12 * (vx / 0.625) * (vx / 0.625) : 0;
+      sa.setXYZ(v, vx * taper * round, vy + top, vz * taper * round);
+    }
+    st.computeVertexNormals();
+    jitter(st, 0.07, i);
     st.translate(0, h / 2, 0);
-    const sp = paint(prep(st), 0x4a4a6a, 0x8a8aa8, (pp, n, cc) => {
-      cc.multiplyScalar(0.85 + 0.25 * vnoise(pp.x * 2, pp.y * 1.5, i));
-      if (n.y > 0.6) cc.lerp(new Color(0x3e7a6a), 0.6);
+    const sp = paint(prep(st), 0x8a88ae, 0xd0cee4, (pp, n, cc) => {
+      cc.multiplyScalar(0.84 + 0.28 * vnoise(pp.x * 2.4, pp.y * 1.6, i));
+      // Pale lichen dabs and moss on top and the shoulders.
+      if (vnoise(pp.x * 5 + 3, pp.y * 4, i + 9) > 0.72) cc.lerp(new Color(0xc8d0c0), 0.35);
+      if (n.y > 0.45) cc.lerp(new Color(0x4e8a72), 0.65);
+      // Shade toward the foot (grounded, not floating).
+      cc.multiplyScalar(0.72 + 0.28 * Math.min(1, pp.y / 1.4));
     });
     const islet = paint(prep(new SphereGeometry(1.6, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.35, 1)), 0x4a5a5a, 0x5a8a6a);
     stones.push(place(merge([sp, islet]), p.x, p.z, face, 1, 0 - heightAt(p.x, p.z) - 0.25));
@@ -506,8 +526,8 @@ function tarn(c: Ctx): void {
     const k = 3 + Math.floor(R() * 4);
     for (let j = 0; j < k; j++) {
       const hh = (onShore ? 0.5 : 1.0) * (0.8 + R() * 1.6);
-      const g = new OctahedronGeometry(0.3, 0).scale(1, hh / 0.3 * 0.5, 1).rotateZ((R() - 0.5) * 0.7).rotateX((R() - 0.5) * 0.7).translate((R() - 0.5) * 0.7, hh * 0.4, (R() - 0.5) * 0.7);
-      cl.push(paint(prep(g), 0xb8c8ff, 0xf0f4ff));
+      const g = crystalShard(hh, 0.26 + R() * 0.08, R() * 6, new Color(0x1c1a60), new Color(0x6aa8e0));
+      cl.push(g.rotateZ((R() - 0.5) * 0.7).rotateX((R() - 0.5) * 0.7).translate((R() - 0.5) * 0.7, -hh * 0.1, (R() - 0.5) * 0.7));
     }
     c.glow.push(place(merge(cl), p.x, p.z, R() * 6));
   }

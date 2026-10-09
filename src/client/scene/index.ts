@@ -242,7 +242,8 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   const textures = new FishTextures(opts.assetBase ?? "/art/fish/");
   const cardGeo = sharedCardGeometry();
   const rigMats = {
-    body: paintedMaterial({ pkScale: 0.6, crisp: true }),
+    // pkScale 0.6 -> 1.8: one cloth stroke no longer spans a whole sleeve or tummy (round 09 blotches).
+    body: paintedMaterial({ pkScale: 1.8, crisp: true }),
     glowRod: new MeshBasicMaterial({ vertexColors: true, color: new Color(1.6, 1.8, 2.4) }),
   };
   const fishers = new FisherViews(rigMats, cardGeo, textures, fx, shadows);

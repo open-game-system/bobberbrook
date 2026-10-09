@@ -66,14 +66,18 @@ void main() {
   float t = uTime * (2.4 + vSeed);
   float n = vn(vec2(uv.x * 3.0 + vSeed * 13.0, uv.y * 3.5 - t)) * 0.65 + vn(vec2(uv.x * 7.0 - vSeed * 5.0, uv.y * 7.0 - t * 1.7)) * 0.35;
   // Licks lean and sway, more toward the tip.
-  float x = uv.x - 0.5 + (n - 0.5) * 0.45 * uv.y + sin(t * 0.7 + vSeed * 9.0) * 0.06 * uv.y;
-  float w = 0.42 * pow(max(0.0, 1.0 - uv.y), 0.75) * (0.75 + 0.25 * smoothstep(0.0, 0.15, uv.y));
-  float body = smoothstep(w, w * 0.35, abs(x)) * smoothstep(1.0, 0.55, uv.y + (n - 0.5) * 0.5);
-  float core = smoothstep(w * 0.55, 0.0, abs(x)) * smoothstep(0.75, 0.15, uv.y + (n - 0.5) * 0.3);
-  vec3 col = mix(vec3(0.85, 0.16, 0.05), vec3(1.0, 0.55, 0.12), smoothstep(0.0, 0.6, body));
-  col = mix(col, vec3(1.0, 0.92, 0.62), core);
+  float x = uv.x - 0.5 + (n - 0.5) * 0.55 * uv.y + sin(t * 0.7 + vSeed * 9.0) * 0.07 * uv.y;
+  // Round 09: the soft teardrop still read as a cone. Narrower licks with a forked, torn top: two
+  // tongues split by noise, holes eaten out of the upper body, a hot white-gold heart low down.
+  float w = 0.34 * pow(max(0.0, 1.0 - uv.y), 0.9) * (0.7 + 0.3 * smoothstep(0.0, 0.12, uv.y));
+  float fork = smoothstep(0.35, 0.9, uv.y) * smoothstep(0.08, 0.0, abs(x + (vSeed - 0.5) * 0.1)) * 0.9;
+  float torn = smoothstep(0.45, 0.75, vn(vec2(uv.x * 9.0 + vSeed * 31.0, uv.y * 6.0 - t * 2.2))) * smoothstep(0.35, 0.95, uv.y);
+  float body = smoothstep(w, w * 0.3, abs(x)) * smoothstep(1.0, 0.5, uv.y + (n - 0.5) * 0.6) * (1.0 - fork) * (1.0 - torn * 0.85);
+  float core = smoothstep(w * 0.6, 0.0, abs(x)) * smoothstep(0.6, 0.05, uv.y + (n - 0.5) * 0.3);
+  vec3 col = mix(vec3(0.9, 0.12, 0.03), vec3(1.0, 0.48, 0.08), smoothstep(0.0, 0.55, body));
+  col = mix(col, vec3(1.0, 0.86, 0.5), core);
   float a = clamp(body * (0.75 + 0.25 * uFire), 0.0, 1.0);
-  gl_FragColor = vec4(col * a * 1.6, a);
+  gl_FragColor = vec4(col * a * 1.8, a);
 }`;
 
 export type CampfireFx = { mesh: Mesh; update(time: number, fire: number): void; dispose(): void };
@@ -94,10 +98,12 @@ export function buildCampfireFx(x: number, y: number, z: number): CampfireFx {
     idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
   };
   // Flames: a tall middle lick and a ring of smaller ones round it.
-  quad(0, 0, 0, 1.45, R(), 0, 0);
-  for (let i = 0; i < 5; i++) {
-    const a = (i / 5) * Math.PI * 2 + R() * 0.5;
-    quad(Math.cos(a) * 0.22, 0, Math.sin(a) * 0.22, 0.75 + R() * 0.45, R(), 0, 0);
+  quad(0, 0, 0, 1.35, R(), 0, 0);
+  quad(0.08, 0, -0.05, 1.15, R(), 0, 0);
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 9) * Math.PI * 2 + R() * 0.5;
+    const r = i % 2 === 0 ? 0.3 : 0.16;
+    quad(Math.cos(a) * r, 0, Math.sin(a) * r, 0.55 + R() * 0.5, R(), 0, 0);
   }
   // Embers.
   for (let i = 0; i < 26; i++) quad((R() - 0.5) * 0.5, 0.3, (R() - 0.5) * 0.5, 0.06 + R() * 0.06, R(), 1, 0.25 + R() * 0.35);
