@@ -79,21 +79,34 @@ await snap("2-at-water");
 for (const p of [kid, dad]) { await p.locator("button.action").dispatchEvent("pointerdown"); await p.locator("button.action").dispatchEvent("pointerup"); }
 await kid.waitForTimeout(1200);
 await snap("3-waiting");
-for (let i = 0; i < 100; i++) {
-  const { me, now } = await lakeOf(kid);
-  if (me.mode === "bite" || now >= me.biteAt) break;
-  await kid.waitForTimeout(100);
-}
+// Both fish (the phone strip shows Dad's own states, not just the kid's): wait for each one's bite.
+const biting = async (p: Page) => {
+  for (let i = 0; i < 150; i++) {
+    const { me, now } = await lakeOf(p);
+    if (me.mode === "bite" || now >= me.biteAt) return;
+    await p.waitForTimeout(100);
+  }
+};
+await Promise.all([biting(kid), biting(dad)]);
 await kid.waitForTimeout(150);
 await snap("4-bite");
-await kid.locator("button.action").dispatchEvent("pointerdown");
-await kid.waitForTimeout(1500);
-await snap("5-reel");
-for (let i = 0; i < 200; i++) {
-  if ((await lakeOf(kid)).me.mode !== "reel") break;
+// Hook and hold: both reel.
+for (const p of [kid, dad]) await p.locator("button.action").dispatchEvent("pointerdown");
+for (let i = 0; i < 30; i++) {
+  const [k, d] = await Promise.all([lakeOf(kid), lakeOf(dad)]);
+  if (k.me.mode === "reel" && d.me.mode === "reel") break;
   await kid.waitForTimeout(100);
 }
-await kid.locator("button.action").dispatchEvent("pointerup");
+// The first press hooked; now hold the line (a press in the reel state holds it).
+for (const p of [kid, dad]) await p.locator("button.action").dispatchEvent("pointerdown");
+await kid.waitForTimeout(800);
+await snap("5-reel");
+for (let i = 0; i < 300; i++) {
+  const [k, d] = await Promise.all([lakeOf(kid), lakeOf(dad)]);
+  if (k.me.mode !== "reel" && d.me.mode !== "reel") break;
+  await kid.waitForTimeout(100);
+}
+for (const p of [kid, dad]) await p.locator("button.action").dispatchEvent("pointerup");
 await kid.waitForTimeout(700);
 await snap("6-catch");
 await browser.close();
