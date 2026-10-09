@@ -290,19 +290,32 @@ export function route(from: AreaId, to: AreaId): AreaId[] {
   while (queue.length > 0) {
     const at = queue.shift()!;
     if (at === to) break;
-    for (const t of TRAILS) {
-      const next = t.joins[0] === at ? t.joins[1] : t.joins[1] === at ? t.joins[0] : null;
-      if (next && !seen.has(next)) {
-        seen.add(next);
-        prev.set(next, at);
-        queue.push(next);
-      }
+    for (const next of trailNeighbours(at)) {
+      if (seen.has(next)) continue;
+      seen.add(next);
+      prev.set(next, at);
+      queue.push(next);
     }
   }
-  const path: AreaId[] = [to];
+  return walkBack(prev, from, to);
+}
+
+/** The places one trail away, in TRAILS order. */
+export function trailNeighbours(at: AreaId): AreaId[] {
+  return TRAILS.map((t) => otherEnd(t.joins, at)).filter((x): x is AreaId => x !== null);
+}
+
+/** The far end of a trail joining `ends`, from `at` (null if the trail doesn't touch `at`). */
+export function otherEnd(ends: readonly [AreaId, AreaId], at: AreaId): AreaId | null {
+  return ends[0] === at ? ends[1] : ends[1] === at ? ends[0] : null;
+}
+
+/** Walks predecessors back from `to` to `from`; [] when `to` was never reached. */
+export function walkBack<K>(prev: ReadonlyMap<K, K>, from: K, to: K): K[] {
+  const path: K[] = [to];
   while (path[0] !== from) {
     const p = prev.get(path[0]!);
-    if (!p) return [];
+    if (p === undefined) return [];
     path.unshift(p);
   }
   return path;
@@ -313,14 +326,20 @@ export function nextWaypoint(here: Vec, target: Vec): Vec {
   const fromArea = areaAt(here);
   const toArea = areaAt(target);
   if (!toArea || fromArea?.id === toArea.id) return target;
-  if (!fromArea) {
-    // On a trail: walk to the end that leads toward the target.
-    const t = TRAILS.find((tr) => onTrailNear(here, tr));
-    if (!t) return target;
-    return distance(t.from, target) < distance(t.to, target) ? t.from : t.to;
-  }
-  const path = route(fromArea.id, toArea.id);
-  const step = path[1];
+  if (!fromArea) return trailEndToward(here, target);
+  return trailheadToward(fromArea, toArea.id, target);
+}
+
+/** On a trail: walk to the end that leads toward the target (no trail here: straight at it). */
+function trailEndToward(here: Vec, target: Vec): Vec {
+  const t = TRAILS.find((tr) => onTrailNear(here, tr));
+  if (!t) return target;
+  return distance(t.from, target) < distance(t.to, target) ? t.from : t.to;
+}
+
+/** In a place, bound for another: this place's end of the first trail on the route (no route: straight at the target). */
+function trailheadToward(fromArea: Area, to: AreaId, target: Vec): Vec {
+  const step = route(fromArea.id, to)[1];
   if (!step) return target;
   const trail = TRAILS.find((tr) => tr.joins.includes(fromArea.id) && tr.joins.includes(step));
   if (!trail) return target;
