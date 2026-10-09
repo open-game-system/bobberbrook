@@ -20,7 +20,9 @@ export function patchLambertWrap(): void {
 \tfloat bandsNL = wrapNL * 3.0;
 \tfloat dotNL = mix( wrapNL, ( floor( bandsNL ) + smoothstep( 0.36, 0.64, fract( bandsNL ) ) ) / 3.0, 0.75 );
 \t// Warm key, cool violet bounce on the turned-away side (Ashenvale's lilac shadows).
-\tvec3 irradiance = dotNL * directLight.color * vec3( 1.04, 1.0, 0.94 ) + ( 1.0 - dotNL ) * directLight.color * vec3( 0.07, 0.06, 0.14 );`,
+\tvec3 irradiance = dotNL * directLight.color * vec3( 1.04, 1.0, 0.94 ) + ( 1.0 - dotNL ) * directLight.color * vec3( 0.07, 0.06, 0.14 );
+\t// A painted rim of key light on the silhouette (the warm edge WoW paints on its characters and props).
+\tirradiance += directLight.color * vec3( 0.13, 0.09, 0.05 ) * pow( 1.0 - saturate( dot( geometryNormal, geometryViewDir ) ), 3.0 ) * wrapNL;`,
   );
 }
 

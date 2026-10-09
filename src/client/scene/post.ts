@@ -114,8 +114,9 @@ const KneeShader = {
     uFar: { value: 1000 },
     /** Pixels per metre at 1 m depth (the AO radius is a fixed world size). */
     uPxPerM: { value: 1000 },
-    uKnee: { value: 0.66 },
-    uMax: { value: 1.12 },
+    /** Knee and ceiling in displayed (exposed) units: divided by the exposure each frame. */
+    uKnee: { value: 0.62 },
+    uMax: { value: 0.98 },
     uAO: { value: 0.62 },
     uAOTint: { value: new Color(0.5, 0.44, 0.7) },
   },
@@ -159,12 +160,13 @@ void main() {
   }
   float m = max(c.r, max(c.g, c.b));
   if (m > uKnee) {
+    // Glows keep their hue: the ceiling sits just under where the tone curve bleaches to white.
     float r = uMax - uKnee;
     float mm = uKnee + r * (1.0 - exp(-(m - uKnee) / r));
     c *= mm / m;
     // Very hot pixels also lose a little saturation toward a pale warm tint (painted highlights, not neon).
     float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
-    c = mix(c, vec3(l) * vec3(1.02, 1.0, 0.96), smoothstep(uKnee, uMax, m) * 0.15);
+    c = mix(c, vec3(l) * vec3(1.02, 1.0, 0.96), smoothstep(uKnee, uMax, m) * 0.05);
   }
   gl_FragColor = vec4(c, t.a);
 }`,
@@ -187,6 +189,9 @@ class KneeAOPass extends Pass {
     const u = this.mat.uniforms;
     u.tDiffuse!.value = readBuffer.texture;
     u.tDepth!.value = readBuffer.depthTexture;
+    const exp = Math.max(0.05, renderer.toneMappingExposure);
+    u.uKnee!.value = 0.62 / exp;
+    u.uMax!.value = 0.98 / exp;
     const cam = this.camera;
     if (cam instanceof PerspectiveCamera) {
       u.uNear!.value = cam.near;
@@ -412,6 +417,8 @@ export type Post = {
   target: WebGLRenderTarget;
   /** Screen spots kept crisp this frame: (u, v, radius in screen-height units, unused); radius 0 = off. */
   crisp: Vector4[];
+  /** A/B switch for perf checks: false skips the contact shadow, knee and painterly filter. */
+  setPainterly(on: boolean): void;
   /** Calls draw for each object drawn over the finished frame (the name tags, on TAG_LAYER). */
   overlay: ((draw: (o: Object3D) => void) => void) | null;
   setSize(w: number, h: number): void;
@@ -430,7 +437,7 @@ export function buildPost(renderer: WebGLRenderer, scene: Scene, camera: Camera,
   const paint = new PaintPass(w, h);
   composer.addPass(paint);
   // Bloom only on what is left above the knee: a soft wide glow round lanterns and glowing water.
-  const bloom = new UnrealBloomPass(new Vector2(w / 2, h / 2), 0.32, 0.55, 0.78);
+  const bloom = new UnrealBloomPass(new Vector2(w / 2, h / 2), 0.42, 0.65, 0.72);
   composer.addPass(bloom);
   const grade = new ShaderPass(GradeShader);
   composer.addPass(grade);
@@ -459,6 +466,10 @@ export function buildPost(renderer: WebGLRenderer, scene: Scene, camera: Camera,
       setRes(w2, h2);
     },
     overlay: null,
+    setPainterly(on) {
+      knee.enabled = on;
+      paint.enabled = on;
+    },
     render() {
       composer.render();
       // Name tags over the finished frame, untouched by the filter (they never depth-test anyway).
