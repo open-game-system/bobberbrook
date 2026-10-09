@@ -8,7 +8,7 @@ import type { GameRigInput, RigContext, SessionRig } from "../skills/game-rig/sr
 const URL_BASE = process.env.BB_URL ?? "http://127.0.0.1:8841";
 
 type V = { x: number; z: number };
-type FisherLite = { seat: number; pos: V; mode: string; biteAt: number; biteUntil: number; reel: { progress: number } | null };
+type FisherLite = { seat: number; pos: V; mode: string; biteAt: number; biteUntil: number; missAt: number | null; reel: { progress: number } | null };
 type LakeLite = { fishers: FisherLite[]; swirls: { pos: V; golden: boolean }[]; now: number; campfire: boolean };
 
 async function lakeOf(page: Page): Promise<{ lake: LakeLite; seat: number; now: number }> {
@@ -90,10 +90,14 @@ async function fishOnce(rig: SessionRig, page: Page, who: string, careful: boole
     await page.waitForTimeout(100);
   }
   if (holding) await btn.dispatchEvent("pointerup");
-  if ((await me(page)).f.mode === "catch") rig.mark(`${who} catch`);
-  else rig.mark(`${who} no catch (cast failed or line still out)`);
+  const end = (await me(page)).f;
+  if (end.mode === "catch") rig.mark(`${who} catch`);
+  else rig.mark(`${who} no catch (${end.mode === "walk" ? "never cast" : end.missAt !== null ? "fish got away" : `still ${end.mode}`})`);
   await page.waitForTimeout(3600);
 }
+
+/** The TV page keeps loading fish art and voice clips after it is usable: wait for the DOM, not every asset (the shared Mac is loaded). */
+const LOAD: { waitUntil: "domcontentloaded"; timeout: number } = { waitUntil: "domcontentloaded", timeout: 90_000 };
 
 type PageFor = { baseUrl: string; pageFor: (role: string) => Promise<Page> };
 const fromSetup = (rig: RigContext): PageFor => ({ baseUrl: rig.baseUrl, pageFor: async (role) => (rig.role === role ? rig.page : rig.open(role)) });
@@ -109,12 +113,12 @@ const fromSession = (rig: SessionRig): PageFor => ({
 async function hostAndJoin(rig: PageFor): Promise<{ tv: Page; dad: Page; kid: Page; code: string }> {
   const { pageFor } = rig;
   const tv = await pageFor("tv");
-  await tv.goto(`${rig.baseUrl}/?as=tv&record=1`);
+  await tv.goto(`${rig.baseUrl}/?as=tv&record=1`, LOAD);
   await tv.locator(".ticket-code").waitFor({ timeout: 60_000 });
   const code = ((await tv.locator(".ticket-code").textContent()) ?? "").trim();
   const join = async (role: string, name: string | null) => {
     const page = await pageFor(role);
-    await page.goto(`${rig.baseUrl}/join/${code}?rig=1`);
+    await page.goto(`${rig.baseUrl}/join/${code}?rig=1`, LOAD);
     if (name === null) {
       // The kid taps the blue hat (no words on his iPad).
       await page.getByRole("button", { name: "blue hat" }).click({ timeout: 60_000, force: true });
@@ -158,7 +162,7 @@ const config: GameRigInput = {
   holdSelector: "button.action.reel",
   screens: [
     { name: "tv-empty-lake", role: "tv", path: "/?as=tv", checks: ["overlay", "text", "safe-area"], settleMs: 4000, viewports: [TV] },
-    { name: "kid-hat-picker", role: "kid", setup: async (rig) => { const tv = await rig.open("tv"); await tv.goto(`${rig.baseUrl}/?as=tv`); await tv.locator(".ticket-code").waitFor({ timeout: 60_000 }); const code = ((await tv.locator(".ticket-code").textContent()) ?? "").trim(); await rig.page.goto(`${rig.baseUrl}/join/${code}`); }, focal: false, viewports: [IPAD] },
+    { name: "kid-hat-picker", role: "kid", setup: async (rig) => { const tv = await rig.open("tv"); await tv.goto(`${rig.baseUrl}/?as=tv`, LOAD); await tv.locator(".ticket-code").waitFor({ timeout: 60_000 }); const code = ((await tv.locator(".ticket-code").textContent()) ?? "").trim(); await rig.page.goto(`${rig.baseUrl}/join/${code}`, LOAD); }, focal: false, viewports: [IPAD] },
     { name: "phone-controller", role: "dad", setup: async (rig) => void (await hostAndJoin(fromSetup(rig))), focal: false, viewports: [PHONE, PHONE_SE] },
     { name: "ipad-controller", role: "kid", setup: async (rig) => void (await hostAndJoin(fromSetup(rig))), focal: false, viewports: [IPAD] },
     { name: "tv-two-fishers", role: "tv", setup: async (rig) => void (await hostAndJoin(fromSetup(rig))), checks: ["overlay", "text", "safe-area"], settleMs: 3000, viewports: [TV] },
