@@ -10,9 +10,17 @@ let patched = false;
 export function patchLambertWrap(): void {
   if (patched) return;
   patched = true;
-  ShaderChunk.lights_lambert_pars_fragment = ShaderChunk.lights_lambert_pars_fragment.replace(
-    "float dotNL = saturate( dot( geometryNormal, directLight.direction ) );",
-    "float dotNL = saturate( ( dot( geometryNormal, directLight.direction ) + 0.3 ) / 1.3 );",
+  const src = ShaderChunk.lights_lambert_pars_fragment;
+  const from = "float dotNL = saturate( dot( geometryNormal, directLight.direction ) );\n\tvec3 irradiance = dotNL * directLight.color;";
+  if (!src.includes(from)) throw new Error("three's Lambert chunk changed: re-check the painted light ramp");
+  ShaderChunk.lights_lambert_pars_fragment = src.replace(
+    from,
+    `float wrapNL = saturate( ( dot( geometryNormal, directLight.direction ) + 0.3 ) / 1.3 );
+\t// Painted light: four soft value bands (a painter's planes of light, not a smooth airbrush ramp).
+\tfloat bandsNL = wrapNL * 3.0;
+\tfloat dotNL = mix( wrapNL, ( floor( bandsNL ) + smoothstep( 0.36, 0.64, fract( bandsNL ) ) ) / 3.0, 0.75 );
+\t// Warm key, cool violet bounce on the turned-away side (Ashenvale's lilac shadows).
+\tvec3 irradiance = dotNL * directLight.color * vec3( 1.04, 1.0, 0.94 ) + ( 1.0 - dotNL ) * directLight.color * vec3( 0.07, 0.06, 0.14 );`,
   );
 }
 
