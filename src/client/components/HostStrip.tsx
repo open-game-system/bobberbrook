@@ -5,6 +5,7 @@ import { coachLine } from "../coach";
 import { JournalSheet } from "./JournalSheet";
 import { WorldMap } from "./WorldMap";
 import { SEAT_HEX } from "./MiniMap";
+import { BookIcon, CampfireIcon, FishersIcon, MapIcon, RodIcon, ShellIcon } from "./Icons";
 
 /**
  * The host phone's words: one line to read aloud, the journal, who's on easy mode, and the campfire.
@@ -22,24 +23,44 @@ export function HostStrip({ lake, mySeat, now, send }: { lake: Lake; mySeat: num
       </p>
       <div className="host-buttons">
         <button type="button" onClick={() => setSheet("journal")}>
-          Journal {speciesCount(lake.journal)}/{JOURNAL_FISH.length}
+          <BookIcon />
+          <span>Journal</span>
+          <small>
+            {speciesCount(lake.journal)}/{JOURNAL_FISH.length}
+          </small>
         </button>
         <button type="button" onClick={() => setSheet("map")}>
-          Map
+          <MapIcon />
+          <span>Map</span>
         </button>
         <button type="button" onClick={() => setSheet("fishers")}>
-          Fishers
+          <FishersIcon />
+          <span>Fishers</span>
         </button>
         <button type="button" className={lake.campfire ? "on" : ""} onClick={() => send({ type: "CAMPFIRE", on: !lake.campfire })}>
-          {lake.campfire ? "Back to fishing" : "Campfire"}
+          {lake.campfire ? <RodIcon /> : <CampfireIcon />}
+          <span>{lake.campfire ? "Back to fishing" : "Campfire"}</span>
         </button>
       </div>
       <div className="rod-line">
-        <span className="rod-name">{ROD_NAMES[lake.rodTier]} rod</span>
-        <span className="rod-bar">
-          <span style={{ width: `${next === undefined ? 100 : Math.round(((lake.shells - (ROD_AT[lake.rodTier] ?? 0)) / (next - (ROD_AT[lake.rodTier] ?? 0))) * 100)}%` }} />
+        <span className="rod-icon">
+          <RodIcon />
         </span>
-        <span className="rod-next">{next !== undefined ? `${ROD_NAMES[lake.rodTier + 1]} at ${next}` : "best rod"}</span>
+        <span className="rod-text">
+          <span className="rod-name">{ROD_NAMES[lake.rodTier]} rod</span>
+          <span className="rod-bar">
+            <span style={{ width: `${next === undefined ? 100 : Math.round(((lake.shells - (ROD_AT[lake.rodTier] ?? 0)) / (next - (ROD_AT[lake.rodTier] ?? 0))) * 100)}%` }} />
+          </span>
+        </span>
+        <span className="rod-next">
+          {next !== undefined ? (
+            <>
+              <ShellIcon /> {lake.shells}/{next}
+            </>
+          ) : (
+            "best rod"
+          )}
+        </span>
       </div>
       {sheet === "map" && <WorldMap lake={lake} mySeat={mySeat} now={now} onClose={() => setSheet(null)} />}
       {sheet === "journal" && <JournalSheet journal={lake.journal} discovered={lake.discovered} worldSeed={lake.worldSeed} onClose={() => setSheet(null)} />}

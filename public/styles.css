@@ -125,14 +125,21 @@ button { font: inherit; color: inherit; }
 
 /* host strip */
 .host-strip { width: min(46vw, 520px); display: grid; gap: 8px; align-content: start; }
-.coach { margin: 0; padding: 12px 16px; border-radius: 18px; background: rgba(28, 20, 66, 0.82); border: 3px solid rgba(180, 160, 255, 0.55); font-size: 21px; line-height: 1.2; font-weight: 700; min-height: 3.6em; }
-.host-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
-.host-buttons button { border: 0; border-radius: 14px; padding: 10px 16px; font-size: 18px; font-weight: 800; background: linear-gradient(#9a72e6, #6a4ac0); color: #fff; box-shadow: 0 4px 0 #3e2a80; touch-action: manipulation; }
-.host-buttons button.on { background: var(--coral); }
-.rod-line { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; }
-.rod-bar { flex: 1; height: 12px; border-radius: 8px; background: rgba(255,255,255,.15); overflow: hidden; }
-.rod-bar span { display: block; height: 100%; background: linear-gradient(90deg, #ffd9c0, #ffd25a); border-radius: 8px; }
-.rod-next { opacity: 0.75; font-size: 15px; }
+.coach { margin: 0; padding: 12px 16px 12px 18px; border-radius: 6px 18px 18px 6px; background: linear-gradient(100deg, rgba(40, 28, 92, 0.92), rgba(24, 18, 62, 0.88)); border: 2px solid rgba(240, 201, 106, 0.45); border-left: 6px solid #7ff0e4; box-shadow: 0 6px 18px rgba(8, 4, 30, 0.45); font-size: 21px; line-height: 1.22; font-weight: 700; min-height: 3.6em; }
+/* Four equal tiles (icon over label): the grown-up's tools, in the valley's violet and moon-gold. */
+.host-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.host-buttons button { position: relative; display: grid; justify-items: center; align-content: center; gap: 2px; min-height: 76px; padding: 8px 4px 6px; border: 2px solid rgba(240, 201, 106, 0.55); border-radius: 16px; background: radial-gradient(circle at 50% 22%, #5a3fb0, #2e2070 70%); color: #fff6dc; font-size: 15px; font-weight: 800; letter-spacing: 0.01em; box-shadow: inset 0 2px 0 rgba(255,255,255,.18), 0 4px 0 #170f40; touch-action: manipulation; }
+.host-buttons button:active { translate: 0 3px; box-shadow: inset 0 2px 0 rgba(255,255,255,.18), 0 1px 0 #170f40; }
+.host-buttons button svg { width: 36px; height: 36px; }
+.host-buttons button small { position: absolute; top: 4px; right: 6px; font-size: 12px; font-weight: 800; color: #1a1240; background: #f0c96a; border-radius: 8px; padding: 1px 5px; }
+.host-buttons button.on { background: radial-gradient(circle at 50% 22%, #ff9a6a, #c4503a 75%); }
+.rod-line { display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 10px; padding: 6px 12px 6px 8px; border-radius: 14px; background: rgba(20, 14, 52, 0.7); border: 2px solid rgba(240, 201, 106, 0.3); font-size: 16px; font-weight: 800; }
+.rod-icon svg { width: 40px; height: 40px; display: block; }
+.rod-text { display: grid; gap: 4px; }
+.rod-bar { height: 14px; border-radius: 8px; background: rgba(255,255,255,.12); box-shadow: inset 0 2px 3px rgba(0,0,0,.4); overflow: hidden; }
+.rod-bar span { display: block; height: 100%; background: linear-gradient(90deg, #ffd9c0, #ffd25a); border-radius: 8px; box-shadow: 0 0 10px rgba(255, 210, 90, 0.6); transition: width 0.6s; }
+.rod-next { display: flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; color: #ffe4c8; }
+.rod-next svg { width: 22px; height: 22px; }
 .sheet { position: fixed; inset: 6vmin; z-index: 20; border-radius: 24px; background: rgba(24, 18, 58, 0.97); border: 4px solid rgba(180, 160, 255, 0.55); padding: 16px; overflow: auto; touch-action: pan-y; }
 .sheet-head { display: flex; justify-content: space-between; align-items: center; }
 .sheet-head h2 { margin: 0; font-size: 26px; }

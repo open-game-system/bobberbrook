@@ -112,3 +112,39 @@ export function ZeppelinIcon() {
     </svg>
   );
 }
+
+/** The family journal: a leaf-bound book. */
+export function BookIcon() {
+  return (
+    <svg viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M14 22 Q32 14 50 24 Q68 14 86 22 V80 Q68 72 50 82 Q32 72 14 80z" fill="#3d2a74" stroke="#f0c96a" strokeWidth="5" strokeLinejoin="round" />
+      <path d="M50 24 V82" stroke="#f0c96a" strokeWidth="4" />
+      <path d="M24 38 Q34 34 42 38 M24 52 Q34 48 42 52 M58 38 Q66 34 76 38" stroke="#b8a6f0" strokeWidth="4" fill="none" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** The valley map: a folded map with a dotted trail. */
+export function MapIcon() {
+  return (
+    <svg viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M12 24 L36 16 L64 26 L88 18 V76 L64 84 L36 74 L12 82z" fill="#2c5e5a" stroke="#f0c96a" strokeWidth="5" strokeLinejoin="round" />
+      <path d="M36 16 V74 M64 26 V84" stroke="#1d403e" strokeWidth="3" />
+      <path d="M22 66 Q34 50 48 56 T76 34" stroke="#ffe07a" strokeWidth="4" strokeDasharray="2 7" strokeLinecap="round" fill="none" />
+      <circle cx="76" cy="34" r="6" fill="#7ff0e4" />
+    </svg>
+  );
+}
+
+/** The fishers: two hats side by side (no faces). */
+export function FishersIcon() {
+  return (
+    <svg viewBox="0 0 100 100" aria-hidden="true">
+      <ellipse cx="34" cy="62" rx="24" ry="8" fill="#4f9a4a" />
+      <path d="M20 62 Q22 38 34 36 Q46 38 48 62z" fill="#6cc463" />
+      <ellipse cx="66" cy="70" rx="24" ry="8" fill="#3a7ad0" />
+      <path d="M52 70 Q54 46 66 44 Q78 46 80 70z" fill="#5aa0ff" />
+      <path d="M52 62 H80" stroke="#f0c96a" strokeWidth="4" />
+    </svg>
+  );
+}
