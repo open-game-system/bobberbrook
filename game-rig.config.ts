@@ -60,6 +60,8 @@ async function press(page: Page): Promise<void> {
 
 /** Casts, waits for the bite, hooks, reels (letting go when the fish thrashes if `careful`), until the catch. */
 async function fishOnce(rig: SessionRig, page: Page, who: string, careful: boolean): Promise<void> {
+  // Wait for the last catch card to finish (a press during it does nothing).
+  for (let i = 0; i < 40 && (await me(page)).f.mode !== "walk"; i++) await page.waitForTimeout(150);
   await press(page);
   rig.mark(`${who} casts`);
   const deadline = Date.now() + 25_000;
