@@ -13,7 +13,7 @@ import { WorldMap } from "../components/WorldMap";
 import { SwirlCompass } from "../components/SwirlCompass";
 import { PlaceFound } from "../components/PlaceFound";
 import { worldFor } from "../../game/regions";
-import { compassTo } from "../compass";
+import { compassShown, compassTo } from "../compass";
 import { positionAt } from "../fisherUi";
 import { buttonState, needsTick } from "../fisherUi";
 import { localStore, readProgress, writeProgress } from "../progressStore";
@@ -116,7 +116,7 @@ export function FisherScreen({ seat, host, hosting }: { seat: number; host: bool
       <div className="fisher-middle">
         <BobberWindow state={state} escaped={me.missAt !== null && now - me.missAt < 1600} />
         {(state.kind === "walk-to-water" || state.kind === "cast") && (() => {
-          const c = compassTo(lake, positionAt(me, now), seat);
+          const c = compassShown(state.kind, compassTo(lake, positionAt(me, now), seat));
           return c ? <SwirlCompass c={c} /> : null;
         })()}
         {me.catch && me.mode === "catch" && <CatchCard c={me.catch} words={host} />}

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { newLake } from "../game/lake";
 import { areaById, castRingIn, type AreaId } from "../game/world";
 import { worldFor } from "../game/regions";
-import { compassGoal, compassTo, nearestRide, nearestSwirl, nearestUnfound, shoreFor } from "./compass";
+import { compassGoal, compassShown, compassTo, nearestRide, nearestSwirl, nearestUnfound, shoreFor } from "./compass";
 
 const swirl = (id: number, area: AreaId, theta: number) => ({ id, area, pos: castRingIn(areaById(area), theta), theta, golden: false, since: 0, until: 1e9, catches: 0 });
 
@@ -81,5 +81,21 @@ describe("compassGoal past every place in sight", () => {
     expect(compassTo(everywhere, from)).toBeNull();
     expect(compassGoal({ ...everywhere, swirls: [s] }, from)?.at).toEqual(shoreFor(lake, s));
     expect(kind === "boat" || kind === "zeppelin").toBe(true);
+  });
+});
+
+describe("compassShown", () => {
+  const c = { angle: 0, distance: 20, golden: false, explore: false, arrived: false };
+  it("walking away from water: the arrow leads the way", () => {
+    expect(compassShown("walk-to-water", c)).toBe(c);
+  });
+  it("at the water with the rod: no arrow (fish here), unless a golden swirl or the family calls", () => {
+    expect(compassShown("cast", c)).toBeNull();
+    expect(compassShown("cast", { ...c, golden: true })).not.toBeNull();
+    expect(compassShown("cast", { ...c, family: true })).not.toBeNull();
+  });
+  it("no goal, or busy fishing: nothing", () => {
+    expect(compassShown("walk-to-water", null)).toBeNull();
+    expect(compassShown("waiting", c)).toBeNull();
   });
 });

@@ -1,3 +1,4 @@
+import type { ButtonState } from "./fisherUi";
 import { LEASH, type Lake, type Swirl } from "../game/lake";
 import { worldFor, type Platform } from "../game/regions";
 import { SHORE_REACH, pondRadius, type Vec } from "../game/world";
@@ -108,4 +109,15 @@ function arrowTo(lake: Lake, from: Vec, goal: Goal): Compass {
     ...(goal.vehicle ? { vehicle: goal.vehicle } : {}),
     arrived: !goal.explore && distance < 2.2,
   };
+}
+
+/**
+ * Whether the arrow shows for this button state. With the rod showing the kid should fish here, so a
+ * swirl arrow (which flips as swirls move) would only say "go elsewhere"; a golden swirl or the family
+ * calling still shows.
+ */
+export function compassShown(kind: ButtonState["kind"], c: Compass | null): Compass | null {
+  if (!c) return null;
+  if (kind === "walk-to-water") return c;
+  return kind === "cast" && (c.golden || c.family === true) ? c : null;
 }
