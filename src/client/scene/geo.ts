@@ -1,4 +1,4 @@
-import { BufferAttribute, BufferGeometry, Color, Matrix4, MeshDepthMaterial, MeshLambertMaterial, ShaderChunk, Vector3, Vector4, type Side } from "three";
+import { BufferAttribute, BufferGeometry, Color, Matrix4, MeshBasicMaterial, MeshDepthMaterial, MeshLambertMaterial, type Material, ShaderChunk, Vector3, Vector4, type Side } from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { PK, applyPaint, type PaintKind } from "./painter";
 
@@ -251,6 +251,36 @@ export function occluderMaterial(u: OccluderUniforms): MeshLambertMaterial {
   m.alphaToCoverage = true;
   m.customProgramCacheKey = () => "bobber-occluder";
   return m;
+}
+
+/**
+ * Unlit glow (lamp glass, lantern cages) that dissolves with the occluder fade, so a lamp between the
+ * camera and a fisher goes entirely (round 10: the glass stayed, floating, where its post had gone).
+ * One program for every instance (each keeps its own colour for the time of day).
+ */
+export function occluderGlowMaterial(u: OccluderUniforms, opts: { vertexColors?: boolean; color?: number } = {}): MeshBasicMaterial {
+  const m = new MeshBasicMaterial({ vertexColors: opts.vertexColors ?? true, color: opts.color ?? 0xffffff });
+  m.onBeforeCompile = (shader) => applyOccluder(shader, u);
+  m.alphaToCoverage = true;
+  m.customProgramCacheKey = () => "bobber-occluder-glow";
+  return m;
+}
+
+/** The scene's fade materials, for builders that make lamps and posts (registered once by the scene). */
+let fadeSolid: Material | null = null;
+let fadeUniforms: OccluderUniforms | null = null;
+export function registerFade(solid: Material, u: OccluderUniforms): void {
+  fadeSolid = solid;
+  fadeUniforms = u;
+}
+/** The dissolving painted material for lamp posts and the like (`fallback` when no scene registered one). */
+export function fadeMaterial(fallback: Material): Material {
+  return fadeSolid ?? fallback;
+}
+/** A dissolving glow material (a plain one when no scene registered the fade). */
+export function fadeGlowMaterial(opts: { vertexColors?: boolean; color?: number } = {}): MeshBasicMaterial {
+  if (fadeUniforms) return occluderGlowMaterial(fadeUniforms, opts);
+  return new MeshBasicMaterial({ vertexColors: opts.vertexColors ?? true, color: opts.color ?? 0xffffff });
 }
 
 /**

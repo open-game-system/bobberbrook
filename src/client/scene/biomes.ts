@@ -28,7 +28,7 @@ import { activeWorld, platformsAround } from "./worldQuery";
  * shore where the group camera looks.
  */
 
-export type KitCtx = { a: PondPlace; seed: number; wood: BufferGeometry[]; glow: BufferGeometry[]; full: boolean; group: Group; painted: Material; tree: Material };
+export type KitCtx = { a: PondPlace; seed: number; wood: BufferGeometry[]; glow: BufferGeometry[]; lamps: BufferGeometry[]; lampGlow: BufferGeometry[]; full: boolean; group: Group; painted: Material; tree: Material };
 
 const at = (a: PondPlace, theta: number, d: number) => {
   const r = pondRadius(a, theta) + d;
@@ -182,8 +182,8 @@ export function willowKit(c: KitCtx, willowGeo: () => BufferGeometry): void {
       paint(prep(new CylinderGeometry(0.05, 0.06, 2.2, 6).translate(0, 1.1, 0)), 0x3a2c38),
       paint(prep(new TorusGeometry(0.3, 0.04, 5, 10, Math.PI).translate(0.3, 2.2, 0)), 0x3a2c38),
     ]);
-    c.wood.push(put(crook, p.x, p.z, R() * 6));
-    c.glow.push(put(paint(prep(new SphereGeometry(0.16, 8, 6).translate(0.6, 1.85, 0)), 0xf0d8ff), p.x, p.z, 0));
+    c.lamps.push(put(crook, p.x, p.z, R() * 6));
+    c.lampGlow.push(put(paint(prep(new SphereGeometry(0.16, 8, 6).translate(0.6, 1.85, 0)), 0xf0d8ff), p.x, p.z, 0));
   }
 }
 
@@ -235,8 +235,8 @@ export function emberKit(c: KitCtx): void {
       paint(prep(new BoxGeometry(0.5, 0.07, 0.07).translate(0.22, h - 0.05, 0)), 0x4a3220),
       paint(prep(new ConeGeometry(0.26, 0.22, 4).rotateY(Math.PI / 4).translate(0.42, h - 0.12, 0)), 0x2a2420),
     ]);
-    c.wood.push(put(post, p.x, p.z, R() * 6));
-    c.glow.push(put(paint(prep(new BoxGeometry(0.24, 0.3, 0.24).translate(0.42, h - 0.42, 0)), 0xffa040), p.x, p.z, 0));
+    c.lamps.push(put(post, p.x, p.z, R() * 6));
+    c.lampGlow.push(put(paint(prep(new BoxGeometry(0.24, 0.3, 0.24).translate(0.42, h - 0.42, 0)), 0xffa040), p.x, p.z, 0));
   }
   // The leaf drifts are painted fallen-leaf cards now (areas.ts, the recipe's litter), not copper mounds.
 }

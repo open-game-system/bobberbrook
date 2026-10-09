@@ -1,10 +1,10 @@
-import { BoxGeometry, Color, ConeGeometry, CylinderGeometry, Group, InstancedMesh, MeshBasicMaterial, SphereGeometry, type Material } from "three";
+import { BoxGeometry, Color, ConeGeometry, CylinderGeometry, Group, InstancedMesh, SphereGeometry, type Material } from "three";
 import { TRAIL_HALF_WIDTH } from "../../game/world";
 import { instanced, mushroomGeometry, rockGeometry, type Inst } from "./kit";
 import { poolMesh } from "./pools";
 import { matteGlowMaterial } from "./matte";
 import { matteTint } from "./plants";
-import { merge, paint, prep } from "./geo";
+import { fadeGlowMaterial, fadeMaterial, merge, paint, prep } from "./geo";
 import { hash2, rng } from "./noise";
 import { trailsWithin, type SceneTrail } from "./worldQuery";
 import type { Jobs } from "./stream";
@@ -33,7 +33,9 @@ export function buildTrails(full: boolean, painted: Material, jobs: Jobs): Trail
   const glassGeo = new SphereGeometry(0.1, 8, 6).scale(1, 1.3, 1).translate(0.28, 1.05, 0);
   const stoneGeo = rockGeometry(11);
   const shroomGeo = mushroomGeometry();
-  const glassMat = new MeshBasicMaterial({ color: 0xffffff });
+  // Lamps dissolve between the camera and a fisher, glass and all.
+  const glassMat = fadeGlowMaterial({ vertexColors: false });
+  const postMat = fadeMaterial(painted);
   const shroomMat = matteGlowMaterial();
   const live = new Map<string, { g: Group | null; alive: boolean }>();
   let lastX = 1e9;
@@ -82,7 +84,7 @@ export function buildTrails(full: boolean, painted: Material, jobs: Jobs): Trail
     if (!slot.alive) return;
     const g = new Group();
     g.name = `trail-${t.key}`;
-    const posts = instanced(postGeo, painted, lamps, full);
+    const posts = instanced(postGeo, postMat, lamps, full);
     posts.name = "trail-lamps";
     const glassMesh = instanced(glassGeo, glassMat, glass, false);
     glassMesh.name = "trail-lamp-glass";

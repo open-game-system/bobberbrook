@@ -31,6 +31,7 @@ const SHOTS = [
   ["fog", null, true],
   ["boarding", null, true],
   ["tower", null, true],
+  ["tower-lamp", null, true],
   ["boat-ride", null, true],
   ["zeppelin-ride", null, true],
   ["arrival", null, true],

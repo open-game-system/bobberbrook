@@ -87,6 +87,10 @@ appear and fade (`since`, `until`), never pop.
 - **Split family** (round 10): while the widest pair of fishers is within 34 m (released at 38 m) the
   camera frames everyone, zooming out; only past that does it follow the active place and put the others
   on screen-edge markers (`FamilyFrame` / `SplitFocus` in `split.ts`).
+- **Nothing between the camera and a fisher** (round 11): trees, lamp posts (path, trail, dock, mooring and
+  tower lamps, with their glass), the tower's rails and mast and the moored vehicles dissolve through the
+  occluder fade (`registerFade` in `geo.ts`); when one fisher stands behind another on the camera axis the
+  group camera yaws (up to 0.5 rad) and lifts a touch until both read (`lineup.ts`, held against shuffling).
 - **Catch moment**: an eased push toward the catcher for ~2 s then back (only when one catch at a time).
 - **Campfire** (`lake.campfire`): the camera settles on the campfire; fishers sit around it.
 

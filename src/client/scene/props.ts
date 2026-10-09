@@ -29,7 +29,7 @@ import { CAMPFIRE, DOCK, EAST, OBSTACLES, SOUTH, WEST, NORTH, angleGap, lakeRadi
 import { FALLS, PATH_D, heightAt } from "./terrain";
 import { clearOfTrails } from "./valley";
 import { fbm, rng, vnoise } from "./noise";
-import { jitter, merge, paint, paintedMaterial, prep, puffNormals, surf } from "./geo";
+import { fadeGlowMaterial, jitter, merge, paint, paintedMaterial, prep, puffNormals, surf } from "./geo";
 import { buildCampfireFx } from "./campfire";
 import { PK } from "./painter";
 import type { TodState } from "./tod";
@@ -367,7 +367,8 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   paint(lampCap, 0x2a2228);
   // Lamp posts dissolve like the trees when they stand between the camera and a fisher.
   add(instanced(merge([lampPost, lampHook, lampCap]), treeMat, lamps, true)).name = "lamp-posts";
-  const lampGlassMat = new MeshBasicMaterial({ color: 0xffffff });
+  // The glass dissolves with its post (round 10: it floated on where the post had gone).
+  const lampGlassMat = fadeGlowMaterial({ vertexColors: false });
   disposables.push(lampGlassMat);
   const lampGlass = new SphereGeometry(0.1, 8, 6).scale(1, 1.3, 1).translate(0.28, 1.05, 0);
   add(instanced(lampGlass, lampGlassMat, lamps.map((l) => ({ ...l, tint: new Color(1, 0.7, 0.35) })), false)).name = "lamp-glass";
@@ -436,7 +437,8 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   paint(lanternFrame, 0x2a2420);
   const lanternTop = prep(new ConeGeometry(0.24, 0.18, 4).rotateY(Math.PI / 4).translate(lx - 0.5, deckY + 1.89, lz));
   paint(lanternTop, 0x2a2420);
-  dockParts.push(lpost, arm, lanternFrame, lanternTop);
+  // The lantern post dissolves between the camera and a fisher (like the path lamps).
+  add(new Mesh(merge([lpost, arm, lanternFrame, lanternTop]), treeMat)).name = "dock-lantern";
   // Crates and a bucket on the deck.
   const crate = prep(new BoxGeometry(0.55, 0.45, 0.55).translate(-0.6, deckY + 0.22, DOCK.rootZ - 1.6));
   paint(crate, 0x8a5a32, 0xb07a48);
@@ -449,7 +451,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   dock.name = "dock";
   dock.castShadow = true;
   dock.receiveShadow = true;
-  const glassMat = new MeshBasicMaterial({ color: 0x9af0ff });
+  const glassMat = fadeGlowMaterial({ vertexColors: false, color: 0x9af0ff });
   disposables.push(glassMat);
   const glass = add(new Mesh(new BoxGeometry(0.22, 0.28, 0.22), glassMat));
   glass.position.set(lx - 0.5, deckY + 1.62, lz);

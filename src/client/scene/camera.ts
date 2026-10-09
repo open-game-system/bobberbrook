@@ -1,6 +1,7 @@
 import { PerspectiveCamera, Vector3 } from "three";
 import { CAMPFIRE, DOCK, EAST, NORTH, WEST, lakeRadius } from "../../game/world";
 import { damp } from "./noise";
+import { Lineup, type Ground } from "./lineup";
 
 /** Critically damped spring toward a goal (exact step: no overshoot, stable at any dt). */
 export function spring(x: number, v: number, goal: number, omega: number, dt: number, out: { x: number; v: number }): void {
@@ -97,6 +98,10 @@ export class CameraRig {
   readonly anchor = new Vector3();
   private readonly pts: Vector3[] = Array.from({ length: MAX_POINTS }, () => new Vector3());
   private n = 0;
+  /** The fishers' feet on the ground (for the lineup: nobody hidden behind another). */
+  private readonly feet: Ground[] = Array.from({ length: MAX_POINTS }, () => ({ x: 0, z: 0 }));
+  private nf = 0;
+  private readonly lineup = new Lineup();
   private first = true;
   private startT = -1;
   private readonly tmp = new Vector3();
@@ -113,8 +118,8 @@ export class CameraRig {
     this.first = true;
   }
 
-  debug(): { dist: number; catchW: number; revealW: number; n: number; target: number[]; ahead: number } {
-    return { dist: this.dist, catchW: this.catchW, revealW: this.revealW, n: this.n, target: this.target.toArray(), ahead: this.ahead };
+  debug(): { dist: number; catchW: number; revealW: number; n: number; target: number[]; ahead: number; yaw: number; el: number; feet: number[][] } {
+    return { dist: this.dist, catchW: this.catchW, revealW: this.revealW, n: this.n, target: this.target.toArray(), ahead: this.ahead, yaw: this.yaw, el: this.el, feet: this.feet.slice(0, this.nf).map((f) => [f.x, f.z]) };
   }
 
   get view(): ViewName {
@@ -123,6 +128,19 @@ export class CameraRig {
 
   beginFocus(): void {
     this.n = 0;
+    this.nf = 0;
+  }
+
+  /** A framed fisher's feet (the camera yaws a little so nobody stands hidden behind another). */
+  addFisher(x: number, z: number): void {
+    if (this.nf >= MAX_POINTS) return;
+    const f = this.feet[this.nf++]!;
+    f.x = x;
+    f.z = z;
+  }
+
+  private lineUp(yaw: number, el: number): { yaw: number; el: number } {
+    return this.lineup.update(this.feet, yaw, el, this.nf);
   }
 
   /** A point that must stay in frame (feet; the rig adds the head and name tag above it). */
@@ -293,14 +311,20 @@ export class CameraRig {
       }
       const side = kind === 1 ? 0.75 : 0.85;
       const back = kind === 1 ? 0.55 : 0.25;
-      this.wantYaw = Math.atan2(sx * side + ux * back, sz * side + uz * back);
-      this.wantEl = kind === 1 ? 0.5 : 0.4;
+      const yaw0 = Math.atan2(sx * side + ux * back, sz * side + uz * back);
+      const el0 = kind === 1 ? 0.5 : 0.4;
+      // No lineup here: a family huddled to board cannot be spread by a yaw, it would only swing the shot.
+      this.wantYaw = yaw0;
+      this.wantEl = el0;
       this.fitGroup(this.wantYaw, this.wantEl);
       rate = 1.2;
     } else if (groupMode) {
       // Each generated place is framed from its own side (home places keep the classic view).
-      this.wantYaw = this.placeYaw;
-      this.fitGroup(this.placeYaw);
+      // Nobody hidden behind another fisher: a slight yaw (and lift) when one stands behind another.
+      const lu = this.lineUp(this.placeYaw, EL);
+      this.wantYaw = this.placeYaw + lu.yaw;
+      this.wantEl = EL + lu.el;
+      this.fitGroup(this.wantYaw, this.wantEl);
     } else if (v === "wide" && this.n > 0) {
       // High and far over the family: the lie of the land round them (the fog's edge, the sea).
       this.fitGroup();

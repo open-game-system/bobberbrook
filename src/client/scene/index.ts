@@ -24,7 +24,7 @@ import { CameraRig, isView, VIEWS } from "./camera";
 import { FisherViews, type CatchFocus } from "./fishers";
 import { FishShadows, FishTextures, sharedCardGeometry } from "./fishviz";
 import { Fx } from "./fx";
-import { MAX_FOCUS, occluderDepthMaterial, occluderMaterial, patchLambertWrap } from "./geo";
+import { MAX_FOCUS, occluderDepthMaterial, occluderMaterial, patchLambertWrap, registerFade } from "./geo";
 import { makeParticles } from "./particles";
 import { TAG_LAYER, buildPost, type Post } from "./post";
 import { buildProps } from "./props";
@@ -88,6 +88,8 @@ export type SceneDebug = {
   toggle?(name: string): number;
   /** Names of the scene's top-level objects (for toggle). */
   names?(): string[];
+  /** Where the TV camera is (world metres). */
+  cameraAt?(): { x: number; y: number; z: number };
   /** Turns the painterly post (contact shadow, knee, Kuwahara) off or on, for an in-page perf A/B. */
   painterly?(on: boolean): boolean;
 };
@@ -184,6 +186,8 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     uVP: { value: new Matrix4() },
   };
   const treeMat = occluderMaterial(occ);
+  // Lamps, lantern posts and their glass, wherever they are built, dissolve through the same fade.
+  registerFade(treeMat, occ);
   // Leaf cards for every canopy built from here on (one program for both leaf sheets).
   const leafMats = { violet: leafMaterial(kit.leavesViolet, occ, time), fern: leafMaterial(kit.leavesFern, occ, time), needle: leafMaterial(needleSheet(), occ, time) };
   setFoliageMaterials(leafMats);
@@ -446,6 +450,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     fishers.forEachSeat((seat, x, y, z, _c, bob) => {
       if (!framed.has(seat)) return;
       rig.addFocus(x, y, z);
+      rig.addFisher(x, z);
       if (bob) rig.addFocus(bob.x, Math.max(0, bob.y), bob.z);
     });
     const nf = vehicles.rideFocus(rideFocus);
@@ -600,6 +605,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   const rendererName = String(dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
 
   window.__scene = {
+    cameraAt: () => ({ x: camera.position.x, y: camera.position.y, z: camera.position.z }),
     info: () => ({
       renderer: rendererName,
       quality: opts.quality,

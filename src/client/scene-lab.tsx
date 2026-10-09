@@ -2,7 +2,7 @@
  * Scene lab: the TV scene full-window, driven by a local simulation with the real lake rules and
  * simple bots. ?scenario=morning|four-reel|golden-swirl|night-catch|rod-upgrade|campfire|empty|
  * moonwell|mistmarsh|pools|hollow|tarn|trail|discovery|night-tarn|far-place|biome-<biome>|boat-ride|
- * zeppelin-ride|boarding|tower|arrival|fog &phase=0..1 &seed=N &world=N (world seed, default 7) &lite=1 &view=name
+ * zeppelin-ride|boarding|tower|tower-lamp|arrival|fog &phase=0..1 &seed=N &world=N (world seed, default 7) &lite=1 &view=name
  */
 import { produce } from "immer";
 import { CATCH_SKIP_MS, SEAT_COLORS, action, join, move, newLake, reelHold, setCampfire, step, type Fisher, type Lake } from "../game/lake";
@@ -165,6 +165,52 @@ const LAZY: Record<string, () => Scenario> = {
   // The boarding moment (sail unfurling / propellers spinning, the platform glowing): held there.
   tower: () => atPlatform(findPlatform("zeppelin"), 0.3, (l) => l.boarding !== null && l.now - l.boarding.since > 1700, (_l, now, s) => now - s > 2600, true),
   boarding: () => atPlatform(findPlatform("boat"), 0.4, (l) => l.boarding !== null && l.now - l.boarding.since > 1700, (_l, now, s) => now - s > 2600, true),
+  // A tower lantern between the camera and a fisher (round 10, 239 s): Juneau on the tower deck just
+  // behind its camera-side lamp while Dad fishes the pond beside it (the lamp must dissolve).
+  "tower-lamp": () => {
+    const pl = findPlatform("zeppelin");
+    const place = W.placeById(pl.place);
+    if (!place) throw new Error("the zeppelin place is missing");
+    const t = W.towerAt(place);
+    // The deck lamps stand at pi/8 + k pi/2 on a 5.85 m ring. Once the camera has settled (2.5 s), Juneau
+    // steps 2.6 m behind the lamp nearest the camera, on the line from the lens (again at 5.5 s).
+    let placed = 0;
+    let t0 = -1;
+    const behindLamp = (l: Lake, now: number): Lake => {
+      if (t0 < 0) t0 = now;
+      // Juneau is busy on the deck (an idle fisher would tag along after Dad).
+      l = produce(l, (dd) => { for (const f of dd.fishers) if (f.seat === 2) f.lastInputAt = now; });
+      const cam = window.__scene?.cameraAt?.();
+      // Twice: the camera re-fits after the first step, so the second aims from where it settled.
+      if (placed >= 2 || now - t0 < 3000 + placed * 2500 || !cam) return l;
+      placed++;
+      let a = Math.PI / 8;
+      const score = (b: number) => -Math.hypot(t.x + Math.cos(b) * 5.85 - cam.x, t.z + Math.sin(b) * 5.85 - cam.z);
+      for (let k = 1; k < 4; k++) {
+        const b = Math.PI / 8 + (k * Math.PI) / 2;
+        if (score(b) > score(a)) a = b;
+      }
+      const lx = t.x + Math.cos(a) * 5.85;
+      const lz = t.z + Math.sin(a) * 5.85;
+      const d = Math.hypot(lx - cam.x, lz - cam.z) || 1;
+      const at = { x: lx + ((lx - cam.x) / d) * 2.6, z: lz + ((lz - cam.z) / d) * 2.6 };
+      return produce(l, (dd) => { for (const f of dd.fishers) if (f.seat === 2) { f.pos = at; f.vel = { x: 0, z: 0 }; f.movedAt = now; } });
+    };
+    const juneau = { x: t.x, z: t.z };
+    // Dad at the pond shore nearest the tower.
+    const th = Math.atan2(t.z - place.center.z, t.x - place.center.x);
+    const dad = shoreOf(place, th);
+    return {
+      phase: 0.3,
+      fishers: [
+        { seat: 2, name: "Juneau", spot: juneau, at: juneau, stay: true },
+        { seat: 0, name: "Dad", spot: dad, at: shoreOf(place, th, 2.5) },
+      ],
+      setup: (l) => produce(l, (d) => { d.discovered = ["moonwell", pl.place]; }),
+      direct: behindLamp,
+      hero: (_l, now, s) => now - s > 9000,
+    };
+  },
   // Arrival: the airship settling at the far tower, the family stepping off.
   arrival: () => atPlatform(findPlatform("zeppelin"), 0.3, (l) => rideK(l) > 0.86, (l, now, s) => now - s > 1500 && (l.ride === null || rideK(l) > 0.985)),
   // The edge of what the family has explored: out of Whisperfall Pools up the trail north into the
