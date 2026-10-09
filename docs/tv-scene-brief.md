@@ -11,6 +11,11 @@ by a cloud GPU Chrome and streamed to a Chromecast. References: `concept/web/*.j
   trees (clustered blob canopies), fat rounded rocks, saturated warm-cool colour, painted gradients
   baked into vertex colours or canvas textures, minimal specular. Toon-ish wrap lighting, soft
   shadows at 20–30 % of lit brightness, never black. `NeutralToneMapping`. A gentle grade and bloom.
+- **Painted texture kit** (`public/art/textures/`, cut from one Codex sheet by `scripts/slice-textures.py`):
+  WoW reads as hand-painted diffuse textures on simple shapes. Ground blends grass / moss / path / rock /
+  lakebed in world space; canopies are clumps of alpha leaf cards (leaves-violet, leaves-fern) round a
+  dark core; trunks get bark, boulders and cliffs rock, tower stone the stone tiles. New surfaces get a
+  painted texture, never flat vertex colour alone.
 - **Not** the previous OGS games' looks (no papercraft, no ink outlines, no felt).
 - **No faces on objects** (bobbers, rods, boats, houses, the sun, the moon). Fishers have simple faces.
 - No text in the 3D world except fisher name tags.
