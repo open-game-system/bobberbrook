@@ -1,0 +1,14 @@
+FAIL tv-empty-lake @ 1920x1080
+     - screen_error message="page.screenshot: Timeout 30000ms exceeded."
+FAIL kid-hat-picker @ 1080x810
+     - screen_error message="page.goto: Timeout 90000ms exceeded."
+FAIL phone-controller @ 393x852
+     - screen_error message="page.goto: Timeout 90000ms exceeded."
+FAIL phone-controller @ 375x667
+     - screen_error message="page.goto: Timeout 90000ms exceeded."
+FAIL ipad-controller @ 1080x810
+     - screen_error message="page.goto: Timeout 90000ms exceeded."
+FAIL tv-two-fishers @ 1920x1080
+     - screen_error message="page.goto: Timeout 90000ms exceeded."
+
+6 screen×viewport shots, 6 findings → critic/rounds/06/check/report.json, critic/rounds/06/check/sheet.png

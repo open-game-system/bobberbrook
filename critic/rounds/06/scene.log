@@ -1,0 +1,45 @@
+moonwell {"label":"moonwell","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":59,"programs":59,"calls":495,"triangles":3000809,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":104}
+far-place {"label":"far-place","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":57,"programs":57,"calls":424,"triangles":2221344,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":75}
+biome-willow {"label":"biome-willow","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":56,"programs":56,"calls":295,"triangles":2302167,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":85}
+biome-crystal {"label":"biome-crystal","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":57,"programs":57,"calls":415,"triangles":2661575,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":109}
+biome-ember {"label":"biome-ember","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":59,"programs":59,"calls":450,"triangles":2889511,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":99}
+biome-frost {"label":"biome-frost","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":59,"programs":59,"calls":510,"triangles":3810657,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":144}
+biome-marsh {"label":"biome-marsh","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":59,"programs":60,"calls":537,"triangles":4208244,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":96}
+fog {"label":"fog","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":59,"programs":59,"calls":298,"triangles":2595090,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":70}
+boarding {"label":"boarding","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":57,"programs":57,"calls":391,"triangles":2569496,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":68}
+tower {"label":"tower","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":59,"programs":59,"calls":547,"triangles":3624302,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":92}
+boat-ride {"label":"boat-ride","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":56,"programs":57,"calls":341,"triangles":1126506,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":116}
+zeppelin-ride {"label":"zeppelin-ride","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":57,"programs":58,"calls":334,"triangles":1579875,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":130}
+arrival {"label":"arrival","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":57,"programs":57,"calls":451,"triangles":3234421,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":69}
+mistmarsh {"label":"mistmarsh","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":59,"programs":59,"calls":556,"triangles":4037976,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":61}
+hollow {"label":"hollow","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":59,"programs":59,"calls":426,"triangles":2939318,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":114}
+pools {"label":"pools","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":59,"programs":59,"calls":417,"triangles":2912683,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":111}
+tarn {"label":"tarn","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":59,"programs":59,"calls":397,"triangles":2698411,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":82}
+trail {"label":"trail","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":59,"programs":59,"calls":573,"triangles":4122166,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":63}
+spread {"label":"spread","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":59,"programs":59,"calls":498,"triangles":3822476,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":110}
+discovery {"label":"discovery","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":59,"programs":59,"calls":540,"triangles":3993318,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":74}
+night-tarn {"label":"night-tarn","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":59,"programs":60,"calls":363,"triangles":2603301,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":69}
+double-catch {"label":"double-catch","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":59,"programs":59,"calls":454,"triangles":3246144,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":121}
+miss {"label":"miss","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":59,"programs":59,"calls":460,"triangles":3266262,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":115}
+morning {"label":"morning","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":59,"programs":59,"calls":446,"triangles":3367271,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":118}
+morning@0.97 {"label":"morning@0.97","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":59,"programs":59,"calls":463,"triangles":3515403,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":100}
+four-reel {"label":"four-reel","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":59,"programs":59,"calls":493,"triangles":2981585,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":116}
+golden-swirl {"label":"golden-swirl","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":59,"programs":59,"calls":467,"triangles":3416552,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":84}
+night-catch {"label":"night-catch","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":59,"programs":59,"calls":462,"triangles":3234830,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":77}
+rod-upgrade {"label":"rod-upgrade","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":59,"programs":59,"calls":468,"triangles":3090480,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":117}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.goto: Timeout 30000ms exceeded.
+Call log:
+  - navigating to "http://127.0.0.1:8841/scene-lab.html?scenario=campfire", waiting until "load"
+
+    at /Users/jonathanmumm/src/bobberbrook/scripts/shoot-scene.mjs:87:14 {
+  log: [
+    '  - navigating to "http://127.0.0.1:8841/scene-lab.html?scenario=campfire", waiting until "load"'
+  ],
+  name: 'TimeoutError'
+}
+
+Node.js v24.9.0

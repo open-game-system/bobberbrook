@@ -1,0 +1,90 @@
+{
+  "pass": false,
+  "results": [
+    {
+      "screen": "tv-empty-lake",
+      "role": "tv",
+      "viewport": "1920x1080",
+      "shot": "critic/rounds/06/check/tv-empty-lake/tv-1920x1080.png",
+      "failures": [
+        {
+          "code": "screen_error",
+          "message": "page.screenshot: Timeout 30000ms exceeded."
+        }
+      ],
+      "errors": [],
+      "tapped": []
+    },
+    {
+      "screen": "kid-hat-picker",
+      "role": "kid",
+      "viewport": "1080x810",
+      "shot": "critic/rounds/06/check/kid-hat-picker/kid-1080x810.png",
+      "failures": [
+        {
+          "code": "screen_error",
+          "message": "page.goto: Timeout 90000ms exceeded."
+        }
+      ],
+      "errors": [],
+      "tapped": []
+    },
+    {
+      "screen": "phone-controller",
+      "role": "dad",
+      "viewport": "393x852",
+      "shot": "critic/rounds/06/check/phone-controller/dad-393x852.png",
+      "failures": [
+        {
+          "code": "screen_error",
+          "message": "page.goto: Timeout 90000ms exceeded."
+        }
+      ],
+      "errors": [],
+      "tapped": []
+    },
+    {
+      "screen": "phone-controller",
+      "role": "dad",
+      "viewport": "375x667",
+      "shot": "critic/rounds/06/check/phone-controller/dad-375x667.png",
+      "failures": [
+        {
+          "code": "screen_error",
+          "message": "page.goto: Timeout 90000ms exceeded."
+        }
+      ],
+      "errors": [],
+      "tapped": []
+    },
+    {
+      "screen": "ipad-controller",
+      "role": "kid",
+      "viewport": "1080x810",
+      "shot": "critic/rounds/06/check/ipad-controller/kid-1080x810.png",
+      "failures": [
+        {
+          "code": "screen_error",
+          "message": "page.goto: Timeout 90000ms exceeded."
+        }
+      ],
+      "errors": [],
+      "tapped": []
+    },
+    {
+      "screen": "tv-two-fishers",
+      "role": "tv",
+      "viewport": "1920x1080",
+      "shot": "critic/rounds/06/check/tv-two-fishers/tv-1920x1080.png",
+      "failures": [
+        {
+          "code": "screen_error",
+          "message": "page.goto: Timeout 90000ms exceeded."
+        }
+      ],
+      "errors": [],
+      "tapped": []
+    }
+  ],
+  "sheet": "critic/rounds/06/check/sheet.png"
+}
