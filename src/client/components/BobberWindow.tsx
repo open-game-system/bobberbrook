@@ -4,7 +4,7 @@ import type { ButtonState } from "../fisherUi";
  * A close-up of your own bobber, in the middle of the controller: the kid sees the nibble and the
  * splash right in their hands, a moment before the TV.
  */
-export function BobberWindow({ state }: { state: ButtonState }) {
+export function BobberWindow({ state, escaped = false }: { state: ButtonState; escaped?: boolean }) {
   const show = state.kind === "waiting" || state.kind === "bite" || state.kind === "reel";
   if (!show) return null;
   const thrash = state.kind === "reel" && state.thrashing;
@@ -22,6 +22,13 @@ export function BobberWindow({ state }: { state: ButtonState }) {
         </div>
       )}
       {(state.kind === "bite" || thrash) && <div className="bw-splash" />}
+      {/* A missed bite: the fish's shadow darts off with a little splash (no words). */}
+      {escaped && state.kind === "waiting" && (
+        <>
+          <div className="bw-splash bw-escape-splash" />
+          <div className="bw-fish bw-escape" />
+        </>
+      )}
     </div>
   );
 }

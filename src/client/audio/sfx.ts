@@ -16,6 +16,19 @@ export function setSfxTrim(trim: number): void {
   SFX_TRIM = trim;
 }
 
+/** Every effect goes through one gentle low-pass: the bright edges of noise bursts read as clicks on TV speakers. */
+let bus: { ctx: AudioContext; node: AudioNode } | null = null;
+function sfxBus(a: { ctx: AudioContext; out: AudioNode }): AudioNode {
+  if (bus && bus.ctx === a.ctx) return bus.node;
+  const lp = a.ctx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 6500;
+  lp.Q.value = 0.5;
+  lp.connect(a.out);
+  bus = { ctx: a.ctx, node: lp };
+  return lp;
+}
+
 function chain(gain: number, pan: number): { ctx: AudioContext; node: AudioNode; t: number } | null {
   const a = audio();
   if (!a) return null;
@@ -23,7 +36,7 @@ function chain(gain: number, pan: number): { ctx: AudioContext; node: AudioNode;
   g.gain.value = gain * SFX_TRIM;
   const p = a.ctx.createStereoPanner();
   p.pan.value = pan;
-  g.connect(p).connect(a.out);
+  g.connect(p).connect(sfxBus(a));
   return { ctx: a.ctx, node: g, t: a.ctx.currentTime };
 }
 
@@ -84,18 +97,19 @@ export const sfx = {
   },
   nibble: (o: Opts = {}) => tone(520, 0.07, { gain: 0.14, bend: 1.6, ...o }),
   bite: (o: Opts = {}) => {
-    whoosh(0.5, 1500, 350, { gain: 0.45, q: 0.9, ...o });
+    whoosh(0.5, 1000, 300, { gain: 0.42, q: 1.1, ...o });
     tone(note(9), 0.25, { gain: 0.3, type: "triangle", ...o, at: (o.at ?? 0) + 0.02 });
     tone(note(11), 0.35, { gain: 0.3, type: "triangle", ...o, at: (o.at ?? 0) + 0.12 });
   },
-  reelClick: (o: Opts = {}) => whoosh(0.03, 3500, 3000, { gain: 0.16, q: 6, ...o }),
-  thrash: (o: Opts = {}) => whoosh(0.3, 1800, 700, { gain: 0.3, q: 0.7, ...o }),
+  // A soft wooden tick (tonal, low): a 3.5 kHz noise tick counted as a harsh click every reel.
+  reelClick: (o: Opts = {}) => tone(880, 0.05, { gain: 0.09, type: "triangle", attack: 0.008, ...o }),
+  thrash: (o: Opts = {}) => whoosh(0.32, 1100, 500, { gain: 0.28, q: 1.0, ...o }),
   missed: (o: Opts = {}) => {
-    whoosh(0.35, 1500, 600, { gain: 0.25, ...o });
+    whoosh(0.35, 1000, 450, { gain: 0.24, ...o });
     tone(note(6), 0.4, { gain: 0.14, type: "triangle", bend: 0.6, ...o, at: (o.at ?? 0) + 0.1 });
   },
   catch: (o: Opts = {}) => {
-    whoosh(0.45, 1400, 500, { gain: 0.3, q: 1.0, ...o });
+    whoosh(0.45, 950, 400, { gain: 0.28, q: 1.1, ...o });
     [5, 7, 9, 12].forEach((n, i) => tone(note(n), 0.35, { gain: 0.22, type: "triangle", ...o, at: (o.at ?? 0) + 0.1 + i * 0.07 }));
   },
   newFish: (o: Opts = {}) => {

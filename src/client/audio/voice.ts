@@ -1,4 +1,5 @@
 import { audio } from "./engine";
+import { duckMusic } from "./world";
 
 /**
  * The narrator (TV only): fish names on a catch, and a few cheers. Clips are decoded once and played
@@ -36,8 +37,14 @@ async function play(id: string, delay = 0): Promise<void> {
   src.buffer = buf;
   const g = a.ctx.createGain();
   g.gain.value = 0.62;
-  src.connect(g).connect(a.out);
+  // A gentle de-ess: TTS sibilants read as harsh clicks on TV speakers.
+  const deEss = a.ctx.createBiquadFilter();
+  deEss.type = "highshelf";
+  deEss.frequency.value = 5000;
+  deEss.gain.value = -6;
+  src.connect(deEss).connect(g).connect(a.out);
   src.start(start);
+  window.setTimeout(() => duckMusic(buf.duration + 0.2), Math.max(0, (start - a.ctx.currentTime) * 1000));
   busyUntil = start + buf.duration + 0.15;
 }
 

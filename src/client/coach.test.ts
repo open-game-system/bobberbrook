@@ -23,6 +23,12 @@ describe("coachLine", () => {
   it("skips coaching an easy fisher (the game hooks for them)", () => {
     expect(coachLine(withMode(family(), 1, { mode: "bite", easy: true }), 0, 10)).not.toContain("bite");
   });
+  it("says why a fish got away, for a moment after the miss (the kid's first)", () => {
+    const missed = withMode(family(), 1, { mode: "wait", missAt: 1000 });
+    expect(coachLine(missed, 0, 2000)).toBe("Juneau's fish got away: tap as soon as the bobber dips. Another one is coming!");
+    expect(coachLine(withMode(family(), 0, { mode: "wait", missAt: 1000 }), 0, 2000)).toBe("Too slow, it got away! Tap the moment it dips. Another one is coming.");
+    expect(coachLine(missed, 0, 1000 + 4500)).not.toContain("got away");
+  });
   it("coaches the reel", () => {
     expect(coachLine(withMode(family(), 1, { mode: "reel" }), 0, 10)).toContain("Juneau is reeling");
   });

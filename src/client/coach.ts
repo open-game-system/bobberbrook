@@ -39,6 +39,16 @@ const theirBite: Rule = (lake, mySeat) => {
   return f ? `${nameOf(lake, f.seat)} has a bite! Tell them: tap now!` : null;
 };
 
+/** How long the coach explains a miss. */
+const MISS_LINE_MS = 4000;
+
+const freshMiss: Rule = (lake, mySeat, now) => {
+  const recent = lake.fishers.filter((f) => f.mode === "wait" && f.missAt !== null && now - f.missAt < MISS_LINE_MS && !f.easy);
+  const kid = recent.find((f) => f.seat !== mySeat);
+  if (kid) return `${nameOf(lake, kid.seat)}'s fish got away: tap as soon as the bobber dips. Another one is coming!`;
+  return recent.some((f) => f.seat === mySeat) ? "Too slow, it got away! Tap the moment it dips. Another one is coming." : null;
+};
+
 const theirReel: Rule = (lake, mySeat) => {
   const f = otherIn(lake, mySeat, "reel");
   return f ? `${nameOf(lake, f.seat)} is reeling: hold the button, let go when the fish splashes!` : null;
@@ -145,7 +155,7 @@ const exploreTip: Rule = (lake) => {
 };
 
 /** In priority order: what's happening to someone right now first, then news, then a tip. */
-const RULES: Rule[] = [campfireLine, riding, boardingNow, myBite, theirBite, theirReel, freshCatch, wentAhead, freshDiscovery, goldenSwirl, rideNearby, exploreTip, timeTip, rodTip];
+const RULES: Rule[] = [campfireLine, riding, boardingNow, myBite, theirBite, theirReel, freshCatch, freshMiss, wentAhead, freshDiscovery, goldenSwirl, rideNearby, exploreTip, timeTip, rodTip];
 
 /**
  * The host phone's one line to read aloud. The grown-up is the coach: what's happening to the kids

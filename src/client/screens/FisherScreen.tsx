@@ -114,7 +114,7 @@ export function FisherScreen({ seat, host, hosting }: { seat: number; host: bool
         {host && <HostStrip lake={lake} mySeat={seat} now={now} send={send} />}
       </div>
       <div className="fisher-middle">
-        <BobberWindow state={state} />
+        <BobberWindow state={state} escaped={me.missAt !== null && now - me.missAt < 1600} />
         {(state.kind === "walk-to-water" || state.kind === "cast") && (() => {
           const c = compassTo(lake, positionAt(me, now), seat);
           return c ? <SwirlCompass c={c} /> : null;

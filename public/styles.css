@@ -106,6 +106,10 @@ button { font: inherit; color: inherit; }
 @keyframes dip { 50% { translate: -50% -20%; } }
 @keyframes dive { to { translate: -50% 10%; scale: 0.6; opacity: 0.4; } }
 @keyframes splash { from { scale: 0.9; } to { scale: 1.2; } }
+.bw-fish.bw-escape { --progress: 0.4; transition: none; animation: escape 1.2s ease-in forwards; }
+.bw-escape-splash { animation: splash-out 0.6s ease-out forwards; }
+@keyframes escape { from { translate: -50% -50%; opacity: 1; } to { translate: 160% -20%; opacity: 0; } }
+@keyframes splash-out { from { scale: 0.8; opacity: 1; } to { scale: 1.4; opacity: 0; } }
 
 /* catch card */
 .catch-card { position: absolute; inset: -8%; display: grid; place-items: center; animation: pop 0.45s cubic-bezier(.2,1.6,.4,1); }

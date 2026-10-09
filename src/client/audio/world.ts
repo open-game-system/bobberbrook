@@ -279,8 +279,9 @@ export function startWorld(): void {
   water = startWater(ctx, out);
   night = startNight(ctx, out);
   musicBus = ctx.createGain();
-  // The bed sits under the effects but must read as music between catches (round 01: too faint).
-  musicBus.gain.value = 2.2;
+  // The bed sits under the effects but must read as music between catches (round 01: too faint;
+  // round 05: still −23 dBFS between events, lifted ~2 dB).
+  musicBus.gain.value = MUSIC_LEVEL;
   const delay = ctx.createDelay();
   delay.delayTime.value = BEAT * 0.75;
   const fb = ctx.createGain();
@@ -309,6 +310,18 @@ export function startWorld(): void {
   };
   timers.push(window.setInterval(loop, 400));
   loop();
+}
+
+const MUSIC_LEVEL = 2.8;
+
+/** Dips the music under the narrator for `seconds`, then brings it back. */
+export function duckMusic(seconds: number): void {
+  const a = audio();
+  if (!a || !musicBus) return;
+  const t = a.ctx.currentTime;
+  musicBus.gain.cancelScheduledValues(t);
+  musicBus.gain.setTargetAtTime(MUSIC_LEVEL * 0.45, t, 0.08);
+  musicBus.gain.setTargetAtTime(MUSIC_LEVEL, t + seconds, 0.4);
 }
 
 export function stopWorld(): void {

@@ -81,3 +81,16 @@ describe("the big button always leads to fishing (wading in)", () => {
     expect(me(lake).fishSpot).toBeNull();
   });
 });
+
+describe("a missed bite is remembered", () => {
+  it("records when the fish got away (the coach explains it)", () => {
+    let lake = backFromShore(lakeWith(1), 1);
+    lake = action(lake, 0, T0 + 100);
+    expect(me(lake).missAt).toBeNull();
+    lake = step(lake, T0 + 1000);
+    const until = me(lake).biteUntil;
+    lake = step(lake, until + 10);
+    expect(me(lake).missAt).toBe(until);
+    expect(me(lake).mode).toBe("wait");
+  });
+});

@@ -71,6 +71,7 @@ export const FisherSchema = z.object({
     .object({ fishId: z.string(), cm: z.number(), shells: z.number(), isNew: z.boolean(), golden: z.boolean(), at: z.number(), seq: z.number() })
     .nullable(),
   missSeq: z.number(),
+  missAt: z.number().nullable(),
 });
 
 export const LakeSchema = z.object({

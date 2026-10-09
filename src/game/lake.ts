@@ -67,6 +67,8 @@ export type Fisher = {
   reel: Reel | null;
   catch: Catch | null;
   missSeq: number;
+  /** When the last bite got away (the coach explains it), or null. */
+  missAt: number | null;
 };
 
 export type Swirl = { id: number; area: PlaceId; pos: Vec; theta: number; golden: boolean; since: number; until: number; catches: number };
@@ -540,6 +542,7 @@ const stepBite: ModeStep = (d, f, now) => {
   if (now < f.biteUntil) return false;
   // It got away: a splash, and the bobber waits for the next one.
   f.missSeq += 1;
+  f.missAt = f.biteUntil;
   f.mode = "wait";
   scheduleBite(d, f, f.biteUntil);
   return true;
@@ -804,6 +807,7 @@ export function join(lake: Lake, input: { name: string | null; ogsId: string | n
       reel: null,
       catch: null,
       missSeq: 0,
+      missAt: null,
     });
     d.fishers.sort((a, b) => a.seat - b.seat);
     reveal(d);
