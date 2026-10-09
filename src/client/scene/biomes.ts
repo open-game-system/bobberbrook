@@ -86,31 +86,45 @@ function farSpot(c: KitCtx, R: () => number, out: number, base = -Math.PI / 2): 
 
 /** An oak with a pale canopy: the place's sub-palette tints it (amber in ember woods, frost-blue, prism-violet). */
 export function paleOakGeometry(seed: number): BufferGeometry {
+  // Round 09-B: the ember woods read blocky (five even lumps, a bright core showing through). Now a
+  // looser crown of seven uneven puffs at different heights, a dark core and denser leaf cards.
   const r = rng(seed);
-  const trunk = prep(new CylinderGeometry(0.28, 0.5, 3.4, 7).translate(0, 1.7, 0));
+  const trunk = prep(new CylinderGeometry(0.24, 0.5, 3.6, 8).translate(0, 1.8, 0));
   paint(trunk, 0x3a2c30, 0x6a5458);
+  const limbs: BufferGeometry[] = [];
   const blobs: BufferGeometry[] = [];
   const puffs: Puff[] = [];
-  for (let i = 0; i < 5; i++) {
-    const a = (i / 5) * Math.PI * 2 + r();
-    const rr = i === 0 ? 0 : 1.3;
-    const rad = i === 0 ? 2.1 : 1.45;
-    const g = new SphereGeometry(rad * 0.86, 9, 7);
-    jitter(g, 0.16, seed + i);
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2 + r() * 0.8;
+    const rr = i === 0 ? 0 : 1.2 + r() * 0.7;
+    const rad = i === 0 ? 1.9 : 1.05 + r() * 0.5;
+    const py = i === 0 ? 4.9 : 3.7 + r() * 1.4;
+    const sy = 0.75 + r() * 0.2;
+    const g = new SphereGeometry(rad * 0.8, 10, 8);
+    g.scale(1, sy, 1);
+    jitter(g, 0.2, seed + i);
     g.computeVertexNormals();
-    const py = 4.3 + (i === 0 ? 0.4 : -0.1 + r() * 0.5);
     g.translate(Math.cos(a) * rr, py, Math.sin(a) * rr);
     blobs.push(prep(g));
-    puffs.push([Math.cos(a) * rr, py, Math.sin(a) * rr, rad]);
+    puffs.push([Math.cos(a) * rr, py, Math.sin(a) * rr, rad, sy]);
+    if (i > 0) {
+      // A limb out to the puff (bark), so the crown hangs from branches, not a ball on a stick.
+      const len = Math.hypot(rr, py - 3.0);
+      const limb = new CylinderGeometry(0.07, 0.14, len, 5).translate(0, len / 2, 0);
+      limb.rotateZ(-Math.atan2(rr, py - 3.0));
+      limb.rotateY(-a);
+      limb.translate(0, 3.0, 0);
+      limbs.push(paint(prep(limb), 0x3a2c30, 0x5a4448));
+    }
   }
   const canopy = merge(blobs);
-  puffNormals(canopy, 0, 4.3, 0, 0.8);
+  puffNormals(canopy, 0, 4.4, 0, 0.8);
   paint(canopy, 0x8a8090, 0xf4f0f8, (p, n, c) => {
-    c.multiplyScalar((0.85 + 0.25 * vnoise(p.x * 2, p.z * 2 + p.y, 4)) * 0.62);
-    if (n.y > 0.5) c.lerp(new Color(0xffffff).multiplyScalar(0.6), (n.y - 0.5) * 0.4);
+    c.multiplyScalar((0.85 + 0.25 * vnoise(p.x * 2, p.z * 2 + p.y, 4)) * 0.38);
+    if (n.y > 0.5) c.lerp(new Color(0xffffff).multiplyScalar(0.45), (n.y - 0.5) * 0.3);
   });
-  const cards = leafCards(puffs, { cx: 0, cy: 4.3, cz: 0, size: 1.2, density: 2.2, inner: 0x8a8090, outer: 0xf4f0f8, top: 0xffffff, seed: seed * 5 + 2 });
-  return attachFoliage(barked([trunk], [canopy]), cards, "violet");
+  const cards = leafCards(puffs, { cx: 0, cy: 4.4, cz: 0, size: 1.05, density: 3.0, inner: 0x6a6070, outer: 0xf4f0f8, top: 0xffffff, seed: seed * 5 + 2 });
+  return attachFoliage(barked([trunk, ...limbs], [canopy]), cards, "violet");
 }
 
 /** A pine heavy with snow. */
@@ -213,6 +227,8 @@ export function emberKit(c: KitCtx): void {
     const th = (i / n) * Math.PI * 2 + R() * 0.4;
     const p = atR(a, th, a.pond.r + a.clearing * (0.55 + R() * 0.3));
     if (!clearOfTrails(p.x, p.z, 1)) continue;
+    // Not on the camera's side of the pond (round 08: posts stood between the camera and the family).
+    if (Math.sin(th) > 0.1) continue;
     const h = 2.2 + R() * 0.6;
     const post = merge([
       paint(prep(new CylinderGeometry(0.08, 0.11, h, 7).translate(0, h / 2, 0)), 0x4a3220, 0x6a4a30),
@@ -222,15 +238,7 @@ export function emberKit(c: KitCtx): void {
     c.wood.push(put(post, p.x, p.z, R() * 6));
     c.glow.push(put(paint(prep(new BoxGeometry(0.24, 0.3, 0.24).translate(0.42, h - 0.42, 0)), 0xffa040), p.x, p.z, 0));
   }
-  // Leaf drifts: low copper mounds.
-  for (let i = 0; i < 14; i++) {
-    const p = at(a, R() * Math.PI * 2, 1 + R() * (a.clearing - 1));
-    if (!clearOfTrails(p.x, p.z, 0.5)) continue;
-    const g = new SphereGeometry(0.9 + R() * 0.7, 9, 5, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.28, 1);
-    jitter(g, 0.12, i);
-    g.computeVertexNormals();
-    c.wood.push(put(paint(prep(g), 0x9a4a2a, 0xe89a4a, (pp, _n, cc) => cc.multiplyScalar(0.85 + 0.3 * vnoise(pp.x * 3, pp.z * 3, 7))), p.x, p.z, R() * 6, 1, -0.05));
-  }
+  // The leaf drifts are painted fallen-leaf cards now (areas.ts, the recipe's litter), not copper mounds.
 }
 
 /** Snowy rocks, an ice rim round the pond and frosted boulders. */

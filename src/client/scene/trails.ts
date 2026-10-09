@@ -1,6 +1,8 @@
 import { BoxGeometry, Color, ConeGeometry, CylinderGeometry, Group, InstancedMesh, MeshBasicMaterial, SphereGeometry, type Material } from "three";
 import { TRAIL_HALF_WIDTH } from "../../game/world";
 import { instanced, mushroomGeometry, rockGeometry, type Inst } from "./kit";
+import { matteGlowMaterial } from "./matte";
+import { matteTint } from "./plants";
 import { merge, paint, prep } from "./geo";
 import { hash2, rng } from "./noise";
 import { trailsWithin, type SceneTrail } from "./worldQuery";
@@ -19,7 +21,7 @@ const SHOW_R = 230;
 export function buildTrails(full: boolean, painted: Material, jobs: Jobs): TrailDressing {
   const group = new Group();
   group.name = "trails";
-  const shroomCols = [new Color(0.5, 1.6, 2.2), new Color(0.9, 0.8, 2.4), new Color(0.4, 2.0, 1.8), new Color(1.6, 0.9, 2.2)];
+  const shroomCols = [new Color(0.5, 1.6, 2.2), new Color(0.9, 0.8, 2.4), new Color(0.4, 2.0, 1.8), new Color(1.6, 0.9, 2.2)].map(matteTint);
   const lampPost = prep(new CylinderGeometry(0.05, 0.07, 1.3, 6).translate(0, 0.65, 0));
   paint(lampPost, 0x3a2c38);
   const lampHook = prep(new BoxGeometry(0.32, 0.04, 0.04).translate(0.14, 1.28, 0));
@@ -31,7 +33,7 @@ export function buildTrails(full: boolean, painted: Material, jobs: Jobs): Trail
   const stoneGeo = rockGeometry(11);
   const shroomGeo = mushroomGeometry();
   const glassMat = new MeshBasicMaterial({ color: 0xffffff });
-  const shroomMat = new MeshBasicMaterial({ vertexColors: true });
+  const shroomMat = matteGlowMaterial();
   const live = new Map<string, { g: Group | null; alive: boolean }>();
   let lastX = 1e9;
   let lastZ = 1e9;
@@ -103,7 +105,7 @@ export function buildTrails(full: boolean, painted: Material, jobs: Jobs): Trail
     group,
     update(tod, _time, fx, fz) {
       glassMat.color.setScalar(0.9 + 2.2 * tod.glow);
-      shroomMat.color.setScalar(0.35 + 0.75 * tod.glow);
+      shroomMat.emissive.setScalar(0.35 + 2.2 * tod.glow);
       if (Math.hypot(fx - lastX, fz - lastZ) < 6) return;
       lastX = fx;
       lastZ = fz;

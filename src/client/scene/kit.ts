@@ -21,6 +21,7 @@ import { jitter, merge, paint, prep, puffNormals, surf } from "./geo";
 import { PK } from "./painter";
 import { attachFoliage, coniferCards, foliageOf, hangingCards, leafCards, type Puff, type Strand, type Tier } from "./foliage";
 import { barked, markRock, surfaceMaterial } from "./surfaces";
+import { rim } from "./matte";
 
 /** The shared set-dressing kit: trees, rocks, plants and buildings every place draws from. */
 
@@ -178,67 +179,38 @@ export function giantGeometry(variant: number): BufferGeometry {
 }
 
 export function mushroomGeometry(): BufferGeometry {
-  // Painted like the reference's glowing toadstools: a pale stem darkening to the ground, a cap deep in
-  // the middle and brightening to a glowing rim, darker gills underneath, a few pale spots.
+  // Matte painted toadstools (round 09-B; they were unlit HDR colour and read as glossy vinyl): a stem
+  // dark at the root and pale under the cap, a cap lit from above with soft brushy mottling and pale
+  // spots, dark gills. Only the cap's rim (and faintly the gills) glows, through aRim.
   const stem = prep(new CylinderGeometry(0.045, 0.075, 0.3, 7).translate(0, 0.15, 0));
-  paint(stem, 0x4a5a78, 0xe8f4ff);
+  paint(stem, 0x3a4458, 0xd8e2f0);
+  rim(stem, () => 0);
   const capPaint = (r0: number, y0: number) => (p: Vector3, n: Vector3, c: Color) => {
-    const rim = Math.min(1, Math.hypot(p.x, p.z) / r0);
-    const k = 0.5 + 0.62 * Math.pow(rim, 2.2);
+    const rr = Math.min(1, Math.hypot(p.x, p.z) / r0);
+    // Baked light: the crown catches the light, the shoulder rolls into shade, the rim lifts again.
+    const k = 0.62 + 0.18 * (1 - rr) + 0.3 * Math.pow(rr, 4) + 0.12 * (vnoise(p.x * 26 + 7, p.z * 26 + (p.y - y0) * 14, 43) - 0.5);
     c.setScalar(k);
-    // Soft pale spots on the crown.
     const sp = vnoise(p.x * 34 + 3, p.z * 34 + (p.y - y0) * 20, 41);
-    if (sp > 0.72 && rim < 0.8) c.lerp(new Color(1.2, 1.2, 1.2), (sp - 0.72) * 2.6);
-    if (n.y < -0.2) c.setScalar(0.3);
+    if (sp > 0.74 && rr < 0.75) c.lerp(new Color(1, 1, 1), (sp - 0.74) * 2.4);
+    if (n.y < -0.2) c.setScalar(0.28);
   };
+  const capRim = (r0: number, cx: number, cz: number) => (x: number, _y: number, z: number) => Math.pow(Math.min(1, Math.hypot(x - cx, z - cz) / r0), 6);
   const cap = prep(new SphereGeometry(0.17, 12, 7, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.75, 1).translate(0, 0.27, 0));
   paint(cap, 0xffffff, 0xffffff, capPaint(0.17, 0.27));
+  rim(cap, capRim(0.17, 0, 0));
   const gills = prep(new CylinderGeometry(0.03, 0.165, 0.035, 18, 1, true).translate(0, 0.255, 0));
-  paint(gills, 0xffffff, 0xffffff, (p, _n, c) => c.setScalar(0.26 + 0.12 * (Math.sin(Math.atan2(p.z, p.x) * 18) > 0 ? 1 : 0)));
+  paint(gills, 0xffffff, 0xffffff, (p, _n, c) => c.setScalar(0.22 + 0.1 * (Math.sin(Math.atan2(p.z, p.x) * 18) > 0 ? 1 : 0)));
+  rim(gills, () => 0.3);
   const small = prep(new SphereGeometry(0.09, 9, 5, 0, Math.PI * 2, 0, Math.PI / 2).translate(0.16, 0.12, 0.05));
   paint(small, 0xffffff, 0xffffff, (p, n, c) => capPaint(0.09, 0.12)(new Vector3(p.x - 0.16, p.y, p.z - 0.05), n, c));
+  rim(small, capRim(0.09, 0.16, 0.05));
   const sgills = prep(new CylinderGeometry(0.015, 0.088, 0.02, 12, 1, true).translate(0.16, 0.115, 0.05));
-  paint(sgills, 0x505868);
+  paint(sgills, 0x404858);
+  rim(sgills, () => 0.3);
   const sstem = prep(new CylinderGeometry(0.025, 0.045, 0.13, 6).translate(0.16, 0.06, 0.05));
-  paint(sstem, 0x4a5a78, 0xd0e4f8);
+  paint(sstem, 0x3a4458, 0xc8d4e8);
+  rim(sstem, () => 0);
   return merge([stem, cap, gills, small, sgills, sstem]);
-}
-
-/** A fern: arching fronds from a centre (sways with the grass). */
-export function fernGeometry(): BufferGeometry {
-  const parts: BufferGeometry[] = [];
-  for (let i = 0; i < 7; i++) {
-    const a = (i / 7) * Math.PI * 2 + i * 0.3;
-    const len = 0.55 + ((i * 5) % 3) * 0.12;
-    const g = new SphereGeometry(1, 6, 4);
-    g.scale(0.09, 0.02, len / 2);
-    g.translate(0, 0, len / 2);
-    g.rotateX(-0.75);
-    g.rotateY(a);
-    g.translate(0, 0.05, 0);
-    const p = prep(g);
-    paint(p, 0x245a4a, 0x6ab88a);
-    parts.push(p);
-  }
-  const m = merge(parts);
-  // Normals up so fronds light like the ground.
-  const nor = m.getAttribute("normal");
-  for (let i = 0; i < nor.count; i++) nor.setXYZ(i, 0, 1, 0);
-  return m;
-}
-
-/** A glowing bellflower stalk: little hanging bells (lit by the instance colour). */
-export function bellGeometry(): BufferGeometry {
-  const stem = prep(new CylinderGeometry(0.012, 0.016, 0.5, 4).translate(0, 0.25, 0));
-  paint(stem, 0x2a4a5a);
-  const parts: BufferGeometry[] = [stem];
-  for (let i = 0; i < 3; i++) {
-    const a = i * 2.1;
-    const b = prep(new ConeGeometry(0.06, 0.09, 7, 1, true).translate(Math.cos(a) * 0.06, 0.36 + i * 0.07, Math.sin(a) * 0.06));
-    paint(b, 0xffffff, 0xe0f0ff);
-    parts.push(b);
-  }
-  return merge(parts);
 }
 
 export function pineGeometry(): BufferGeometry {
@@ -331,17 +303,6 @@ export function flowerGeometry(): BufferGeometry {
   paint(eye, 0xffd23a);
   // Head + eye are white/yellow; the instance tint colours the petals (and slightly the eye).
   return merge([stem, head, eye]);
-}
-
-export function lupineGeometry(): BufferGeometry {
-  const stem = prep(new CylinderGeometry(0.015, 0.02, 0.5, 4).translate(0, 0.25, 0));
-  paint(stem, 0x3f7a2a);
-  const spike = prep(new ConeGeometry(0.09, 0.5, 7, 3).translate(0, 0.68, 0));
-  jitter(spike, 0.2, 2);
-  paint(spike, 0xffffff, 0xf0f0ff);
-  const leaves = prep(new ConeGeometry(0.16, 0.12, 6).translate(0, 0.06, 0));
-  paint(leaves, 0x4a8a34);
-  return merge([stem, spike, leaves]);
 }
 
 export function reedGeometry(cattail: boolean): BufferGeometry {
