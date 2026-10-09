@@ -319,5 +319,18 @@
       "references": []
     },
     "date": "2026-10-08"
+  },
+  {
+    "files": [
+      "assets-src/textures/atlas-a.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "A texture sheet for a 3D game in the hand-painted style of World of Warcraft's Ashenvale zone (Blizzard hand-painted diffuse textures: visible confident brush strokes, painted-in soft light from the top-left, rich saturated violets, teals and mossy greens, no photo detail, no hard outlines). A perfect 3x3 grid of nine square texture swatches filling the whole image edge to edge, separated by thin pure black gutters, each swatch flat-on, top-down, evenly lit and designed to tile seamlessly: 1) lush twilight grass with tiny violet flowers, 2) deep green-teal moss, 3) worn earth forest path with small pebbles, 4) dark violet-brown night-elf tree bark with vertical ridges, 5) mossy grey-blue boulder stone, 6) carved pale stone tiles with moss in the cracks, 7) a cluster of large violet-magenta tree leaves on transparent-looking black background (leaf card), 8) teal-green fern and leaf cluster on black (leaf card), 9) shallow lake bed: sand and pebbles under turquoise water. No text, no labels, no numbers, no characters, no faces.",
+      "references": [
+        "concept/ashenvale/ref-night.jpg"
+      ]
+    },
+    "date": "2026-10-09"
   }
 ]
