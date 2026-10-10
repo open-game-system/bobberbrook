@@ -25,6 +25,11 @@ describe("the big button", () => {
     const deep: Lake = { ...shore(), fishers: shore().fishers.map((f) => ({ ...f, pos: { x: 0, z: 1000 } })) };
     expect(buttonState(deep, me(deep), T0).kind).toBe("walk-to-water");
   });
+  it("while walking down to the water the device keeps the room's clock going (the TV may stall)", () => {
+    const walking = me(shore());
+    expect(needsTick({ ...walking, mode: "walk", fishSpot: null }, T0)).toBe(false);
+    expect(needsTick({ ...walking, mode: "walk", fishSpot: { x: 1, z: 2 } }, T0)).toBe(true);
+  });
   it("waits, wiggles on nibbles, then shows the bite the moment it is due", () => {
     const l = step(action(shore(), 0, T0), T0 + 900);
     const f = me(l);

@@ -61,7 +61,9 @@ export function positionAt(f: Fisher, now: number): { x: number; z: number } {
 
 /** The moment, in each mode, after which the room owes this screen an update (null: nothing pending). */
 const DUE: Record<Fisher["mode"], (me: Fisher) => number | null> = {
-  walk: () => null,
+  // Walking down to the water: the room walks the fisher on its own ticks; the TV may stall (a loaded
+  // stream froze it for minutes in round 16), so this device keeps the clock going until the cast.
+  walk: (me) => (me.fishSpot ? 0 : null),
   cast: (me) => me.castAt + 900,
   wait: (me) => me.biteAt,
   bite: (me) => me.biteUntil,

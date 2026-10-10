@@ -106,3 +106,26 @@ describe("each fisher gets their own spot on the bank", () => {
     expect(distance(a, b)).toBeGreaterThanOrEqual(3.5);
   });
 });
+
+describe("the walk down to the water always arrives", () => {
+  it("from anywhere a fisher can stand 4–14 m back round Moonwell (one or two fishers), a press always ends in a cast within 20 s", () => {
+    const w = worldFor(1);
+    const stuck: string[] = [];
+    for (let k = 0; k < 36; k++) {
+      const th = (k / 36) * 2 * Math.PI;
+      for (const back of [4, 7, 10, 14]) {
+        const r = lakeRadius(th) + back;
+        const start = { x: Math.cos(th) * r, z: Math.sin(th) * r };
+        if (!w.walkable(start)) continue;
+        for (const n of [1, 2]) {
+          let l = lakeWith(n);
+          l = { ...l, swirls: [], fishers: l.fishers.map((f, i) => ({ ...f, pos: i === 0 ? start : w.advance(start, { x: 1, z: 0 }, 0.3), vel: { x: 0, z: 0 } })) };
+          for (const f of l.fishers) l = action(l, f.seat, T0 + 100);
+          l = run(l, T0 + 100, 20_000);
+          if (l.fishers.some((f) => f.mode === "walk")) stuck.push(`θ=${th.toFixed(2)} back=${back} n=${n}`);
+        }
+      }
+    }
+    expect(stuck).toEqual([]);
+  });
+});
