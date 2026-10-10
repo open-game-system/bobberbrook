@@ -1,5 +1,6 @@
 import { AdditiveBlending, BufferAttribute, BufferGeometry, Mesh, ShaderMaterial } from "three";
 import { rng } from "./noise";
+import { getCards } from "./cards";
 
 /**
  * The campfire's flames and embers (round 07: a stack of additive cones): camera-facing flame cards
@@ -12,6 +13,7 @@ attribute vec3 aOff;
 attribute vec4 aCard; // size, seed, kind (0 flame, 1 ember), speed
 uniform float uTime;
 uniform float uFire;
+uniform float uPainted;
 varying vec2 vUv;
 varying float vSeed;
 varying float vKind;
@@ -23,7 +25,10 @@ void main() {
   vec3 c = aOff;
   float size = aCard.x;
   vLife = 0.0;
-  if (aCard.z > 0.5) {
+  if (aCard.z > 1.5) {
+    // The painted embers card: a still card over the fire (its sparks scroll up in the fragment shader).
+    size *= 0.85 + 0.15 * uFire;
+  } else if (aCard.z > 0.5) {
     // An ember: rises, drifts and fades over its life.
     float life = fract(uTime * aCard.w + aCard.y * 7.31);
     vLife = life;
@@ -37,14 +42,18 @@ void main() {
   vec4 mv = modelViewMatrix * vec4(c, 1.0);
   // Flames stand on their base (grow upward); embers are centred.
   vec2 corner = position.xy;
-  if (aCard.z < 0.5) corner.y += 0.5;
-  mv.xy += corner * size * (aCard.z < 0.5 ? vec2(0.62, 1.0) : vec2(1.0));
+  if (aCard.z < 0.5 || aCard.z > 1.5) corner.y += 0.5;
+  mv.xy += corner * size * (aCard.z < 0.5 ? vec2(uPainted > 0.5 ? 0.9 : 0.62, 1.0) : vec2(1.0));
   gl_Position = projectionMatrix * mv;
 }`;
 
 const FRAG = /* glsl */ `
 uniform float uTime;
 uniform float uFire;
+uniform float uPainted;
+uniform sampler2D tFlameA;
+uniform sampler2D tFlameB;
+uniform sampler2D tEmbers;
 varying vec2 vUv;
 varying float vSeed;
 varying float vKind;
@@ -55,6 +64,14 @@ float vn(vec2 p) {
   return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), f.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), f.x), f.y);
 }
 void main() {
+  if (vKind > 1.5) {
+    // Painted embers rising: the card scrolls up and fades near its wrap and its top.
+    float y = fract(vUv.y - uTime * 0.22);
+    vec4 e = texture2D(tEmbers, vec2(vUv.x, y));
+    float a = e.a * smoothstep(0.0, 0.12, y) * smoothstep(1.0, 0.85, y) * smoothstep(1.0, 0.55, vUv.y) * (0.6 + 0.4 * uFire);
+    gl_FragColor = vec4(e.rgb * a * 1.4, a);
+    return;
+  }
   if (vKind > 0.5) {
     float d = length(vUv - 0.5);
     float a = smoothstep(0.5, 0.0, d) * (1.0 - smoothstep(0.6, 1.0, vLife)) * smoothstep(0.0, 0.08, vLife);
@@ -65,6 +82,17 @@ void main() {
   vec2 uv = vUv;
   float t = uTime * (2.4 + vSeed);
   float n = vn(vec2(uv.x * 3.0 + vSeed * 13.0, uv.y * 3.5 - t)) * 0.65 + vn(vec2(uv.x * 7.0 - vSeed * 5.0, uv.y * 7.0 - t * 1.7)) * 0.35;
+  if (uPainted > 0.5) {
+    // Round 11: the Codex-painted licks, swaying more toward the tip, breathing in height, half of them
+    // mirrored, crossfading between the two paintings (a slow flipbook).
+    vec2 q = vec2(uv.x + (n - 0.5) * 0.14 * uv.y + sin(t * 0.7 + vSeed * 9.0) * 0.04 * uv.y, uv.y / (0.9 + 0.12 * sin(t * 1.3 + vSeed * 7.0)));
+    if (fract(vSeed * 3.7) > 0.5) q.x = 1.0 - q.x;
+    float k = 0.5 + 0.5 * sin(t * 0.8 + vSeed * 11.0);
+    vec4 f = mix(texture2D(tFlameA, q), texture2D(tFlameB, q), k * smoothstep(0.2, 0.8, vSeed + 0.3));
+    float a = f.a * (0.75 + 0.25 * uFire) * step(q.y, 1.0);
+    gl_FragColor = vec4(f.rgb * a * 1.5, a);
+    return;
+  }
   // Licks lean and sway, more toward the tip.
   float x = uv.x - 0.5 + (n - 0.5) * 0.55 * uv.y + sin(t * 0.7 + vSeed * 9.0) * 0.07 * uv.y;
   // Round 09: the soft teardrop still read as a cone. Narrower licks with a forked, torn top: two
@@ -107,6 +135,9 @@ export function buildCampfireFx(x: number, y: number, z: number): CampfireFx {
   }
   // Embers.
   for (let i = 0; i < 26; i++) quad((R() - 0.5) * 0.5, 0.3, (R() - 0.5) * 0.5, 0.06 + R() * 0.06, R(), 1, 0.25 + R() * 0.35);
+  // The painted embers card (drawn only when the kit has it).
+  const cards = getCards();
+  if (cards) quad(0, 0.5, 0.05, 2.0, R(), 2, 0);
   const g = new BufferGeometry();
   g.setAttribute("position", new BufferAttribute(new Float32Array(pos), 3));
   g.setAttribute("aOff", new BufferAttribute(new Float32Array(off), 3));
@@ -119,7 +150,7 @@ export function buildCampfireFx(x: number, y: number, z: number): CampfireFx {
     transparent: true,
     depthWrite: false,
     blending: AdditiveBlending,
-    uniforms: { uTime: { value: 0 }, uFire: { value: 0 } },
+    uniforms: { uTime: { value: 0 }, uFire: { value: 0 }, uPainted: { value: cards ? 1 : 0 }, tFlameA: { value: cards?.flameA ?? null }, tFlameB: { value: cards?.flameB ?? null }, tEmbers: { value: cards?.embers ?? null } },
   });
   const mesh = new Mesh(g, mat);
   mesh.name = "campfire-flames";

@@ -20,6 +20,10 @@ by a cloud GPU Chrome and streamed to a Chromecast. References: `concept/web/*.j
   Codex planks (docks, boardwalks, gangplanks, tower deck) and canvas (the airship) in place of the code
   painting, plus shingles (cottage roofs), runestone (tarn and moon-gate stones) and snow (frost rim,
   drifts, snow caps) layers; one program, the kind picks the layer.
+- **Painted cards** (round 11, `cards.ts`): the campfire burns Codex flame licks (flame-a/flame-b crossfaded,
+  swaying, half mirrored) with a rising embers card; the ride clouds are the cloud-a/cloud-b cumulus
+  (premultiplied value cuts the black-keyed fringe, each card fades at its edges); lamp pools are the
+  painted warm pool, additive. A builder with no card registered keeps its code painting.
 - **Fewer, bigger, painted plants** (round 09-B): no carpet of small glossy props. Ground flora is a
   few clumps of painted alpha-card plants (`src/client/scene/plants.ts`: ferns, bluebells, foxgloves,
   glow-cap clusters, fallen-leaf drifts; canvas brushwork, matte, wind sway, only bell mouths and cap

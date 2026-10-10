@@ -1,6 +1,7 @@
 import { AdditiveBlending, CanvasTexture, Color, InstancedMesh, MeshBasicMaterial, PlaneGeometry, SRGBColorSpace } from "three";
 import { instanced, type Inst } from "./kit";
 import type { TodState } from "./tod";
+import { getCards } from "./cards";
 
 /**
  * Pools of lamplight on the ground (round 09 critic: "no lantern pools"): soft painted discs of warm
@@ -48,7 +49,10 @@ function poolTexture(): CanvasTexture {
 
 export function poolMaterial(): MeshBasicMaterial {
   if (!mat) {
-    mat = new MeshBasicMaterial({ map: poolTexture(), color: 0x000000, transparent: true, blending: AdditiveBlending, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    // Round 11: the Codex-painted warm pool (drawn additively: its black key adds nothing).
+    const painted = getCards()?.poolWarm ?? null;
+    tint = painted ? paintedTint : warm;
+    mat = new MeshBasicMaterial({ map: painted ?? poolTexture(), color: 0x000000, transparent: true, blending: AdditiveBlending, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
     mat.name = "lamp-pools";
   }
   return mat;
@@ -65,11 +69,14 @@ export function poolMesh(list: Inst[]): InstancedMesh {
 }
 
 const warm = new Color(1.0, 0.56, 0.24);
+/** The painted pool is already warm and fills its card: a dim neutral tint keeps its colour at the old strength. */
+const paintedTint = new Color(0.42, 0.34, 0.26);
+let tint = warm;
 /** Pools brighten with the lamps: nothing by day, full at night. */
 export function updatePools(tod: TodState): void {
   if (!mat) return;
   const n = Math.max(0, Math.min(1, (tod.glow - 0.4) / 0.55));
-  mat.color.copy(warm).multiplyScalar(POOL_STRENGTH * n * n);
+  mat.color.copy(tint).multiplyScalar(POOL_STRENGTH * n * n);
 }
 
 /** Pool brightness at full night (additive, linear). */

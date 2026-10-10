@@ -25,6 +25,13 @@ export type PaintKit = {
   shingles: PaintTex;
   runestone: PaintTex;
   snow: PaintTex;
+  /** RGBA cards (keyed off black). */
+  flameA: PaintTex;
+  flameB: PaintTex;
+  embers: PaintTex;
+  cloudA: PaintTex;
+  cloudB: PaintTex;
+  poolWarm: PaintTex;
   dispose(): void;
 };
 
@@ -99,14 +106,14 @@ export function loadPaintKit(base = "/art/textures/"): Promise<PaintKit> {
   if (shared) return shared;
   const loader = new TextureLoader();
   const p = async (): Promise<PaintKit> => {
-    const [grass, moss, path, bark, rock, tiles, bed, leavesViolet, leavesFern, planks, canvas, shingles, runestone, snow] = await Promise.all(
-      ["grass", "moss", "path", "bark", "rock", "stone-tiles", "lakebed", "leaves-violet", "leaves-fern", "planks", "canvas", "shingles", "runestone", "snow"].map((n) => load(loader, `${base}${n}.webp`)),
+    const [grass, moss, path, bark, rock, tiles, bed, leavesViolet, leavesFern, planks, canvas, shingles, runestone, snow, flameA, flameB, embers, cloudA, cloudB, poolWarm] = await Promise.all(
+      ["grass", "moss", "path", "bark", "rock", "stone-tiles", "lakebed", "leaves-violet", "leaves-fern", "planks", "canvas", "shingles", "runestone", "snow", "flame-a", "flame-b", "embers", "cloud-a", "cloud-b", "pool-warm"].map((n) => load(loader, `${base}${n}.webp`)),
     );
-    if (!grass || !moss || !path || !bark || !rock || !tiles || !bed || !leavesViolet || !leavesFern || !planks || !canvas || !shingles || !runestone || !snow) throw new Error("paint kit: missing texture");
+    if (!grass || !moss || !path || !bark || !rock || !tiles || !bed || !leavesViolet || !leavesFern || !planks || !canvas || !shingles || !runestone || !snow || !flameA || !flameB || !embers || !cloudA || !cloudB || !poolWarm) throw new Error("paint kit: missing texture");
     return {
-      grass, moss, path, bark, rock, tiles, bed, leavesViolet, leavesFern, planks, canvas, shingles, runestone, snow,
+      grass, moss, path, bark, rock, tiles, bed, leavesViolet, leavesFern, planks, canvas, shingles, runestone, snow, flameA, flameB, embers, cloudA, cloudB, poolWarm,
       dispose() {
-        for (const t of [grass, moss, path, bark, rock, tiles, bed, leavesViolet, leavesFern, planks, canvas, shingles, runestone, snow]) t.tex.dispose();
+        for (const t of [grass, moss, path, bark, rock, tiles, bed, leavesViolet, leavesFern, planks, canvas, shingles, runestone, snow, flameA, flameB, embers, cloudA, cloudB, poolWarm]) t.tex.dispose();
         shared = null;
       },
     };

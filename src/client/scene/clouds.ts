@@ -1,6 +1,7 @@
 import { BufferAttribute, BufferGeometry, Color, InstancedMesh, ShaderMaterial } from "three";
 import { rng } from "./noise";
 import { cloudSheet } from "./painter";
+import { getCards } from "./cards";
 
 /**
  * Painted cloud banks: each cloud is a cluster of camera-facing cards cut from the painted cumulus
@@ -31,8 +32,18 @@ varying float vFade;
 void main() {
   vec4 t = texture2D(map, vUv);
   if (t.a < 0.01) discard;
-  vec3 col = mix(uShade, uLit, smoothstep(0.3, 0.85, t.r));
-  gl_FragColor = vec4(col, min(1.0, t.a * 1.5) * vFade);
+  // Light from the painted cloud's own value (unpremultiplied, so the black-keyed fringe is no darker),
+  // tinted by the time of day.
+  float lp = dot(t.rgb, vec3(0.3, 0.55, 0.15));
+  float l = lp / max(t.a, 0.05);
+  vec3 col = mix(uShade, uLit, smoothstep(0.25, 0.9, l));
+  // The painted cards' black-keyed fringe and faint haze are cut (premultiplied value), and every card
+  // fades out at its own edges (the paintings touch them).
+  vec2 local = fract(vUv * 2.0);
+  float edge = smoothstep(0.0, 0.1, min(min(local.x, 1.0 - local.x), min(local.y, 1.0 - local.y)));
+  float a = min(1.0, t.a * 1.5) * smoothstep(0.06, 0.3, lp) * edge;
+  if (a < 0.01) discard;
+  gl_FragColor = vec4(col, a * vFade);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
 }`;
@@ -67,7 +78,9 @@ export function buildCloudCards(count: number): CloudCards {
   g.setAttribute("aOff", new BufferAttribute(new Float32Array(off), 3));
   g.setAttribute("aCard", new BufferAttribute(new Float32Array(card), 3));
   g.setIndex(idx);
-  const tex = cloudSheet();
+  // Round 11: the Codex-painted cumulus cards when the kit has them, else the code-painted sheet.
+  const painted = getCards()?.clouds ?? null;
+  const tex = painted ?? cloudSheet();
   const lit = new Color(1, 1, 1);
   const shade = new Color(0.5, 0.45, 0.7);
   const mat = new ShaderMaterial({
@@ -88,7 +101,7 @@ export function buildCloudCards(count: number): CloudCards {
     dispose() {
       g.dispose();
       mat.dispose();
-      tex.dispose();
+      if (!painted) tex.dispose();
     },
   };
 }

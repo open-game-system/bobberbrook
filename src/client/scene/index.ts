@@ -32,6 +32,7 @@ import { buildSky } from "./sky";
 import { SwirlViews } from "./swirls";
 import { buildGroundStream } from "./terrain";
 import { imageOf, loadPaintKit } from "./paintkit";
+import { asCard, cloudSheetOf, setCards } from "./cards";
 import { groundMaterial } from "./groundmat";
 import { leafMaterial, setFoliageMaterials } from "./foliage";
 import { CHAR_LIGHT, needleSheet, setPaintImages } from "./painter";
@@ -175,6 +176,13 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   const jobs = createJobs();
   const kit = await loadPaintKit(opts.textureBase ?? "/art/textures/");
   // The painted kit's planks, canvas, shingles, runestone and snow go into the prop texture array.
+  // The painted cards: campfire flames and embers, ride clouds, lamp pools (round 11).
+  {
+    const ca = imageOf(kit.cloudA);
+    const cb = imageOf(kit.cloudB);
+    const clouds = ca && cb ? cloudSheetOf(ca, cb) : null;
+    setCards(clouds ? { flameA: asCard(kit.flameA.tex), flameB: asCard(kit.flameB.tex), embers: asCard(kit.embers.tex), clouds, poolWarm: asCard(kit.poolWarm.tex) } : null);
+  }
   setPaintImages({ planks: imageOf(kit.planks), canvas: imageOf(kit.canvas), shingles: imageOf(kit.shingles), runestone: imageOf(kit.runestone), snow: imageOf(kit.snow) });
   const groundMat = groundMaterial(kit);
   const water = buildWater();
