@@ -79,6 +79,8 @@ const MAX_POINTS = 24;
 const PUSH_STEPS = [1, 0.8, 0.6, 0.4, 0.2, 0];
 /** Heights above each focus point that must be in frame: the foot ring's front edge and the name tag. */
 const LIFTS = [-0.7, 4.0];
+/** How far above the catcher's feet the scene puts the catch focus (fishers.ts catchFocus). */
+const CATCH_UP = 1.8;
 
 /** The group camera: from the south, high three-quarter, eased, yaw roughly fixed. */
 export class CameraRig {
@@ -126,6 +128,7 @@ export class CameraRig {
   /** The place the establishing view looks over (where the family last was; Moonwell at first). */
   readonly anchor = new Vector3();
   private readonly pts: Vector3[] = Array.from({ length: MAX_POINTS }, () => new Vector3());
+  private readonly softPt = new Uint8Array(MAX_POINTS);
   private n = 0;
   /** The fishers' feet on the ground (for the lineup: nobody hidden behind another). */
   private readonly feet: Ground[] = Array.from({ length: MAX_POINTS }, () => ({ x: 0, z: 0 }));
@@ -189,9 +192,15 @@ export class CameraRig {
     return this.lineup.update(this.feet, yaw, el, this.nf, this.blockers, this.wantDist);
   }
 
-  /** A point that must stay in frame (feet; the rig adds the head and name tag above it). */
-  addFocus(x: number, y: number, z: number): void {
+  /**
+   * A point that must stay in frame (feet; the rig adds the head and name tag above it). Round 20: `soft`
+   * points (bobbers, the water in front of the family) shape the group framing but a catch push-in may
+   * leave them (round 19 session 229/236 s at Mistmarsh: a bobber and the pond point kept every push
+   * strength from fitting, so the catch got no push-in at all).
+   */
+  addFocus(x: number, y: number, z: number, soft = false): void {
     if (this.n >= MAX_POINTS - 1) return;
+    this.softPt[this.n] = soft ? 1 : 0;
     this.pts[this.n++]!.set(x, y, z);
   }
 
@@ -222,13 +231,14 @@ export class CameraRig {
   }
 
   /** Whether every focus point (feet to name tag) sits inside the safe margin from this pose. */
-  private fits(target: Vector3, dist: number, yaw: number, el: number, pitch: number): boolean {
+  private fits(target: Vector3, dist: number, yaw: number, el: number, pitch: number, hardOnly = false): boolean {
     const cam = this.probe;
     cam.fov = this.camera.fov;
     cam.aspect = this.camera.aspect;
     cam.updateProjectionMatrix();
     this.pose(cam, target, dist, yaw, el, pitch);
     for (let i = 0; i < this.n; i++) {
+      if (hardOnly && this.softPt[i]) continue;
       const p = this.pts[i]!;
       for (const lift of LIFTS) {
         this.tmp.set(p.x, p.y + lift, p.z).project(cam);
@@ -387,6 +397,7 @@ export class CameraRig {
       this.ahead += (wantAhead - this.ahead) * damp(1.2, dt);
       if (this.ahead > 0.3 && speed > 0.05 && this.n < MAX_POINTS - 1) {
         const p = this.pts[this.n - 1]!;
+        this.softPt[this.n] = 1;
         this.pts[this.n++]!.set(cx + (this.motion.x / speed) * this.ahead, p.y, cz + (this.motion.z / speed) * this.ahead);
       }
     } else this.haveCentre = false;
@@ -539,12 +550,14 @@ export class CameraRig {
       for (const k of PUSH_STEPS) {
         const cw = this.catchW * k;
         const w = cw * (tight ? 0.8 : 0.62);
-        this.wantTarget.copy(t0).lerp(this.tmp.set(catchAt.x, catchAt.y + 1.2, catchAt.z), w);
+        // Round 20: aimed at the catcher 1.2 m up, like the group framing (it aimed 3 m up, at the fish held
+        // overhead, so a close push dropped the feet out of the safe box and only the weakest push fitted).
+        this.wantTarget.copy(t0).lerp(this.tmp.set(catchAt.x, catchAt.y - CATCH_UP + 1.2, catchAt.z), w);
         // Round 17: deeper (tight 14 -> min(12, 0.62 d), spread 0.58 d / 17 m -> 0.5 d / 13 m): the round-16
         // session showed no readable push at 320-332 s.
         this.wantDist = d0 + ((tight ? Math.min(d0 * 0.62, 12) : Math.max(13, d0 * 0.5)) - d0) * (tight ? w : cw);
         this.wantEl = e0 + (0.36 - e0) * cw * 0.8;
-        if (k === 0 || this.fits(this.wantTarget, this.wantDist, this.wantYaw, this.wantEl, pitch)) break;
+        if (k === 0 || this.fits(this.wantTarget, this.wantDist, this.wantYaw, this.wantEl, pitch, true)) break;
       }
     }
     // The discovery reveal (weight worked out above).
@@ -560,6 +573,7 @@ export class CameraRig {
         const n0 = this.n;
         for (let k = 0; k < 8 && this.n < MAX_POINTS - 1; k++) {
           const a = (k / 8) * Math.PI * 2;
+          this.softPt[this.n] = 1;
           this.pts[this.n++]!.set(reveal.x + Math.cos(a) * reveal.r, 0, reveal.z + Math.sin(a) * reveal.r);
         }
         this.fitGroup(this.wantYaw, REVEAL_EL + this.revealLift);

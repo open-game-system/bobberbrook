@@ -187,6 +187,13 @@ appear and fade (`since`, `until`), never pop.
   metres in front of another in a tight framing, the group camera steps back up to 16% so the near back never looms.
 - **Catch moment** (round 17): an eased push toward the catcher (~1 s in, held while the fish is up, ~1 s out); a second
   catch while the first fish is up keeps the push on the middle of both catchers (the safe-margin fit decides how deep).
+- **Round 20, every place framed like Moonwell**: the group camera keeps a place's own side while the family fishes
+  that side of the pond and swings round when they fish further round, until it stands no more than 0.75 rad off
+  straight behind them, looking over their shoulders across the water (`placeView.ts`; Mistmarsh's boardwalk shore was
+  framed from across the pond). Bobbers, the pond point and a golden swirl are soft focus points: they shape the group
+  shot but a catch push-in may leave them, and the push aims 1.2 m up the catcher (it aimed at the fish overhead, so
+  only the weakest push fitted). Lines are drawn taut over a walk over the water and a reeled bobber stops at its outer
+  edge (`walkways.ts`).
 - **Discovery** (round 17; round 18: it waits, up to 6 s, until a fisher is within the pond plus 45 % of the clearing, so it plays as the family arrives at the water, `revealGate.ts`): a 5 s reveal swings round behind the family (a three-quarter yaw that keeps every fisher
   apart, at most 1.6 rad off the place view), up and out until the whole new pond lies beyond them, then back.
 - **Campfire** (`lake.campfire`): the camera settles on the campfire; fishers sit around it. The seats are a horseshoe 2.9 m out, open on the camera's axis so the fire burns in the gap and never in

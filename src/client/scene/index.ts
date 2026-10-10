@@ -41,6 +41,7 @@ import { CHAR_LIGHT, needleSheet, setPaintImages } from "./painter";
 import { setCapImages } from "./giantCap";
 import { barkMaterial, rockMaterial, setSurfaceMaterials, tilesMaterial } from "./surfaces";
 import { placeHash } from "./valley";
+import { behindYaw, placeYaw, wrapAngle } from "./placeView";
 import { buildEscape } from "./escape";
 import { newTodState, rideTwilight, sampleTod } from "./tod";
 import type { LakeScene, SceneQuality } from "./types";
@@ -312,6 +313,10 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   scene.add(world);
   const splitFocus = new SplitFocus();
   const familyFrame = new FamilyFrame();
+  /** Round 20: the place the camera's side was last worked out for, and that side (placeView.ts). */
+  let yawPlace = "";
+  let yawNow = 0;
+  const yawFeet: { x: number; z: number }[] = [];
   const allSeats = new Set<number>();
   const members: Member[] = [];
   const markerList: Marker[] = [];
@@ -528,7 +533,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       if (!framed.has(seat)) return;
       rig.addFocus(x, y, z);
       rig.addFisher(x, z);
-      if (bob) rig.addFocus(bob.x, Math.max(0, bob.y), bob.z);
+      if (bob) rig.addFocus(bob.x, Math.max(0, bob.y), bob.z, true);
     });
     const nf = vehicles.rideFocus(rideFocus);
     for (let i = 0; i < nf; i++) rig.addFocus(rideFocus[i]!.x, rideFocus[i]!.y, rideFocus[i]!.z);
@@ -543,7 +548,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     let gz = 0;
     fishers.forEachSeat((seat, x, _y, z) => { if (framed.has(seat)) { gx += x; gz += z; n++; } });
     // A golden swirl near the family is part of the shot (round 13: one was announced and never seen).
-    if (n > 0 && !riding && !bf && !cf && swirls.goldAt(goldAt) > 0.3 && Math.hypot(goldAt.x - gx / n, goldAt.z - gz / n) < GOLD_FRAME_M) rig.addFocus(goldAt.x, 0, goldAt.z);
+    if (n > 0 && !riding && !bf && !cf && swirls.goldAt(goldAt) > 0.3 && Math.hypot(goldAt.x - gx / n, goldAt.z - gz / n) < GOLD_FRAME_M) rig.addFocus(goldAt.x, 0, goldAt.z, true);
     const here = n > 0 ? activeWorld().areaAt({ x: gx / n, z: gz / n }) : null;
     const onTrail = n > 0 && here === null && !riding ? 1 : 0;
     if (here && n > 0 && !riding && !bf) {
@@ -553,7 +558,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       const wd = Math.hypot(wx, wz);
       if (wd < here.pond.r + here.clearing && wd > 0.5) {
         const k = Math.min(wd, 10) / wd;
-        rig.addFocus(gx / n + wx * k, 0, gz / n + wz * k);
+        rig.addFocus(gx / n + wx * k, 0, gz / n + wz * k, true);
       }
     }
     // Tower decks near the family: the group camera yaws so it never looks at them through one (round 14).
@@ -571,7 +576,17 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     }
     if (here) {
       rig.anchor.set(here.center.x, 0, here.center.z);
-      rig.placeYaw = here.home ? 0 : (placeHash(here.key, 11) - 0.5) * 0.9;
+      // Round 20: the place's own side while the family fishes it, round behind them when they fish its far
+      // shore (placeView.ts: Mistmarsh's boardwalk shore was framed from across the pond).
+      yawFeet.length = 0;
+      fishers.forEachSeat((seat, x, _y, z) => { if (framed.has(seat) && yawFeet.length < 8) yawFeet.push({ x, z }); });
+      const pref = here.home ? 0 : (placeHash(here.key, 11) - 0.5) * 0.9;
+      if (here.key !== yawPlace) {
+        yawPlace = here.key;
+        yawNow = rig.placeYaw + wrapAngle(pref - rig.placeYaw);
+      }
+      yawNow = placeYaw(pref, behindYaw(here.center.x, here.center.z, yawFeet), yawNow);
+      rig.placeYaw = yawNow;
     }
     trailW += (onTrail - trailW) * Math.min(1, dt * 1.5);
     const reveal = revealAge >= 0 && revealAge < REVEAL_S + 0.4 ? { x: revealArea.center.x, z: revealArea.center.z, age: revealAge, r: revealArea.pond.r } : null;

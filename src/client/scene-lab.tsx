@@ -494,6 +494,29 @@ const SCENARIOS: Record<string, Scenario> = {
     warmUntil: (l) => l.fishers.every((f) => f.mode === "reel"),
     hero: (l, now) => l.fishers.filter((f) => f.mode === "catch" && f.catch !== null && now - f.catch.at > 900 && now - f.catch.at < 2600).length >= 2,
   },
+  // Round 20 (round 19 session 216-257 s): Dad and Juneau fishing Mistmarsh from the shore they arrive
+  // on (north-east, by the boardwalk), as the family really does; the shot is mid-catch (the push-in).
+  "mistmarsh-catch": {
+    phase: 0.36,
+    fishers: [
+      { seat: 0, name: "Dad", spot: shoreIn("mistmarsh", -0.45), easy: true, at: shoreIn("mistmarsh", -0.45, 2) },
+      { seat: 2, name: "Juneau", spot: shoreIn("mistmarsh", -0.7), easy: true, at: shoreIn("mistmarsh", -0.7, 2) },
+    ],
+    setup: discoverOnly(["mistmarsh"]),
+    warmUntil: (l) => l.fishers.some((f) => f.mode === "reel"),
+    hero: (l, now) => inCatch(l, now, 1300, 2000),
+  },
+  // The same, while both reel in (the lines and bobbers by the boardwalk).
+  "mistmarsh-reel": {
+    phase: 0.36,
+    fishers: [
+      { seat: 0, name: "Dad", spot: shoreIn("mistmarsh", -0.45), easy: true, at: shoreIn("mistmarsh", -0.45, 2) },
+      { seat: 2, name: "Juneau", spot: shoreIn("mistmarsh", -0.7), easy: true, at: shoreIn("mistmarsh", -0.7, 2) },
+    ],
+    setup: discoverOnly(["mistmarsh"]),
+    warmUntil: (l) => l.fishers.some((f) => f.mode === "reel"),
+    hero: (l) => l.fishers.some((f) => f.mode === "reel" && f.reel !== null && f.reel.progress > 0.55),
+  },
   // The family strung out along the trail: one at the lake, one mid-trail, one at the marsh's edge.
   spread: {
     phase: 0.3,

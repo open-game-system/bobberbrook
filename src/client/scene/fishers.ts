@@ -1,3 +1,4 @@
+import { lineFloor, underWalk } from "./walkways";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -474,7 +475,11 @@ class FisherView {
       const dz = f.bobber.z - this.z;
       const near = 0.28;
       showBobber = true;
-      bob.set(f.bobber.x - dx * (1 - near) * pr * 0.85, 0, f.bobber.z - dz * (1 - near) * pr * 0.85);
+      // Round 20: reeled in no further than the outer edge of a walk over the water (round 19 session 229 s:
+      // the bobber was dragged in under Mistmarsh's boardwalk and the line ran through its planks).
+      let k = pr;
+      for (let i = 0; i < 12 && k > 0 && underWalk(f.bobber.x - dx * (1 - near) * k * 0.85, f.bobber.z - dz * (1 - near) * k * 0.85); i++) k = Math.max(0, k - 0.08);
+      bob.set(f.bobber.x - dx * (1 - near) * k * 0.85, 0, f.bobber.z - dz * (1 - near) * k * 0.85);
       const hold = f.reel.holding;
       target.armRx = -1.05 + (hold ? Math.sin(t * 9) * 0.06 : 0);
       target.armLx = hold ? -1.0 + Math.sin(t * 12) * 0.35 : -0.9;
@@ -736,11 +741,30 @@ class FisherView {
   private updateLine(a: Vector3, b: Vector3, sag: number, camera: Camera): void {
     const p = this.linePos;
     const width = 0.035;
+    // Round 20: a line never runs through a walk's planks or rails (round 19 session 226-257 s, Mistmarsh's
+    // boardwalk): where it would, it is drawn taut over the walk's outer edge, two straight runs from the rod
+    // tip to that edge and down to the bobber, like a line laid over a rail.
+    let qs = -1;
+    let qy = 0;
+    let best = -Infinity;
+    for (let i = 1; i < LINE_SEGS; i++) {
+      const s = i / LINE_SEGS;
+      const floor = lineFloor(a.x + (b.x - a.x) * s, a.z + (b.z - a.z) * s);
+      if (floor === -Infinity) continue;
+      // The steepest rise from the bobber end is the edge the taut line rests on.
+      const k = (floor - b.y) / (1 - s);
+      if (k > best) {
+        best = k;
+        qs = s;
+        qy = floor;
+      }
+    }
     for (let i = 0; i <= LINE_SEGS; i++) {
       const s = i / LINE_SEGS;
       const x = a.x + (b.x - a.x) * s;
       const z = a.z + (b.z - a.z) * s;
-      const y = a.y + (b.y - a.y) * s - sag * 4 * s * (1 - s) * 1.2;
+      let y = a.y + (b.y - a.y) * s - sag * 4 * s * (1 - s) * 1.2;
+      if (qs > 0) y = Math.max(y, s <= qs ? a.y + (qy - a.y) * (s / qs) : qy + (b.y - qy) * ((s - qs) / (1 - qs)));
       // Side vector: perpendicular to the line and the view direction.
       this.tmp.set(b.x - a.x, b.y - a.y, b.z - a.z);
       this.camDir.set(camera.position.x - x, camera.position.y - y, camera.position.z - z);

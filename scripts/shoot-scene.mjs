@@ -50,6 +50,8 @@ const SHOTS = [
   ["discovery", null, true],
   ["night-tarn", null, true],
   ["double-catch", null, true],
+  ["mistmarsh-catch", null, true],
+  ["mistmarsh-reel", null, true],
   ["miss", null, true],
   ["morning", null, false],
   ["morning", 0.97, false],

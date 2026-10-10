@@ -39,6 +39,7 @@ import type { TodState } from "./tod";
 import { flowMaterial, ribbon } from "./water";
 import { dressShore } from "./shores";
 import { buildHero } from "./heroes";
+import { WALK_Y, boardwalkPath } from "./walkways";
 import { buildPlaceLandmark, crystalKit, emberKit, frostKit, willowKit, type LandmarkKind } from "./biomes";
 
 /**
@@ -174,13 +175,8 @@ function mistmarsh(c: Ctx): void {
   c.group.add(wMesh);
   const lampPools: Inst[] = [];
   // The boardwalk on stilts: from the north shore out over the water and along it, lanterns on posts.
-  const path: Vector3[] = [];
-  for (let i = 0; i <= 14; i++) {
-    const t = i / 14;
-    const th = -1.55 + t * 1.25;
-    const r = pondRadius(a, th) + 1.5 - Math.sin(t * Math.PI) * 5.5 - t * 0.5;
-    path.push(new Vector3(a.center.x + Math.cos(th) * r, 0.55, a.center.z + Math.sin(th) * r));
-  }
+  // Round 20: the path lives in walkways.ts (the fishing lines keep over it).
+  const path = boardwalkPath(a).map((p) => new Vector3(p.x, WALK_Y, p.z));
   const curve = new CatmullRomCurve3(path);
   const N = 70;
   const plankCols = [0xa0714a, 0x8f6440, 0xb07e52, 0x9a6c46];
