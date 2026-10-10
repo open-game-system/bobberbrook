@@ -24,6 +24,14 @@ by a cloud GPU Chrome and streamed to a Chromecast. References: `concept/web/*.j
   swaying, half mirrored) with a rising embers card; the ride clouds are the cloud-a/cloud-b cumulus
   (premultiplied value cuts the black-keyed fringe, each card fades at its edges); lamp pools are the
   painted warm pool, additive. A builder with no card registered keeps its code painting.
+- **Painted kit part 3** (round 12): Codex cards are cleaned for mipmaps at load (`cleanCardPixels` in `cards.ts`:
+  opaque colour bled into every non-opaque texel). Pines carry the pine-spray boughs, frost pines the snow-laden
+  pine-snow (snowy cones stay as the far stand-in); teal canopies use leaves-teal; every canopy's outer 22 % of
+  cards (`splitRim`) use leaves-glow, whose bright strokes self-light at night; willows and giant trees hang
+  painted wisteria curtains (`wisteriaCards`); bluebells, foxgloves and glow-caps (blue and violet planes) are the
+  Codex cards (the code-painted fern rosette and grass stay: the Codex ones carpeted the foreground); crystals
+  carry the crystal texture as an emissive gradient map (`crystal.ts`); pools of moonlight (pool-cool, additive,
+  by moon) lie on the Moonwell lawn and in each clearing. Not used: embers-logs, forest-floor, glow-moss.
 - **Fewer, bigger, painted plants** (round 09-B): no carpet of small glossy props. Ground flora is a
   few clumps of painted alpha-card plants (`src/client/scene/plants.ts`: ferns, bluebells, foxgloves,
   glow-cap clusters, fallen-leaf drifts; canvas brushwork, matte, wind sway, only bell mouths and cap
