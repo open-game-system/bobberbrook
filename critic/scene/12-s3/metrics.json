@@ -1,0 +1,53 @@
+{
+  "round": "12-s3",
+  "shots": [
+    {
+      "label": "moonwell",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 79,
+      "programs": 79,
+      "calls": 724,
+      "triangles": 2941617,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 97
+    },
+    {
+      "label": "biome-willow",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 75,
+      "programs": 75,
+      "calls": 470,
+      "triangles": 2459510,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 88
+    },
+    {
+      "label": "mistmarsh",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 79,
+      "programs": 79,
+      "calls": 797,
+      "triangles": 3998765,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 55
+    },
+    {
+      "label": "hollow",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 79,
+      "programs": 80,
+      "calls": 619,
+      "triangles": 3395489,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 74
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}

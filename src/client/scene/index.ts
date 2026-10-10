@@ -224,6 +224,8 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     // which lights its bright strokes at night (leafGlow follows the moon).
     teal: leafMaterial(cleanPaint(kit.leavesTeal), occ, time),
     glow: leafMaterial(cleanPaint(kit.leavesGlow), occ, time, { hue: 0.6, glow: leafGlow }),
+    // Painted wisteria strands on willows and the giant trees (the sheet keeps most of its own colour).
+    wisteria: leafMaterial(cleanPaint(kit.wisteria), occ, time, { hue: 0.85 }),
   };
   setFoliageMaterials(leafMats);
   // Painted rock on every boulder and cliff, painted bark on trunks, stone tiles on the tower dais.
@@ -783,7 +785,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       leafMats.fern.dispose();
       leafMats.needle.map?.dispose();
       leafMats.needle.dispose();
-      for (const m of [leafMats.needleSnow, leafMats.teal, leafMats.glow]) {
+      for (const m of [leafMats.needleSnow, leafMats.teal, leafMats.glow, leafMats.wisteria]) {
         m.map?.dispose();
         m.dispose();
       }

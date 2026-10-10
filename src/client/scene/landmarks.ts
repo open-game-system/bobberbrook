@@ -23,11 +23,11 @@ import {
   type ShaderMaterial as SM,
 } from "three";
 import { pondRadius, type Area, type AreaId, type PondPlace } from "../../game/world";
-import { RIM_SHARE, cliffRockGeometry, crystalShard, instanced, rockGeometry, type Inst } from "./kit";
+import { RIM_SHARE, WISTERIA_TIP, WISTERIA_TOP, cliffRockGeometry, crystalShard, instanced, rockGeometry, type Inst } from "./kit";
 import { poolMesh } from "./pools";
 import { fadeGlowMaterial, jitter, merge, paint, prep, puffNormals, surf } from "./geo";
 import { PK } from "./painter";
-import { attachFoliage, hangingCards, leafCards, splitRim, type Puff, type Strand } from "./foliage";
+import { attachFoliage, leafCards, splitRim, wisteriaCards, type Puff, type Strand } from "./foliage";
 import { barked } from "./surfaces";
 import { rng, vnoise } from "./noise";
 import { heightAt } from "./terrain";
@@ -108,7 +108,7 @@ export function willowGeometry(seed: number): BufferGeometry {
     strands.push({ x: Math.cos(a) * rr, y: 6.9 - (rr - 3.4) * 0.35, z: Math.sin(a) * rr, len, w, ox: Math.cos(a), oz: Math.sin(a) });
   }
   const [body, rimCards] = splitRim(cards, 0, 6.8, 0, RIM_SHARE);
-  return attachFoliage(barked(wood, parts), merge([body, hangingCards(strands, 0x4a3478, 0xd0b4ff, seed * 17)]), "violet", [rimCards, "glow"]);
+  return attachFoliage(barked(wood, parts), body, "violet", [rimCards, "glow"], [wisteriaCards(strands, WISTERIA_TOP, WISTERIA_TIP, seed * 17), "wisteria"]);
 }
 
 /** A birch: a slim white trunk with dark marks, a light lavender crown. */

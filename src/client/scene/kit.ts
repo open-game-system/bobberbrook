@@ -19,7 +19,7 @@ import {
 import { rng, vnoise } from "./noise";
 import { jitter, merge, paint, prep, puffNormals, surf } from "./geo";
 import { PK } from "./painter";
-import { attachFoliage, coniferCards, foliageOf, hangingCards, leafCards, splitRim, type Puff, type Strand, type Tier } from "./foliage";
+import { attachFoliage, coniferCards, foliageOf, leafCards, splitRim, wisteriaCards, type Puff, type Strand, type Tier } from "./foliage";
 import { barked, markRock, surfaceMaterial } from "./surfaces";
 import { rim } from "./matte";
 
@@ -76,6 +76,10 @@ export function blob(r: number, x: number, y: number, z: number, seed: number, w
 
 /** Share of a canopy's leaf cards on its rim that take the glow sheet (round 12). */
 export const RIM_SHARE = 0.22;
+
+/** Wisteria strand shading (round 12): under the canopy, and at the tips. */
+export const WISTERIA_TOP = 0x8a7aa8;
+export const WISTERIA_TIP = 0xf4ecff;
 
 /** Canopy colours: bottom, top, sunlit tips. 0 violet, 1 teal, 2 rose. */
 export const CANOPY: [number, number, number][] = [
@@ -179,7 +183,7 @@ export function giantGeometry(variant: number): BufferGeometry {
     strands.push({ x: Math.cos(a) * rr, y: 16.9 - rr * 0.08, z: Math.sin(a) * rr, len, w, ox: Math.cos(a), oz: Math.sin(a) });
   }
   const [body, rimCards] = splitRim(cards, 0, 18, 0, RIM_SHARE);
-  return attachFoliage(barked(wood, parts), merge([body, hangingCards(strands, 0x5a3a8a, 0xd8b8ff, 900 + variant)]), variant === 1 ? "teal" : "violet", [rimCards, "glow"]);
+  return attachFoliage(barked(wood, parts), body, variant === 1 ? "teal" : "violet", [rimCards, "glow"], [wisteriaCards(strands, WISTERIA_TOP, WISTERIA_TIP, 900 + variant), "wisteria"]);
 }
 
 export function mushroomGeometry(): BufferGeometry {

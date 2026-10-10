@@ -222,62 +222,6 @@ export function coniferCards(tiers: Tier[], o: { inner: number | Color; outer: n
 export type Strand = { x: number; y: number; z: number; len: number; w: number; ox: number; oz: number };
 
 /**
- * Hanging leaf strands under a canopy rim: each a chain of crossed leaf cards, narrowing and paling
- * toward the tip, swaying outward lower down. Replaces the flat moss drapes (they read as spikes).
- */
-export function hangingCards(strands: Strand[], top: number | Color, tip: number | Color, seed: number): BufferGeometry {
-  const r = rng(seed);
-  const pos: number[] = [];
-  const nor: number[] = [];
-  const uv: number[] = [];
-  const col: number[] = [];
-  const ct = new Color(top);
-  const cp = new Color(tip);
-  const c = new Color();
-  for (const st of strands) {
-    const ol = Math.hypot(st.ox, st.oz) || 1;
-    const ox = st.ox / ol;
-    const oz = st.oz / ol;
-    const k = Math.max(2, Math.round(st.len / (st.w * 0.55)));
-    for (let i = 0; i < k; i++) {
-      const t = i / Math.max(1, k - 1);
-      const sz = st.w * (1 - 0.45 * t) * (0.9 + r() * 0.2);
-      const drop = st.len * t;
-      const out = 0.3 * t * t;
-      const cx = st.x + ox * out + (r() - 0.5) * 0.15;
-      const cy = st.y - drop - sz * 0.3;
-      const cz = st.z + oz * out + (r() - 0.5) * 0.15;
-      c.copy(ct).lerp(cp, t).multiplyScalar(0.9 + r() * 0.2);
-      const u0 = Math.floor(r() * 2) * 0.5;
-      const v0 = Math.floor(r() * 2) * 0.5;
-      // One card per link, alternating its turn so the chain stays round from any side.
-      for (const rot of [i % 2 === 0 ? 0 : Math.PI / 2]) {
-        const a = Math.atan2(oz, ox) + Math.PI / 2 + rot + (r() - 0.5) * 0.5;
-        const ax = Math.cos(a) * sz * 0.5;
-        const az = Math.sin(a) * sz * 0.5;
-        const hy = sz * 0.55;
-        // Corners: (side, up) in card space; the sheet hangs leaves-down (v flipped).
-        const corners = [[-1, -1, 0, 1], [1, -1, 1, 1], [1, 1, 1, 0], [-1, 1, 0, 0]];
-        for (const q of [0, 1, 2, 0, 2, 3]) {
-          const [sa = 0, sb = 0, uu = 0, vv = 0] = corners[q]!;
-          pos.push(cx + ax * sa, cy + hy * sb, cz + az * sa);
-          uv.push(u0 + uu * 0.5, v0 + vv * 0.5);
-          nor.push(ox * 0.8, 0.45, oz * 0.8);
-          col.push(c.r, c.g, c.b);
-        }
-      }
-    }
-  }
-  const g = new BufferGeometry();
-  g.setAttribute("position", new BufferAttribute(new Float32Array(pos), 3));
-  g.setAttribute("normal", new BufferAttribute(new Float32Array(nor), 3));
-  g.setAttribute("uv", new BufferAttribute(new Float32Array(uv), 2));
-  g.setAttribute("color", new BufferAttribute(new Float32Array(col), 3));
-  g.computeBoundingSphere();
-  return g;
-}
-
-/**
  * The leaf-card material: painted leaf sheet as detail over the card colour (the instance tint gives
  * each place its canopy), alpha-to-coverage edges, a gentle wind sway, and the occluder fade so a
  * canopy between the camera and the family dissolves like the rest of the tree. One program for both
@@ -378,4 +322,54 @@ export function splitRim(g: BufferGeometry, cx: number, cy: number, cz: number, 
     return out;
   };
   return [pick(false), pick(true)];
+}
+
+/**
+ * Painted wisteria (round 12): each hanging strand one tall crossed pair of cards carrying the whole
+ * Codex wisteria (racemes of lilac blossom under a few leaves), hung from the canopy rim and swinging out
+ * a little at the bottom. The card colour only shades it (darker up under the canopy, pale at the tips);
+ * the sheet keeps most of its own hue.
+ */
+export function wisteriaCards(strands: Strand[], top: number | Color, tip: number | Color, seed: number): BufferGeometry {
+  const r = rng(seed);
+  const pos: number[] = [];
+  const nor: number[] = [];
+  const uv: number[] = [];
+  const col: number[] = [];
+  const ct = new Color(top);
+  const cp = new Color(tip);
+  for (const st of strands) {
+    const ol = Math.hypot(st.ox, st.oz) || 1;
+    const ox = st.ox / ol;
+    const oz = st.oz / ol;
+    const h = st.len * 1.25;
+    const w = st.w * 1.5;
+    const mirror = r() < 0.5;
+    const k = 0.9 + r() * 0.2;
+    const base = Math.atan2(oz, ox) + Math.PI / 2 + (r() - 0.5) * 0.6;
+    for (const turn of [0, Math.PI / 2]) {
+      const a = base + turn;
+      const ax = Math.cos(a) * w * 0.5;
+      const az = Math.sin(a) * w * 0.5;
+      // Corners: (side, t down the strand); the bottom swings out along the strand's outward direction.
+      const corners: [number, number][] = [[-1, 1], [1, 1], [1, 0], [-1, 0]];
+      for (const q of [0, 1, 2, 0, 2, 3]) {
+        const [sa, t] = corners[q]!;
+        const out = 0.35 * t * t;
+        pos.push(st.x + ax * sa + ox * out, st.y + 0.25 - h * t, st.z + az * sa + oz * out);
+        // The image's top (v = 1 in a cleaned card) hangs at the canopy.
+        uv.push(mirror ? (1 - sa) / 2 : (1 + sa) / 2, 1 - t);
+        nor.push(ox * 0.8, 0.45, oz * 0.8);
+        const c = ct.clone().lerp(cp, t).multiplyScalar(k);
+        col.push(c.r, c.g, c.b);
+      }
+    }
+  }
+  const g = new BufferGeometry();
+  g.setAttribute("position", new BufferAttribute(new Float32Array(pos), 3));
+  g.setAttribute("normal", new BufferAttribute(new Float32Array(nor), 3));
+  g.setAttribute("uv", new BufferAttribute(new Float32Array(uv), 2));
+  g.setAttribute("color", new BufferAttribute(new Float32Array(col), 3));
+  g.computeBoundingSphere();
+  return g;
 }
