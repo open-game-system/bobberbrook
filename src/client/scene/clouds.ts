@@ -14,7 +14,10 @@ attribute vec3 aOff;
 attribute vec3 aCard;
 varying vec2 vUv;
 varying float vFade;
+varying float vLayer;
 void main() {
+  // 0 at the back card of a cluster, 1 at the front (round 18: layered, not one marbled sheet).
+  vLayer = clamp(aOff.z / 3.0 + 0.5, 0.0, 1.0);
   vec4 c = modelViewMatrix * instanceMatrix * vec4(aOff, 1.0);
   float sc = length(instanceMatrix[1].xyz);
   c.xy += position.xy * aCard.x * sc * vec2(1.6, 1.0);
@@ -29,6 +32,7 @@ uniform vec3 uLit;
 uniform vec3 uShade;
 varying vec2 vUv;
 varying float vFade;
+varying float vLayer;
 void main() {
   vec4 t = texture2D(map, vUv);
   if (t.a < 0.01) discard;
@@ -36,12 +40,17 @@ void main() {
   // tinted by the time of day.
   float lp = dot(t.rgb, vec3(0.3, 0.55, 0.15));
   float l = lp / max(t.a, 0.05);
-  vec3 col = mix(uShade, uLit, smoothstep(0.25, 0.9, l));
+  // Round 18: a long, soft ramp (0.25-0.9 cut every card into two flat tones with wavy borders: marble).
+  vec3 col = mix(uShade, uLit, smoothstep(0.05, 1.05, l));
+  // Back cards sit in the haze (cooler, softer); front cards carry the light.
+  col = mix(mix(uShade, col, 0.55), col, vLayer);
   // The painted cards' black-keyed fringe and faint haze are cut (premultiplied value), and every card
   // fades out at its own edges (the paintings touch them).
   vec2 local = fract(vUv * 2.0);
   float edge = smoothstep(0.0, 0.1, min(min(local.x, 1.0 - local.x), min(local.y, 1.0 - local.y)));
-  float a = min(1.0, t.a * 1.5) * smoothstep(0.06, 0.3, lp) * edge;
+  // Round 18: the cover comes from the painting's alpha; only the near-black fringe is cut by value. Cutting
+  // at a mid value (0.06-0.3) opened holes along every shaded fold, so overlapping cards read as marble.
+  float a = min(1.0, t.a * 1.4) * smoothstep(0.015, 0.09, lp) * edge;
   if (a < 0.01) discard;
   gl_FragColor = vec4(col, a * vFade);
   #include <tonemapping_fragment>
@@ -52,17 +61,19 @@ export type CloudCards = { mesh: InstancedMesh; lit: Color; shade: Color; dispos
 
 export function buildCloudCards(count: number): CloudCards {
   const R = rng(818);
-  const CARDS = 8;
+  // Round 18: more, smaller cards per bank (14, was 8 at 9-11 units): the ride camera saw a few huge cards
+  // blown up past their painting's resolution, read as one marbled sheet. Now lobes with sky between.
+  const CARDS = 14;
   const pos: number[] = [];
   const off: number[] = [];
   const card: number[] = [];
   const idx: number[] = [];
   for (let k = 0; k < CARDS; k++) {
     // Back to front: a wide back card, smaller ones in front lower down.
-    const ox = (R() - 0.5) * 6.0;
-    const oy = (R() - 0.5) * 0.8 - k * 0.12;
+    const ox = (R() - 0.5) * 10.0;
+    const oy = (R() - 0.5) * 1.4 - k * 0.08;
     const oz = (k / CARDS - 0.5) * 3.0;
-    const size = 9.0 - k * 0.5 + R() * 2.0;
+    const size = 6.0 - k * 0.16 + R() * 2.2;
     const u0 = Math.floor(R() * 2) * 0.5;
     const v0 = Math.floor(R() * 2) * 0.5;
     const b = pos.length / 3;

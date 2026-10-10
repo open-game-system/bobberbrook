@@ -134,10 +134,14 @@ export function capMaterial(): MeshBasicMaterial {
       float rho = length(vCap.xy - 0.5) / ${RIM.toFixed(2)};
       float spot = smoothstep(1.25, 1.75, l);
       vec3 dc = pow(max(d, vec3(0.0)), vec3(1.7));
-      d = mix(dc, d * 0.86, spot);
+      // Round 18: the pale spots sit lower still and lean to the cap's own colour (bright dabs read as glare).
+      d = mix(dc, mix(vec3(l), d, 0.6) * 0.66, spot);
       float vein = smoothstep(1.05, 1.35, l) * (1.0 - spot) * smoothstep(0.15, 0.5, rho);
       d *= 1.0 + 0.55 * vein;
       d *= mix(1.0, 0.52, smoothstep(0.7, 0.9, rho) * (1.0 - smoothstep(0.95, 1.02, rho)));
+      // Round 18: the planar painting stretches its pale spots into long streaks down the cap's steep side,
+      // which read as glare on a glossy dome: toward the rim the pale strokes settle into the cap's colour.
+      d = mix(d, vec3(0.5), smoothstep(0.45, 0.8, rho) * smoothstep(1.0, 1.4, l) * 0.9);
     }
     diffuseColor.rgb *= clamp(d, 0.22, 2.2);
   }`,

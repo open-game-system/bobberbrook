@@ -1,0 +1,31 @@
+{
+  "round": "18-s2b",
+  "shots": [
+    {
+      "label": "tower",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 812,
+      "triangles": 3110402,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 88
+    },
+    {
+      "label": "zeppelin-ride",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 80,
+      "programs": 80,
+      "calls": 413,
+      "triangles": 1130135,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 120
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}

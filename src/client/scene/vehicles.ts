@@ -2,6 +2,7 @@ import {
   AdditiveBlending,
   BoxGeometry,
   BufferGeometry,
+  CatmullRomCurve3,
   Color,
   ConeGeometry,
   CylinderGeometry,
@@ -21,6 +22,7 @@ import {
   Shape,
   SphereGeometry,
   TorusGeometry,
+  TubeGeometry,
   Vector2,
   Vector3,
   type Material,
@@ -98,13 +100,21 @@ function boatGeometry(): { body: BufferGeometry; sail: BufferGeometry; glow: Buf
   const deck = paint(prep(surf(new BoxGeometry(6.4, 0.14, 2.3).translate(0, -0.02, 0), PK.planks)), 0xc89a68, 0xd8aa78, (p, _n, c) => {
     if (Math.abs(((p.z + 3) * 2.2) % 1) < 0.08) c.multiplyScalar(0.8);
   });
-  const rim = paint(prep(new TorusGeometry(1, 0.09, 6, 28).rotateX(Math.PI / 2).scale(3.55, 1, 1.32).translate(0, 0.1, 0)), 0xe8b860);
-  const bow = paint(prep(new ConeGeometry(0.22, 1.2, 6).rotateZ(-Math.PI / 2 - 0.5).translate(3.7, 0.55, 0)), 0xe8b860);
+  // Round 18: a round wooden gunwale and a carved wooden bow post (a torus squashed to the hull's oval
+  // swelled into a wide, smooth gold band: the hull read as yellow vinyl).
+  const gunwalePts: Vector3[] = [];
+  for (let i = 0; i < 40; i++) {
+    const a = (i / 40) * Math.PI * 2;
+    gunwalePts.push(new Vector3(Math.cos(a) * 3.55, 0.1, Math.sin(a) * 1.32));
+  }
+  const rim = paint(prep(surf(new TubeGeometry(new CatmullRomCurve3(gunwalePts, true), 64, 0.1, 6, true), PK.grain, 1)), 0x4a2e1c, 0x7a5434);
+  const bow = paint(prep(surf(new ConeGeometry(0.22, 1.2, 6).rotateZ(-Math.PI / 2 - 0.5).translate(3.7, 0.55, 0), PK.grain)), 0x4a2e1c, 0x8a6240);
   const mast = paint(prep(surf(new CylinderGeometry(0.09, 0.12, 6.2, 8).translate(0.4, 3.1, 0), PK.grain)), 0x5a3a28, 0x7a5a38);
   const yard = paint(prep(surf(new CylinderGeometry(0.06, 0.06, 3.4, 6).rotateX(Math.PI / 2).translate(0.4, 5.6, 0), PK.grain, 1)), 0x5a3a28);
   const cabin = paint(prep(surf(new BoxGeometry(1.4, 0.9, 1.6).translate(-2.3, 0.5, 0), PK.planks)), 0xa87a50, 0xc89a68);
   // Round 15: the cabin's canopy is tent canvas (violet, gold trim), not a flat violet cone.
-  const roof = paint(prep(surf(new ConeGeometry(1.25, 0.8, 4).rotateY(Math.PI / 4).scale(1, 1, 1.15).translate(-2.3, 1.35, 0), PK.tent, 2, 1)), 0xc8bce0, 0xffffff);
+  // Round 18: a shingled cabin roof like the cottages' (the tent canvas's trim ran diagonally across the cone).
+  const roof = surf(paint(prep(new ConeGeometry(1.25, 0.8, 4).rotateY(Math.PI / 4).scale(1, 1, 1.15).translate(-2.3, 1.35, 0)), 0x2e2068, 0x8a6ad0, (pp, _n, cc) => { if (pp.y < 1.05) cc.lerp(new Color(0xd8b878), 0.35); }), PK.shingles);
   const pole = paint(prep(new CylinderGeometry(0.04, 0.05, 1.3, 6).translate(3.2, 0.7, 0)), 0x3a2a28);
   const body = merge([hullP, deck, rim, bow, mast, yard, cabin, roof, pole]);
   // The sail hangs from the yard (top at y = 0 so it can unfurl downward by scale.y).
@@ -117,9 +127,8 @@ function boatGeometry(): { body: BufferGeometry; sail: BufferGeometry; glow: Buf
     sp.setX(i, 0.55 * Math.sin(((y + 4.2) / 4.2) * Math.PI) * (1 - (z / 1.55) ** 2));
   }
   sail.computeVertexNormals();
-  const sailP = paint(prep(sail), 0xf4ead8, 0xfff8ec, (p, _n, c) => {
-    if (p.y < -1.6 && p.y > -2.5) c.setHex(0xb89ae8);
-  });
+  // Round 18: the sail is the painted tent canvas (violet, gold trim; its own folds), not a flat cream sheet.
+  const sailP = paint(prep(surf(sail, PK.tent, 1, 1)), 0x8a80b0, 0xd8d0ec);
   const glow = merge([
     paint(prep(new SphereGeometry(0.17, 10, 8).translate(3.2, 1.45, 0)), 0xffc070),
     paint(prep(new SphereGeometry(0.13, 8, 6).translate(-2.3, 1.85, 0)), 0xffd890),
@@ -215,8 +224,9 @@ function zeppelinGeometry(): { body: BufferGeometry; prop: BufferGeometry; glow:
     ribs.push(paint(prep(new TorusGeometry(r, 0.04, 6, 48).rotateY(Math.PI / 2).translate(-ENV_L / 2 + ENV_L * t, ENV_Y, 0)), 0x9a7434, 0xe6c47a, trim));
   }
   // A gold nose cap and a tail cone.
-  ribs.push(paint(prep(new SphereGeometry(0.42, 12, 8).translate(ENV_L / 2 - 0.12, ENV_Y, 0)), 0xa88038, 0xecd08a));
-  ribs.push(paint(prep(new ConeGeometry(0.3, 0.9, 10).rotateZ(Math.PI / 2).translate(-ENV_L / 2 - 0.2, ENV_Y, 0)), 0x9a7434, 0xd8b468));
+  // Round 18: carved wood, not smooth gold (the tail cone faced the ride camera as a glossy orange spike).
+  ribs.push(paint(prep(surf(new SphereGeometry(0.42, 12, 8).translate(ENV_L / 2 - 0.12, ENV_Y, 0), PK.grain)), 0x5a3a24, 0x9a7444));
+  ribs.push(paint(prep(surf(new ConeGeometry(0.3, 0.9, 10).rotateZ(Math.PI / 2).translate(-ENV_L / 2 - 0.2, ENV_Y, 0), PK.grain, 1)), 0x4a2e1c, 0x8a6240));
   // A spine along the top and a belly keel the gondola hangs from.
   ribs.push(paint(prep(surf(new BoxGeometry(ENV_L * 0.62, 0.16, 0.5).translate(0.3, ENV_Y - ENV_R + 0.12, 0), PK.planks)), 0x6a4a30, 0x8a6a40));
   // Tail: canvas fins stretched on painted wooden ribs (round 09: flat violet slabs with cardboard
@@ -237,7 +247,8 @@ function zeppelinGeometry(): { body: BufferGeometry; prop: BufferGeometry; glow:
     const fin = finGeometry(rootL, tipL, span, sweep);
     const root = envR(0.2) - 0.25;
     const placeFin = (g: BufferGeometry) => g.translate(0, root, 0).rotateX(rot).translate(tailX, ENV_Y, 0);
-    fins.push(paint(prep(surf(placeFin(fin), PK.canvas, 0.42, 0.42)), 0x3e3472, 0x6c5ea6, (p, _n, c) => {
+    // Round 18: the fins are the painted tent canvas (folds and gold trim of its own), not flat violet.
+    fins.push(paint(prep(surf(placeFin(fin), PK.tent, 0.3, 0.3)), 0x7a70a8, 0xc8c0e8, (p, _n, c) => {
       // Canvas sags a little between the ribs.
       c.multiplyScalar(0.9 + 0.1 * Math.abs(Math.sin(p.x * 2.4)));
     }));
@@ -249,8 +260,8 @@ function zeppelinGeometry(): { body: BufferGeometry; prop: BufferGeometry; glow:
     for (const cf of [0.3, 0.62, 0.95]) spars.push(wood(lead0.clone().lerp(trail0, cf), leadS.clone().lerp(trailS, cf), 0.075));
     for (const sp of spars) fins.push(placeFin(sp));
     // The rudder / elevator: a canvas flap on a wooden frame, hinged on the trailing edge, turned a little.
-    const flap = surf(new BoxGeometry(0.8, span * 0.8, 0.1).translate(-0.4, root + span * 0.45, 0), PK.canvas, 1, 1);
-    const flapP = paint(prep(flap), 0x4a3e80, 0x7a6cb4);
+    const flap = surf(new BoxGeometry(0.8, span * 0.8, 0.1).translate(-0.4, root + span * 0.45, 0), PK.tent, 1, 1);
+    const flapP = paint(prep(flap), 0x8a80b8, 0xd0c8f0);
     const flapFrame = [
       wood(new Vector3(0, root + span * 0.05, 0), new Vector3(0, root + span * 0.85, 0), 0.07),
       wood(new Vector3(-0.8, root + span * 0.05, 0), new Vector3(-0.8, root + span * 0.85, 0), 0.06),

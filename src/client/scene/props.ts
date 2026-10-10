@@ -555,8 +555,13 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     const lx2 = CAMPFIRE.x + Math.cos(a) * (SEAT_R + 0.15);
     const lz2 = CAMPFIRE.z + Math.sin(a) * (SEAT_R + 0.15);
     const log = prep(new CylinderGeometry(0.22, 0.24, 2.4, 9).rotateZ(Math.PI / 2).rotateY(-a + Math.PI / 2).translate(lx2, heightAt(lx2, lz2) + 0.18, lz2));
-    paint(log, 0x6a4628, 0x8a6038);
-    surf(log, PK.grain, 1);
+    // Round 18: the painted rod wood's swirling grain, darker, with pale cut ends (a smooth orange
+    // cylinder read as plastic by the fire).
+    paint(log, 0x4a3020, 0x6a4a2c, (_p, n, c) => {
+      // The log runs along (sin a, 0, -cos a): faces along it are the cut ends.
+      if (Math.abs(Math.sin(a) * n.x - Math.cos(a) * n.z) > 0.8) c.setHex(0xb08a5a);
+    });
+    surf(log, PK.rodwood, 1);
     campParts.push(log);
   }
   for (let i = 0; i < 4; i++) {

@@ -61,6 +61,11 @@ by a cloud GPU Chrome and streamed to a Chromecast. References: `concept/web/*.j
   features write alpha 0 (never painted), skin 0.1 (a faint brush, 0.16), clothes, hats, boots and packs 0.22 (a gentler
   brush than the world, 0.4 vs 0.58); clothes take the world's grade and part of its painted value bands (0.45) and a
   banded character fill, so the family no longer reads as smooth vinyl figures pasted on a brushed world.
+- **Round 18 (last glossy props)**: the boat has a round wooden gunwale and bow post, a shingled cabin roof and a tent
+  canvas sail; the zeppelin's nose and tail cone are carved wood and its fins and flaps tent canvas; the campfire seat
+  logs carry the rod-wood grain with pale cut ends; giant caps are hand-shaped (wavering rim, lumpy crown, banded
+  painted light) and their pale strokes settle into the cap colour toward the rim; ride cloud banks are 14 smaller
+  cards (cover from the painting's alpha, a long soft value ramp, hazier back cards).
 - **Painted ground underfoot** (round 13, `decking.ts`): everything the family stands on is painted. Boardwalk
   planks each carry one board of the Codex planks along the walk (explicit texture coordinates: `aPaint.x >= PK_UV`);
   decks, plinths, stepping stones and terraces are lathe-turned discs (`disc`) with a bevelled lip that takes a painted

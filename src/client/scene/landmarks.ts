@@ -329,13 +329,33 @@ function giantMushroom(seed: number, h: number, capR: number, hue: number): { st
   // as plastic, round 14 critics). The vertex colours only carry the painted light: the cap's colour, lit from
   // above and to the left, a lifted rim lip that glows, and a value low enough that the glow gain keeps the brushwork.
   const capG = new SphereGeometry(capR, 64, 18, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.42, 1);
+  // Round 18: a hand-shaped cap, not a lathe-perfect dome (a smooth dome under a smooth light read as
+  // glossy plastic at TV distance): the rim wavers in and out, the crown is softly lumpy.
+  const cp = capG.getAttribute("position");
+  for (let i = 0; i < cp.count; i++) {
+    const x = cp.getX(i);
+    const y = cp.getY(i);
+    const z = cp.getZ(i);
+    const th = Math.atan2(z, x);
+    const rho = Math.min(1, Math.hypot(x, z) / capR);
+    const wave = 1 + 0.035 * Math.sin(th * 5 + seed) + 0.02 * Math.sin(th * 11 + seed * 1.7);
+    const lump = 1 + 0.08 * (vnoise(x * 0.5, z * 0.5, seed + 3) - 0.5) * (1 - rho * 0.6);
+    cp.setXYZ(i, x * wave, y * lump, z * wave);
+  }
+  capG.computeVertexNormals();
   const base = new Color().setHSL(hue, 0.5, 0.54);
   const lip = new Color().setHSL(hue, 0.5, 0.86);
   const cap = capUV(
     paint(prep(capG), base, base, (p, n, c) => {
       const rho = Math.min(1, Math.hypot(p.x, p.z) / capR);
-      c.multiplyScalar(0.78 + 0.32 * Math.max(0, n.x * -0.45 + n.y * 0.8 + n.z * 0.35));
-      c.lerp(lip, Math.min(1, Math.max(0, (rho - 0.93) / 0.07)) * 0.6);
+      // Round 18: the painted light falls in planes (three soft value bands), and the rim lip glows less
+      // (a bright smooth lip read as a specular edge on vinyl).
+      const L = Math.max(0, n.x * -0.45 + n.y * 0.8 + n.z * 0.35);
+      const b = L * 3;
+      const fb = b - Math.floor(b);
+      const Lb = (Math.floor(b) + fb * fb * (3 - 2 * fb)) / 3;
+      c.multiplyScalar(0.74 + 0.38 * (L * 0.35 + Lb * 0.65));
+      c.lerp(lip, Math.min(1, Math.max(0, (rho - 0.93) / 0.07)) * 0.3);
       c.multiplyScalar(0.62);
     }),
     capR,
