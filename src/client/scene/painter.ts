@@ -9,9 +9,20 @@ import { rng } from "./noise";
  */
 
 /** Surface kinds (the texture-array layer; NONE = no painted detail, e.g. faces and glass). */
-export const PK = { brush: 0, grain: 1, planks: 2, cloth: 3, canvas: 4, none: 5 } as const;
+export const PK = { brush: 0, grain: 1, planks: 2, cloth: 3, canvas: 4, shingles: 5, runestone: 6, snow: 7, none: 8 } as const;
 export type PaintKind = (typeof PK)[keyof typeof PK];
-const LAYERS = 5;
+const LAYERS = 8;
+
+/**
+ * Round 11: the Codex-painted kit (public/art/textures) replaces the code-painted planks and canvas and
+ * adds shingles, runestone and snow layers. Set before the first painted program compiles; a kind with no
+ * image keeps its code painting (planks, canvas) or the generic brushwork.
+ */
+export type PaintImages = Partial<Record<"planks" | "canvas" | "shingles" | "runestone" | "snow", CanvasImageSource>>;
+let images: PaintImages = {};
+export function setPaintImages(i: PaintImages): void {
+  images = i;
+}
 const S = 512;
 
 type Ctx = CanvasRenderingContext2D;
@@ -264,7 +275,11 @@ let shared: PaintArray | null = null;
 /** The painted detail array (painted once per page). */
 export function paintArray(): PaintArray {
   if (shared) return shared;
-  const painters = [paintBrush, paintGrain, paintPlanks, paintCloth, paintCanvas];
+  const img = (k: keyof PaintImages, fallback: (ctx: Ctx, R: Rand) => void) => {
+    const im = images[k];
+    return im ? (ctx: Ctx) => ctx.drawImage(im, 0, 0, S, S) : fallback;
+  };
+  const painters = [paintBrush, paintGrain, img("planks", paintPlanks), paintCloth, img("canvas", paintCanvas), img("shingles", paintBrush), img("runestone", paintBrush), img("snow", paintBrush)];
   const c = canvas();
   const inv: Vector3[] = [];
   let data: Uint8Array;
@@ -372,14 +387,19 @@ export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexSh
       `#include <color_fragment>
   {
     float pk = floor(vPk.x + 0.5);
-    if (pk < 4.5) {
+    if (pk < 7.5) {
       vec3 n = normalize(vPkN);
       vec3 tx;
-      if (pk > 3.5) {
+      // Per kind: triplanar scale (per metre) and detail strength (brush grain planks cloth canvas
+      // shingles runestone snow).
+      const float SCS[8] = float[8](0.8, 1.2, 0.36, 1.6, 1.0, 0.42, 0.45, 0.3);
+      const float STR[8] = float[8](0.55, 0.92, 0.72, 0.9, 0.75, 0.92, 0.9, 0.8);
+      int ki = int(pk);
+      if (pk > 3.5 && pk < 4.5) {
         tx = texture(tPk, vec3(vPk.yz, 4.0)).rgb;
       } else {
         vec3 w = pow(abs(n), vec3(4.0)); w /= (w.x + w.y + w.z + 1e-4);
-        float sc = pk < 0.5 ? 0.8 : (pk < 1.5 ? 1.2 : (pk < 2.5 ? 0.57 : 1.6));
+        float sc = SCS[ki];
         vec3 p = vPkP * uPkScale * sc;
         vec2 ux = p.zy; vec2 uz = p.xy; vec2 uy = vPk.y > 0.5 ? p.zx : p.xz;
         // Grain runs up posts and poles (stretched along the grain).
@@ -387,10 +407,9 @@ export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexSh
         if (pk > 0.5 && pk < 1.5 && vPk.y > 0.5) { ux = p.zy * vec2(0.3, 1.0); uz = p.xy * vec2(0.3, 1.0); uy = p.xz * vec2(0.3, 1.0); }
         tx = texture(tPk, vec3(ux, pk)).rgb * w.x + texture(tPk, vec3(uz + 0.37, pk)).rgb * w.z + texture(tPk, vec3(uy + 0.71, pk)).rgb * w.y;
       }
-      int ki = int(pk);
       vec3 d = tx * iPk[ki];
       float l = dot(d, vec3(0.3, 0.55, 0.15));
-      float str = pk < 0.5 ? 0.55 : (pk < 2.5 ? 0.92 : (pk < 3.5 ? 0.9 : 0.95));
+      float str = STR[ki];
       // Cloth (the fishers' clothes and hats) keeps a narrow value range: its broad fold strokes read as
       // white paint blotches on a 1 m figure (round 09 critic), so only the weave and soft folds show.
       vec2 rng = pk > 2.5 && pk < 3.5 ? vec2(0.74, 1.24) : vec2(0.0, 2.4);

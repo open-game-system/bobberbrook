@@ -25,7 +25,8 @@ import {
 import { pondRadius, type Area, type AreaId, type PondPlace } from "../../game/world";
 import { cliffRockGeometry, crystalShard, instanced, rockGeometry, type Inst } from "./kit";
 import { poolMesh } from "./pools";
-import { fadeGlowMaterial, jitter, merge, paint, prep, puffNormals } from "./geo";
+import { fadeGlowMaterial, jitter, merge, paint, prep, puffNormals, surf } from "./geo";
+import { PK } from "./painter";
 import { attachFoliage, hangingCards, leafCards, type Puff, type Strand } from "./foliage";
 import { barked } from "./surfaces";
 import { rng, vnoise } from "./noise";
@@ -507,7 +508,7 @@ function tarn(c: Ctx): void {
       cc.multiplyScalar(0.72 + 0.28 * Math.min(1, pp.y / 1.4));
     });
     const islet = paint(prep(new SphereGeometry(1.6, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.35, 1)), 0x4a5a5a, 0x5a8a6a);
-    stones.push(place(merge([sp, islet]), p.x, p.z, face, 1, 0 - heightAt(p.x, p.z) - 0.25));
+    stones.push(place(merge([surf(sp, PK.runestone), islet]), p.x, p.z, face, 1, 0 - heightAt(p.x, p.z) - 0.25));
     // Runes: a crescent and a line of dots, on the face toward the water.
     const rune: BufferGeometry[] = [];
     const cres = new TorusGeometry(0.32, 0.06, 4, 14, Math.PI * 1.25).rotateZ(-0.6).translate(0, h * 0.72, 0.4);

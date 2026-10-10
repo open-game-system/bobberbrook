@@ -31,10 +31,10 @@ import { buildProps } from "./props";
 import { buildSky } from "./sky";
 import { SwirlViews } from "./swirls";
 import { buildGroundStream } from "./terrain";
-import { loadPaintKit } from "./paintkit";
+import { imageOf, loadPaintKit } from "./paintkit";
 import { groundMaterial } from "./groundmat";
 import { leafMaterial, setFoliageMaterials } from "./foliage";
-import { CHAR_LIGHT, needleSheet } from "./painter";
+import { CHAR_LIGHT, needleSheet, setPaintImages } from "./painter";
 import { barkMaterial, rockMaterial, setSurfaceMaterials, tilesMaterial } from "./surfaces";
 import { placeHash } from "./valley";
 import { buildEscape } from "./escape";
@@ -174,6 +174,8 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   scene.add(sky.dome, sky.mountains);
   const jobs = createJobs();
   const kit = await loadPaintKit(opts.textureBase ?? "/art/textures/");
+  // The painted kit's planks, canvas, shingles, runestone and snow go into the prop texture array.
+  setPaintImages({ planks: imageOf(kit.planks), canvas: imageOf(kit.canvas), shingles: imageOf(kit.shingles), runestone: imageOf(kit.runestone), snow: imageOf(kit.snow) });
   const groundMat = groundMaterial(kit);
   const water = buildWater();
   const ground = buildGroundStream(groundMat, water.sea, jobs, full);

@@ -19,6 +19,12 @@ export type PaintKit = {
   bed: PaintTex;
   leavesViolet: PaintTex;
   leavesFern: PaintTex;
+  /** Round 11 (kit part 2): surfaces painted into the prop texture array (painter.ts setPaintImages). */
+  planks: PaintTex;
+  canvas: PaintTex;
+  shingles: PaintTex;
+  runestone: PaintTex;
+  snow: PaintTex;
   dispose(): void;
 };
 
@@ -93,14 +99,14 @@ export function loadPaintKit(base = "/art/textures/"): Promise<PaintKit> {
   if (shared) return shared;
   const loader = new TextureLoader();
   const p = async (): Promise<PaintKit> => {
-    const [grass, moss, path, bark, rock, tiles, bed, leavesViolet, leavesFern] = await Promise.all(
-      ["grass", "moss", "path", "bark", "rock", "stone-tiles", "lakebed", "leaves-violet", "leaves-fern"].map((n) => load(loader, `${base}${n}.webp`)),
+    const [grass, moss, path, bark, rock, tiles, bed, leavesViolet, leavesFern, planks, canvas, shingles, runestone, snow] = await Promise.all(
+      ["grass", "moss", "path", "bark", "rock", "stone-tiles", "lakebed", "leaves-violet", "leaves-fern", "planks", "canvas", "shingles", "runestone", "snow"].map((n) => load(loader, `${base}${n}.webp`)),
     );
-    if (!grass || !moss || !path || !bark || !rock || !tiles || !bed || !leavesViolet || !leavesFern) throw new Error("paint kit: missing texture");
+    if (!grass || !moss || !path || !bark || !rock || !tiles || !bed || !leavesViolet || !leavesFern || !planks || !canvas || !shingles || !runestone || !snow) throw new Error("paint kit: missing texture");
     return {
-      grass, moss, path, bark, rock, tiles, bed, leavesViolet, leavesFern,
+      grass, moss, path, bark, rock, tiles, bed, leavesViolet, leavesFern, planks, canvas, shingles, runestone, snow,
       dispose() {
-        for (const t of [grass, moss, path, bark, rock, tiles, bed, leavesViolet, leavesFern]) t.tex.dispose();
+        for (const t of [grass, moss, path, bark, rock, tiles, bed, leavesViolet, leavesFern, planks, canvas, shingles, runestone, snow]) t.tex.dispose();
         shared = null;
       },
     };
@@ -132,3 +138,9 @@ vec3 pkDetail(vec3 tex, vec3 inv, float hue) {
   return clamp(mix(vec3(l), d, hue), 0.0, 2.4);
 }
 `;
+
+/** The loaded image behind a kit texture (undefined for the blank stand-in), for drawing into a canvas. */
+export function imageOf(t: PaintTex): CanvasImageSource | undefined {
+  const img: unknown = t.tex.image;
+  return img instanceof HTMLImageElement || img instanceof ImageBitmap || img instanceof HTMLCanvasElement ? img : undefined;
+}

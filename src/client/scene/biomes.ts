@@ -13,7 +13,8 @@ import {
 } from "three";
 import { pondRadius, type Area, type PondPlace } from "../../game/world";
 import { crystalShard, instanced, giantGeometry, rockGeometry, type Inst } from "./kit";
-import { jitter, merge, paint, prep, puffNormals } from "./geo";
+import { jitter, merge, paint, prep, puffNormals, surf } from "./geo";
+import { PK } from "./painter";
 import { attachFoliage, leafCards, type Puff } from "./foliage";
 import { barked } from "./surfaces";
 import { rng, vnoise } from "./noise";
@@ -246,7 +247,7 @@ export function frostKit(c: KitCtx): void {
   const { a } = c;
   const R = rng(601 + c.seed);
   // A frozen rim: one sheet of ice hugging the shore, its inner edge ragged, snow banked on it.
-  c.wood.push(frozenRim(a, R));
+  c.wood.push(surf(frozenRim(a, R), PK.snow));
   // Snowy banks: soft drifts piled along the shore and against the trees.
   for (let i = 0; i < 22; i++) {
     const th = (i / 22) * Math.PI * 2 + R() * 0.2;
@@ -256,7 +257,7 @@ export function frostKit(c: KitCtx): void {
     const g = new SphereGeometry(r, 12, 5, 0, Math.PI * 2, 0, Math.PI / 2).scale(1.4, 0.32, 0.9);
     jitter(g, 0.1 * r, i + 7);
     g.computeVertexNormals();
-    c.wood.push(put(paint(prep(g), 0xb8c8e4, 0xffffff, (pp, n, cc) => cc.multiplyScalar(0.84 + 0.16 * Math.max(0, n.y))), p.x, p.z, th + Math.PI / 2, 1, -0.12));
+    c.wood.push(put(surf(paint(prep(g), 0xb8c8e4, 0xffffff, (pp, n, cc) => cc.multiplyScalar(0.84 + 0.16 * Math.max(0, n.y))), PK.snow), p.x, p.z, th + Math.PI / 2, 1, -0.12));
   }
   const rocks: Inst[] = [];
   for (let i = 0; i < 14; i++) {
@@ -268,7 +269,7 @@ export function frostKit(c: KitCtx): void {
   rm.name = "frost-rocks";
   c.group.add(rm);
   // Snow caps on the rocks (white domes).
-  for (const r of rocks) c.wood.push(put(paint(prep(new SphereGeometry(r.s * 0.95, 9, 5, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.4, 0.85)), 0xe8f0ff, 0xffffff), r.x, r.z, r.ry, 1, r.s * 0.45 - 0.1));
+  for (const r of rocks) c.wood.push(put(surf(paint(prep(new SphereGeometry(r.s * 0.95, 9, 5, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.4, 0.85)), 0xe8f0ff, 0xffffff), PK.snow), r.x, r.z, r.ry, 1, r.s * 0.45 - 0.1));
   // Faint blue ice lights in the snow.
   for (let i = 0; i < 6; i++) {
     const p = at(a, R() * Math.PI * 2, 1 + R() * 4);
@@ -345,7 +346,7 @@ function arch(c: KitCtx, R: () => number): void {
     if (n.y > 0.6) cc.lerp(new Color(0x3e8a6a), 0.6);
   });
   const feet = [-2.5, 2.5].map((x) => paint(prep(new BoxGeometry(1.1, 1.2, 1.0).translate(x, 0.3, 0)), 0x5a5478, 0x7a7498));
-  c.wood.push(put(merge([stone, ...feet]), p.x, p.z, face, 1.5));
+  c.wood.push(put(surf(merge([stone, ...feet]), PK.runestone), p.x, p.z, face, 1.5));
   const runes: BufferGeometry[] = [];
   for (let i = 0; i < 9; i++) {
     const t = 0.15 * Math.PI + (i / 8) * 0.7 * Math.PI;

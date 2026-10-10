@@ -426,11 +426,11 @@ export function cottageGeometry(seed: number): { body: BufferGeometry; windows: 
     c.multiplyScalar(0.78 + 0.3 * Math.min(1, row * 1.6));
     if (n.y < -0.1) c.multiplyScalar(0.55);
   };
-  const roof = surf(prep(new LatheGeometry(sweep(eave, roofH, h - 0.05, 0.32), 20)), PK.planks);
+  const roof = surf(prep(new LatheGeometry(sweep(eave, roofH, h - 0.05, 0.32), 20)), PK.shingles);
   paint(roof, rc, rc, roofPaint(h - 0.05, roofH));
   const y2 = h - 0.05 + roofH * 0.42;
   const e2 = eave * Math.pow(1 - 0.42, 1.45) + 0.35;
-  const roof2 = surf(prep(new LatheGeometry(sweep(e2, roofH * 0.62, y2, 0.22), 16)), PK.planks);
+  const roof2 = surf(prep(new LatheGeometry(sweep(e2, roofH * 0.62, y2, 0.22), 16)), PK.shingles);
   paint(roof2, rc, rc, roofPaint(y2, roofH * 0.62));
   const gold = (g: BufferGeometry) => paint(prep(g), 0xb88a30, 0xf0d080);
   const trim1 = gold(new TorusGeometry(eave + 0.32, 0.06, 5, 32).rotateX(Math.PI / 2).translate(0, h - 0.05 + 0.29, 0));
