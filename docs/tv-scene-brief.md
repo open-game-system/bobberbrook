@@ -123,6 +123,11 @@ appear and fade (`since`, `until`), never pop.
   distance, 0.03 rad) so shuffling fishers do not drift the shot; past it the critically damped follow takes the
   excess only. Leaving the campfire, and any jump across the world, cuts straight onto the family's own framing
   (25 % wide, a touch high) and settles in, never via the establishing view or a parked vehicle.
+- **Framing guard** (round 13): fisher centres fit inside 0.70 NDC across (tags and shoulders reach ~0.08 past the
+  centre line, so they stay inside the 10 % safe margin); the calm hold is dropped when it no longer fits, and while
+  anyone is past the margin in the live shot the follow hurries (up to x3.2). A discovery frames the new pond whole
+  with the family (its rim joins the fit, a little higher). A golden swirl within 40 m of the family joins the
+  framing, and its light pillar (on the golden swirl nearest the lens) rises to 34 m from afar as a beacon.
 - **Catch moment**: an eased push toward the catcher for ~2 s then back, only when one catch is up at a time
   (`catchFocus` drops the push for a catch that ever shares the screen with another).
 - **Campfire** (`lake.campfire`): the camera settles on the campfire; fishers sit around it. The seats are a horseshoe 2.9 m out, open on the camera's axis so the fire burns in the gap and never in

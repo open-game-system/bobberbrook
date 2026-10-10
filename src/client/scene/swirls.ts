@@ -1,4 +1,4 @@
-import { Group, PointLight, type Mesh, type ShaderMaterial } from "three";
+import { Group, PointLight, type Mesh, type ShaderMaterial, type Vector3 } from "three";
 import type { Lake } from "../../game/lake";
 import { MAX_SWIRLS, type Water } from "./water";
 import type { FishShadows } from "./fishviz";
@@ -13,6 +13,9 @@ export class SwirlViews {
   readonly light: PointLight;
   private readonly slots: Slot[] = Array.from({ length: MAX_SWIRLS }, () => ({ id: -1, x: 0, z: 0, golden: false, alpha: 0, live: false, seed: 0 }));
   private readonly pillar: Mesh;
+  private gold = 0;
+  private goldX = 0;
+  private goldZ = 0;
   private readonly pillarMat: ShaderMaterial;
   private sparkAcc = 0;
 
@@ -34,7 +37,14 @@ export class SwirlViews {
     this.pillar.visible = true;
   }
 
-  frame(lake: Lake | null, sn: number, t: number, dt: number, glow: number): void {
+  /** The strongest golden swirl's position (written to out) and its strength (0 = none). */
+  goldAt(out: { x: number; z: number }): number {
+    out.x = this.goldX;
+    out.z = this.goldZ;
+    return this.gold;
+  }
+
+  frame(lake: Lake | null, sn: number, t: number, dt: number, glow: number, eye: Vector3 | null = null): void {
     for (const s of this.slots) s.live = false;
     if (lake) {
       for (const sw of lake.swirls) {
@@ -56,6 +66,7 @@ export class SwirlViews {
       }
     }
     let gold = 0;
+    let bestD = Infinity;
     let gx = 0;
     let gz = 0;
     this.slots.forEach((s, i) => {
@@ -79,10 +90,14 @@ export class SwirlViews {
           this.shadows.add(x, z, heading, sc, Math.sin(t * 8 + k) * 0.2, 0.05 + 0.45 * g, 0.2 + 1.3 * g, 0.24 + 1.3 * g);
         }
       }
-      if (s.golden && s.alpha > gold) {
+      // The beacon goes to the golden swirl nearest the lens (round 13: one at home outshone the one the
+      // family was walking to); a fading one only while no other is up.
+      const dGold = eye ? Math.hypot(eye.x - s.x, eye.z - s.z) : 0;
+      if (s.golden && ((gold < 0.3 && s.alpha > gold) || (s.alpha > 0.3 && dGold < bestD))) {
         gold = s.alpha;
         gx = s.x;
         gz = s.z;
+        bestD = dGold;
       }
     });
     // Sparkles over the schools; lots of gold over a golden one.
@@ -97,8 +112,15 @@ export class SwirlViews {
         else if (Math.random() < 0.5) this.fx.sparkle(s.x + Math.cos(a) * rr, 0.15, s.z + Math.sin(a) * rr, 1, 0.85, 1, 1, 0.5, 0.3);
       }
     }
+    this.gold = gold;
+    this.goldX = gx;
+    this.goldZ = gz;
     this.pillar.visible = gold > 0.01;
     this.pillar.position.set(gx, 0, gz);
+    // A beacon from afar (round 13): seen from the trail it rises well over the canopy (10 m close by,
+    // up to 34 m from 60 m away) and widens a little, so a golden swirl reads on the TV before you reach it.
+    const far = eye ? Math.min(1, Math.max(0, (Math.hypot(eye.x - gx, eye.z - gz) - 22) / 38)) : 0;
+    this.pillar.scale.set(1 + 0.6 * far, 1 + 2.4 * far, 1 + 0.6 * far);
     this.pillar.rotation.y = t * 0.2;
     this.pillarMat.uniforms.uStrength!.value = gold * (0.85 + 0.15 * Math.sin(t * 2));
     this.pillarMat.uniforms.uTime!.value = t;

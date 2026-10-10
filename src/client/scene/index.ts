@@ -295,6 +295,9 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   fishers.rideOf = (seat, out) => vehicles.rideSeat(seat, out);
   scene.add(fishers.group);
   const swirls = new SwirlViews(water, shadows, fx);
+  const goldAt = { x: 0, z: 0 };
+  /** A golden swirl this close to the family's centre joins the camera's framing (metres). */
+  const GOLD_FRAME_M = 40;
   scene.add(swirls.group);
   const world = new Group();
   scene.add(world);
@@ -462,7 +465,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       return at;
     });
     shadows.begin();
-    swirls.frame(lake, sn, t, dt, tod.glow);
+    swirls.frame(lake, sn, t, dt, tod.glow, camera.position);
     fishers.frame(lake, sn, t, dt, camera, props.campSeats);
     shadows.end();
     fx.ambient(dt, tod, lake?.campfire ? 1 : 0, rig.focus.x, rig.focus.z);
@@ -511,6 +514,8 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     let gx = 0;
     let gz = 0;
     fishers.forEachSeat((seat, x, _y, z) => { if (framed.has(seat)) { gx += x; gz += z; n++; } });
+    // A golden swirl near the family is part of the shot (round 13: one was announced and never seen).
+    if (n > 0 && !riding && !bf && !cf && swirls.goldAt(goldAt) > 0.3 && Math.hypot(goldAt.x - gx / n, goldAt.z - gz / n) < GOLD_FRAME_M) rig.addFocus(goldAt.x, 0, goldAt.z);
     const here = n > 0 ? activeWorld().areaAt({ x: gx / n, z: gz / n }) : null;
     const onTrail = n > 0 && here === null && !riding ? 1 : 0;
     if (here && n > 0 && !riding && !bf) {
@@ -528,7 +533,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       rig.placeYaw = here.home ? 0 : (placeHash(here.key, 11) - 0.5) * 0.9;
     }
     trailW += (onTrail - trailW) * Math.min(1, dt * 1.5);
-    const reveal = revealAge >= 0 && revealAge < 3.5 ? { x: revealArea.center.x, z: revealArea.center.z, age: revealAge } : null;
+    const reveal = revealAge >= 0 && revealAge < 3.5 ? { x: revealArea.center.x, z: revealArea.center.z, age: revealAge, r: revealArea.pond.r } : null;
     rig.update(t, dt, lake?.campfire ?? false, cf, trailW, reveal);
     // Sparkles keep off faces (round 11: they covered Juneau's at night).
     faceList.length = 0;

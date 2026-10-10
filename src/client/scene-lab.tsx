@@ -442,6 +442,18 @@ const SCENARIOS: Record<string, Scenario> = {
     warmUntil: () => true,
     hero: (l, now, s) => now - s > 3500 && areaAt(centroid(l)) === null && centroid(l).x < -38,
   },
+  // Round 13 (session 160 s: a golden swirl at Mistmarsh announced and never shown): the family on the
+  // trail with a golden swirl in the marsh ahead; the beacon must read on the TV.
+  "golden-trail": {
+    phase: 0.36,
+    fishers: [
+      { seat: 0, name: "Dad", spot: shoreIn("mistmarsh", -0.6, 1.5), at: onTrailAt(0, -0.16, 1.2) },
+      { seat: 2, name: "Juneau", spot: shoreIn("mistmarsh", -0.8, 1.5), at: onTrailAt(0, -0.1, 0) },
+    ],
+    setup: both(discoverOnly(["mistmarsh"]), swirlIn("mistmarsh", 0.6, true)),
+    warmUntil: () => true,
+    hero: (l, now, s) => now - s > 3500 && areaAt(centroid(l)) === null && centroid(l).x < -38,
+  },
   // Two catches at once, side by side.
   "double-catch": {
     phase: 0.25,

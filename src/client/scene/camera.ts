@@ -14,8 +14,11 @@ export function spring(x: number, v: number, goal: number, omega: number, dt: nu
 const S = { x: 0, v: 0 };
 
 /** A place being revealed (the discovery moment). */
-export type Reveal = { x: number; z: number; age: number };
+/** A place being discovered: its centre, the pond radius (framed whole, round 13) and the reveal age (s). */
+export type Reveal = { x: number; z: number; age: number; r?: number };
 const REVEAL_S = 2.6;
+/** The reveal looks down a little more steeply, so the new pond reads over the trees. */
+const REVEAL_EL = 0.5;
 
 export const VIEWS = ["auto", "group", "wide", "establish", "campfire", "dock", "falls", "lily", "reeds", "overview", "top"] as const;
 export type ViewName = (typeof VIEWS)[number];
@@ -39,7 +42,10 @@ const MIN_DIST = 17;
 const MAX_DIST = 64;
 /** Where the fishers' box must fit, in NDC (x: ±, y: bottom..top; the top leaves room for name tags). */
 /** 0.78: every fisher (feet to name tag) stays inside a 10% safe margin, with a little room to ease. */
-const FIT_X = 0.78;
+// Round 13: 0.78 -> 0.70. The fit works on each fisher's centre line, but a name tag and a body reach about
+// 0.08 NDC to either side of it, so 0.78 let tags and shoulders past the 10 % safe margin (night-catch,
+// session 141 s and 228 s).
+const FIT_X = 0.7;
 /** The safe margin a catch push-in may never break (NDC). */
 const SAFE = 0.8;
 /** The fishers' feet sit on this line (a short foreground band below them), not centred in the box. */
@@ -116,6 +122,9 @@ export class CameraRig {
   /** A cut that lands on the family itself (framed, a little wide and high) instead of the establishing view. */
   private soft = false;
   private wasCamp = false;
+  /** 0..1: how hard the follow hurries because a framed point is outside the safe margin right now. */
+  private urge = 0;
+  private readonly revealT = new Vector3();
   /** The dead-zoned framing goal (the family shuffling about inside it does not move the camera). */
   private readonly held = new Vector3();
   private heldDist = 0;
@@ -180,6 +189,18 @@ export class CameraRig {
     cam.lookAt(target);
     cam.rotateX(pitch);
     cam.updateMatrixWorld(true);
+  }
+
+  /** Whether any focus point (feet to name tag) is past the safe margin in the camera's current shot. */
+  private outside(cam: PerspectiveCamera): boolean {
+    for (let i = 0; i < this.n; i++) {
+      const p = this.pts[i]!;
+      for (const lift of LIFTS) {
+        this.tmp.set(p.x, p.y + lift, p.z).project(cam);
+        if (this.tmp.z < 1 && (Math.abs(this.tmp.x) > SAFE || Math.abs(this.tmp.y) > SAFE)) return true;
+      }
+    }
+    return false;
   }
 
   /** Whether every focus point (feet to name tag) sits inside the safe margin from this pose. */
@@ -371,6 +392,14 @@ export class CameraRig {
         this.heldEl = this.wantEl;
         this.haveHeld = true;
       }
+      // The calm hold never keeps a framing that has let someone out of the safe box (round 13: on the
+      // trail the hold kept the shot while a walker left it).
+      if (!this.fits(this.held, this.heldDist, this.heldYaw, this.heldEl, PITCH_UP)) {
+        this.held.copy(this.wantTarget);
+        this.heldDist = this.wantDist;
+        this.heldYaw = this.wantYaw;
+        this.heldEl = this.wantEl;
+      }
       const zone = DEAD_M + DEAD_K * this.wantDist;
       const dx = this.wantTarget.x - this.held.x;
       const dy = this.wantTarget.y - this.held.y;
@@ -429,9 +458,29 @@ export class CameraRig {
     this.revealW += (rw - this.revealW) * damp(5, dt);
     if (reveal && this.revealW > 0.001) {
       const w = this.revealW;
-      this.wantTarget.lerp(this.tmp.set(reveal.x, 0.5, reveal.z), w * 0.55);
-      this.wantDist += (Math.max(this.wantDist * 1.25, 44) - this.wantDist) * w;
-      this.wantEl += (0.62 - this.wantEl) * w;
+      if (reveal.r !== undefined && this.n > 0) {
+        // Round 13: frame the new pond whole with the family (it used to look half at the forest): its rim
+        // joins the fit, from a little higher so the water reads over the trees.
+        const t0 = this.base.copy(this.wantTarget);
+        const d0 = this.wantDist;
+        const e0 = this.wantEl;
+        const n0 = this.n;
+        for (let k = 0; k < 8 && this.n < MAX_POINTS - 1; k++) {
+          const a = (k / 8) * Math.PI * 2;
+          this.pts[this.n++]!.set(reveal.x + Math.cos(a) * reveal.r, 0, reveal.z + Math.sin(a) * reveal.r);
+        }
+        this.fitGroup(this.wantYaw, REVEAL_EL);
+        this.revealT.copy(this.wantTarget);
+        const dR = this.wantDist;
+        this.n = n0;
+        this.wantTarget.copy(t0).lerp(this.revealT, w);
+        this.wantDist = d0 + (dR - d0) * w;
+        this.wantEl = e0 + (REVEAL_EL - e0) * w;
+      } else {
+        this.wantTarget.lerp(this.tmp.set(reveal.x, 0.5, reveal.z), w * 0.55);
+        this.wantDist += (Math.max(this.wantDist * 1.25, 44) - this.wantDist) * w;
+        this.wantEl += (0.62 - this.wantEl) * w;
+      }
     }
     // A jump across the world (a new scene, a far place): cut there instead of flying over it.
     if (!this.first && Math.hypot(this.wantTarget.x - this.target.x, this.wantTarget.z - this.target.z) > 150) {
@@ -470,7 +519,11 @@ export class CameraRig {
     // it (continuous velocity and acceleration: no jerk, no overshoot).
     const intro = Math.min(1, Math.max(0, (t - this.startT) / INTRO_S));
     // A catch push-in arrives while the fish is still up (the hold is only ~2.4 s).
-    const r = rate * this.rateK * (0.25 + 0.75 * intro * intro) * (1 + this.catchW * 1.3);
+    // Someone at or past the safe margin in the shot as it stands: the follow hurries (round 13: walkers on
+    // the trail were cropped at the edge while the springs caught up).
+    const out = groupMode && !campfire && !this.ride && !this.board && !est && this.n > 0 && this.outside(cam);
+    this.urge += ((out ? 1 : 0) - this.urge) * damp(out ? 6 : 1.5, dt);
+    const r = rate * this.rateK * (0.25 + 0.75 * intro * intro) * (1 + this.catchW * 1.3) * (1 + 2.2 * this.urge);
     const k1 = damp(r * 2.2, dt);
     this.goalTarget.lerp(this.wantTarget, k1);
     this.goalDist += (this.wantDist - this.goalDist) * k1;

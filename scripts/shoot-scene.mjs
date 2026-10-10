@@ -53,6 +53,7 @@ const SHOTS = [
   ["morning", 0.97, false],
   ["four-reel", null, true],
   ["golden-swirl", null, true],
+  ["golden-trail", null, true],
   ["night-catch", null, true],
   ["rod-upgrade", null, true],
   ["campfire", null, false],
