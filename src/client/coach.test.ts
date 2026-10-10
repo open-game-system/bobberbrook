@@ -38,6 +38,10 @@ describe("coachLine", () => {
     expect(coachLine(family(), 0, 15_000)).not.toMatch(/shells/);
     expect(coachLine(family(), 0, 30_000)).toMatch(/shells/);
   });
+  it("my own fresh catch beats coaching the kid's reel (Dad's card is up)", () => {
+    const l = withMode(withMode(family(), 0, { mode: "catch", catch: { fishId: "minnow", cm: 9, shells: 1, isNew: false, golden: false, at: 900, seq: 1 } }), 1, { mode: "reel" });
+    expect(coachLine(l, 0, 1000)).toMatch(/^Dad caught/);
+  });
   it("coaches the reel", () => {
     expect(coachLine(withMode(family(), 1, { mode: "reel" }), 0, 10)).toContain("Juneau is reeling");
   });

@@ -69,6 +69,12 @@ export function catchLine(lake: Lake, who: string, c: { fishId: string; isNew: b
   return c.isNew ? `New fish! ${who} caught ${article(name)} ${name}. That's ${speciesCount(lake.journal)} of ${JOURNAL_FISH.length} in the journal.` : `${who} caught ${article(name)} ${name}, ${c.cm} cm.`;
 }
 
+/** My own catch card is up: that line comes before coaching someone else's reel. */
+const myCatch: Rule = (lake, mySeat, now) => {
+  const f = lake.fishers.find((x) => x.seat === mySeat && x.mode === "catch" && x.catch && now - x.catch.at < 3400);
+  return f?.catch ? catchLine(lake, nameOf(lake, f.seat), f.catch) : null;
+};
+
 const freshCatch: Rule = (lake, _mySeat, now) => {
   const f = lake.fishers.find((x) => x.mode === "catch" && x.catch && now - x.catch.at < 3400);
   return f?.catch ? catchLine(lake, nameOf(lake, f.seat), f.catch) : null;
@@ -174,7 +180,7 @@ const exploreTip: Rule = (lake) => {
 };
 
 /** In priority order: what's happening to someone right now first, then news, then a tip. */
-const RULES: Rule[] = [campfireLine, riding, boardingNow, myBite, theirBite, theirReel, freshCatch, freshMiss, wentAhead, freshDiscovery, goldenSwirl, rideNearby, exploreTip, timeTip, talkTip, rodTip];
+const RULES: Rule[] = [campfireLine, riding, boardingNow, myBite, myCatch, theirBite, theirReel, freshCatch, freshMiss, wentAhead, freshDiscovery, goldenSwirl, rideNearby, exploreTip, timeTip, talkTip, rodTip];
 
 /**
  * The host phone's one line to read aloud. The grown-up is the coach: what's happening to the kids
