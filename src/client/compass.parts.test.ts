@@ -108,3 +108,13 @@ describe("one shared goal for the family", () => {
     expect(sharedGoal(lake, { x: -40, z: 25 })).not.toBeNull();
   });
 });
+
+describe("tagging along shows on the kid's iPad", () => {
+  it("while the kid walks after the family by themself, the arrow points at the one they follow", () => {
+    let lake = join(join(newLake(1, 0), { name: "Dad", ogsId: null }).lake, { name: "J", ogsId: null }).lake;
+    lake = { ...lake, fishers: lake.fishers.map((f) => (f.seat === 0 ? { ...f, pos: { x: -15, z: 20 } } : { ...f, pos: { x: 0, z: 20 }, following: true })) };
+    const c = compassTo(lake, { x: 0, z: 20 }, 1);
+    expect(c?.family).toBe(true);
+    expect(Math.cos(c?.angle ?? 0)).toBeLessThan(-0.9);
+  });
+});

@@ -21,3 +21,31 @@ export function campfireRecap(log: Lake["log"], since: number | null, now: numbe
   const shown = Math.floor((now - since) / RECAP_EVERY_MS);
   return log.slice(-RECAP_MAX).slice(0, Math.max(0, shown));
 }
+
+/** A TV banner. A catch banner can carry up to two more catches that landed while it was up. */
+export type Toast = {
+  id: number;
+  kind: "new" | "upgrade" | "golden" | "place" | "tod";
+  fishId?: string;
+  seat?: number;
+  tier?: number;
+  place?: string;
+  ride?: "boat" | "zeppelin";
+  tod?: TimeOfDay;
+  star?: boolean;
+  also: { fishId: string; seat: number; star: boolean | undefined }[];
+};
+
+/**
+ * Adds fresh banners to the queue. A catch joins a catch banner already up or waiting (up to three per
+ * banner), so a second catch never waits behind the first (round 18: Dad's showed only at the campfire).
+ */
+export function queueToasts(queue: Toast[], fresh: Toast[]): Toast[] {
+  const out = queue.map((t) => ({ ...t, also: [...t.also] }));
+  for (const t of fresh) {
+    const host = t.kind === "new" && t.fishId && t.seat !== undefined ? out.find((q) => q.kind === "new" && q.also.length < 2) : undefined;
+    if (host && t.fishId && t.seat !== undefined) host.also.push({ fishId: t.fishId, seat: t.seat, star: t.star });
+    else out.push(t);
+  }
+  return out.slice(-4);
+}

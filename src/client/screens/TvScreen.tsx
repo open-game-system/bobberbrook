@@ -20,7 +20,8 @@ import { thrashingAt } from "../../game/reel";
 import { createServerClock } from "../serverClock";
 import { SEAT_HEX } from "../components/MiniMap";
 import { BoatIcon, RodIcon, ShellIcon, ZeppelinIcon } from "../components/Icons";
-import { boardingProgress, campfireRecap, todChanged } from "../tvHud";
+import { boardingProgress, campfireRecap, queueToasts, todChanged, type Toast } from "../tvHud";
+import { revealReady } from "../scene/revealGate";
 import type { TimeOfDay } from "../../game/daycycle";
 import { qualityFor, rendererName } from "../gpu";
 
@@ -33,7 +34,6 @@ function qrDataUrl(text: string): string {
   return qr.createDataURL(6, 2);
 }
 
-type Toast = { id: number; kind: "new" | "upgrade" | "golden" | "place" | "tod"; fishId?: string; seat?: number; tier?: number; place?: string; ride?: "boat" | "zeppelin"; tod?: TimeOfDay; star?: boolean };
 
 const TOD_NAMES: Record<TimeOfDay, string> = { morning: "Morning", golden: "Golden hour", night: "Night falls", dawn: "Dawn" };
 
@@ -73,6 +73,7 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
     }, 2000);
     return () => window.clearInterval(id);
   }, [sound]);
+  const pendingPlace = useRef<{ area: string; seat: number; since: number } | null>(null);
   const lastTod = useRef<TimeOfDay | null>(null);
   const toastId = useRef(0);
   const teachMem = useRef<TeachMemory>(new Map());
@@ -123,16 +124,24 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
     const fresh: Toast[] = [];
     const turned = todChanged(lastTod.current, todNow);
     lastTod.current = todNow;
-    if (turned) fresh.push({ id: ++toastId.current, kind: "tod", tod: turned });
+    if (turned) fresh.push({ id: ++toastId.current, also: [], kind: "tod", tod: turned });
     for (const e of events) {
       // Every catch gets its banner (two at once queue, one after the other); a new species gets the star.
-      if (e.kind === "caught") fresh.push({ id: ++toastId.current, kind: "new", fishId: e.fishId, seat: e.seat, star: e.isNew });
-      if (e.kind === "upgrade") fresh.push({ id: ++toastId.current, kind: "upgrade", tier: e.tier });
-      if (e.kind === "golden-swirl") fresh.push({ id: ++toastId.current, kind: "golden" });
-      if (e.kind === "discovered") fresh.unshift({ id: ++toastId.current, kind: "place", place: worldFor(lake.worldSeed).placeById(e.area)?.name ?? "A new place", seat: e.seat });
-      if (e.kind === "ride") fresh.unshift({ id: ++toastId.current, kind: "place", place: e.to, seat: 0, ride: e.vehicle });
+      if (e.kind === "caught") fresh.push({ id: ++toastId.current, also: [], kind: "new", fishId: e.fishId, seat: e.seat, star: e.isNew });
+      if (e.kind === "upgrade") fresh.push({ id: ++toastId.current, also: [], kind: "upgrade", tier: e.tier });
+      if (e.kind === "golden-swirl") fresh.push({ id: ++toastId.current, also: [], kind: "golden" });
+      // The "New place" banner waits for the family to reach the water, with the scene's reveal (round 18:
+      // it fired at the clearing's edge, seconds before anyone saw the pond).
+      if (e.kind === "discovered") pendingPlace.current = { area: e.area, seat: e.seat, since: performance.now() };
+      if (e.kind === "ride") fresh.unshift({ id: ++toastId.current, also: [], kind: "place", place: e.to, seat: 0, ride: e.vehicle });
     }
-    if (fresh.length > 0) setToasts((t) => [...t, ...fresh].slice(-4));
+    const pending = pendingPlace.current;
+    const found = pending ? worldFor(lake.worldSeed).placeById(pending.area) : null;
+    if (pending && (!found || revealReady(lake.fishers.map((f) => f.pos), found, (performance.now() - pending.since) / 1000))) {
+      fresh.unshift({ id: ++toastId.current, also: [], kind: "place", place: found?.name ?? "A new place", seat: pending.seat });
+      pendingPlace.current = null;
+    }
+    if (fresh.length > 0) setToasts((t) => queueToasts(t, fresh));
   }, [lake, sound, clock, campfireSince]);
 
   // One banner at a time: the first in the queue shows for 3.2 s, then the next.
@@ -259,6 +268,15 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
                   {fishById(t.fishId)?.name}
                 </span>
                 {t.star && <span className="toast-star" aria-hidden="true">★</span>}
+                {t.also.map((a) => (
+                  <span key={`${a.seat}-${a.fishId}`} className="toast-also">
+                    <img src={`/art/fish/${a.fishId}.webp`} alt="" />
+                    <span className="toast-text">
+                      <b style={{ color: SEAT_HEX[lake.fishers.find((f) => f.seat === a.seat)?.color ?? "green"] }}>{lake.fishers.find((f) => f.seat === a.seat)?.name ?? ""}</b> {fishById(a.fishId)?.name}
+                    </span>
+                    {a.star && <span className="toast-star" aria-hidden="true">★</span>}
+                  </span>
+                ))}
               </>
             )}
             {t.kind === "upgrade" && (

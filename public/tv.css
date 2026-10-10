@@ -69,3 +69,4 @@
 .toast.upgrade .toast-icon { width: 6.5vh; height: 6.5vh; }
 /* Sound started but not reaching the speakers: a small marker at the edge (outside the focal area). */
 .sound-stalled { position: absolute; right: 3vw; top: 14vh; width: 5vh; height: 5vh; padding: 0.8vh; border-radius: 50%; background: rgba(28, 20, 66, 0.8); border: 0.3vh solid #ff8a7a; }
+.toast-also { display: flex; align-items: center; gap: 0.8vw; padding-left: 1vw; border-left: 0.3vh solid rgba(255, 210, 90, 0.5); }

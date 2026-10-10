@@ -83,7 +83,7 @@ export function nearestRide(platforms: Pick<Platform, "at" | "kind" | "toPlace">
 
 /** The compass arrow (screen angle: 0 = right, π/2 = down, the minimap's north-up frame). */
 export function compassTo(lake: Lake, from: Vec, mySeat?: number): Compass | null {
-  const back = backToFamily(lake, from, mySeat);
+  const back = backToFamily(lake, from, mySeat) ?? followingFamily(lake, from, mySeat);
   if (back) return back;
   const goal = sharedGoal(lake, from);
   return goal ? arrowTo(lake, from, goal) : null;
@@ -98,6 +98,16 @@ export function sharedGoal(lake: Lake, from: Vec): Goal | null {
   if (n < 2) return compassGoal(lake, from);
   const middle = { x: lake.fishers.reduce((a, f) => a + f.pos.x, 0) / n, z: lake.fishers.reduce((a, f) => a + f.pos.z, 0) / n };
   return compassGoal(lake, middle);
+}
+
+/** Tagging along by themself: the arrow shows who they're walking to (round 18: no cue on the iPad). */
+function followingFamily(lake: Lake, from: Vec, mySeat: number | undefined): Compass | null {
+  const me = lake.fishers.find((f) => f.seat === mySeat);
+  if (!me?.following) return null;
+  const others = lake.fishers.filter((f) => f.seat !== mySeat);
+  const near = others.reduce<(typeof others)[number] | null>((b, f) => (!b || dist(f.pos, from) < dist(b.pos, from) ? f : b), null);
+  if (!near) return null;
+  return { angle: Math.atan2(near.pos.z - from.z, near.pos.x - from.x), distance: dist(near.pos, from), golden: false, explore: false, family: true, arrived: false };
 }
 
 /** Gone too far ahead: point back to the family (they're on their way). */
