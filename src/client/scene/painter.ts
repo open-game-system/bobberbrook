@@ -9,7 +9,7 @@ import { rng } from "./noise";
  */
 
 /** Surface kinds (the texture-array layer; NONE = no painted detail, e.g. faces and glass). */
-export const PK = { brush: 0, grain: 1, planks: 2, cloth: 3, canvas: 4, shingles: 5, runestone: 6, snow: 7, tiles: 8, rock: 9, moss: 10, quilt: 11, felt: 12, leather: 13, knit: 14, rodwood: 15, tent: 16, none: 17 } as const;
+export const PK = { brush: 0, grain: 1, planks: 2, cloth: 3, canvas: 4, shingles: 5, runestone: 6, snow: 7, tiles: 8, rock: 9, moss: 10, quilt: 11, felt: 12, leather: 13, knit: 14, rodwood: 15, tent: 16, none: 17, skin: 18 } as const;
 export type PaintKind = (typeof PK)[keyof typeof PK];
 const LAYERS = 17;
 /**
@@ -414,6 +414,8 @@ export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexSh
     float fireFace = dot(normal, toFire);
     vec3 chDir = normalize(mix(vec3(-0.45, 0.2, 0.87), toFire, uChFire.w));
     float chFill = saturate((dot(normal, chDir) + 0.45) / 1.45);
+    // Round 16: the fill models the form (a painter's turn into shade), not a flat wash over the face.
+    chFill = pow(chFill, 1.35);
     float rimSide = mix(1.0, 2.4 * smoothstep(0.3, -0.4, fireFace), uChFire.w);
     outgoingLight *= mix(1.0, 0.12 + 0.43 * smoothstep(-0.5, 0.6, fireFace), uChFire.w);
     // The rim is painted too: on the clothes it follows the painted detail's value (no clean vinyl edge).
@@ -464,6 +466,18 @@ export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexSh
       if (pk > 10.5 && pk < 15.5) pkRimK = 0.55 * clamp(l * l, 0.0, 1.6);
       // Baked top light: painted surfaces are lit from above, shaded underneath.
       diffuseColor.rgb *= mix(0.82, 1.1, smoothstep(-0.6, 0.85, n.y));
+    } else if (pk > ${LAYERS + 0.5} && pk < ${LAYERS + 1.5}) {
+      // Skin (round 16): painted, not vinyl. A broad, faint brush mottle (never over the features' shapes),
+      // a soft top light that falls to a warm rosy shade underneath, and a low, painted rim.
+      vec3 n = normalize(vPkN);
+      vec3 w = pow(abs(n), vec3(4.0)); w /= (w.x + w.y + w.z + 1e-4);
+      vec3 p = vPkP * uPkScale * 0.9;
+      vec3 tx = texture(tPk, vec3(p.zy, 0.0)).rgb * w.x + texture(tPk, vec3(p.xy + 0.37, 0.0)).rgb * w.z + texture(tPk, vec3(p.xz + 0.71, 0.0)).rgb * w.y;
+      float l = dot(tx * iPk[0], vec3(0.3, 0.55, 0.15));
+      diffuseColor.rgb *= mix(1.0, clamp(l, 0.74, 1.24), 0.7);
+      diffuseColor.rgb *= mix(vec3(0.74, 0.58, 0.58), vec3(1.05, 1.01, 0.95), smoothstep(-0.7, 0.8, n.y));
+      pkRimK = 0.3;
+      gPkSkin = 1.0;
     }
   }`,
     );

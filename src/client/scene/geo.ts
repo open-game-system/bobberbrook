@@ -15,7 +15,7 @@ export function patchLambertWrap(): void {
   if (!src.includes(from)) throw new Error("three's Lambert chunk changed: re-check the painted light ramp");
   // uPkCrisp (1 on the fishers, see painter.ts; 0 = unset elsewhere): characters keep a smooth ramp,
   // so firelight and lamplight model their faces instead of flattening them into one band.
-  ShaderChunk.lights_lambert_pars_fragment = `uniform float uPkCrisp;\n${src.replace(
+  ShaderChunk.lights_lambert_pars_fragment = `uniform float uPkCrisp;\nfloat gPkSkin = 0.0;\n${src.replace(
     from,
     `float wrapNL = saturate( ( dot( geometryNormal, directLight.direction ) + 0.3 ) / 1.3 );
 \t// Painted light: four soft value bands (a painter's planes of light, not a smooth airbrush ramp).
@@ -24,7 +24,9 @@ export function patchLambertWrap(): void {
 \t// Warm key, cool violet bounce on the turned-away side (Ashenvale's lilac shadows).
 \tvec3 irradiance = dotNL * directLight.color * vec3( 1.04, 1.0, 0.94 ) + ( 1.0 - dotNL ) * directLight.color * vec3( 0.07, 0.06, 0.14 );
 \t// A painted rim of key light on the silhouette (the warm edge WoW paints on its characters and props).
-\tirradiance += directLight.color * vec3( 0.13, 0.09, 0.05 ) * pow( 1.0 - saturate( dot( geometryNormal, geometryViewDir ) ), 3.0 ) * wrapNL;`,
+\tirradiance += directLight.color * vec3( 0.13, 0.09, 0.05 ) * pow( 1.0 - saturate( dot( geometryNormal, geometryViewDir ) ), 3.0 ) * wrapNL * ( 1.0 - 0.75 * gPkSkin );
+\t// Skin (round 16): a warm, blood-lit band where the light turns away (painted skin, not vinyl).
+\tirradiance += directLight.color * vec3( 0.2, 0.05, 0.01 ) * gPkSkin * smoothstep( 0.05, 0.45, wrapNL ) * ( 1.0 - smoothstep( 0.45, 0.85, wrapNL ) );`,
   )}`;
 }
 

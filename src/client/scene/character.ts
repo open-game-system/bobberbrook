@@ -91,9 +91,33 @@ const OCCLUDERS: Occluder[] = [
 ];
 /** Bakes the figure's occlusion and top light into a clothing part placed at `at` (its pivot) in the figure. */
 const shaded = (g: BufferGeometry, at: Vector3 = new Vector3()) => bakeFigure(g, at, OCCLUDERS);
-/** Skin and the face: no painted detail (clean, readable faces). */
+/** Skin (round 16): painted skin, a faint mottle and a warm shade (see painter.ts), never vinyl. */
 function skin(g: BufferGeometry, color: number, top?: number): BufferGeometry {
-  return part(g, color, top, PK.none);
+  return part(g, color, top, PK.skin);
+}
+/** The face's features (eyes, shines, smile, glasses, freckles): no painted detail (clean, readable faces). */
+function feature(g: BufferGeometry, color: number): BufferGeometry {
+  return part(g, color, undefined, PK.none);
+}
+
+/**
+ * Round 16: the hat brim's soft shadow across the brow and a little occlusion under the chin, baked into the
+ * skull's vertex colours (head space: the skull's centre at y 0.24, the brim from ~0.32 up).
+ */
+function underBrim(g: BufferGeometry): BufferGeometry {
+  const pos = g.getAttribute("position");
+  const col = g.getAttribute("color");
+  const sm = (a: number, b: number, x: number) => {
+    const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  };
+  for (let i = 0; i < pos.count; i++) {
+    const y = pos.getY(i);
+    const k = (1 - 0.24 * sm(0.3, 0.42, y)) * (1 - 0.22 * sm(0.1, 0.0, y));
+    col.setXYZ(i, col.getX(i) * k, col.getY(i) * k, col.getZ(i) * k);
+  }
+  col.needsUpdate = true;
+  return g;
 }
 
 function hatGeometry(seat: number, color: number): BufferGeometry {
@@ -272,15 +296,16 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials)
   head.position.set(0, 0.56, 0);
   body.add(head);
   const HR = 0.25;
-  const skull = skin(new SphereGeometry(HR, 22, 16).translate(0, 0.24, 0), SKIN, lighten(SKIN, 0.1));
+  const skull = underBrim(skin(new SphereGeometry(HR, 22, 16).translate(0, 0.24, 0), SKIN, lighten(SKIN, 0.1)));
   const hair = part(new SphereGeometry(HR + 0.012, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.6).rotateX(-0.75).translate(0, 0.25, -0.02), HAIR[seat]!);
   // The fringe sits low on the brow, under the hat's brim (it used to poke through it).
   const fringe = part(new SphereGeometry(0.1, 10, 6).scale(1.5, 0.45, 0.7).translate(0, 0.375, 0.19), HAIR[seat]!);
   const ears = [1, -1].map((sx) => skin(new SphereGeometry(0.05, 8, 6).scale(0.55, 1, 0.9).translate(sx * HR, 0.22, 0), SKIN));
-  const eyes = [1, -1].map((sx) => skin(new SphereGeometry(0.038, 10, 8).scale(0.85, 1.2, 0.45).translate(sx * 0.088, 0.255, 0.226), 0x24160f));
-  const shines = [1, -1].map((sx) => skin(new SphereGeometry(0.013, 6, 4).translate(sx * 0.088 + 0.012, 0.272, 0.244), 0xffffff));
-  const cheeks = [1, -1].map((sx) => skin(new SphereGeometry(0.042, 9, 6).scale(1, 0.62, 0.35).translate(sx * 0.145, 0.185, 0.2), 0xff8a86));
-  const smile = skin(new TorusGeometry(0.045, 0.012, 5, 12, Math.PI).rotateZ(Math.PI).rotateX(-0.35).translate(0, 0.18, 0.236), 0x8a3a2a);
+  const eyes = [1, -1].map((sx) => feature(new SphereGeometry(0.038, 10, 8).scale(0.85, 1.2, 0.45).translate(sx * 0.088, 0.255, 0.226), 0x24160f));
+  const shines = [1, -1].map((sx) => feature(new SphereGeometry(0.013, 6, 4).translate(sx * 0.088 + 0.012, 0.272, 0.244), 0xffffff));
+  // Soft blush (round 16): half way from the skin to rose, and flatter, so it reads as warmth, not a sticker.
+  const cheeks = [1, -1].map((sx) => skin(new SphereGeometry(0.044, 9, 6).scale(1, 0.6, 0.28).translate(sx * 0.145, 0.185, 0.2), new Color(SKIN).lerp(new Color(0xf08878), 0.5).getHex()));
+  const smile = feature(new TorusGeometry(0.045, 0.012, 5, 12, Math.PI).rotateZ(Math.PI).rotateX(-0.35).translate(0, 0.18, 0.236), 0x8a3a2a);
   const nose = skin(new SphereGeometry(0.024, 8, 6).translate(0, 0.215, 0.25), 0xffb896);
   // The hat style follows the colour the player picked (blue is always the sun hat), not the seat.
   const style = Math.max(0, HAT_STYLE.indexOf(colorName));
@@ -298,15 +323,15 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials)
     traits.push(part(new SphereGeometry(0.04, 8, 6).scale(1.8, 0.8, 0.6).translate(0.09, -0.17, -0.3), color));
   } else if (colorName === "yellow") {
     // Round glasses.
-    for (const sx of [1, -1]) traits.push(skin(new TorusGeometry(0.058, 0.011, 6, 18).translate(sx * 0.088, 0.255, 0.238), 0x3a2a24));
-    traits.push(skin(new CylinderGeometry(0.008, 0.008, 0.06, 5).rotateZ(Math.PI / 2).translate(0, 0.262, 0.245), 0x3a2a24));
+    for (const sx of [1, -1]) traits.push(feature(new TorusGeometry(0.058, 0.011, 6, 18).translate(sx * 0.088, 0.255, 0.238), 0x3a2a24));
+    traits.push(feature(new CylinderGeometry(0.008, 0.008, 0.06, 5).rotateZ(Math.PI / 2).translate(0, 0.262, 0.245), 0x3a2a24));
   } else if (colorName === "blue") {
     // Freckles across the cheeks and nose.
     for (const [fx, fy] of [[0.13, 0.215], [0.165, 0.2], [0.12, 0.19], [0.05, 0.225]] as [number, number][]) {
       for (const sx of [1, -1]) {
         const x = sx * fx;
         const z = Math.sqrt(Math.max(0, HR * HR - x * x - (fy - 0.24) * (fy - 0.24))) + 0.002;
-        traits.push(skin(new SphereGeometry(0.009, 5, 4).translate(x, fy, z), 0xb0603a));
+        traits.push(feature(new SphereGeometry(0.009, 5, 4).translate(x, fy, z), 0xb0603a));
       }
     }
   }

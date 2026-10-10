@@ -1,0 +1,53 @@
+{
+  "round": "16-s1",
+  "shots": [
+    {
+      "label": "moonwell",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 756,
+      "triangles": 3305997,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 97
+    },
+    {
+      "label": "double-catch",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 644,
+      "triangles": 3214882,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 104
+    },
+    {
+      "label": "night-catch",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 717,
+      "triangles": 3377276,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 80
+    },
+    {
+      "label": "campfire",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 689,
+      "triangles": 3151135,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 71
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}
