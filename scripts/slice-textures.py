@@ -1,7 +1,8 @@
 """Cuts a painted texture sheet (3x3; black gutters, or plain thirds when the cards sit on black) into
 game textures: tiling swatches made seamless by cross-fading each with its half-offset copy, cards keyed
 off black into alpha.
-Usage: python3 scripts/slice-textures.py SHEET OUTDIR [name,name,... (9)] [cards: all | name,name]
+Usage: python3 scripts/slice-textures.py SHEET OUTDIR [name,name,... (9)] [cards: all | name,name] [raw: name,name]
+(raw: cut as is, no seamless cross-fade — radial maps like a mushroom cap seen from above)
 Default names and cards: the first sheet (atlas-a)."""
 import sys
 import numpy as np
@@ -34,6 +35,7 @@ if len(cols) != 3 or len(rows) != 3:
 NAMES = sys.argv[3].split(",") if len(sys.argv) > 3 else ["grass", "moss", "path", "bark", "rock", "stone-tiles", "leaves-violet", "leaves-fern", "lakebed"]
 assert len(NAMES) == 9, NAMES
 CARDS = set(NAMES) if len(sys.argv) > 4 and sys.argv[4] == "all" else set(sys.argv[4].split(",")) if len(sys.argv) > 4 and sys.argv[4] else {"leaves-violet", "leaves-fern"} if len(sys.argv) <= 3 else set()
+RAW = set(sys.argv[5].split(",")) if len(sys.argv) > 5 and sys.argv[5] else set()
 SIZE = 512
 
 def seamless(img):
@@ -55,6 +57,8 @@ for k, name in enumerate(NAMES):
         alpha_img = Image.fromarray((alpha * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.6))
         tile = tile.convert("RGBA"); tile.putalpha(alpha_img)
         tile.save(f"{out}/{name}.webp", quality=88)
+    elif name in RAW:
+        tile.save(f"{out}/{name}.webp", quality=86)
     else:
         seamless(tile).save(f"{out}/{name}.webp", quality=86)
     print(name)

@@ -371,5 +371,18 @@
       ]
     },
     "date": "2026-10-09"
+  },
+  {
+    "files": [
+      "assets-src/textures/atlas-e.png"
+    ],
+    "source": "Codex image_generation (gpt-image, ChatGPT plan) (generated)",
+    "input": {
+      "prompt": "A texture sheet for a 3D game in the hand-painted style of World of Warcraft (Blizzard hand-painted diffuse textures for chunky stylized characters and props: visible confident brush strokes, painted-in soft light from the top-left, baked soft occlusion, rich saturated colour, no photo detail, no hard outlines). A perfect 3x3 grid of nine square swatches filling the whole image edge to edge, separated by thin pure black gutters, each flat-on and designed to tile seamlessly: 1) a cozy quilted cloth vest fabric in a neutral warm cream (to be tinted in code), with stitched seams and soft folds, 2) a felted wool hat fabric in neutral light grey with a stitched band, 3) worn brown leather boot texture with stitches, 4) a knitted wool scarf texture in neutral cream, 5) the top of a giant glowing teal mushroom cap with pale spots and painted gradient, 6) the top of a giant glowing violet mushroom cap with pale spots and painted gradient, 7) the gilled underside of a glowing mushroom cap in lavender, 8) polished fishing-rod wood with a brass ring band, 9) painted canvas tent fabric in deep violet with gold trim. No text, no labels, no numbers, no characters, no faces.",
+      "references": [
+        "concept/ashenvale/ref-day.jpg"
+      ]
+    },
+    "date": "2026-10-10"
   }
 ]
