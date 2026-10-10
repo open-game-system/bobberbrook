@@ -16,7 +16,11 @@ const S = { x: 0, v: 0 };
 /** A place being revealed (the discovery moment). */
 /** A place being discovered: its centre, the pond radius (framed whole, round 13) and the reveal age (s). */
 export type Reveal = { x: number; z: number; age: number; r?: number };
-const REVEAL_S = 2.6;
+/** Round 17: 2.6 -> 5.0 s. The session's 2.6 s reveal (eased in and out through the follow springs) never
+ * visibly left the family's framing (round 16, 287 s): now ~1.2 s in, a held look, ~1.2 s back. */
+export const REVEAL_S = 5.0;
+/** The reveal swings round behind the family (the new pond beyond them) by at most this much (rad). */
+const REVEAL_YAW_MAX = 1.6;
 /** The reveal looks down a little more steeply, so the new pond reads over the trees. */
 const REVEAL_EL = 0.5;
 
@@ -98,6 +102,11 @@ export class CameraRig {
   private haveCentre = false;
   private ahead = 0;
   private revealW = 0;
+  /** The reveal's yaw offset from the place's view (set when a reveal starts) and its last age. */
+  private revealYaw = 0;
+  private revealAge = -1;
+  /** The lineup's lift at the reveal's look (every fisher readable in the reveal too). */
+  private revealLift = 0;
   private catchW = 0;
   private override: ViewName = "auto";
   /** The closest the group framing comes (further out when framing one place of a split family, so the place reads). */
@@ -286,6 +295,49 @@ export class CameraRig {
     this.wantEl = EL;
     const groupMode = v === "auto" || v === "group";
     const est = v === "establish" || (v === "auto" && this.n === 0 && !campfire);
+    // The discovery reveal's weight (a catch push-in wins): up, out and round behind the family so the new
+    // pond lies beyond them, for REVEAL_S.
+    let rw = 0;
+    if (reveal && groupMode && !campfire && this.catchW < 0.1) {
+      const a = reveal.age;
+      rw = a < 1.2 ? a / 1.2 : a < REVEAL_S - 1.2 ? 1 : Math.max(0, 1 - (a - (REVEAL_S - 1.2)) / 1.2);
+      rw = rw * rw * (3 - 2 * rw);
+    }
+    if (reveal && (this.revealAge < 0 || reveal.age < this.revealAge) && this.n > 0) {
+      // A new reveal: look from the family's side of the pond across it.
+      let cx = 0;
+      let cz = 0;
+      for (let i = 0; i < this.n; i++) {
+        cx += this.pts[i]!.x;
+        cz += this.pts[i]!.z;
+      }
+      cx /= this.n;
+      cz /= this.n;
+      const behind = Math.hypot(cx - reveal.x, cz - reveal.z) > 1 ? Math.atan2(cx - reveal.x, cz - reveal.z) : this.placeYaw;
+      // Round behind them, but three-quarter enough that nobody stands behind anyone (a family walking in
+      // single file off the trail lines up straight behind each other): the yaw near "behind" whose
+      // narrowest sideways gap between two fishers is widest.
+      let best = 0;
+      let bestScore = -Infinity;
+      for (let k = -4; k <= 4; k++) {
+        const y = behind + k * 0.2;
+        const dy = Math.atan2(Math.sin(y - this.placeYaw), Math.cos(y - this.placeYaw));
+        if (Math.abs(dy) > REVEAL_YAW_MAX) continue;
+        let gap = 2.5;
+        for (let i = 0; i < this.nf; i++) for (let j = i + 1; j < this.nf; j++) {
+          const a = this.feet[i]!;
+          const b = this.feet[j]!;
+          gap = Math.min(gap, Math.abs((a.x - b.x) * Math.cos(y) - (a.z - b.z) * Math.sin(y)));
+        }
+        const score = gap - 0.35 * Math.abs(k * 0.2) - 0.15 * Math.abs(dy);
+        if (score > bestScore) {
+          bestScore = score;
+          best = dy;
+        }
+      }
+      this.revealYaw = best;
+    }
+    this.revealAge = reveal ? reveal.age : -1;
     // Where the family is heading: smoothed centroid motion.
     if (this.n > 0) {
       let cx = 0;
@@ -366,9 +418,13 @@ export class CameraRig {
     } else if (groupMode) {
       // Each generated place is framed from its own side (home places keep the classic view).
       // Nobody hidden behind another fisher: a slight yaw (and lift) when one stands behind another.
-      const lu = this.lineUp(this.placeYaw, EL);
-      this.wantYaw = this.placeYaw + lu.yaw;
-      this.wantEl = EL + lu.el;
+      // The reveal swings the base view round behind the family; the lineup then works on that view.
+      const yaw0 = this.placeYaw + this.revealYaw * this.revealW;
+      const el0 = EL + (REVEAL_EL - EL) * this.revealW;
+      const lu = this.lineUp(yaw0, el0);
+      this.wantYaw = yaw0 + lu.yaw;
+      this.wantEl = el0 + lu.el;
+      this.revealLift = lu.el;
       this.fitGroup(this.wantYaw, this.wantEl);
     } else if (v === "wide" && this.n > 0) {
       // High and far over the family: the lie of the land round them (the fog's edge, the sea).
@@ -453,13 +509,7 @@ export class CameraRig {
         if (k === 0 || this.fits(this.wantTarget, this.wantDist, this.wantYaw, this.wantEl, pitch)) break;
       }
     }
-    // The discovery reveal: up and out over the new place for ~2.5 s (a catch push-in wins).
-    let rw = 0;
-    if (reveal && groupMode && !campfire && this.catchW < 0.1) {
-      const a = reveal.age;
-      rw = a < 0.8 ? a / 0.8 : a < REVEAL_S - 0.9 ? 1 : Math.max(0, 1 - (a - (REVEAL_S - 0.9)) / 0.9);
-      rw = rw * rw * (3 - 2 * rw);
-    }
+    // The discovery reveal (weight worked out above).
     this.revealW += (rw - this.revealW) * damp(5, dt);
     if (reveal && this.revealW > 0.001) {
       const w = this.revealW;
@@ -474,13 +524,13 @@ export class CameraRig {
           const a = (k / 8) * Math.PI * 2;
           this.pts[this.n++]!.set(reveal.x + Math.cos(a) * reveal.r, 0, reveal.z + Math.sin(a) * reveal.r);
         }
-        this.fitGroup(this.wantYaw, REVEAL_EL);
+        this.fitGroup(this.wantYaw, REVEAL_EL + this.revealLift);
         this.revealT.copy(this.wantTarget);
         const dR = this.wantDist;
         this.n = n0;
         this.wantTarget.copy(t0).lerp(this.revealT, w);
         this.wantDist = d0 + (dR - d0) * w;
-        this.wantEl = e0 + (REVEAL_EL - e0) * w;
+        this.wantEl = e0 + (REVEAL_EL + this.revealLift - e0) * w;
       } else {
         this.wantTarget.lerp(this.tmp.set(reveal.x, 0.5, reveal.z), w * 0.55);
         this.wantDist += (Math.max(this.wantDist * 1.25, 44) - this.wantDist) * w;
@@ -528,7 +578,7 @@ export class CameraRig {
     // the trail were cropped at the edge while the springs caught up).
     const out = groupMode && !campfire && !this.ride && !this.board && !est && this.n > 0 && this.outside(cam);
     this.urge += ((out ? 1 : 0) - this.urge) * damp(out ? 6 : 1.5, dt);
-    const r = rate * this.rateK * (0.25 + 0.75 * intro * intro) * (1 + this.catchW * 1.3) * (1 + 2.2 * this.urge);
+    const r = rate * this.rateK * (0.25 + 0.75 * intro * intro) * (1 + this.catchW * 1.3) * (1 + 0.8 * this.revealW) * (1 + 2.2 * this.urge);
     const k1 = damp(r * 2.2, dt);
     this.goalTarget.lerp(this.wantTarget, k1);
     this.goalDist += (this.wantDist - this.goalDist) * k1;

@@ -1,0 +1,64 @@
+{
+  "round": "17-s3b",
+  "shots": [
+    {
+      "label": "discovery",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 672,
+      "triangles": 2987456,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 70
+    },
+    {
+      "label": "discovery@tod-morning",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 839,
+      "triangles": 3683437,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 99
+    },
+    {
+      "label": "discovery@tod-golden",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 855,
+      "triangles": 3705059,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 63
+    },
+    {
+      "label": "discovery@tod-night",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 756,
+      "triangles": 3570012,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 69
+    },
+    {
+      "label": "discovery@tod-dawn",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 879,
+      "triangles": 3766267,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 87
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}

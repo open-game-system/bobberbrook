@@ -515,7 +515,8 @@ const SCENARIOS: Record<string, Scenario> = {
       { seat: 1, name: "Mom", spot: shoreIn("mistmarsh", -0.8, 1.5), at: onTrailAt(0, 0.02, -1.2) },
     ],
     warmUntil: () => true,
-    hero: (l, now) => l.discovery !== null && now - l.discovery.at > 1300,
+    // Round 17: the reveal now eases in over 1.2 s and holds to 3.8 s: shoot the held look.
+    hero: (l, now) => l.discovery !== null && now - l.discovery.at > 2800,
   },
   // The family split (round-02 live play): Juneau fishing at the lake, Dad dawdling at the marsh end
   // of the trail, ~29 m apart (the leash is 30 m).

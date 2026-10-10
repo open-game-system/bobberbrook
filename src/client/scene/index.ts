@@ -21,7 +21,7 @@ import {
 } from "three";
 import { dayPhase } from "../../game/daycycle";
 import type { Lake } from "../../game/lake";
-import { CameraRig, isView, VIEWS } from "./camera";
+import { CameraRig, REVEAL_S, isView, VIEWS } from "./camera";
 import { FisherViews, type CatchFocus } from "./fishers";
 import { FishShadows, FishTextures, sharedCardGeometry } from "./fishviz";
 import { Fx } from "./fx";
@@ -553,7 +553,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       rig.placeYaw = here.home ? 0 : (placeHash(here.key, 11) - 0.5) * 0.9;
     }
     trailW += (onTrail - trailW) * Math.min(1, dt * 1.5);
-    const reveal = revealAge >= 0 && revealAge < 3.5 ? { x: revealArea.center.x, z: revealArea.center.z, age: revealAge, r: revealArea.pond.r } : null;
+    const reveal = revealAge >= 0 && revealAge < REVEAL_S + 0.4 ? { x: revealArea.center.x, z: revealArea.center.z, age: revealAge, r: revealArea.pond.r } : null;
     rig.update(t, dt, lake?.campfire ?? false, cf, trailW, reveal);
     // Sparkles keep off faces (round 11: they covered Juneau's at night).
     faceList.length = 0;
