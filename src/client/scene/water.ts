@@ -86,7 +86,8 @@ void main() {
   float n2 = vn(p * 0.9 + vec2(0.37, 0.0) + uTime * 0.15);
   float n3 = vn(p * 0.9 + vec2(0.0, 0.37) + uTime * 0.15);
   g += vec2(n2 - n1, n3 - n1) * 0.35;
-  g *= 1.0 - 0.8 * uCalm;
+  // Round 20: 0.8 -> 0.6: a still place keeps some ripple shading (the tarn and willow ponds read as flat plates).
+  g *= 1.0 - 0.6 * uCalm;
   float ringFoam = 0.0;
   for (int i = 0; i < ${MAX_RIPPLES}; i++) {
     vec4 rp = uRipples[i];
@@ -151,7 +152,9 @@ void main() {
   vec3 R = reflect(-V, N);
   vec3 sky = mix(uSkyHorizon, uSkyTop, smoothstep(0.0, 0.6, R.y));
   // Still water (the tarn) is a mirror: more sky, and the stars in it at night.
-  float mirror = uCalm * uCalm;
+  // Round 20: the mirror lies on the deep water only; the shallows keep Moonwell's glowing rim (at the tarn and the
+  // willow ponds a calm of 0.7-0.9 mixed the lavender sky over the whole pond, rim included: one flat plate).
+  float mirror = uCalm * uCalm * (0.25 + 0.75 * dz);
   if (uStars > 0.01 && R.y > 0.0) {
     vec2 sp = R.xz / (R.y + 0.35) * 90.0;
     vec2 cell = floor(sp);
@@ -166,7 +169,7 @@ void main() {
   float treeRef = 1.0 - smoothstep(crownH - 0.06, crownH + 0.05, R.y + (g.x + g.y) * 0.15);
   vec3 canopyRef = mix(uShoreTint * 0.7, vec3(0.22, 0.13, 0.36), 0.45) * (0.6 + 0.5 * uGlow) + uSkyHorizon * 0.08;
   sky = mix(sky, canopyRef, treeRef * 0.85);
-  vec3 col = mix(base, sky, fres * 0.65 + mirror * 0.4 + 0.06 + 0.12 * treeRef);
+  vec3 col = mix(base, sky, fres * 0.65 + mirror * 0.25 + 0.06 + 0.12 * treeRef);
   vec3 H = normalize(uSunDir + V);
   // Painted glints: soft-edged dabs, capped (never a white-hot speck that blooms the frame out).
   float nh = max(dot(N, H), 0.0);

@@ -127,10 +127,13 @@ export function buildMist(full: boolean): Mist {
         const R = rng(Math.floor(a.center.x * 31 + a.center.z * 17) + 808);
         // Low mist lying on the marsh water.
         if (a.biome === "marsh" || a.biome === "willow") {
+          // Round 20: wisps along the banks and reeds, not a blanket over the open water (round 19 session 226-257 s:
+          // sixteen 7-12 m cards across the pond washed Mistmarsh's water to one flat lavender; Moonwell's depth
+          // gradient, glowing shallows and foam only show where the water is clear).
           for (let i = 0; i < (full ? 16 : 9); i++) {
             const th = R() * Math.PI * 2;
-            const r = pondRadius(a, th) * Math.sqrt(R()) * 0.95;
-            add(a.id, "marsh", a.center.x + Math.cos(th) * r, 0.7, a.center.z + Math.sin(th) * r, 7 + R() * 5, a.biome === "willow" ? 0.16 : 0.22);
+            const r = pondRadius(a, th) * (0.82 + R() * 0.3);
+            add(a.id, "marsh", a.center.x + Math.cos(th) * r, 0.6, a.center.z + Math.sin(th) * r, 4.5 + R() * 3.5, a.biome === "willow" ? 0.15 : 0.2);
           }
         }
         // The veil: a thick bank of mist over the whole clearing.

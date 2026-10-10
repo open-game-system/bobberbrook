@@ -181,7 +181,8 @@ export const LOOKS: Record<AreaId, AreaLook> = {
   tarn: {
     grassA: c(0x3e5e72), grassB: c(0x5a7e8a), grassC: c(0x9aa8e0),
     canopy: [c(0xa8b8e8), c(0x98a8e0), c(0xb8c0f0)],
-    waterShallow: c(0xa0c0ff), waterDeep: c(0x7070d8), calm: 0.9,
+    // Round 20: silver-cyan shallows (0xa0c0ff dulled the glowing rim to blue-grey; the deep keeps the tarn's cool violet).
+    waterShallow: c(0xc8f0ff), waterDeep: c(0x7070d8), calm: 0.9,
     fog: c(0x8a9ae0), fogK: 0.5, fogScale: 0.8, sunK: 0.9, hemiK: 0.95, hemiSky: c(0xc0c8ff), glowAdd: 0.3, mistAdd: 0.25, exposureK: 1.0, grade: c(0xeef0ff),
   },
 };
@@ -194,7 +195,8 @@ const BIOME_LOOKS: Record<"willow" | "crystal" | "ember" | "frost", AreaLook> = 
   willow: {
     grassA: B(0x3e7a6a), grassB: B(0x6aa88a), grassC: B(0xb898e0),
     canopy: [B(0xd8b0ff), B(0xc8a0f0), B(0xe8c8ff)],
-    waterShallow: B(0xf0e8ff), waterDeep: B(0xc8b8f0), calm: 0.7,
+    // Round 20: a deeper pearl-violet middle (0xc8b8f0 left no depth gradient: one pale plate).
+    waterShallow: B(0xf0e8ff), waterDeep: B(0xa090e0), calm: 0.7,
     fog: B(0xd0c0ec), fogK: 0.4, fogScale: 0.85, sunK: 1.12, hemiK: 0.88, hemiSky: B(0xdccaf8), glowAdd: 0.15, mistAdd: 0.3, exposureK: 0.97, grade: B(0xfaf4ff),
   },
   // Pale glowing crystal clusters, prism light.
