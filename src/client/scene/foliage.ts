@@ -268,7 +268,9 @@ export function leafMaterial(tex: PaintTex, occ: OccluderUniforms, time: { value
         "#include <emissivemap_fragment>",
         `#include <emissivemap_fragment>
   vec3 leafLit = leafTex.rgb * uLeafInv;
-  totalEmissiveRadiance += uLeafGlow * vColor.rgb * leafLit * smoothstep(0.8, 1.7, pkLum(leafLit));`,
+  // Round 20: by the strokes' value, tinted half toward moon lilac (the sheet's own green-teal strokes lit one by
+  // one read as noisy green speckles over the night canopy, tower_tod-night).
+  totalEmissiveRadiance += uLeafGlow * mix(vColor.rgb, vec3(0.72, 0.74, 1.0), 0.5) * pkLum(leafLit) * smoothstep(0.8, 1.7, pkLum(leafLit));`,
       )
       // Both faces take the crown's normal (a card seen from behind is not a dark hole in the canopy).
       .replace("#include <normal_fragment_begin>", "#include <normal_fragment_begin>\n  normal = normalize(vNormal);");

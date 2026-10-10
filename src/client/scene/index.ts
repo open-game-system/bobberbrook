@@ -133,7 +133,8 @@ function swayMaterial(time: { value: number }): MeshLambertMaterial {
 }
 
 /** Night self-light of the glow-rim leaves (round 12). */
-const LEAF_GLOW = 0.9;
+// Round 20: 0.9 -> 0.3 (with the lilac tint in foliage.ts: the lit strokes read as specks at 0.9).
+const LEAF_GLOW = 0.3;
 /** Character night light strengths (fill: warm lantern from the camera side; rim: cool moon edge). */
 const CHAR_NIGHT = { fill: 0.55, rim: 0.35, fire: 0.7 };
 const tmpFire = new Color();

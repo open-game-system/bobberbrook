@@ -175,7 +175,7 @@ export const LOOKS: Record<AreaId, AreaLook> = {
     grassA: c(0x1e3e58), grassB: c(0x2a5a6a), grassC: c(0x5a4aa8),
     canopy: [c(0x8a7ad0), c(0x6a6ac0), c(0x9a6ad8)],
     waterShallow: c(0x90ffff), waterDeep: c(0x7a90ff), calm: 0.3,
-    fog: c(0x2a2c78), fogK: 0.75, fogScale: 0.6, sunK: 0.35, hemiK: 0.7, hemiSky: c(0x6a70d8), glowAdd: 0.75, mistAdd: 0.3, exposureK: 1.08, grade: c(0xe4e8ff),
+    fog: c(0x2a2c78), fogK: 0.75, fogScale: 0.6, sunK: 0.5, hemiK: 0.95, hemiSky: c(0x6a70d8), glowAdd: 0.75, mistAdd: 0.3, exposureK: 1.15, grade: c(0xe4e8ff),
   },
   // High mountain tarn: cool silver-blue, dark pines, mirror water.
   tarn: {
