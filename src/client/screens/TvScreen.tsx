@@ -7,7 +7,8 @@ import { createLakeScene, type LakeScene } from "../scene";
 import { lakeEvents } from "../lakeEvents";
 import { createLiveSounds, playLakeEvents } from "../tvSounds";
 import { startWorld, setPlaceMood, setRiding, setTimeOfDayMood, setTraveling } from "../audio/world";
-import { unlockAudio } from "../audio/engine";
+import { audioClock, unlockAudio } from "../audio/engine";
+import { audioStalled } from "../audio/health";
 import { voice } from "../audio/voice";
 import { sfx } from "../audio/sfx";
 import { FISH_IDS } from "../../game/fish";
@@ -55,6 +56,23 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
   const [sound, setSound] = useState(autoSound);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [campfireSince, setCampfireSince] = useState<number | null>(null);
+  // A small marker when sound has started but isn't reaching the speakers (a silent TV vs a silent stream).
+  const [soundStalled, setSoundStalled] = useState(false);
+  useEffect(() => {
+    if (!sound) return;
+    let last = audioClock();
+    let lastWall = performance.now();
+    const id = window.setInterval(() => {
+      const now = audioClock();
+      const wall = performance.now();
+      const stalled = last !== null && now !== null && audioStalled({ state: now.state, advanced: now.time - last.time, wall: (wall - lastWall) / 1000 });
+      setSoundStalled(stalled);
+      if (stalled) console.warn("[bobberbrook] TV audio is not playing", now);
+      last = now;
+      lastWall = wall;
+    }, 2000);
+    return () => window.clearInterval(id);
+  }, [sound]);
   const lastTod = useRef<TimeOfDay | null>(null);
   const toastId = useRef(0);
   const teachMem = useRef<TeachMemory>(new Map());
@@ -273,6 +291,14 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
             <p className="ticket-kicker">Scan to fish</p>
             <p className="ticket-code">{roomCode}</p>
           </div>
+        </div>
+      )}
+      {sound && soundStalled && (
+        <div className="sound-stalled" role="status" aria-label="No sound">
+          <svg viewBox="0 0 40 40" aria-hidden="true">
+            <path d="M6 15 h7 l9 -8 v26 l-9 -8 h-7z" fill="#fff" />
+            <path d="M28 14 l8 12 M36 14 l-8 12" stroke="#ff8a7a" strokeWidth="3.5" strokeLinecap="round" />
+          </svg>
         </div>
       )}
       {!sound && (

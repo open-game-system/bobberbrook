@@ -17,7 +17,7 @@ function load(id: string): Promise<AudioBuffer | null> {
   if (hit) return hit;
   const a = audio();
   const p = a
-    ? fetch(`/audio/voice/${id}.m4a`)
+    ? fetch(`/audio/voice/${id}.mp3`)
         .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status)))))
         .then((b) => a.ctx.decodeAudioData(b))
         .catch(() => null)

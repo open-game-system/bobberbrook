@@ -19,10 +19,12 @@ export function audio(): { ctx: AudioContext; out: GainNode } | null {
   if (nav.audioSession) nav.audioSession.type = "playback";
   ctx = new AudioContext();
   master = ctx.createGain();
-  master.gain.value = 0.9;
+  // Loud enough for TV speakers after the stream (the bed sat at about -22 dBFS): about +4 dB into a
+  // compressor that holds the peaks.
+  master.gain.value = 1.45;
   const comp = ctx.createDynamicsCompressor();
-  comp.threshold.value = -14;
-  comp.ratio.value = 3;
+  comp.threshold.value = -18;
+  comp.ratio.value = 4;
   master.connect(comp).connect(ctx.destination);
   if (tapDest === null && new URLSearchParams(location.search).has("record")) {
     tapDest = ctx.createMediaStreamDestination();
@@ -46,4 +48,9 @@ export function setPaused(on: boolean): void {
 export function captureStream(): MediaStream | null {
   audio();
   return tapDest?.stream ?? null;
+}
+
+/** The page's audio clock, if sound has started (for the TV's "no sound" marker). */
+export function audioClock(): { state: AudioContextState; time: number } | null {
+  return ctx ? { state: ctx.state, time: ctx.currentTime } : null;
 }
