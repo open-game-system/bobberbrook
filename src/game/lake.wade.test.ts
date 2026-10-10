@@ -94,3 +94,15 @@ describe("a missed bite is remembered", () => {
     expect(me(lake).mode).toBe("wait");
   });
 });
+
+describe("each fisher gets their own spot on the bank", () => {
+  it("a second fisher wading in picks a spot at least 3.5 m from the first one's", () => {
+    let lake = backFromShore(lakeWith(2), 6);
+    lake = { ...lake, fishers: lake.fishers.map((f) => (f.seat === 1 ? { ...f, pos: { x: -(lakeRadius(WEST) + 6), z: 1 } } : f)) };
+    lake = action(lake, 0, T0 + 100);
+    lake = action(lake, 1, T0 + 100);
+    const a = lake.fishers[0]!.fishSpot!;
+    const b = lake.fishers[1]!.fishSpot!;
+    expect(distance(a, b)).toBeGreaterThanOrEqual(3.5);
+  });
+});

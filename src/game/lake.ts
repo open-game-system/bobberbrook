@@ -289,11 +289,11 @@ const FOLLOW_SPEED = WALK_SPEED * 0.85;
 type Tagger = Pick<Fisher, "pos" | "vel" | "mode" | "lastInputAt" | "following" | "fishSpot" | "movedAt" | "seat">;
 
 /** Steers each idle, walking fisher toward the nearest other fisher, by trail and round the ponds, and stops them close by. */
-export function tagAlong(fishers: Tagger[], now: number, w: World = worldFor(HOME_WORLD_SEED)): void {
+export function tagAlong(fishers: Tagger[], now: number, w: World = worldFor(HOME_WORLD_SEED), boardingId: string | null = null): void {
   for (const f of fishers) {
     const others = fishers.filter((o) => o !== f);
     if (others.length === 0 || resting(f, now)) continue;
-    tagStep(f, nearestOf(f, others), w);
+    tagStep(f, nearestOf(f, others), w, boardingId);
   }
 }
 
@@ -307,9 +307,11 @@ function nearestOf(f: Tagger, others: Tagger[]): Tagger {
 }
 
 /** One fisher's tag-along move toward `near`, the closest of the others. */
-function tagStep(f: Tagger, near: Tagger, w: World): void {
-  // Someone waiting at a dock or tower: walk right up onto that one so the trip can start.
-  const platform = mooringAt(w, near.pos, PLATFORM_REACH);
+function tagStep(f: Tagger, near: Tagger, w: World, boardingId: string | null): void {
+  // Someone waiting at a dock or tower: walk right up onto that one so the trip can start (the one the
+  // family is already boarding, never its neighbour, or the trip would flip to another destination).
+  const boarding = boardingId ? w.platformsNear(near.pos, 0).find((q) => q.id === boardingId && distance(q.at, near.pos) <= PLATFORM_REACH) : undefined;
+  const platform = boarding ?? mooringAt(w, near.pos, PLATFORM_REACH);
   const mine = mooringAt(w, f.pos, PLATFORM_REACH - 1);
   const target = boardingTarget(f, near, platform, mine);
   if (target) return steer(f, target.at, w, arrivalSpeed(distance(target.at, f.pos)));
@@ -597,7 +599,7 @@ export function step(lake: Lake, now: number): Lake {
       keepApart(d.fishers, w);
       leash(d.fishers, w);
       wadeIn(d, now, w);
-      tagAlong(d.fishers, now, w);
+      tagAlong(d.fishers, now, w, d.boarding?.platformId ?? null);
       board(d, now, w);
     }
     pickUpSparkles(d, now);
@@ -889,7 +891,8 @@ export function action(lake: Lake, seat: number, now: number): Lake {
     const cast = w.castFrom(f.pos);
     if (cast) return startCast(d, f, cast, now);
     if (f.mode !== "walk") return;
-    f.fishSpot = w.fishingSpot(f.pos, WADE_RANGE);
+    const taken = d.fishers.filter((o) => o !== f).map((o) => o.fishSpot ?? o.pos);
+    f.fishSpot = w.fishingSpot(f.pos, WADE_RANGE, taken);
     if (f.fishSpot) steer(f, f.fishSpot, w, WALK_SPEED);
   });
 }

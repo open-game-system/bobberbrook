@@ -167,7 +167,7 @@ export type World = {
   advance(pos: Vec, vel: Vec, dt: number): Vec;
   castFrom(p: Vec): { bobber: Vec; water: Water; place: Place } | null;
   /** The nearest spot within `range` to stand and cast from (just up the bank), or null when no water is that close. */
-  fishingSpot(p: Vec, range: number): Vec | null;
+  fishingSpot(p: Vec, range: number, taken?: Vec[]): Vec | null;
   /** Next point to head for on the way from `from` to `to` (round ponds, along trails). */
   navNext(from: Vec, to: Vec): Vec;
 };
@@ -175,6 +175,8 @@ export type World = {
 /** Fishing spots: tried every 7.5° round each pond, this far up the bank. */
 const SPOT_ANGLES = 48;
 const SPOT_BACK = 1.2;
+/** Each fisher's own bit of bank: at least this far from where the others stand or are heading. */
+const SPOT_APART = 3.5;
 
 const worlds = new Map<number, World>();
 /** The world for a seed (cached: the room, the TV and every phone share one per seed). */
@@ -365,8 +367,9 @@ export function createWorld(seed: number): World {
     return null;
   }
 
-  function fishingSpot(p: Vec, range: number): Vec | null {
-    if (castFrom(p)) return p;
+  function fishingSpot(p: Vec, range: number, taken: Vec[] = []): Vec | null {
+    const free = (q: Vec) => taken.every((t) => distance(t, q) >= SPOT_APART);
+    if (castFrom(p) && free(p)) return p;
     let best: Vec | null = null;
     let bestD = range;
     for (const a of placesNear(p, 1)) {
@@ -375,7 +378,7 @@ export function createWorld(seed: number): World {
         const r = pondRadius(a, theta) + SPOT_BACK;
         const q = { x: a.center.x + Math.cos(theta) * r, z: a.center.z + Math.sin(theta) * r };
         const d = distance(p, q);
-        if (d < bestD && walkable(q) && castFrom(q)) {
+        if (d < bestD && walkable(q) && castFrom(q) && free(q)) {
           best = q;
           bestD = d;
         }

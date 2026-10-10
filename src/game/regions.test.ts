@@ -145,6 +145,30 @@ describe("tagging along to a ride", () => {
   });
 });
 
+describe("tagging along onto the mooring being boarded", () => {
+  it("walks the kid onto the mooring the family is boarding, not the neighbouring one nearer Dad", () => {
+    const w = worldFor(seed);
+    const all = w.platformsNear({ x: 0, z: 0 }, 0).filter((x) => x.kind === "zeppelin");
+    const pairs = all.flatMap((a, i) => all.slice(i + 1).map((b): [Platform, Platform] => [a, b]));
+    const [first, second] = pairs.reduce((best, pq) => (Math.hypot(pq[0].at.x - pq[1].at.x, pq[0].at.z - pq[1].at.z) < Math.hypot(best[0].at.x - best[1].at.x, best[0].at.z - best[1].at.z) ? pq : best));
+    // The family boards the one a plain "nearest mooring to Dad" lookup would NOT return first.
+    const [p, q] = [second, first];
+    const d = Math.hypot(q.at.x - p.at.x, q.at.z - p.at.z);
+    // Dad stands within reach of p (being boarded) but nearer q; the kid idles 4 m to the side of q.
+    const dad = { x: p.at.x + ((q.at.x - p.at.x) / d) * (d / 2 + 0.05), z: p.at.z + ((q.at.z - p.at.z) / d) * (d / 2 + 0.05) };
+    const T0 = 10_000;
+    let l: Lake = { ...join(join(newLake(1, T0), { name: "A", ogsId: null }).lake, { name: "B", ogsId: null }).lake, worldSeed: seed };
+    l = { ...l, boarding: { platformId: p.id, since: T0 }, fishers: l.fishers.map((f) => (f.seat === 0 ? { ...f, pos: dad, lastInputAt: T0 } : { ...f, pos: { x: q.at.x - ((q.at.z - p.at.z) / d) * 4, z: q.at.z + ((q.at.x - p.at.x) / d) * 4 }, lastInputAt: 0 })) };
+    l = step(l, T0 + 250);
+    const kid = l.fishers[1]!;
+    const heading = { x: kid.vel.x, z: kid.vel.z };
+    const toP = { x: p.at.x - kid.pos.x, z: p.at.z - kid.pos.z };
+    const toQ = { x: q.at.x - kid.pos.x, z: q.at.z - kid.pos.z };
+    const cos = (a: { x: number; z: number }, b: { x: number; z: number }) => (a.x * b.x + a.z * b.z) / (Math.hypot(a.x, a.z) * Math.hypot(b.x, b.z) || 1);
+    expect(cos(heading, toP)).toBeGreaterThan(cos(heading, toQ));
+  });
+});
+
 describe("fog of war", () => {
   it("clears round everyone as they go, and remembers it", () => {
     const l = join(newLake(1, 1000), { name: "A", ogsId: null }).lake;
