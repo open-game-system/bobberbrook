@@ -165,7 +165,7 @@ export class CatchCard {
     this.group.add(this.rays, this.card);
   }
 
-  /** Paints the fish into the card with a soft white halo (reads on any background). Returns the aspect. */
+  /** Paints the fish into the card with a soft thin rim of light (reads on any background). Returns the aspect. */
   paint(img: HTMLImageElement | undefined, glow: string): number {
     const c = this.canvas;
     const ctx = c.getContext("2d");
@@ -177,10 +177,12 @@ export class CatchCard {
     const w = c.width - pad * 2;
     const h = w / aspect;
     const y = (c.height - h) / 2;
+    // Round 16: a soft, thin rim of light (one pass, short blur), not a thick white sticker halo.
     ctx.save();
     ctx.shadowColor = glow;
-    ctx.shadowBlur = 34;
-    for (let i = 0; i < 3; i++) ctx.drawImage(img, pad, y, w, h);
+    ctx.shadowBlur = 12;
+    ctx.globalAlpha = 0.55;
+    ctx.drawImage(img, pad, y, w, h);
     ctx.restore();
     ctx.drawImage(img, pad, y, w, h);
     this.tex.needsUpdate = true;

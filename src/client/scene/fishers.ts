@@ -42,6 +42,8 @@ const HOLD_ARM_X = -1.25;
 const HOLD_ARM_Z = 0.42;
 /** The held fish's plane in front of the catcher's centre (world units): past the belly, behind the mittens. */
 const HOLD_FRONT = 0.5;
+/** The held fish's tilt (radians, head up). */
+const HOLD_TILT = 0.14;
 /** The chin above the feet (world units, at FISHER_SCALE): the held fish's top stays under it. */
 const CHIN_Y = 0.55 * FISHER_SCALE;
 /** The fish is held up until this age (s), then tucked away over TUCK_S. */
@@ -50,7 +52,7 @@ const TUCK_S = 0.45;
 /** Half the fisher's head width with the hat brim (world units, at FISHER_SCALE). */
 const HEAD_HALF = 0.3 * FISHER_SCALE;
 /** How much longer the arms reach while holding a catch. */
-const HOLD_REACH = 0.45;
+const HOLD_REACH = 0.75;
 
 const scratch: Vec = { x: 0, z: 0 };
 const predicted: Vec = { x: 0, z: 0 };
@@ -661,7 +663,11 @@ class FisherView {
     // it sits exactly where chestHold put it, top under the chin), just behind the mittens.
     this.hold.set(this.x, chest.centreY, this.z);
     this.tmp.copy(camera.position).sub(this.hold).normalize();
-    this.hold.addScaledVector(this.tmp, HOLD_FRONT);
+    // Round 16: the plane runs through the mittens (their mid point's depth along the view ray, never into
+    // the belly), so each mitten is half in front of the fish, gripping it, instead of a sticker on top.
+    const handsDepth = (this.handA.x + this.handB.x) / 2 - this.hold.x;
+    const hd = handsDepth * this.tmp.x + ((this.handA.y + this.handB.y) / 2 - this.hold.y) * this.tmp.y + ((this.handA.z + this.handB.z) / 2 - this.hold.z) * this.tmp.z;
+    this.hold.addScaledVector(this.tmp, Math.min(HOLD_FRONT + 0.25, Math.max(HOLD_FRONT, hd)));
     this.tagLift = 0;
     // The lift: out of the water on the way to the bobber (never more than LIFT_REACH out, so a double
     // catch never puts a fish between two fishers), a short arc into the hands.
@@ -686,7 +692,8 @@ class FisherView {
     const W = W0 * Math.max(0.001, scale);
     this.card.card.scale.set(W, W, 1);
     const wiggle = age < LEAP_S ? (this.catchJunk ? s * Math.PI * 2 : Math.sin(age * 22) * 0.2) : Math.sin(age * 6) * 0.05;
-    this.card.card.rotation.z = wiggle * (1 - o);
+    // Held, not pinned: tilted a touch, head up, toward the catcher's side of the frame.
+    this.card.card.rotation.z = wiggle * (1 - o) + HOLD_TILT * Math.min(1, age / LEAP_S) * (1 - o);
     // Rays behind rare catches and new species (gold); legendary: bigger, brighter.
     const rayOn = tier >= 1 || this.catchNew || this.catchGolden;
     const rayK = rayOn && age > LEAP_S * 0.8 ? Math.min(1, (age - LEAP_S * 0.8) * 3) * (1 - out) : 0;

@@ -41,6 +41,16 @@ by a cloud GPU Chrome and streamed to a Chromecast. References: `concept/web/*.j
   array, by explicit texture coordinates and keeping its own colour; the Mistmarsh pavilion and every lantern shrine
   hang a scalloped drape under their shingled eaves (the pavilion's lanterns hang just under its hem), and the boat's
   cabin canopy is tent canvas.
+- **Round 16 (painted, not plastic)**: skin is its own painted kind (`PK.skin`: faint brush mottle, a top light to a
+  warm rosy shade, a warm terminator band in the Lambert patch, a low rim; eyes, smile, glasses and freckles stay clean),
+  the hat brim bakes a shadow over the brow, the blush is soft, and the character fill models the form (pow 1.35). The
+  Hollow's roots are slim tubes under leafy fern/glow-rim garlands (the old tubes were jittered in world space into
+  jagged dark planks); the giant trees' boughs carry leaf cards; giant caps push their painting's contrast, glow along
+  the brightest strokes and darken inside the rim. Every small glowing toadstool (shore, giants, clearings, trails) is a
+  Codex glow-cap card. Lamp and moon pools fade radially; the sky is a three-stop painted gradient with brush streaks
+  and a broad sun/moon halo; the day haze is lilac, not grey; mist puffs take the sky light; the sea's shallows ramp is
+  wide and noisy and fades at the coast; the boat wake is soft lines. The held fish sits in a plane through the
+  mittens (each half in front of it), tilted head up, with a thin soft rim instead of a thick white halo.
 - **Painted ground underfoot** (round 13, `decking.ts`): everything the family stands on is painted. Boardwalk
   planks each carry one board of the Codex planks along the walk (explicit texture coordinates: `aPaint.x >= PK_UV`);
   decks, plinths, stepping stones and terraces are lathe-turned discs (`disc`) with a bevelled lip that takes a painted
