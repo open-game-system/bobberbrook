@@ -63,9 +63,15 @@ const SHOTS = [
   ["empty", 0.1, false],
   ["empty", 0.65, false],
 ];
+// Time-of-day matrix: every hero view again at morning, golden hour, night and dawn (phases per
+// src/game/daycycle.ts timeOfDay: morning < 0.36 <= golden < 0.5 <= night < 0.86 <= dawn). Labels
+// "<view>@tod-<name>", files "<view>_tod-<name>.png". --no-tod skips it.
+const TOD = [["morning", 0.2], ["golden", 0.44], ["night", 0.68], ["dawn", 0.93]];
+const TOD_VIEWS = ["moonwell", "far-place", "mistmarsh", "hollow", "tower", "trail", "discovery", "four-reel"];
 const only = typeof args.only === "string" ? args.only.split(",") : null;
+const matrix = args["no-tod"] ? [] : TOD_VIEWS.flatMap((v) => TOD.map(([name, ph]) => [v, ph, true, name]));
 // --soak: only the uncapped soaks (A/B perf), no stills.
-const shots = args.soak ? [] : SHOTS.filter(([s]) => !only || only.includes(s)).slice(0, args.quick ? 4 : undefined);
+const shots = args.soak ? [] : [...SHOTS, ...matrix].filter(([s]) => !only || only.includes(s)).slice(0, args.quick ? 4 : undefined);
 
 // Real GPU: full Chromium (not the headless shell, which renders on SwiftShader).
 // --disable-audio-output: a fake speaker, so a hung coreaudiod never blocks the TV page's AudioContext.
@@ -81,61 +87,86 @@ async function launch(f = flags) {
   }
   throw last;
 }
-const browser = await launch();
-const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
+let browser = await launch();
 const errors = [];
-page.on("pageerror", (e) => errors.push(String(e)));
-page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
-
 const metrics = { round, shots: [] };
 const failures = [];
 const files = [];
-for (const [scenario, phase, hero] of shots) {
-  const q = new URLSearchParams({ scenario });
-  if (phase !== null) q.set("phase", String(phase));
-  if (args.lite) q.set("lite", "1");
-  const label = `${scenario}${phase !== null ? `@${phase}` : ""}`;
-  await page.goto(`${base}/scene-lab.html?${q}`, { timeout: 120_000 });
-  await page.waitForFunction(() => window.__lab?.ready === true, null, { timeout: 60_000 });
-  const before = await page.evaluate(() => window.__scene.info());
-  if (hero) {
-    // No fallback: a scenario that never reaches its moment is a failed shot, not a still of something else.
-    const ok = await page.waitForFunction(() => window.__lab?.heroReady === true, null, { timeout: 45_000 }).then(() => true, () => false);
-    if (!ok) {
-      failures.push(label);
-      console.error(`FAIL ${label}: hero moment not reached (no shot taken)`);
-      continue;
+// Everything taken so far is on disk after every shot: a crash later never loses the stills.
+const saveMetrics = () => writeFileSync(join(out, "metrics.json"), JSON.stringify({ ...metrics, errors, failures }, null, 2));
+
+// One page per shot (a GPU process that dies takes only that shot), a fresh browser when it is gone.
+async function shoot(scenario, phase, hero, tod) {
+  if (!browser.isConnected()) browser = await launch();
+  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
+  page.on("pageerror", (e) => errors.push(String(e)));
+  page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
+  try {
+    const q = new URLSearchParams({ scenario });
+    if (phase !== null) q.set("phase", String(phase));
+    if (args.lite) q.set("lite", "1");
+    const label = tod ? `${scenario}@tod-${tod}` : `${scenario}${phase !== null ? `@${phase}` : ""}`;
+    await page.goto(`${base}/scene-lab.html?${q}`, { timeout: 120_000 });
+    await page.waitForFunction(() => window.__lab?.ready === true, null, { timeout: 60_000 });
+    const before = await page.evaluate(() => window.__scene.info());
+    if (hero) {
+      // No fallback: a scenario that never reaches its moment is a failed shot, not a still of something else.
+      const ok = await page.waitForFunction(() => window.__lab?.heroReady === true, null, { timeout: 45_000 }).then(() => true, () => false);
+      if (!ok) return { label, failed: "hero moment not reached (no shot taken)" };
+    } else await page.waitForTimeout(6500);
+    const file = join(out, `${label.replace(/@tod-/, "_tod-").replace(/[@.]/g, "_")}.png`);
+    const png = await page.screenshot({ path: file, timeout: 120_000 });
+    files.push([label, file]);
+    const info = await page.evaluate(() => window.__scene.info());
+    const luma = await page.evaluate(async (b64) => {
+      const c = new Image();
+      c.src = `data:image/png;base64,${b64}`;
+      await c.decode();
+      const s = document.createElement("canvas");
+      s.width = 192; s.height = 108;
+      const x = s.getContext("2d");
+      x.drawImage(c, 0, 0, 192, 108);
+      const d = x.getImageData(0, 0, 192, 108).data;
+      let sum = 0;
+      for (let i = 0; i < d.length; i += 4) sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+      return sum / (d.length / 4);
+    }, png.toString("base64")).catch(() => null);
+    metrics.shots.push({ label, renderer: info.renderer, programsAtStart: before.programs, programs: info.programs, calls: info.calls, triangles: info.triangles, p50: info.frameP50, p95: info.frameP95, meanLuma: luma === null ? null : Math.round(luma) });
+    console.log(label, JSON.stringify(metrics.shots.at(-1)));
+    return { label };
+  } finally {
+    await page.close().catch(() => {});
+  }
+}
+
+for (const [scenario, phase, hero, tod] of shots) {
+  const label = tod ? `${scenario}@tod-${tod}` : `${scenario}${phase !== null ? `@${phase}` : ""}`;
+  let res;
+  for (let attempt = 0; attempt < 2 && !res; attempt++) {
+    try {
+      res = await shoot(scenario, phase, hero, tod);
+    } catch (e) {
+      console.error(`ERR ${label} (attempt ${attempt + 1}): ${String(e).split("\n")[0]}`);
+      if (!browser.isConnected()) browser = await launch();
     }
-  } else await page.waitForTimeout(6500);
-  const file = join(out, `${label.replace(/[@.]/g, "_")}.png`);
-  await page.screenshot({ path: file, timeout: 120_000 });
-  files.push([label, file]);
-  const info = await page.evaluate(() => window.__scene.info());
-  const png = (await import("node:fs")).readFileSync(file).toString("base64");
-  const luma = await page.evaluate(async (b64) => {
-    const c = new Image();
-    c.src = `data:image/png;base64,${b64}`;
-    await c.decode();
-    const s = document.createElement("canvas");
-    s.width = 192; s.height = 108;
-    const x = s.getContext("2d");
-    x.drawImage(c, 0, 0, 192, 108);
-    const d = x.getImageData(0, 0, 192, 108).data;
-    let sum = 0;
-    for (let i = 0; i < d.length; i += 4) sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
-    return sum / (d.length / 4);
-  }, png);
-  metrics.shots.push({ label, renderer: info.renderer, programsAtStart: before.programs, programs: info.programs, calls: info.calls, triangles: info.triangles, p50: info.frameP50, p95: info.frameP95, meanLuma: Math.round(luma) });
-  console.log(label, JSON.stringify(metrics.shots.at(-1)));
+  }
+  if (!res || res.failed) {
+    failures.push(label);
+    console.error(`FAIL ${label}: ${res?.failed ?? "crashed twice"}`);
+  }
+  saveMetrics();
 }
 
 // Motion pair + a 20 s soak on four-reel (programs must not grow).
-if (!only || only.includes("four-reel") || args.soak) {
+if (!only || only.includes("four-reel") || args.soak) try {
+  if (!browser.isConnected()) browser = await launch();
+  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
   await page.goto(`${base}/scene-lab.html?scenario=four-reel${args.lite ? "&lite=1" : ""}`, { timeout: 120_000 });
   await page.waitForFunction(() => window.__lab?.ready === true, null, { timeout: 60_000 });
   await page.screenshot({ path: join(out, "motion_a.png") });
   await page.waitForTimeout(100);
   await page.screenshot({ path: join(out, "motion_b.png") });
+  await page.close();
   // Soaks (uncapped): four-reel (programs must not grow), tower (zeppelin boards then flies, streaming
   // new chunks at 20 m/s), boarding (the boat boards then sails).
   const perf = await launch(perfFlags);
@@ -154,25 +185,30 @@ if (!only || only.includes("four-reel") || args.soak) {
   }
   metrics.soak = metrics.soaks["four-reel"];
   await perf.close();
+} catch (e) {
+  console.error(`ERR motion/soak: ${String(e).split("\n")[0]}`);
+  failures.push("soak");
 }
-metrics.errors = errors;
-metrics.failures = failures;
-writeFileSync(join(out, "metrics.json"), JSON.stringify(metrics, null, 2));
+saveMetrics();
 
 // Contact sheet: 3 columns of 640x360 tiles with labels.
 const tiles = files.map(([label, f]) => ({ label, f }));
 const html = `<html><body style="margin:0;background:#111;display:grid;grid-template-columns:repeat(3,640px);gap:4px;font:600 18px system-ui;color:#fff">${tiles
   .map(({ label, f }) => `<div style="position:relative"><img src="file://${process.cwd()}/${f}" style="width:640px;height:360px;display:block"><div style="position:absolute;left:6px;top:4px;background:#0009;padding:2px 8px;border-radius:6px">${label}</div></div>`)
   .join("")}</body></html>`;
-await page.close();
 const sheetHtml = join(out, "sheet.html");
 writeFileSync(sheetHtml, html);
-const sp = await browser.newPage({ viewport: { width: 1928, height: Math.ceil(tiles.length / 3) * 364 } });
-await sp.goto(`file://${process.cwd()}/${sheetHtml}`);
-await sp.waitForTimeout(500);
-await sp.screenshot({ path: join(out, "sheet.png"), fullPage: true });
-await browser.close();
-console.log(`sheet: ${join(out, "sheet.png")}`);
+try {
+  if (!browser.isConnected()) browser = await launch();
+  const sp = await browser.newPage({ viewport: { width: 1928, height: Math.max(364, Math.ceil(tiles.length / 3) * 364) } });
+  await sp.goto(`file://${process.cwd()}/${sheetHtml}`);
+  await sp.waitForTimeout(500);
+  await sp.screenshot({ path: join(out, "sheet.png"), fullPage: true });
+  console.log(`sheet: ${join(out, "sheet.png")}`);
+} catch (e) {
+  console.error(`ERR sheet: ${String(e).split("\n")[0]} (stills and sheet.html are saved)`);
+}
+await browser.close().catch(() => {});
 if (errors.length) console.log("errors:", errors.slice(0, 10));
 if (failures.length) {
   console.error(`\nFAILED: ${failures.length} hero moment(s) not reached: ${failures.join(", ")}`);
