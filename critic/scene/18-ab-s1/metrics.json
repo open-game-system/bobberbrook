@@ -1,0 +1,40 @@
+{
+  "round": "18-ab-s1",
+  "shots": [],
+  "soaks": {
+    "four-reel": {
+      "programsBefore": 81,
+      "programsAfter": 81,
+      "p50": 11,
+      "p95": 13.199999809265137,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 1789
+    },
+    "tower": {
+      "programsBefore": 81,
+      "programsAfter": 81,
+      "p50": 9.300000190734863,
+      "p95": 10.600000381469727,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 2289
+    },
+    "boarding": {
+      "programsBefore": 80,
+      "programsAfter": 80,
+      "p50": 8.100000381469727,
+      "p95": 9.399999618530273,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 2731
+    }
+  },
+  "soak": {
+    "programsBefore": 81,
+    "programsAfter": 81,
+    "p50": 11,
+    "p95": 13.199999809265137,
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+    "frames": 1789
+  },
+  "errors": [],
+  "failures": []
+}

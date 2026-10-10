@@ -57,6 +57,10 @@ by a cloud GPU Chrome and streamed to a Chromecast. References: `concept/web/*.j
   a boat dock); the fog of war is billowing painted mist that thins near the camera, its flat blanket layers fading as
   they turn edge-on; far oaks, willows and birches (75-300 m) are leaf-card clumps, not blobs; ponds darken toward the
   middle by the share of the way in, mirror a canopy line along the far banks, and lap with soft broken foam.
+- **Round 18 (fishers in the painting)**: the character mask is three-level (`CHAR_MASK` in `painter.ts`): the face's
+  features write alpha 0 (never painted), skin 0.1 (a faint brush, 0.16), clothes, hats, boots and packs 0.22 (a gentler
+  brush than the world, 0.4 vs 0.58); clothes take the world's grade and part of its painted value bands (0.45) and a
+  banded character fill, so the family no longer reads as smooth vinyl figures pasted on a brushed world.
 - **Painted ground underfoot** (round 13, `decking.ts`): everything the family stands on is painted. Boardwalk
   planks each carry one board of the Codex planks along the walk (explicit texture coordinates: `aPaint.x >= PK_UV`);
   decks, plinths, stepping stones and terraces are lathe-turned discs (`disc`) with a bevelled lip that takes a painted

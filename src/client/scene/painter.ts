@@ -19,6 +19,13 @@ const LAYERS = 17;
 export const PK_UV = 32;
 
 /**
+ * The character mask in the scene buffer's alpha (round 18). The world writes 1; a fisher writes 0 on the
+ * face's features, `skin` on skin and `body` on everything else it wears. post.ts paints each by its own
+ * amount (features never) and treats anything under `char` as a character in the knee and the grade.
+ */
+export const CHAR_MASK = { skin: 0.1, body: 0.22, char: 0.3 } as const;
+
+/**
  * Round 11: the Codex-painted kit (public/art/textures) replaces the code-painted planks and canvas and
  * adds shingles, runestone and snow layers. Set before the first painted program compiles; a kind with no
  * image keeps its code painting (planks, canvas) or the generic brushwork.
@@ -401,7 +408,7 @@ export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexSh
     .replace("#include <begin_vertex>", "#include <begin_vertex>\n  vPkP = transformed;\n  vPk = aPaint;");
   shader.fragmentShader = shader.fragmentShader
     .replace("#include <common>", `#include <common>\n${PAINT_ARRAY_GLSL}`)
-    .replace("#include <dithering_fragment>", "#include <dithering_fragment>\n  gl_FragColor.a *= 1.0 - uPkCrisp;")
+    .replace("#include <dithering_fragment>", "#include <dithering_fragment>\n  gl_FragColor.a *= mix(1.0, pkMaskA, uPkCrisp);")
     // Characters only: a warm lantern fill from the camera's lower left and a cool moonlit rim, so faces
     // and clothes read at night (round 09: Dad a silhouette). Zero by day (set per frame, see index.ts).
     .replace(
@@ -416,6 +423,9 @@ export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexSh
     float chFill = saturate((dot(normal, chDir) + 0.45) / 1.45);
     // Round 16: the fill models the form (a painter's turn into shade), not a flat wash over the face.
     chFill = pow(chFill, 1.35);
+    // Round 18: on clothes the fill falls in painted planes too (a smooth airbrushed turn read as vinyl).
+    float chB = chFill * 3.0;
+    chFill = mix(chFill, (floor(chB) + smoothstep(0.3, 0.7, fract(chB))) / 3.0, 0.6 * gPkBand);
     float rimSide = mix(1.0, 2.4 * smoothstep(0.3, -0.4, fireFace), uChFire.w);
     outgoingLight *= mix(1.0, 0.12 + 0.43 * smoothstep(-0.5, 0.6, fireFace), uChFire.w);
     // The rim is painted too: on the clothes it follows the painted detail's value (no clean vinyl edge).
@@ -427,10 +437,16 @@ export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexSh
       "#include <color_fragment>",
       `#include <color_fragment>
   float pkRimK = 1.0;
+  // The character mask (round 18): what a fisher writes into the scene buffer's alpha, read by post.ts.
+  // 0 = the face's features (never painted), CHAR_MASK.skin = skin (a faint brush), CHAR_MASK.body =
+  // clothes, hair, boots and packs (a gentler version of the world's brush, so they sit in the painting).
+  float pkMaskA = ${CHAR_MASK.body.toFixed(3)};
+  gPkBand = 1.0;
   {
     float pkRaw = floor(vPk.x + 0.5);
     bool pkUv = pkRaw > ${PK_UV - 0.5};
     float pk = pkUv ? pkRaw - ${PK_UV.toFixed(1)} : pkRaw;
+    if (pk > ${LAYERS - 0.5}) { pkMaskA = 0.0; gPkBand = 0.0; }
     if (pk < ${LAYERS - 0.5}) {
       vec3 n = normalize(vPkN);
       vec3 tx;
@@ -478,6 +494,7 @@ export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexSh
       diffuseColor.rgb *= mix(vec3(0.74, 0.58, 0.58), vec3(1.05, 1.01, 0.95), smoothstep(-0.7, 0.8, n.y));
       pkRimK = 0.3;
       gPkSkin = 1.0;
+      pkMaskA = ${CHAR_MASK.skin.toFixed(3)};
     }
   }`,
     );

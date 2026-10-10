@@ -22,6 +22,7 @@ import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { FullScreenQuad, Pass } from "three/addons/postprocessing/Pass.js";
+import { CHAR_MASK } from "./painter";
 
 /** The layer the name tags live on: drawn after the post chain, so the painterly filter never smears them. */
 export const TAG_LAYER = 1;
@@ -70,9 +71,10 @@ float vn2(vec2 p) {
 void main() {
   vec4 t0 = texture2D(tDiffuse, vUv);
   vec3 c = t0.rgb;
-  // The fishers (alpha 0, carried from the scene buffer) skip the warm squeeze and most of the split
-  // tone: firelight on a face stays warm instead of turning mauve.
-  float ch = 1.0 - smoothstep(0.05, 0.6, t0.a);
+  // The fishers' skin and features (CHAR_MASK, carried from the scene buffer) skip the warm squeeze and
+  // most of the split tone: firelight on a face stays warm instead of turning mauve. Their clothes take
+  // the world's grade (round 18: graded apart, they read as figures pasted onto the painting).
+  float ch = 1.0 - smoothstep(${((CHAR_MASK.skin + CHAR_MASK.body) / 2).toFixed(3)}, ${(CHAR_MASK.body - 0.02).toFixed(3)}, t0.a);
   if (any(isnan(c)) || any(isinf(c))) c = vec3(0.0);
   c = max(c, vec3(0.0)) * uGain;
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
@@ -165,7 +167,7 @@ void main() {
   }
   float m = max(c.r, max(c.g, c.b));
   // The fishers (alpha 0, see painter.ts) roll off later: firelit and lamplit faces keep their warm light.
-  float ch = 1.0 - smoothstep(0.05, 0.6, t.a);
+  float ch = 1.0 - smoothstep(${CHAR_MASK.char.toFixed(3)}, 0.6, t.a);
   float knee = mix(uKnee, uKnee * 1.6, ch);
   float top = mix(uMax, uMax * 1.6, ch);
   if (m > knee) {
@@ -320,20 +322,29 @@ const PaintBlendShader = {
     tDiffuse: { value: null },
     tPaint: { value: null },
     uAmount: { value: 0.58 },
+    /** Round 18: the fishers' clothes and skin take a gentler brush (their features none, see CHAR_MASK). */
+    uBody: { value: 0.4 },
+    uSkin: { value: 0.16 },
   },
   vertexShader: VERT,
   fragmentShader: /* glsl */ `
 uniform sampler2D tDiffuse;
 uniform sampler2D tPaint;
 uniform float uAmount;
+uniform float uBody;
+uniform float uSkin;
 varying vec2 vUv;
 void main() {
   vec4 o = texture2D(tDiffuse, vUv);
   vec3 p = texture2D(tPaint, vUv).rgb;
-  // Characters and the held fish write alpha 0 into the scene buffer: never painted over (faces stay crisp).
-  float keep = 1.0 - smoothstep(0.05, 0.6, o.a);
+  // The character mask (painter.ts CHAR_MASK): the faces' features and the held fish write alpha 0 and are
+  // never painted over; skin takes a faint brush, clothes a gentler one than the world (round 18: kept
+  // wholly crisp, the fishers read as smooth vinyl figures against a brushed world).
+  float a = o.a;
+  float amt = mix(0.0, uSkin, smoothstep(0.03, 0.08, a));
+  amt = mix(amt, uBody, smoothstep(${((CHAR_MASK.skin + CHAR_MASK.body) / 2).toFixed(3)}, ${(CHAR_MASK.body - 0.02).toFixed(3)}, a));
   // Strokes take the colour of the paint, but keep the frame's own value detail a little (no mush).
-  float amt = uAmount * (1.0 - keep);
+  amt = mix(amt, uAmount, smoothstep(${CHAR_MASK.char.toFixed(3)}, 0.6, a));
   // Alpha goes on as the character mask for the grade (bloom adds colour only, see buildPost).
   gl_FragColor = vec4(mix(o.rgb, p, amt), o.a);
 }`,
