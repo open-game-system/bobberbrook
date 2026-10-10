@@ -211,6 +211,35 @@ const LAZY: Record<string, () => Scenario> = {
       hero: (_l, now, s) => now - s > 9000,
     };
   },
+  // Back to fishing after the campfire (round 10, 254 s): the family round the fire, then home to their
+  // spots by the airship tower at another place; the shot is 2.5 s after the fire goes out.
+  "campfire-out": () => {
+    const pl = findPlatform("zeppelin");
+    const place = W.placeById(pl.place);
+    if (!place) throw new Error("the zeppelin place is missing");
+    const t = W.towerAt(place);
+    const th = Math.atan2(t.z - place.center.z, t.x - place.center.x);
+    let t0 = -1;
+    let outAt = -1;
+    return {
+      phase: 0.3,
+      fishers: [
+        { seat: 0, name: "Dad", spot: shoreOf(place, th + 0.25), at: shoreOf(place, th + 0.25, 2.5) },
+        { seat: 2, name: "Juneau", spot: shoreOf(place, th - 0.2), at: shoreOf(place, th - 0.2, 2.5) },
+      ],
+      setup: (l) => produce(l, (d) => { d.discovered = ["moonwell", pl.place]; }),
+      campfire: true,
+      direct: (l, now) => {
+        if (t0 < 0) t0 = now;
+        if (outAt < 0 && now - t0 > 6000) {
+          outAt = now;
+          return setCampfire(l, false, now);
+        }
+        return l;
+      },
+      hero: (_l, now) => outAt > 0 && now - outAt > 2500,
+    };
+  },
   // Arrival: the airship settling at the far tower, the family stepping off.
   arrival: () => atPlatform(findPlatform("zeppelin"), 0.3, (l) => rideK(l) > 0.86, (l, now, s) => now - s > 1500 && (l.ride === null || rideK(l) > 0.985)),
   // The edge of what the family has explored: out of Whisperfall Pools up the trail north into the

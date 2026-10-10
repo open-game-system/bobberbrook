@@ -45,6 +45,16 @@ const SAFE = 0.8;
 /** The fishers' feet sit on this line (a short foreground band below them), not centred in the box. */
 const FIT_Y0 = -0.74;
 const FIT_Y1 = 0.6;
+/** The calm dead zone: the framing goal holds until the want leaves DEAD_M + DEAD_K x distance (m), the
+ * distance until it is off by DEAD_DIST of itself, the yaw and elevation by DEAD_ANG (rad). */
+const DEAD_M = 0.6;
+const DEAD_K = 0.035;
+const DEAD_DIST = 0.06;
+const DEAD_ANG = 0.03;
+/** Follows `want` only by how far it is outside a band of half-width `band` round `held`. */
+function deadBand(held: number, want: number, band: number): number {
+  return want > held + band ? want - band : want < held - band ? want + band : held;
+}
 /** Seconds the camera takes to settle in after the scene starts (from the establishing view). */
 const INTRO_S = 3.2;
 
@@ -103,6 +113,15 @@ export class CameraRig {
   private nf = 0;
   private readonly lineup = new Lineup();
   private first = true;
+  /** A cut that lands on the family itself (framed, a little wide and high) instead of the establishing view. */
+  private soft = false;
+  private wasCamp = false;
+  /** The dead-zoned framing goal (the family shuffling about inside it does not move the camera). */
+  private readonly held = new Vector3();
+  private heldDist = 0;
+  private heldYaw = 0;
+  private heldEl = 0;
+  private haveHeld = false;
   private startT = -1;
   private readonly tmp = new Vector3();
   private readonly cx = new Vector3();
@@ -342,6 +361,38 @@ export class CameraRig {
         default: break;
       }
     }
+    // A calm camera: a soft dead zone round the framing goal (the family's small moves and the fit's
+    // recentring do not drift the shot; past the zone it follows by the excess only, no step).
+    if (groupMode && !campfire && !this.ride && !this.board && !est && this.n > 0) {
+      if (!this.haveHeld) {
+        this.held.copy(this.wantTarget);
+        this.heldDist = this.wantDist;
+        this.heldYaw = this.wantYaw;
+        this.heldEl = this.wantEl;
+        this.haveHeld = true;
+      }
+      const zone = DEAD_M + DEAD_K * this.wantDist;
+      const dx = this.wantTarget.x - this.held.x;
+      const dy = this.wantTarget.y - this.held.y;
+      const dz = this.wantTarget.z - this.held.z;
+      const len = Math.hypot(dx, dy, dz);
+      if (len > zone) this.held.addScaledVector(this.tmp.set(dx, dy, dz), (len - zone) / len);
+      this.heldDist = deadBand(this.heldDist, this.wantDist, this.heldDist * DEAD_DIST);
+      this.heldYaw = deadBand(this.heldYaw, this.wantYaw, DEAD_ANG);
+      this.heldEl = deadBand(this.heldEl, this.wantEl, DEAD_ANG);
+      this.wantTarget.copy(this.held);
+      this.wantDist = this.heldDist;
+      this.wantYaw = this.heldYaw;
+      this.wantEl = this.heldEl;
+    } else this.haveHeld = false;
+    // Out of the campfire: straight to the family, framed (round 10 swung half round the fire and on
+    // over the tower and its airship before finding them).
+    const camp = v === "auto" && campfire;
+    if (this.wasCamp && !camp && groupMode && this.n > 0) {
+      this.first = true;
+      this.soft = true;
+    }
+    this.wasCamp = camp;
     // The catch moment: an eased push toward the catcher (~0.7 s in), held while the fish is up, then back.
     let cw = 0;
     if (catchAt && groupMode && !campfire) {
@@ -383,22 +434,37 @@ export class CameraRig {
       this.wantEl += (0.62 - this.wantEl) * w;
     }
     // A jump across the world (a new scene, a far place): cut there instead of flying over it.
-    if (!this.first && Math.hypot(this.wantTarget.x - this.target.x, this.wantTarget.z - this.target.z) > 150) this.first = true;
+    if (!this.first && Math.hypot(this.wantTarget.x - this.target.x, this.wantTarget.z - this.target.z) > 150) {
+      this.first = true;
+      this.soft = groupMode && this.n > 0;
+    }
     const wantPitch = est ? EST_PITCH : groupMode ? PITCH_UP * (1 - this.catchW * 0.6) * (1 - this.revealW * 0.5) : 0;
     if (this.first) {
       // Start on an establishing view over wherever the family is; it eases in from there.
       this.first = false;
       this.startT = t;
-      const startEst = groupMode || est;
-      if (startEst && this.n > 0 && !est) this.target.set(this.wantTarget.x, 0, this.wantTarget.z - 2);
-      else if (startEst) this.target.set(this.anchor.x, 0, this.anchor.z - 2);
-      else this.target.copy(this.wantTarget);
-      this.goalTarget.copy(this.target);
-      this.dist = this.goalDist = startEst ? 60 : this.wantDist;
-      this.yaw = this.goalYaw = startEst ? 0 : this.wantYaw;
-      this.el = this.goalEl = startEst ? EST_EL : this.wantEl;
-      this.pitch = startEst ? EST_PITCH : wantPitch;
-      this.vel.fill(0);
+      if (this.soft) {
+        // Land on the family: their own framing, a little wider and higher, then a slow settle in.
+        this.soft = false;
+        this.target.copy(this.wantTarget);
+        this.goalTarget.copy(this.target);
+        this.dist = this.goalDist = this.wantDist * 1.25;
+        this.yaw = this.goalYaw = this.wantYaw;
+        this.el = this.goalEl = this.wantEl + 0.08;
+        this.pitch = wantPitch;
+        this.vel.fill(0);
+      } else {
+        const startEst = groupMode || est;
+        if (startEst && this.n > 0 && !est) this.target.set(this.wantTarget.x, 0, this.wantTarget.z - 2);
+        else if (startEst) this.target.set(this.anchor.x, 0, this.anchor.z - 2);
+        else this.target.copy(this.wantTarget);
+        this.goalTarget.copy(this.target);
+        this.dist = this.goalDist = startEst ? 60 : this.wantDist;
+        this.yaw = this.goalYaw = startEst ? 0 : this.wantYaw;
+        this.el = this.goalEl = startEst ? EST_EL : this.wantEl;
+        this.pitch = startEst ? EST_PITCH : wantPitch;
+        this.vel.fill(0);
+      }
     }
     // Two stages: the goal is low-passed (no sudden goal jumps), then a critically damped spring follows
     // it (continuous velocity and acceleration: no jerk, no overshoot).

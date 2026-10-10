@@ -91,6 +91,10 @@ appear and fade (`since`, `until`), never pop.
   tower lamps, with their glass), the tower's rails and mast and the moored vehicles dissolve through the
   occluder fade (`registerFade` in `geo.ts`); when one fisher stands behind another on the camera axis the
   group camera yaws (up to 0.5 rad) and lifts a touch until both read (`lineup.ts`, held against shuffling).
+- **Calm** (round 11): the group framing sits in a soft dead zone (0.6 m + 3.5 % of the distance, 6 % of the
+  distance, 0.03 rad) so shuffling fishers do not drift the shot; past it the critically damped follow takes the
+  excess only. Leaving the campfire, and any jump across the world, cuts straight onto the family's own framing
+  (25 % wide, a touch high) and settles in, never via the establishing view or a parked vehicle.
 - **Catch moment**: an eased push toward the catcher for ~2 s then back (only when one catch at a time).
 - **Campfire** (`lake.campfire`): the camera settles on the campfire; fishers sit around it.
 

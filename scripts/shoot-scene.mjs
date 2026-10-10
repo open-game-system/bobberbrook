@@ -54,6 +54,7 @@ const SHOTS = [
   ["night-catch", null, true],
   ["rod-upgrade", null, true],
   ["campfire", null, false],
+  ["campfire-out", null, true],
   ["empty", 0.1, false],
   ["empty", 0.65, false],
 ];

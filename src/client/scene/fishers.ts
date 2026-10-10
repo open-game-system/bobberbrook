@@ -970,6 +970,7 @@ export class FisherViews {
         cardPos: v.card.group.position.toArray(),
         cardScale: v.card.card.scale.toArray(),
         catchStart: v.catchStart,
+        tag: { visible: v.rig.tag.visible, dx: v.tagDx, dy: v.tagDy },
       };
     });
   }

@@ -37,6 +37,9 @@ export function layoutTags(boxes: readonly TagBox[], out: TagShift[], gap = TAG_
   const order = Array.from({ length: n }, (_, i) => i).sort((i, j) => {
     const a = boxes[i]!;
     const b = boxes[j]!;
+    // Fishers huddled closer than a tag width keep a fixed order by seat: their tags never swap sides
+    // as they shuffle (round 11: the boarding huddle's tags flipped back and forth over one another).
+    if (Math.abs(a.x - b.x) < (a.hw + b.hw) * 0.5) return a.seat - b.seat;
     return a.x - b.x || a.seat - b.seat;
   });
   // Clusters of tags that collide where they stand: every other one goes up a row.
@@ -72,7 +75,8 @@ export function layoutTags(boxes: readonly TagBox[], out: TagShift[], gap = TAG_
         if (ox <= 1e-6 || oy <= 0) continue;
         const ax = a.x + sa.dx;
         const bx = b.x + sb.dx;
-        const sgn = ax < bx || (ax === bx && a.seat < b.seat) ? 1 : -1;
+        const huddled = Math.abs(a.x - b.x) < (a.hw + b.hw) * 0.5;
+        const sgn = huddled ? (a.seat < b.seat ? 1 : -1) : ax < bx || (ax === bx && a.seat < b.seat) ? 1 : -1;
         sa.dx -= (sgn * ox) / 2;
         sb.dx += (sgn * ox) / 2;
         moved = true;

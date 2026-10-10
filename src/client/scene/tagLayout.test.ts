@@ -60,3 +60,19 @@ describe("name tag layout", () => {
     expect(a).toEqual(b);
   });
 });
+
+describe("huddled tags keep their sides", () => {
+  it("never swaps two huddled fishers' tags as they shuffle past each other", () => {
+    for (const d of [-0.02, -0.005, 0.005, 0.02]) {
+      const out: TagShift[] = [];
+      // A family of four huddled to board: Dad (0) and Juneau (2) share the bottom row.
+      layoutTags([
+        { x: d, y: 0, hw: 0.06, h: 0.05, seat: 0 },
+        { x: 0.01, y: 0, hw: 0.06, h: 0.05, seat: 1 },
+        { x: -d, y: 0, hw: 0.06, h: 0.05, seat: 2 },
+        { x: -0.01, y: 0, hw: 0.06, h: 0.05, seat: 3 },
+      ], out);
+      expect(d + out[0]!.dx).toBeLessThan(-d + out[2]!.dx);
+    }
+  });
+});
