@@ -429,7 +429,9 @@ export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexSh
     float rimSide = mix(1.0, 2.4 * smoothstep(0.3, -0.4, fireFace), uChFire.w);
     outgoingLight *= mix(1.0, 0.12 + 0.43 * smoothstep(-0.5, 0.6, fireFace), uChFire.w);
     // The rim is painted too: on the clothes it follows the painted detail's value (no clean vinyl edge).
-    outgoingLight += diffuseColor.rgb * uChFill * chFill + uChRim * pow(1.0 - chNV, 2.5) * rimSide * pkRimK;
+    // Round 19: on skin the warm fill keeps half its colour (orange fire on peach skin went to saturated orange vinyl).
+    vec3 chFillC = mix(uChFill, vec3(dot(uChFill, vec3(0.3, 0.55, 0.15))), 0.5 * gPkSkin);
+    outgoingLight += diffuseColor.rgb * chFillC * chFill + uChRim * pow(1.0 - chNV, 2.5) * rimSide * pkRimK;
   }
   #include <opaque_fragment>`,
     )
@@ -494,6 +496,8 @@ export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexSh
       diffuseColor.rgb *= mix(vec3(0.74, 0.58, 0.58), vec3(1.05, 1.01, 0.95), smoothstep(-0.7, 0.8, n.y));
       pkRimK = 0.3;
       gPkSkin = 1.0;
+      // Round 19: half the clothes' painted planes of light on skin too (a smooth turn read as a vinyl doll).
+      gPkBand = 0.5;
       pkMaskA = ${CHAR_MASK.skin.toFixed(3)};
     }
   }`,

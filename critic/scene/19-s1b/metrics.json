@@ -1,0 +1,20 @@
+{
+  "round": "19-s1b",
+  "shots": [
+    {
+      "label": "campfire",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 78,
+      "programs": 78,
+      "calls": 780,
+      "triangles": 3226703,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 67
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}
