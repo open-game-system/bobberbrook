@@ -249,7 +249,10 @@ const config: GameRigInput = {
       const bb = Reflect.get(window, "__bb") as { platforms: () => { kind: string; at: { x: number; z: number }; toPlace: string }[] };
       return bb.platforms().find((p) => p.kind === "zeppelin") ?? null;
     });
-    if (zep) {
+    // The walk back to the tower is ~100 m: under a loaded Mac it took 10+ minutes and every round 14–16
+    // session timed out there. Rides are shot in the scene lab (boarding, zeppelin-ride, arrival); the
+    // session rides only with BB_SESSION_RIDE=1.
+    if (zep && process.env.BB_SESSION_RIDE === "1") {
       rig.mark("explore: back to the zeppelin tower");
       for (const p of [...trail].reverse()) await walkTo(dad, p, 2, 25_000);
       await walkTo(dad, { x: 18, z: 20 }, 2, 25_000);
