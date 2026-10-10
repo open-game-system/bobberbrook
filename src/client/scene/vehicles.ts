@@ -322,7 +322,7 @@ export function towerDeckY(x: number, z: number): number {
   return y;
 }
 
-function towerGeometry(): { body: BufferGeometry; fade: BufferGeometry; glow: BufferGeometry } {
+function towerGeometry(): { body: BufferGeometry; fade: BufferGeometry; mast: BufferGeometry; glow: BufferGeometry } {
   const parts: BufferGeometry[] = [];
   /** Rails, lantern posts and the mast: they dissolve between the camera and a fisher (round 10: a tower lamp hid Juneau). */
   const fade: BufferGeometry[] = [];
@@ -373,29 +373,33 @@ function towerGeometry(): { body: BufferGeometry; fade: BufferGeometry; glow: Bu
   }
   // The mooring mast: a slender carved trunk with a lantern crown under a swept elven roof.
   const MH = 17;
-  parts.push(surf(disc({ r: 1.3, top: DECK_H + 0.55, bottom: DECK_H, lip: 0.12, flare: 0.12, rings: 2 }, 18, (rho, h, lip, c) => {
+  // Round 14: the mast with its foot, rings and crown dissolves as one thing (an instanced mesh of one:
+  // the per-object fade), so its foot never stays behind as a stump on the deck (session 186 s) nor its
+  // crown floats where the trunk has gone.
+  const mast: BufferGeometry[] = [];
+  mast.push(surf(disc({ r: 1.3, top: DECK_H + 0.55, bottom: DECK_H, lip: 0.12, flare: 0.12, rings: 2 }, 18, (rho, h, lip, c) => {
     c.setHex(0x8a5a38).lerp(new Color(0xa87a50), h);
     if (lip) c.lerp(new Color(0xf0c890), 0.4);
     c.multiplyScalar(0.7 + 0.3 * Math.min(1, h * 2) * (rho < 0.3 ? 0.8 : 1));
   }), PK.grain, 1));
-  fade.push(paint(prep(surf(new CylinderGeometry(0.32, 0.55, MH, 10).translate(0, DECK_H + MH / 2, 0), PK.grain)), 0x4a3220, 0x7a5a38));
-  for (const y of [4, 8.5, 12.5]) fade.push(paint(prep(new TorusGeometry(0.5 - y * 0.012, 0.09, 5, 14).rotateX(Math.PI / 2).translate(0, DECK_H + y, 0)), 0xd8a848));
-  parts.push(paint(prep(new CylinderGeometry(1.5, 1.2, 0.25, 14).translate(0, DECK_H + MH - 1.2, 0)), 0x8a5a38, 0xa87a50));
+  mast.push(paint(prep(surf(new CylinderGeometry(0.32, 0.55, MH, 10).translate(0, DECK_H + MH / 2, 0), PK.grain)), 0x4a3220, 0x7a5a38));
+  for (const y of [4, 8.5, 12.5]) mast.push(paint(prep(new TorusGeometry(0.5 - y * 0.012, 0.09, 5, 14).rotateX(Math.PI / 2).translate(0, DECK_H + y, 0)), 0xd8a848));
+  mast.push(paint(prep(new CylinderGeometry(1.5, 1.2, 0.25, 14).translate(0, DECK_H + MH - 1.2, 0)), 0x8a5a38, 0xa87a50));
   for (let k = 0; k < 8; k++) {
     const a = (k / 8) * Math.PI * 2;
-    parts.push(paint(prep(new CylinderGeometry(0.05, 0.05, 1.3, 5).translate(Math.cos(a) * 1.35, DECK_H + MH - 0.45, Math.sin(a) * 1.35)), 0x5a3a28));
+    mast.push(paint(prep(new CylinderGeometry(0.05, 0.05, 1.3, 5).translate(Math.cos(a) * 1.35, DECK_H + MH - 0.45, Math.sin(a) * 1.35)), 0x5a3a28));
   }
   const prof: Vector2[] = [];
   for (let i = 0; i <= 8; i++) {
     const t = i / 8;
     prof.push(new Vector2(0.02 + 2.1 * Math.pow(1 - t, 1.8), DECK_H + MH + 0.1 + t * 2.4));
   }
-  parts.push(paint(prep(new LatheGeometry(prof, 14)), 0x3e2a7a, 0x9a7ae0));
+  mast.push(paint(prep(new LatheGeometry(prof, 14)), 0x3e2a7a, 0x9a7ae0));
   const glow = merge([
     paint(prep(new SphereGeometry(0.55, 12, 8).translate(0, DECK_H + MH - 0.4, 0)), 0xffc878),
     ...lampAt.map(([x, z]) => paint(prep(new SphereGeometry(0.2, 8, 6).translate(x, DECK_H + 2.7, z)), 0xffc070)),
   ]);
-  return { body: tiled(stoneParts, parts), fade: merge(fade), glow };
+  return { body: tiled(stoneParts, parts), fade: merge(fade), mast: merge(mast), glow };
 }
 
 /** A plank bridge from the deck's edge out to a moored gondola (along +x, deck height). */
@@ -644,7 +648,10 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
         tb.receiveShadow = true;
         const tf = new Mesh(tower.fade, fadeMat);
         tf.castShadow = full;
-        tg.add(tb, tf, new Mesh(tower.glow, glowMat));
+        const tm = new InstancedMesh(tower.mast, fadeMat, 1);
+        tm.setMatrixAt(0, new Matrix4());
+        tm.castShadow = full;
+        tg.add(tb, tf, tm, new Mesh(tower.glow, glowMat));
         tg.position.set(t.x, ty, t.z);
         towers.set(p.place, tg);
         group.add(tg);
@@ -974,7 +981,7 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
       lastX = 1e9;
     },
     dispose() {
-      for (const g of [boat.body, boat.sail, boat.glow, dock.body, dock.lamp, dock.glow, zep.body, zep.prop, zep.glow, tower.body, tower.fade, tower.glow, plank, wakeGeo, ringGeo]) g.dispose();
+      for (const g of [boat.body, boat.sail, boat.glow, dock.body, dock.lamp, dock.glow, zep.body, zep.prop, zep.glow, tower.body, tower.fade, tower.mast, tower.glow, plank, wakeGeo, ringGeo]) g.dispose();
       wakeMat.dispose();
       glowMat.dispose();
       ringMat.dispose();

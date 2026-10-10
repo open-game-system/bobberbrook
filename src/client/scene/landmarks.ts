@@ -319,13 +319,30 @@ function giantMushroom(seed: number, h: number, capR: number, hue: number): { st
   stemG.computeVertexNormals();
   const stem = paint(prep(stemG), 0x8a9ac8, 0xd8e8ff, (p, _n, c) => c.multiplyScalar(0.8 + 0.25 * vnoise(p.x * 2, p.y * 0.8, seed)));
   const top = curve.getPointAt(1);
-  const capG = new SphereGeometry(capR, 22, 10, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.42, 1);
-  const capCol = new Color().setHSL(hue, 0.75, 0.6);
-  const capTop = new Color().setHSL(hue, 0.6, 0.78);
-  const cap = paint(prep(capG), capCol, capTop, (p, _n, c) => {
-    // Pale glowing spots.
-    const s = vnoise(p.x * 1.4 + seed, p.z * 1.4, seed + 3);
-    if (s > 0.72) c.lerp(new Color(0xffffff), 0.7);
+  // Round 14: a painted cap, not a plain plastic dome (hollow.png): finer mesh for the brushwork, radial
+  // streaks from the crown, a painted light from above-left, a darker inked band at the rim, soft pale
+  // spots with a halo, and the crown's gloss painted in (it stays unlit glow, like WoW's glowcaps).
+  const capG = new SphereGeometry(capR, 64, 18, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.42, 1);
+  const capCol = new Color().setHSL(hue, 0.7, 0.42);
+  const capTop = new Color().setHSL(hue, 0.55, 0.74);
+  const spot = new Color().setHSL(hue, 0.35, 0.93);
+  const ink = new Color().setHSL(hue + 0.06, 0.6, 0.2);
+  const cap = paint(prep(capG), capCol, capTop, (p, n, c) => {
+    const rho = Math.min(1, Math.hypot(p.x, p.z) / capR);
+    const ang = Math.atan2(p.z, p.x);
+    // Radial brush streaks running out from the crown.
+    c.multiplyScalar(0.82 + 0.3 * vnoise(ang * 9 + seed, rho * 2.5, seed + 7));
+    // Painted light from above and to the left.
+    c.multiplyScalar(0.8 + 0.35 * Math.max(0, n.x * -0.45 + n.y * 0.8 + n.z * 0.35));
+    // The crown's soft painted gloss.
+    c.lerp(spot, 0.45 * Math.max(0, 1 - Math.hypot(p.x + capR * 0.25, p.z - capR * 0.15) / (capR * 0.35)));
+    // Soft pale spots with a lighter halo.
+    const sp = vnoise(p.x * 1.1 + seed, p.z * 1.1, seed + 3);
+    c.lerp(spot, Math.min(1, Math.max(0, (sp - 0.62) / 0.12)) * 0.75 * (1 - rho * 0.4));
+    // An inked band round the rim.
+    c.lerp(ink, Math.min(1, Math.max(0, (rho - 0.88) / 0.12)) * 0.55);
+    // Painted in a lower value range: the glow gain (up to GLOW_CAP) clipped the brushwork to one flat tone.
+    c.multiplyScalar(0.62);
   });
   // The gills underneath: a brighter, glowing underside.
   const gills = paint(prep(new CylinderGeometry(capR * 0.98, capR * 0.2, capR * 0.12, 22, 1, true).translate(0, -capR * 0.04, 0)), new Color().setHSL(hue, 0.9, 0.75), new Color().setHSL(hue, 0.7, 0.9));

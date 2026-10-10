@@ -83,8 +83,10 @@ void main() {
   float along = vWorld.x * 0.7 + vWorld.z * 0.71;
   // Height up the bank (the slope rises fast near its foot).
   float hf = 1.0 - (1.0 - up) * (1.0 - up);
-  float crown = 0.84 + 0.09 * vn(vec2(along * 0.32, 1.0)) + 0.06 * vn(vec2(along * 1.3, 5.0));
-  float ridgeA = (1.0 - smoothstep(crown - 0.03, crown, hf)) * mix(0.7, 1.0, smoothstep(0.0, 0.12, hf));
+  // Round 14: a soft misty top, not a hard-edged slab (tv-empty-lake: grey planes with hard top edges
+  // behind the falls): the skyline wanders more and the top quarter fades out into the air.
+  float crown = 0.8 + 0.13 * vn(vec2(along * 0.32, 1.0)) + 0.08 * vn(vec2(along * 1.3, 5.0));
+  float ridgeA = (1.0 - smoothstep(crown - 0.3, crown, hf)) * mix(0.7, 1.0, smoothstep(0.0, 0.12, hf));
   float a = veil * mix(mix(0.55, 1.0, n) * mix(0.95, 0.55, vLayer), ridgeA, wall);
   // Never between the camera and the family: thin out along the line of sight.
   vec2 sa = uSight.xy;

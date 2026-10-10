@@ -113,13 +113,28 @@ function terraces(c: ShoreCtx, R: () => number, th: number, pal: Palette): void 
     // Round 13: a turned terrace with a painted lip: moss (or snow) on top, painted earth and rock down
     // the side, occluded at the foot (was a flat-coloured cylinder).
     const half = (top + 1.2) / 2;
-    const g = disc({ r, top: half, bottom: -half, lip: 0.35, flare: 0.3, rings: 4 }, 22, (rho, h, lip, out) => {
+    const g = disc({ r, top: half, bottom: -half, lip: 0.35, flare: 0.9, rings: 4 }, 40, (rho, h, lip, out) => {
       if (h > 0.97 || lip) {
         out.setHex(pal.grass[1]).lerp(new Color(pal.grass[0]), 0.35 + 0.25 * rho);
         if (lip) out.lerp(new Color(0xffffff), 0.18);
       } else out.setHex(0x4a3c30).lerp(new Color(0x7a6450), h).multiplyScalar(0.6 + 0.4 * h);
     });
-    jitter(g, 0.08, k + 3);
+    // Round 14: an irregular, sloping outline (three stacked round discs read as placeholder steps, session
+    // 186 s at the Dell): the rim wanders by up to 18 % round the turn and the sides lean out.
+    {
+      const pos = g.getAttribute("position");
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i);
+        const z = pos.getZ(i);
+        const rr = Math.hypot(x, z);
+        if (rr < 1e-3) continue;
+        const ang = Math.atan2(z, x);
+        const k2 = 1 + 0.18 * (vnoise(Math.cos(ang) * 1.6 + k * 7, Math.sin(ang) * 1.6, 11 + k) - 0.5) * 2 * Math.min(1, rr / r);
+        pos.setXYZ(i, x * k2, pos.getY(i), z * k2);
+      }
+      g.computeVertexNormals();
+    }
+    jitter(g, 0.14, k + 3);
     surfBy(g, (_c, n) => (n.y > 0.55 ? (pal.snow ? PK.snow : PK.moss) : PK.rock));
     c.wood.push(put(g, p.x, (top - 1.2) / 2, p.z, R() * 6));
   }
