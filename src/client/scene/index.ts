@@ -8,6 +8,7 @@ import {
   Mesh,
   MeshLambertMaterial,
   NeutralToneMapping,
+  type Object3D,
   Matrix4,
   PCFShadowMap,
   Raycaster,
@@ -247,7 +248,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   const paintedDouble = paintedMaterial({ side: DoubleSide });
   const forest = buildForest(full, treeMat, jobs);
   scene.add(forest.group);
-  const trails = buildTrails(full, painted, jobs);
+  const trails = buildTrails(full, painted, jobs, plantMat);
   scene.add(trails.group);
   const areas = buildAreaDressing(full, { painted, paintedDouble, sway, tree: treeMat, plant: plantMat }, jobs);
   scene.add(areas.group);
@@ -721,7 +722,8 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     pick(x, y) {
       const rc = new Raycaster();
       rc.setFromCamera(new Vector2(x * 2 - 1, 1 - y * 2), camera);
-      return rc.intersectObjects(scene.children, true).slice(0, 8).map((h) => `${h.object.name || h.object.type}${h.object.parent?.name ? "<" + h.object.parent.name : ""} d=${h.distance.toFixed(1)} i=${h.instanceId ?? "-"}`);
+      const shown = (o: Object3D | null): boolean => !o || (o.visible && shown(o.parent));
+      return rc.intersectObjects(scene.children, true).filter((h) => shown(h.object)).slice(0, 8).map((h) => `${h.object.name || h.object.type}${h.object.parent?.name ? "<" + h.object.parent.name : ""} d=${h.distance.toFixed(1)} i=${h.instanceId ?? "-"}`);
     },
     names: () => scene.children.map((o, i) => o.name || `${o.type}#${i}`),
     toggle(name) {

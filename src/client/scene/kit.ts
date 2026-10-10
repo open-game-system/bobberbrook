@@ -134,16 +134,25 @@ export function giantGeometry(variant: number): BufferGeometry {
     paint(rp, 0x261c2a, 0x4a3a4a);
     parts.push(rp);
   }
+  // Round 16: each bough is dressed in leaf cards along its length (bare, they read as flat dark planks
+  // fanned under the crown at TV distance).
+  const boughPuffs: Puff[] = [];
   for (let i = 0; i < 4; i++) {
     const a = (i / 4) * Math.PI * 2 + r();
+    const tilt = 0.75 + r() * 0.25;
+    const lift = 10 + r() * 3;
     const br = new CylinderGeometry(0.35, 0.8, 9, 7);
     br.translate(0, 4.5, 0);
-    br.rotateZ(0.75 + r() * 0.25);
+    br.rotateZ(tilt);
     br.rotateY(a);
-    br.translate(0, 10 + r() * 3, 0);
+    br.translate(0, lift, 0);
     const bp = prep(br);
     paint(bp, 0x2e2434, 0x52404e);
     parts.push(bp);
+    for (const [t, rad] of [[0.45, 1.5], [0.75, 1.9], [1.0, 2.2]] as const) {
+      const p = new Vector3(0, 9 * t, 0).applyAxisAngle(new Vector3(0, 0, 1), tilt).applyAxisAngle(new Vector3(0, 1, 0), a);
+      boughPuffs.push([p.x, p.y + lift + 0.4, p.z, rad, 0.7]);
+    }
   }
   const wood = parts.splice(0, parts.length);
   const [c0, c1, c2] = CANOPY[variant]!;
@@ -171,7 +180,7 @@ export function giantGeometry(variant: number): BufferGeometry {
     if (n.y > 0.5) c.lerp(new Color(c2).multiplyScalar(0.6), (n.y - 0.5) * 0.6);
   });
   parts.push(canopy);
-  const cards = leafCards(puffs, { cx: 0, cy: 18, cz: 0, size: 2.6, density: 2.0, inner: c0, outer: c1, top: c2, seed: 401 + variant });
+  const cards = leafCards([...puffs, ...boughPuffs], { cx: 0, cy: 18, cz: 0, size: 2.6, density: 2.0, inner: c0, outer: c1, top: c2, seed: 401 + variant });
   // Hanging leaf strands (wisteria-like) under the rim.
   const strands: Strand[] = [];
   for (let i = 0; i < 14; i++) {

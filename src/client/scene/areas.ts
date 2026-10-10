@@ -1,7 +1,7 @@
 import { Color, Group, InstancedMesh, MeshLambertMaterial, type Camera, type Material } from "three";
 import { pondRadius, segmentDistance, type Area, type PondPlace } from "../../game/world";
 import type { Biome, Place } from "../../game/regions";
-import { flowerGeometry, giantGeometry, instanced, lilyGeometry, mushroomGeometry, padGeometry, reedGeometry, rockGeometry, tuftGeometry, type Inst } from "./kit";
+import { flowerGeometry, giantGeometry, instanced, lilyGeometry, padGeometry, reedGeometry, rockGeometry, tuftGeometry, type Inst } from "./kit";
 import { matteTint, plantLists, plantMeshes, type PlantKind } from "./plants";
 import { matteGlowMaterial } from "./matte";
 import { rng, vnoise } from "./noise";
@@ -108,7 +108,6 @@ function* dress(a: PondPlace, r0: Recipe, full: boolean, m: AreaMats, glow: Mesh
   const outer = a.pond.r + a.clearing;
   const tufts: Inst[] = [];
   const flowers: Inst[] = [];
-  const shrooms: Inst[] = [];
   const rocks: Inst[] = [];
   const reeds: Inst[] = [];
   const cattails: Inst[] = [];
@@ -153,7 +152,8 @@ function* dress(a: PondPlace, r0: Recipe, full: boolean, m: AreaMats, glow: Mesh
     const p = land(0.4, 26);
     if (trailWear(p.x, p.z) > 0.4 || vnoise(p.x * 0.3, p.z * 0.3, 55) < 0.4) continue;
     if (foreground(p)) continue;
-    shrooms.push({ x: p.x, y: heightAt(p.x, p.z) - 0.02, z: p.z, s: 1.0 + R() * 1.4, ry: R() * 6, tint: pick(capCols) });
+    // Round 16: matte painted glow-cap cards (the 3D toadstools read as smooth glossy domes on the TV).
+    plants.glowcap.push({ x: p.x, y: heightAt(p.x, p.z) - 0.02, z: p.z, s: (1.0 + R() * 1.4) * 0.6, ry: R() * 6, tint: new Color(1, 1, 1).lerp(pick(capCols), 0.55) });
   }
   yield;
   // Painted plants in clumps with open ground between: ferns, bluebells, glow-caps; foxgloves at the
@@ -236,7 +236,6 @@ function* dress(a: PondPlace, r0: Recipe, full: boolean, m: AreaMats, glow: Mesh
   add(pads, padGeometry(), m.paintedDouble, false, "pads");
   add(lilies, lilyGeometry(), lilyMat, false, "lilies");
   add(rocks, rockGeometry(a.pond.r), m.painted, true, "rocks");
-  add(shrooms, mushroomGeometry(), glow, false, "mushrooms");
   for (const mesh of plantMeshes(plants, m.plant)) g.add(mesh);
   return g;
 }

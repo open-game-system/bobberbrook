@@ -127,7 +127,19 @@ export function capMaterial(): MeshBasicMaterial {
     // Caps keep the painting's own hues (teal, violet, pale spots); the gills take the cap's hue, the
     // painting's value and a little of its colour.
     d = li == ${CAP_LAYER.gills} ? mix(vec3(l), d, 0.4) : d;
-    diffuseColor.rgb *= clamp(d, 0.35, 1.9);
+    if (li != ${CAP_LAYER.gills}) {
+      // Round 16: painted at TV distance. The streaks' value contrast pushed (mid-tones apart), the pale
+      // spots held down a little (flat white dabs), a darker band inside the rim, and the brightest
+      // radial strokes glow as veins.
+      float rho = length(vCap.xy - 0.5) / ${RIM.toFixed(2)};
+      float spot = smoothstep(1.25, 1.75, l);
+      vec3 dc = pow(max(d, vec3(0.0)), vec3(1.7));
+      d = mix(dc, d * 0.86, spot);
+      float vein = smoothstep(1.05, 1.35, l) * (1.0 - spot) * smoothstep(0.15, 0.5, rho);
+      d *= 1.0 + 0.55 * vein;
+      d *= mix(1.0, 0.52, smoothstep(0.7, 0.9, rho) * (1.0 - smoothstep(0.95, 1.02, rho)));
+    }
+    diffuseColor.rgb *= clamp(d, 0.22, 2.2);
   }`,
       );
   };

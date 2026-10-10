@@ -1,9 +1,8 @@
-import { BoxGeometry, Color, ConeGeometry, CylinderGeometry, Group, InstancedMesh, SphereGeometry, type Material } from "three";
+import { BoxGeometry, Color, ConeGeometry, CylinderGeometry, Group, InstancedMesh, SphereGeometry, type Material, type MeshLambertMaterial } from "three";
 import { TRAIL_HALF_WIDTH } from "../../game/world";
-import { instanced, mushroomGeometry, rockGeometry, type Inst } from "./kit";
+import { instanced, rockGeometry, type Inst } from "./kit";
 import { poolMesh } from "./pools";
-import { matteGlowMaterial } from "./matte";
-import { matteTint } from "./plants";
+import { matteTint, plantGeometry } from "./plants";
 import { fadeGlowMaterial, fadeMaterial, merge, paint, prep } from "./geo";
 import { hash2, rng } from "./noise";
 import { trailsWithin, type SceneTrail } from "./worldQuery";
@@ -19,7 +18,7 @@ export type TrailDressing = { group: Group; update(tod: TodState, time: number, 
 
 const SHOW_R = 230;
 
-export function buildTrails(full: boolean, painted: Material, jobs: Jobs): TrailDressing {
+export function buildTrails(full: boolean, painted: Material, jobs: Jobs, plantMat: MeshLambertMaterial): TrailDressing {
   const group = new Group();
   group.name = "trails";
   const shroomCols = [new Color(0.5, 1.6, 2.2), new Color(0.9, 0.8, 2.4), new Color(0.4, 2.0, 1.8), new Color(1.6, 0.9, 2.2)].map(matteTint);
@@ -32,11 +31,10 @@ export function buildTrails(full: boolean, painted: Material, jobs: Jobs): Trail
   const postGeo = merge([lampPost, lampHook, lampCap]);
   const glassGeo = new SphereGeometry(0.1, 8, 6).scale(1, 1.3, 1).translate(0.28, 1.05, 0);
   const stoneGeo = rockGeometry(11);
-  const shroomGeo = mushroomGeometry();
+  const capGeo = plantGeometry("glowcap");
   // Lamps dissolve between the camera and a fisher, glass and all.
   const glassMat = fadeGlowMaterial({ vertexColors: false });
   const postMat = fadeMaterial(painted);
-  const shroomMat = matteGlowMaterial();
   const live = new Map<string, { g: Group | null; alive: boolean }>();
   let lastX = 1e9;
   let lastZ = 1e9;
@@ -77,7 +75,8 @@ export function buildTrails(full: boolean, painted: Material, jobs: Jobs): Trail
       const k = 2 + Math.floor(R() * 4);
       for (let i = 0; i < k; i++) {
         const p = at(s + (R() - 0.5) * 1.2, lat + (R() - 0.5) * 1.0);
-        shrooms.push({ x: p.x, y: heightAt(p.x, p.z) - 0.02, z: p.z, s: 0.9 + R() * 1.5, ry: R() * 6, tint: c });
+        // Round 16: matte painted glow-cap cards (the 3D toadstools read as smooth glossy domes on the TV).
+        shrooms.push({ x: p.x, y: heightAt(p.x, p.z) - 0.02, z: p.z, s: (0.9 + R() * 1.5) * 0.6, ry: R() * 6, tint: new Color(1, 1, 1).lerp(c, 0.55) });
       }
     }
     yield;
@@ -90,9 +89,9 @@ export function buildTrails(full: boolean, painted: Material, jobs: Jobs): Trail
     glassMesh.name = "trail-lamp-glass";
     const stoneMesh = instanced(stoneGeo, painted, stones, full);
     stoneMesh.name = "trail-stones";
-    const shroomMesh = instanced(shroomGeo, shroomMat, shrooms, false);
-    shroomMesh.name = "trail-mushrooms";
-    g.add(posts, glassMesh, stoneMesh, shroomMesh, poolMesh(pools));
+    const capMesh = instanced(capGeo, plantMat, shrooms, false);
+    capMesh.name = "plants-glowcap";
+    g.add(posts, glassMesh, stoneMesh, capMesh, poolMesh(pools));
     slot.g = g;
     group.add(g);
   }
@@ -110,7 +109,6 @@ export function buildTrails(full: boolean, painted: Material, jobs: Jobs): Trail
     group,
     update(tod, _time, fx, fz) {
       glassMat.color.setScalar(0.9 + 2.2 * tod.glow);
-      shroomMat.emissive.setScalar(0.35 + 2.2 * tod.glow);
       if (Math.hypot(fx - lastX, fz - lastZ) < 6) return;
       lastX = fx;
       lastZ = fz;
@@ -140,9 +138,8 @@ export function buildTrails(full: boolean, painted: Material, jobs: Jobs): Trail
     dispose() {
       for (const slot of live.values()) drop(slot);
       live.clear();
-      for (const g of [postGeo, glassGeo, stoneGeo, shroomGeo]) g.dispose();
+      for (const g of [postGeo, glassGeo, stoneGeo, capGeo]) g.dispose();
       glassMat.dispose();
-      shroomMat.dispose();
     },
   };
 }

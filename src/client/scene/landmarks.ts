@@ -382,13 +382,30 @@ function hollow(c: Ctx): void {
       new Vector3((p1.x + mid.x) / 2, hh * 0.8, (p1.z + mid.z) / 2),
       new Vector3(p1.x, heightAt(p1.x, p1.z) - 0.5, p1.z),
     ]);
-    const g = new TubeGeometry(curve, 30, 0.75, 8, false);
-    jitter(g, 0.1, t0 * 10);
+    // Round 16: a slim root under a leafy garland of painted fern and glowing leaf cards (the bare 0.75 m
+    // tubes read as flat dark planks across the Hollow at TV distance).
+    // Jittered about its own centre: jitter() scales from the origin, and in world space it threw the
+    // root's vertices metres apart (the jagged dark blades the critics called planks).
+    const mid0 = curve.getPointAt(0.5);
+    const g = new TubeGeometry(new CatmullRomCurve3(curve.points.map((q) => q.clone().sub(mid0))), 30, 0.32, 7, false);
+    jitter(g, 0.06, t0 * 10);
+    g.translate(mid0.x, mid0.y, mid0.z);
     g.computeVertexNormals();
-    c.wood.push(paint(prep(g), 0x4a3a5a, 0x7a6488, (p, n, cc) => {
-      cc.multiplyScalar(0.8 + 0.3 * vnoise(p.x * 1.5, p.y * 1.5 + p.z, 4));
-      if (n.y > 0.6) cc.lerp(new Color(0x2e7a6a), 0.6);
-    }));
+    const core = paint(prep(g), 0x3a2e4a, 0x5a4a6a, (p, _n, cc) => cc.multiplyScalar(0.8 + 0.3 * vnoise(p.x * 1.5, p.y * 1.5 + p.z, 4)));
+    const puffs: Puff[] = [];
+    const steps = Math.max(6, Math.round(curve.getLength() / 1.4));
+    for (let i = 1; i < steps; i++) {
+      const q = curve.getPointAt(i / steps);
+      // Fuller at the crown of the arch, thinning toward the feet.
+      const k = Math.sin((i / steps) * Math.PI);
+      puffs.push([q.x, q.y + 0.25, q.z, 0.7 + 0.9 * k, 0.8]);
+    }
+    const top = curve.getPointAt(0.5);
+    const cards = leafCards(puffs, { cx: top.x, cy: top.y - 2, cz: top.z, size: 1.3, density: 2.0, inner: 0x24304a, outer: 0x4a9a8a, top: 0x9ad8c0, seed: 900 + Math.round(t0 * 100) });
+    const [body, rimCards] = splitRim(cards, top.x, top.y - 2, top.z, RIM_SHARE);
+    const arch = instanced(attachFoliage(core, body, "fern", [rimCards, "glow"]), c.tree, [{ x: 0, y: 0, z: 0, s: 1, ry: 0 }], c.full);
+    arch.name = "hollow-arch";
+    c.group.add(arch);
   }
   // Mossy rocks on the shore, little glowing caps clustered on them.
   const rocks: Inst[] = [];

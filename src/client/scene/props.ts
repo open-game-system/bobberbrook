@@ -36,9 +36,8 @@ import type { TodState } from "./tod";
 import type { SceneQuality } from "./types";
 
 import { moonPoolMesh, poolMesh, updatePools } from "./pools";
-import { CANOPY, blob, bushGeometry, cliffRockGeometry, cottageGeometry, dummy, flowerGeometry, giantGeometry, instanced, lilyGeometry, mushroomGeometry, oakGeometry, padGeometry, pineGeometry, reedGeometry, rockGeometry, tuftGeometry, type Inst } from "./kit";
+import { CANOPY, blob, bushGeometry, cliffRockGeometry, cottageGeometry, dummy, flowerGeometry, giantGeometry, instanced, lilyGeometry, oakGeometry, padGeometry, pineGeometry, reedGeometry, rockGeometry, tuftGeometry, type Inst } from "./kit";
 import { matteTint, plantLists, plantMeshes, type PlantKind } from "./plants";
-import { matteGlowMaterial } from "./matte";
 
 // ---------- the set ----------
 
@@ -313,6 +312,9 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   // 09-B's (its lawn read bare), still one calm matte family of plants, no glossy props.
   const plants: Record<PlantKind, Inst[]> = { ...plantLists(), foxglove: foxgloves, grass: grassCards };
   const capCols = shroomCols;
+  // Round 16: the shore and giants' glowing mushrooms are matte painted glow-cap cards (the 3D toadstools
+  // read as smooth glossy domes on the TV).
+  for (const m of shrooms) plants.glowcap.push({ ...m, s: m.s * 0.6, tint: new Color(1, 1, 1).lerp(m.tint ?? new Color(1, 1, 1), 0.55) });
   const plantTint = (k: PlantKind) => (k === "glowcap" ? new Color(1, 1, 1).lerp(capCols[Math.floor(R() * capCols.length)]!, 0.55) : new Color(1, 1, 1).multiplyScalar(0.82 + R() * 0.25));
   let clumps = 0;
   for (let i = 0; i < 900 && clumps < (full ? 72 : 30); i++) {
@@ -342,9 +344,6 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     clumps++;
   }
   for (const m of plantMeshes(plants, plantMat)) add(m);
-  const shroomMat = matteGlowMaterial();
-  disposables.push(shroomMat);
-  add(instanced(mushroomGeometry(), shroomMat, shrooms, false)).name = "mushrooms";
 
   // --- little amber lanterns along the path (warm accents) ---
   const lamps: Inst[] = [];
@@ -632,7 +631,6 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   fallen.castShadow = true;
 
   const winCol = windowMat.color;
-  const shroomGlow = shroomMat.emissive;
   // Warm lamp-lit windows (the reference's cottages glow amber against the violet dusk).
   const day = new Color(1.0, 0.82, 0.55);
   const night = new Color(2.8, 1.9, 0.95);
@@ -645,7 +643,6 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
       winCol.copy(day).lerp(night, tod.glow);
       updatePools(tod);
       lampGlassMat.color.setScalar(0.9 + 2.2 * tod.glow);
-      shroomGlow.setScalar(0.35 + 2.2 * tod.glow);
       plantMat.emissive.setScalar(0.3 + 1.9 * tod.glow);
       const g = tod.glow;
       glassMat.color.setRGB(0.5 + 0.8 * g, 1.1 + 1.6 * g, 1.3 + 1.8 * g);
