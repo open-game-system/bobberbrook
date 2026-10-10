@@ -1,6 +1,7 @@
 import { BufferGeometry, Color, ConeGeometry, CylinderGeometry, Group, InstancedMesh, type Camera, type Material } from "three";
 import { CAMPFIRE, SOUTH, TRAIL_HALF_WIDTH, angleGap } from "../../game/world";
-import { CANOPY, blob, bushGeometry, instanced, oakGeometry, pineGeometry, type Inst } from "./kit";
+import { CANOPY, RIM_SHARE, blob, bushGeometry, instanced, oakGeometry, pineGeometry, type Inst } from "./kit";
+import { attachFoliage, leafCards, splitRim, type Puff } from "./foliage";
 import { birchGeometry, willowGeometry } from "./landmarks";
 import { paleOakGeometry, snowPineGeometry, snowPineLo } from "./biomes";
 import { fbm, hash2, rng, vnoise } from "./noise";
@@ -25,12 +26,20 @@ export const FOREST_CLEAR: [number, number, number][] = [
 export function oakLo(variant: number): BufferGeometry {
   const trunk = prep(new CylinderGeometry(0.32, 0.5, 3.0, 6).translate(0, 1.5, 0));
   paint(trunk, 0x3a2c3a, 0x6a5460);
-  const canopy = merge([blob(2.1, 0, 4.0, 0, 1, 7, 5), blob(1.5, 1.1, 3.6, 0.4, 2, 6, 4), blob(1.5, -1.0, 3.8, -0.4, 3, 6, 4)]);
+  const puffs: Puff[] = [[0, 4.0, 0, 2.1], [1.1, 3.6, 0.4, 1.5], [-1.0, 3.8, -0.4, 1.5]];
+  const canopy = merge(puffs.map(([x, y, z, r], i) => blob(r * 0.86, x, y, z, i + 1, 7, 5)));
   puffNormals(canopy, 0, 4.0, 0, 0.8);
+  // Round 17: the far stand-in keeps the near tree's look (a dark core under painted leaf cards, a
+  // glowing rim) with fewer, bigger cards; a bare blob canopy read as a plastic ball past 75 m.
   paint(canopy, CANOPY[variant]![0]!, CANOPY[variant]![1]!, (_p, n, c) => {
-    if (n.y > 0.55) c.lerp(new Color(CANOPY[variant]![2]!), (n.y - 0.55) * 0.6);
+    c.multiplyScalar(0.62);
+    if (n.y > 0.55) c.lerp(new Color(CANOPY[variant]![2]!).multiplyScalar(0.6), (n.y - 0.55) * 0.5);
   });
-  return merge([trunk, canopy]);
+  const cards = leafCards(puffs, {
+    cx: 0, cy: 4.0, cz: 0, size: 1.9, density: 1.3, inner: CANOPY[variant]![0]!, outer: CANOPY[variant]![1]!, top: CANOPY[variant]![2]!, seed: 41 + variant,
+  });
+  const [body, rimCards] = splitRim(cards, 0, 4.0, 0, RIM_SHARE);
+  return attachFoliage(merge([trunk, canopy]), body, variant === 1 ? "teal" : "violet", [rimCards, "glow"]);
 }
 
 export function pineLo(): BufferGeometry {

@@ -322,14 +322,18 @@ void main() {
   vec3 H = normalize(uSunDir + V);
   float nh = max(dot(N, H), 0.0);
   col += uSunCol * vec3(1.0, 0.93, 0.82) * (smoothstep(0.35, 0.8, pow(nh, 120.0)) * 0.45 + pow(nh, 26.0) * 0.06) * smoothstep(-0.05, 0.15, uSunDir.y);
-  // Soft lapping foam along the coast.
-  float lap = sin(uTime * 1.1 + vSea.y * 1.4 + vn(p * 0.4) * 5.0) * 0.18;
-  float foam = smoothstep(0.45, 0.0, depth + lap - (vn(p * 1.5 + uTime * 0.15) - 0.5) * 0.3);
-  col = mix(col, vec3(0.97, 1.0, 1.0) * (0.85 + 0.15 * uGlow), clamp(foam, 0.0, 1.0) * 0.85);
-  // Round 16: the sea fades out over the last half metre (its mesh ends on the ground grid's cells, which
-  // drew hard planar seams along the coast), and the foam fades out above the waterline.
-  float alpha = mix(0.7, 0.97, smoothstep(0.0, 2.0, depth)) * smoothstep(-0.15, 0.6, depth);
-  alpha = max(alpha, foam * 0.9 * smoothstep(-0.5, 0.05, depth));
+  // Round 17: the coast is drawn from the sea's signed distance (vSea.y, a smooth field that runs across
+  // the ground cells), not from the depth interpolated over them: the depth ramp ended on the cell grid,
+  // so a boat channel read as a straight-edged water rectangle with a hard white rim pasted on the grass.
+  // The ground meets the sea surface at seaDist -0.38 (heightAt: 0.12 + 0.45 s = SEA_Y).
+  // The wobble only pulls the waterline in, so it never reaches past the mesh's own cells.
+  float coast = -vSea.y - 0.38 - vn(p * 0.31) * 1.3 - vn(p * 1.1 + 3.7) * 0.4;
+  // Soft lapping foam: a broken, breathing band just inside the waterline, never a solid white rim.
+  float lap = sin(uTime * 1.1 + vSea.y * 1.4 + vn(p * 0.4) * 5.0) * 0.25;
+  float foam = (1.0 - smoothstep(0.15, 1.3, coast + lap)) * smoothstep(0.0, 0.35, coast);
+  foam *= smoothstep(0.3, 0.75, vn(p * 1.7 + vec2(uTime * 0.12, -uTime * 0.08)));
+  col = mix(col, vec3(0.92, 0.98, 1.0) * (0.85 + 0.15 * uGlow), clamp(foam, 0.0, 1.0) * 0.55);
+  float alpha = mix(0.62, 0.97, smoothstep(0.0, 2.5, max(depth, coast * 0.5))) * smoothstep(0.0, 0.9, coast);
   gl_FragColor = vec4(max(col, vec3(0.0)), alpha);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
