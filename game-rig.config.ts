@@ -234,7 +234,9 @@ const config: GameRigInput = {
     };
     await walkTo(dad, marsh(-0.6), 1, 15_000);
     rig.mark("found Mistmarsh");
-    // Wait for Juneau to arrive, then he steps up to the water beside Dad.
+    // Dad casts straight away while Juneau tags along (round 19: the bot waited ~30 s for him first and
+    // the critic saw a family that couldn't fish); Juneau presses the button when he arrives and wades in.
+    const dadFirst = fishOnce(rig, dad, "Dad", true);
     for (let i = 0; i < 60; i++) {
       const { lake } = await me(dad);
       const [a, b] = lake.fishers;
@@ -242,10 +244,8 @@ const config: GameRigInput = {
       await dad.waitForTimeout(500);
     }
     rig.mark("Juneau tagged along");
-    await walkTo(kid, marsh(-0.25), 1, 15_000);
-    for (let i = 0; i < 2; i++) {
-      await Promise.all([fishOnce(rig, kid, "Juneau", true), fishOnce(rig, dad, "Dad", true)]);
-    }
+    await Promise.all([fishOnce(rig, kid, "Juneau", true), dadFirst]);
+    await Promise.all([fishOnce(rig, kid, "Juneau", true), fishOnce(rig, dad, "Dad", true)]);
     // Back to Moonwell Lake and up the zeppelin tower: everyone stands on the mooring together, and off they fly.
     const zep = await dad.evaluate(() => {
       const bb = Reflect.get(window, "__bb") as { platforms: () => { kind: string; at: { x: number; z: number }; toPlace: string }[] };
