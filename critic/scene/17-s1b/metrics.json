@@ -1,0 +1,108 @@
+{
+  "round": "17-s1b",
+  "shots": [
+    {
+      "label": "moonwell",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 756,
+      "triangles": 3144161,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 94
+    },
+    {
+      "label": "tower-lamp",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 658,
+      "triangles": 2997434,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 102
+    },
+    {
+      "label": "shore-line",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 635,
+      "triangles": 2798664,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 104
+    },
+    {
+      "label": "golden-swirl",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 665,
+      "triangles": 3290638,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 68
+    },
+    {
+      "label": "golden-trail",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 741,
+      "triangles": 3698053,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 80
+    },
+    {
+      "label": "moonwell@tod-morning",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 750,
+      "triangles": 3144035,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 94
+    },
+    {
+      "label": "moonwell@tod-golden",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 739,
+      "triangles": 3021402,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 64
+    },
+    {
+      "label": "moonwell@tod-night",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 761,
+      "triangles": 3197563,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 72
+    },
+    {
+      "label": "moonwell@tod-dawn",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 742,
+      "triangles": 3046634,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 87
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}

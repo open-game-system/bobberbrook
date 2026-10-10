@@ -201,18 +201,36 @@ export function sharedCardGeometry(): { rays: BufferGeometry; plane: PlaneGeomet
 }
 
 /** A soft light pillar for the golden swirl: brightest where you look through it edge-on, fading up. */
+/** Shared GLSL value noise for the pillar and its ground ring. */
+const PILLAR_NOISE = /* glsl */ `
+float pHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float pNoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(pHash(i), pHash(i + vec2(1.0, 0.0)), f.x), mix(pHash(i + vec2(0.0, 1.0)), pHash(i + vec2(1.0, 1.0)), f.x), f.y);
+}`;
+
+/**
+ * The golden swirl's light pillar (round 17): a soft additive column, brightest through its middle and
+ * fading to nothing at its silhouette (no hard edge facing the camera), broken up by rising vertical
+ * noise that frays its top into wisps, standing in a glowing ring of light on the water.
+ */
 export function lightPillar(): { mesh: Mesh; mat: ShaderMaterial } {
-  const g = new CylinderGeometry(1.5, 2.3, 10, 28, 1, true);
+  const g = new CylinderGeometry(1.6, 2.2, 10, 40, 12, true);
   g.translate(0, 5, 0);
-  const mat = new ShaderMaterial({
-    transparent: true,
-    // Additive light that leaves the buffer's alpha alone (a catcher inside it stays out of the paint filter).
-    blending: CustomBlending,
-    blendSrc: OneFactor,
-    blendDst: OneFactor,
-    blendSrcAlpha: ZeroFactor,
-    blendDstAlpha: OneFactor,
-    depthWrite: false,
+  // Additive light that leaves the buffer's alpha alone (a catcher inside it stays out of the paint filter).
+  const additive = (m: ShaderMaterial): ShaderMaterial => {
+    m.transparent = true;
+    m.blending = CustomBlending;
+    m.blendSrc = OneFactor;
+    m.blendDst = OneFactor;
+    m.blendSrcAlpha = ZeroFactor;
+    m.blendDstAlpha = OneFactor;
+    m.depthWrite = false;
+    return m;
+  };
+  const mat = additive(new ShaderMaterial({
     side: DoubleSide,
     uniforms: { uStrength: { value: 0 }, uTime: { value: 0 } },
     vertexShader: /* glsl */ `
@@ -234,15 +252,57 @@ uniform float uTime;
 varying float vH;
 varying float vFacing;
 varying float vA;
+${PILLAR_NOISE}
 void main() {
-  float edge = pow(1.0 - vFacing, 1.5) * 0.6 + 0.12;
-  float fade = pow(1.0 - clamp(vH, 0.0, 1.0), 2.0) * smoothstep(0.0, 0.06, vH);
-  float streak = 0.75 + 0.25 * sin(vA * 7.0 + uTime * 0.8 + vH * 3.0);
-  vec3 c = vec3(1.0, 0.8, 0.38) * edge * fade * streak * uStrength;
+  // Soft toward the silhouette: the side seen edge-on carries no light, so the column has no outline.
+  float soft = vFacing * vFacing * vFacing;
+  // Rising vertical streaks (seamless round the turn: the angle wraps through sin/cos).
+  vec2 ring = vec2(cos(vA), sin(vA)) * 1.6;
+  float n1 = pNoise(vec2(ring.x * 2.0 + ring.y * 3.1, vH * 3.0 - uTime * 0.35));
+  float n2 = pNoise(vec2(ring.y * 4.3 - ring.x * 1.7, vH * 7.0 - uTime * 0.7));
+  float n = 0.55 * n1 + 0.45 * n2;
+  // Bright and dense at the water, fraying into wisps up the column.
+  float top = 1.0 - smoothstep(0.12 + 0.55 * n, 0.95, vH);
+  float base = smoothstep(0.0, 0.08, vH);
+  float body = mix(1.0, 0.35 + 0.9 * n, smoothstep(0.0, 0.5, vH));
+  vec3 c = mix(vec3(1.0, 0.86, 0.5), vec3(1.0, 0.7, 0.3), vH) * soft * top * base * body * uStrength * 0.5;
   gl_FragColor = vec4(c, 1.0);
 }`,
-  });
+  }));
   const mesh = new Mesh(g, mat);
   mesh.renderOrder = 13;
+  // The glowing ring on the water where the column stands (shares the pillar's uniforms).
+  const disc = new PlaneGeometry(7.2, 7.2);
+  disc.rotateX(-Math.PI / 2);
+  disc.translate(0, 0.06, 0);
+  const ringMat = additive(new ShaderMaterial({
+    uniforms: mat.uniforms,
+    vertexShader: /* glsl */ `
+varying vec2 vP;
+void main() {
+  vP = position.xz;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}`,
+    fragmentShader: /* glsl */ `
+uniform float uStrength;
+uniform float uTime;
+varying vec2 vP;
+${PILLAR_NOISE}
+void main() {
+  float r = length(vP);
+  float a = atan(vP.y, vP.x);
+  float wob = pNoise(vec2(cos(a) * 2.5 + 7.0, sin(a) * 2.5 + uTime * 0.4));
+  float rr = 2.15 + 0.25 * wob;
+  float band = exp(-pow((r - rr) / 0.32, 2.0));
+  float pool = exp(-pow(r / 2.0, 2.0)) * 0.35;
+  float outer = 1.0 - smoothstep(2.6, 3.55, r);
+  float pulse = 0.85 + 0.15 * sin(uTime * 2.2 - r * 2.0);
+  vec3 c = vec3(1.0, 0.8, 0.42) * (band * pulse + pool) * outer * uStrength * 0.6;
+  gl_FragColor = vec4(c, 1.0);
+}`,
+  }));
+  const ringMesh = new Mesh(disc, ringMat);
+  ringMesh.renderOrder = 12;
+  mesh.add(ringMesh);
   return { mesh, mat };
 }

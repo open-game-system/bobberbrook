@@ -1,4 +1,4 @@
-import { Group, PointLight, type Mesh, type ShaderMaterial, type Vector3 } from "three";
+import { Group, Material, Mesh, PointLight, type ShaderMaterial, type Vector3 } from "three";
 import type { Lake } from "../../game/lake";
 import { MAX_SWIRLS, type Water } from "./water";
 import type { FishShadows } from "./fishviz";
@@ -129,7 +129,11 @@ export class SwirlViews {
   }
 
   dispose(): void {
-    this.pillar.geometry.dispose();
-    this.pillarMat.dispose();
+    this.pillar.traverse((o) => {
+      if (o instanceof Mesh) {
+        o.geometry.dispose();
+        if (o.material instanceof Material) o.material.dispose();
+      }
+    });
   }
 }
