@@ -58,6 +58,7 @@ import { FamilyFrame, SplitFocus, type Member } from "./split";
 import { EdgeMarkers, type Marker } from "./markers";
 import { BufferAttribute, DoubleSide, PlaneGeometry, PointLight } from "three";
 import type { Place } from "../../game/regions";
+import { revealReady } from "./revealGate";
 import { createJobs } from "./stream";
 import { buildFogOfWar } from "./fow";
 import { DECK_R, buildVehicles } from "./vehicles";
@@ -272,6 +273,9 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   let nearZ = 1e9;
   let discoverySeq = -1;
   let revealAt = -1;
+  /** Round 18: a find whose reveal waits for the family to reach the water (-1: none waiting). */
+  let revealPendingAt = -1;
+  const arrivals: { x: number; z: number }[] = [];
   let revealArea: Place = activeWorld().placeAt({ i: 0, j: 0 })!;
   let trailW = 0;
   let veilInit = false;
@@ -439,11 +443,21 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       const fresh = discoverySeq !== -1 || sn - lake.discovery.at < 4000;
       discoverySeq = lake.discovery.seq;
       if (fresh) {
-        revealAt = t;
+        // The celebration sparkles now; the camera's reveal waits for the family to arrive (revealGate.ts).
+        revealPendingAt = t;
+        revealAt = -1;
         revealArea = activeWorld().placeById(lake.discovery.area) ?? revealArea;
         fx.discoverySwirl(revealArea.center.x, revealArea.center.z, revealArea.pond.r + 6);
       }
     } else if (lake && !lake.discovery && discoverySeq === -1) discoverySeq = 0;
+    if (revealPendingAt >= 0) {
+      arrivals.length = 0;
+      fishers.forEachSeat((_s, x, _y, z) => { arrivals.push({ x, z }); });
+      if (revealReady(arrivals, revealArea, t - revealPendingAt)) {
+        revealPendingAt = -1;
+        revealAt = t;
+      }
+    }
     const revealAge = revealAt >= 0 ? t - revealAt : -1;
     if (revealAge > 0.9 && revealAge - dt <= 0.9) fx.discoverySwirl(revealArea.center.x, revealArea.center.z, revealArea.pond.r + 3);
     forest.update(camera, rig.focus.x, rig.focus.z);

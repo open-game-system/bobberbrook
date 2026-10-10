@@ -174,7 +174,7 @@ appear and fade (`since`, `until`), never pop.
   metres in front of another in a tight framing, the group camera steps back up to 16% so the near back never looms.
 - **Catch moment** (round 17): an eased push toward the catcher (~1 s in, held while the fish is up, ~1 s out); a second
   catch while the first fish is up keeps the push on the middle of both catchers (the safe-margin fit decides how deep).
-- **Discovery** (round 17): a 5 s reveal swings round behind the family (a three-quarter yaw that keeps every fisher
+- **Discovery** (round 17; round 18: it waits, up to 6 s, until a fisher is within the pond plus 45 % of the clearing, so it plays as the family arrives at the water, `revealGate.ts`): a 5 s reveal swings round behind the family (a three-quarter yaw that keeps every fisher
   apart, at most 1.6 rad off the place view), up and out until the whole new pond lies beyond them, then back.
 - **Campfire** (`lake.campfire`): the camera settles on the campfire; fishers sit around it. The seats are a horseshoe 2.9 m out, open on the camera's axis so the fire burns in the gap and never in
   front of a face (round 13); a fisher walking to a seat goes round the fire (`aroundFire`, 1.7 m clear); the flames add light
