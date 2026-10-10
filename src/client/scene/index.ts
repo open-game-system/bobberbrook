@@ -32,6 +32,7 @@ import { buildSky } from "./sky";
 import { SwirlViews } from "./swirls";
 import { buildGroundStream } from "./terrain";
 import { imageOf, loadPaintKit, type PaintTex } from "./paintkit";
+import { setCrystalTexture } from "./crystal";
 import { asCard, cleanCardOf, cloudSheetOf, needleSheetOf, setCards } from "./cards";
 import { groundMaterial } from "./groundmat";
 import { leafMaterial, setFoliageMaterials } from "./foliage";
@@ -183,8 +184,9 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     const ca = imageOf(kit.cloudA);
     const cb = imageOf(kit.cloudB);
     const clouds = ca && cb ? cloudSheetOf(ca, cb) : null;
-    setCards(clouds ? { flameA: asCard(kit.flameA.tex), flameB: asCard(kit.flameB.tex), embers: asCard(kit.embers.tex), clouds, poolWarm: asCard(kit.poolWarm.tex) } : null);
+    setCards(clouds ? { flameA: asCard(kit.flameA.tex), flameB: asCard(kit.flameB.tex), embers: asCard(kit.embers.tex), clouds, poolWarm: asCard(kit.poolWarm.tex), poolCool: asCard(kit.poolCool.tex) } : null);
   }
+  setCrystalTexture(kit.crystal);
   setPaintImages({ planks: imageOf(kit.planks), canvas: imageOf(kit.canvas), shingles: imageOf(kit.shingles), runestone: imageOf(kit.runestone), snow: imageOf(kit.snow) });
   const groundMat = groundMaterial(kit);
   const water = buildWater();

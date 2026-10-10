@@ -29,7 +29,7 @@ import { activeWorld, platformsAround } from "./worldQuery";
  * shore where the group camera looks.
  */
 
-export type KitCtx = { a: PondPlace; seed: number; wood: BufferGeometry[]; glow: BufferGeometry[]; lamps: BufferGeometry[]; lampGlow: BufferGeometry[]; full: boolean; group: Group; painted: Material; tree: Material };
+export type KitCtx = { a: PondPlace; seed: number; wood: BufferGeometry[]; glow: BufferGeometry[]; /** Crystal shards (painted crystal glow, round 12). */ crystal: BufferGeometry[]; lamps: BufferGeometry[]; lampGlow: BufferGeometry[]; full: boolean; group: Group; painted: Material; tree: Material };
 
 const at = (a: PondPlace, theta: number, d: number) => {
   const r = pondRadius(a, theta) + d;
@@ -231,7 +231,7 @@ export function crystalKit(c: KitCtx): void {
       const g = crystalShard(hh, 0.28 + R() * 0.1, R() * 6, new Color(hue).multiplyScalar(0.3).lerp(new Color(0x2e2c8a), 0.5), new Color(hue).multiplyScalar(0.72));
       cl.push(g.rotateZ((R() - 0.5) * 0.8).rotateX((R() - 0.5) * 0.8).translate((R() - 0.5) * 0.8, -hh * 0.12, (R() - 0.5) * 0.8));
     }
-    c.glow.push(put(merge(cl), p.x, p.z, R() * 6, 1, inWater ? -heightAt(p.x, p.z) - 0.2 : -0.05));
+    c.crystal.push(put(merge(cl), p.x, p.z, R() * 6, 1, inWater ? -heightAt(p.x, p.z) - 0.2 : -0.05));
   }
   // Pale prism-lit rocks.
   const rocks: Inst[] = [];
@@ -409,7 +409,7 @@ function spire(c: KitCtx, R: () => number): void {
     const g = crystalShard(h, i === 0 ? 0.7 : 0.42, R() * 6, new Color(hue).multiplyScalar(0.3).lerp(new Color(0x2e2c8a), 0.5), new Color(hue).multiplyScalar(0.72));
     parts.push(g.rotateZ(i === 0 ? 0 : (R() - 0.5) * 0.9).rotateX(i === 0 ? 0 : (R() - 0.5) * 0.9).translate(i === 0 ? 0 : (R() - 0.5) * 2, -h * 0.12, i === 0 ? 0 : (R() - 0.5) * 2));
   }
-  c.glow.push(put(merge(parts), p.x, p.z, R() * 6, 1, -heightAt(p.x, p.z) - 0.2));
+  c.crystal.push(put(merge(parts), p.x, p.z, R() * 6, 1, -heightAt(p.x, p.z) - 0.2));
   const islet = paint(prep(new SphereGeometry(2.8, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.32, 1)), 0x4a5a6a, 0x6a8a7a);
   c.wood.push(put(islet, p.x, p.z, 0, 1, -heightAt(p.x, p.z) - 0.25));
 }

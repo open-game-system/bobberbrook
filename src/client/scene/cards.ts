@@ -6,7 +6,7 @@ import { CanvasTexture, ClampToEdgeWrapping, DataTexture, LinearFilter, LinearMi
  * Registered once by the scene after the kit loads, before the builders run; a builder with no card
  * registered keeps its code painting.
  */
-export type Cards = { flameA: Texture; flameB: Texture; embers: Texture; clouds: Texture; poolWarm: Texture };
+export type Cards = { flameA: Texture; flameB: Texture; embers: Texture; clouds: Texture; poolWarm: Texture; /** Round 12: the cool moonlight pool. */ poolCool?: Texture };
 let cards: Cards | null = null;
 
 export function setCards(c: Cards | null): void {

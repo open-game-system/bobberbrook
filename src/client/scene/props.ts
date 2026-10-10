@@ -35,7 +35,7 @@ import { PK } from "./painter";
 import type { TodState } from "./tod";
 import type { SceneQuality } from "./types";
 
-import { poolMesh, updatePools } from "./pools";
+import { moonPoolMesh, poolMesh, updatePools } from "./pools";
 import { CANOPY, blob, bushGeometry, cliffRockGeometry, cottageGeometry, dummy, flowerGeometry, giantGeometry, instanced, lilyGeometry, mushroomGeometry, oakGeometry, padGeometry, pineGeometry, reedGeometry, rockGeometry, tuftGeometry, type Inst } from "./kit";
 import { matteTint, plantLists, plantMeshes, type PlantKind } from "./plants";
 import { matteGlowMaterial } from "./matte";
@@ -515,6 +515,18 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   }
   pools.push({ x: lx - 0.5, y: deckY - 0.12, z: lz, s: 3.2, ry: 0 });
   add(poolMesh(pools));
+  // Pools of moonlight on the open lawn round the lake (round 12, night only).
+  {
+    const moon: Inst[] = [];
+    for (const th of [-2.5, -1.15, -0.35, 0.95, 2.15, 2.7]) {
+      const r = lakeRadius(th) + 3.5 + ((th * 7.3) % 1 + 1) % 1 * 3;
+      const x = Math.cos(th) * r;
+      const z = Math.sin(th) * r;
+      moon.push({ x, y: heightAt(x, z), z, s: 3.2, ry: th * 3 });
+    }
+    const mp = moonPoolMesh(moon);
+    if (mp) add(mp);
+  }
   const village = add(new Mesh(merge(bodyParts), mat));
   village.name = "village";
   village.castShadow = true;

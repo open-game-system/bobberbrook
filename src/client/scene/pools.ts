@@ -68,12 +68,37 @@ export function poolMesh(list: Inst[]): InstancedMesh {
   return m;
 }
 
+/**
+ * Pools of moonlight (round 12): the Codex cool pool, additive, on open ground in each clearing, by
+ * night only (with the moon). Same program as the lamp pools (another material instance). Null when
+ * the kit has no cool pool.
+ */
+let moonMat: MeshBasicMaterial | null = null;
+export function moonPoolMesh(list: Inst[]): InstancedMesh | null {
+  const painted = getCards()?.poolCool ?? null;
+  if (!painted) return null;
+  if (!moonMat) {
+    moonMat = new MeshBasicMaterial({ map: painted, color: 0x000000, transparent: true, blending: AdditiveBlending, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    moonMat.name = "moon-pools";
+  }
+  if (!geo) geo = new PlaneGeometry(2, 2).rotateX(-Math.PI / 2).translate(0, 0.12, 0);
+  const m = instanced(geo, moonMat, list, false);
+  m.receiveShadow = false;
+  m.renderOrder = 2;
+  m.name = "moon-pools";
+  return m;
+}
+/** Moon pool tint and strength at full night (the painted pool is blue already: a dim neutral tint). */
+const moonTint = new Color(0.34, 0.38, 0.44);
+export const MOON_POOL_STRENGTH = 0.9;
+
 const warm = new Color(1.0, 0.56, 0.24);
 /** The painted pool is already warm and fills its card: a dim neutral tint keeps its colour at the old strength. */
 const paintedTint = new Color(0.42, 0.34, 0.26);
 let tint = warm;
 /** Pools brighten with the lamps: nothing by day, full at night. */
 export function updatePools(tod: TodState): void {
+  if (moonMat) moonMat.color.copy(moonTint).multiplyScalar(MOON_POOL_STRENGTH * tod.moon * tod.moon);
   if (!mat) return;
   const n = Math.max(0, Math.min(1, (tod.glow - 0.4) / 0.55));
   mat.color.copy(tint).multiplyScalar(POOL_STRENGTH * n * n);

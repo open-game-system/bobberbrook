@@ -23,8 +23,9 @@ import {
   type ShaderMaterial as SM,
 } from "three";
 import { pondRadius, type Area, type AreaId, type PondPlace } from "../../game/world";
+import { crystalMaterial } from "./crystal";
 import { RIM_SHARE, WISTERIA_TIP, WISTERIA_TOP, cliffRockGeometry, crystalShard, instanced, rockGeometry, type Inst } from "./kit";
-import { poolMesh } from "./pools";
+import { moonPoolMesh, poolMesh } from "./pools";
 import { fadeGlowMaterial, jitter, merge, paint, prep, puffNormals, surf } from "./geo";
 import { PK } from "./painter";
 import { attachFoliage, leafCards, splitRim, wisteriaCards, type Puff, type Strand } from "./foliage";
@@ -151,7 +152,7 @@ function lanternPost(h: number): { wood: BufferGeometry; glass: BufferGeometry }
 
 export type Landmark = { group: Group; update(tod: TodState, time: number, pulse: number): void; dispose(): void };
 
-type Ctx = { a: PondPlace; seed: number; wood: BufferGeometry[]; glow: BufferGeometry[]; /** Lamp posts and their glass: they dissolve between the camera and a fisher. */ lamps: BufferGeometry[]; lampGlow: BufferGeometry[]; full: boolean; group: Group; painted: Material; tree: Material; extra: { dispose(): void }[]; flows: SM[]; /** Fade out at night (a rainbow under the moon reads wrong). */ dayOnly: SM[] };
+type Ctx = { a: PondPlace; seed: number; wood: BufferGeometry[]; glow: BufferGeometry[]; crystal: BufferGeometry[]; /** Lamp posts and their glass: they dissolve between the camera and a fisher. */ lamps: BufferGeometry[]; lampGlow: BufferGeometry[]; full: boolean; group: Group; painted: Material; tree: Material; extra: { dispose(): void }[]; flows: SM[]; /** Fade out at night (a rainbow under the moon reads wrong). */ dayOnly: SM[] };
 
 // ---------- Mistmarsh ----------
 
@@ -532,7 +533,7 @@ function tarn(c: Ctx): void {
       const g = crystalShard(hh, 0.26 + R() * 0.08, R() * 6, new Color(0x1c1a60), new Color(0x6aa8e0));
       cl.push(g.rotateZ((R() - 0.5) * 0.7).rotateX((R() - 0.5) * 0.7).translate((R() - 0.5) * 0.7, -hh * 0.1, (R() - 0.5) * 0.7));
     }
-    c.glow.push(place(merge(cl), p.x, p.z, R() * 6));
+    c.crystal.push(place(merge(cl), p.x, p.z, R() * 6));
   }
   // The mountain basin: tall cliffs behind the tarn.
   const cliffs: Inst[] = [];
@@ -578,11 +579,22 @@ export function buildLandmark(a: PondPlace, style: LandmarkStyle, seed: number, 
   const id = style;
   const group = new Group();
   group.name = `landmark-${a.id}`;
-  const c: Ctx = { a, seed, wood: [], glow: [], lamps: [], lampGlow: [], full, group, painted, tree, extra: [], flows: [], dayOnly: [] };
+  const c: Ctx = { a, seed, wood: [], glow: [], crystal: [], lamps: [], lampGlow: [], full, group, painted, tree, extra: [], flows: [], dayOnly: [] };
   BUILDERS[id](c);
   // Generated places: their own shoreline by seed, then their landmark.
   if (landmark) dressShore(c, id);
   if (landmark) buildPlaceLandmark(c, landmark);
+  // Pools of moonlight in the clearing (round 12, night only).
+  {
+    const R = rng(seed * 13 + 5);
+    const moon: Inst[] = [];
+    for (let i = 0; i < 5; i++) {
+      const p = at(a, (i / 5) * Math.PI * 2 + R() * 0.8, 1.5 + R() * Math.max(0.5, a.clearing - 3));
+      moon.push({ x: p.x, y: heightAt(p.x, p.z), z: p.z, s: 2.6 + R() * 1.2, ry: R() * 6 });
+    }
+    const mp = moonPoolMesh(moon);
+    if (mp) group.add(mp);
+  }
   const glowMat = new MeshBasicMaterial({ vertexColors: true });
   if (c.wood.length) {
     const m = new Mesh(merge(c.wood), painted);
@@ -594,6 +606,13 @@ export function buildLandmark(a: PondPlace, style: LandmarkStyle, seed: number, 
   if (c.glow.length) {
     const m = new Mesh(merge(c.glow), glowMat);
     m.name = `${id}-glow`;
+    group.add(m);
+  }
+  // Crystal shards glow like the rest, painted facets over their colours.
+  const crystalMat = crystalMaterial();
+  if (c.crystal.length) {
+    const m = new Mesh(merge(c.crystal), crystalMat);
+    m.name = `${id}-crystals`;
     group.add(m);
   }
   // Lamp posts dissolve like the trees between the camera and a fisher, their glass with them.
@@ -617,6 +636,7 @@ export function buildLandmark(a: PondPlace, style: LandmarkStyle, seed: number, 
       // Hollow's giant caps bloomed the whole TV to white, round 05).
       lampGlowMat.color.setScalar(Math.min(GLOW_CAP, (lo + (hi - lo) * tod.glow) * (1 + pulse * 0.3)));
       glowMat.color.setScalar(Math.min(GLOW_CAP, (lo + (hi - lo) * tod.glow) * (1 + pulse * (0.3 + 0.1 * Math.sin(time * 6)))));
+      crystalMat.color.copy(glowMat.color);
       for (const m of c.dayOnly) m.uniforms.uK!.value = Math.max(0, 1 - tod.moon * 1.2 - tod.stars * 0.3);
       for (const f of c.flows) {
         f.uniforms.uTime!.value = time;
@@ -629,6 +649,7 @@ export function buildLandmark(a: PondPlace, style: LandmarkStyle, seed: number, 
         if (o instanceof Mesh) o.geometry.dispose();
       });
       glowMat.dispose();
+      crystalMat.dispose();
       lampGlowMat.dispose();
       for (const e of c.extra) e.dispose();
     },

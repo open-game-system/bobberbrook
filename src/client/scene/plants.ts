@@ -370,19 +370,18 @@ function sheetTexture(cv: HTMLCanvasElement): Texture {
  * read better at TV distance. A kind with no image keeps its painter. The violet glow-cap fills the spare
  * cell 6 and takes every other plane of a glow-cap cluster.
  */
-export type PlantImages = Partial<Record<"fern" | "bluebell" | "foxglove" | "grass" | "glowcap" | "glowcapViolet", CanvasImageSource>>;
+export type PlantImages = Partial<Record<"bluebell" | "foxglove" | "glowcap" | "glowcapViolet", CanvasImageSource>>;
 const VIOLET_CELL = 6;
 /** Which kinds draw from a Codex image (their geometry follows the image's shape). */
 const painted = new Set<keyof PlantImages>();
 /** How much of an image's brightest strokes self-light (the cap undersides; the bells a little; leaves none). */
-const IMAGE_GLOW: Record<keyof PlantImages, number> = { fern: 0, grass: 0, bluebell: 0.45, foxglove: 0.3, glowcap: 1, glowcapViolet: 1 };
+const IMAGE_GLOW: Record<keyof PlantImages, number> = { bluebell: 0.45, foxglove: 0.3, glowcap: 1, glowcapViolet: 1 };
 
 /** Draws an image into a cell, and its glow (the brightest strokes, by luminance, alpha-weighted) into the glow sheet. */
 function imageCell(ctx: Ctx, glow: Ctx, img: CanvasImageSource, x0: number, y0: number, k: number): void {
   ctx.clearRect(x0, y0, CS, CS);
   ctx.drawImage(img, x0, y0, CS, CS);
-  if (k <= 0) return;
-  const d = ctx.getImageData(x0, y0, CS, CS);
+    const d = ctx.getImageData(x0, y0, CS, CS);
   const g = glow.createImageData(CS, CS);
   const ss = (a: number, b: number, x: number) => {
     const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -427,8 +426,8 @@ export function plantSheet(images: PlantImages = {}): PlantSheet {
       const i = CELL[k];
       const x0 = (i % COLS) * CS;
       const y0 = Math.floor(i / COLS) * CS;
-      const img = k === "litter" ? undefined : images[k];
-      if (img && k !== "litter") {
+      const img = k === "bluebell" || k === "foxglove" || k === "glowcap" ? images[k] : undefined;
+      if (img && (k === "bluebell" || k === "foxglove" || k === "glowcap")) {
         imageCell(ctx, gtx, img, x0, y0, IMAGE_GLOW[k]);
         painted.add(k);
       } else {
@@ -529,13 +528,12 @@ function litterPatch(): BufferGeometry {
 
 export function plantGeometry(k: PlantKind): BufferGeometry {
   switch (k) {
-    // A Codex fern is a whole clump (not one frond): crossed upright cards instead of the rosette.
-    case "fern": return painted.has("fern") ? cards("fern", crossedQuads(1.5, 1.3, 3), 0.7) : fernRosette();
+    case "fern": return fernRosette();
     case "bluebell": return crossed("bluebell", 1.0, 1.0, 3);
     case "foxglove": return painted.has("foxglove") ? crossed("foxglove", 1.4, 1.6, 3) : crossed("foxglove", 1.25, 1.7, 3);
     case "glowcap": return painted.has("glowcapViolet") ? cards("glowcap", crossedQuads(1.1, 1.0, 2), 0.72, VIOLET_CELL) : crossed("glowcap", 1.0, 0.9, 2);
     case "litter": return litterPatch();
-    case "grass": return painted.has("grass") ? cards("grass", crossedQuads(1.0, 0.7, 3), 0.86) : cards("grass", crossedQuads(1.0, 0.52, 3), 0.86);
+    case "grass": return cards("grass", crossedQuads(1.0, 0.52, 3), 0.86);
   }
 }
 
