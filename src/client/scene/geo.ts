@@ -154,41 +154,94 @@ export type OccluderUniforms = {
 };
 export const MAX_FOCUS = 5;
 
-const OCC_VERT_PARS = "varying vec3 vOccW;";
-const OCC_VERT = `
-  vec4 occW = vec4(transformed, 1.0);
-  #ifdef USE_INSTANCING
-  occW = instanceMatrix * occW;
-  #endif
-  vOccW = (modelMatrix * occW).xyz;`;
-const OCC_FRAG_PARS = `
-varying vec3 vOccW;
+/** The fade's maths, shared by the vertex stage (whole instances) and the fragment stage (one-off meshes). */
+const OCC_CORE = `
 uniform vec4 uBox;
 uniform float uNear;
 uniform mat4 uVP;
 uniform vec3 uCam;
 uniform vec3 uFocus[${MAX_FOCUS}];
-/** 0 = solid, 1 = gone: on the line from the camera to a focus point, in front of the action's screen box, or against the lens. */
-float occAmount() {
+/**
+ * 0 = solid, 1 = gone, for a point p standing for something \`pad\` metres round (a canopy's reach): on the line
+ * from the camera to a focus point and in front of it, in front of the action's screen box, or against the lens.
+ */
+float occFront(float d, float s, float L, float pad) {
+  // Round 14: in front of the fisher by a metre or more (it was 86-93 % of the way, so from 25 m out a
+  // tower mast 3 m in front of a fisher stood solid over him, session 184 s).
+  return (1.0 - smoothstep(3.0, 5.5, d)) * step(0.6, s) * (1.0 - smoothstep(L - 1.8, L - 0.8, s - pad * 0.5));
+}
+/** In front of the action's screen box (the foreground band) or against the lens. */
+float occScreen(vec3 p, float pad) {
+  vec4 clip = uVP * vec4(p, 1.0);
+  float vz = clip.w - pad;
+  vec2 sc = clip.xy / max(abs(clip.w), 1e-3) * 0.5 + 0.5;
+  // In front of the action and no higher on screen than its top (name tags): the whole foreground band
+  // across the frame, so no canopy, rock or prop sits over the family or the water before them.
+  float inBand = smoothstep(uBox.w + 0.06, uBox.w + 0.01, sc.y) * step(0.0, uBox.z - uBox.x);
+  float occ = inBand * (1.0 - smoothstep(uNear - 3.0, uNear, vz)) * step(0.0, clip.w);
+  // Never a trunk or canopy right against the lens, nor foreground clutter well in front of the family.
+  return max(occ, (1.0 - smoothstep(7.0, 13.0, vz)) * step(-1.0, clip.w));
+}
+float occAt(vec3 p, float pad) {
   float occ = 0.0;
   for (int i = 0; i < ${MAX_FOCUS}; i++) {
     vec3 b = uFocus[i];
     if (b.y < -50.0) continue;
     vec3 ab = b - uCam;
-    float t = clamp(dot(vOccW - uCam, ab) / max(dot(ab, ab), 1e-3), 0.0, 1.0);
-    float d = length(vOccW - (uCam + ab * t));
-    occ = max(occ, (1.0 - smoothstep(3.0, 5.5, d)) * step(0.03, t) * (1.0 - smoothstep(0.86, 0.93, t)));
+    float L = max(length(ab), 1e-3);
+    float s = clamp(dot(p - uCam, ab) / L, 0.0, L);
+    occ = max(occ, occFront(max(0.0, length(p - (uCam + ab * (s / L))) - pad), s, L, pad));
   }
-  vec4 clip = uVP * vec4(vOccW, 1.0);
-  float vz = clip.w;
-  vec2 sc = clip.xy / max(abs(clip.w), 1e-3) * 0.5 + 0.5;
-  // In front of the action and no higher on screen than its top (name tags): the whole foreground band
-  // across the frame, so no canopy, rock or prop sits over the family or the water before them.
-  float inBand = smoothstep(uBox.w + 0.06, uBox.w + 0.01, sc.y) * step(0.0, uBox.z - uBox.x);
-  occ = max(occ, inBand * (1.0 - smoothstep(uNear - 3.0, uNear, vz)) * step(0.0, vz));
-  // Never a trunk or canopy right against the lens, nor foreground clutter well in front of the family.
-  occ = max(occ, (1.0 - smoothstep(7.0, 13.0, vz)) * step(-1.0, vz));
-  return occ;
+  return max(occ, occScreen(p, pad));
+}
+/** The same for a whole tree: its trunk axis from the foot F up H metres, padded by the canopy's reach. */
+float occTree(vec3 F, float H, float pad) {
+  float occ = 0.0;
+  for (int i = 0; i < ${MAX_FOCUS}; i++) {
+    vec3 b = uFocus[i];
+    if (b.y < -50.0) continue;
+    vec3 ab = b - uCam;
+    float L = max(length(ab), 1e-3);
+    vec3 u = ab / L;
+    // Where the sight line passes nearest the axis seen from above, then the nearest height on the axis.
+    float s = clamp(dot((F - uCam).xz, u.xz) / max(dot(u.xz, u.xz), 1e-4), 0.0, L);
+    vec3 P = uCam + u * s;
+    float h = clamp(P.y - F.y, 0.0, H);
+    occ = max(occ, occFront(max(0.0, length(P - F - vec3(0.0, h, 0.0)) - pad), s, L, pad));
+  }
+  return max(occ, occScreen(F + vec3(0.0, 1.0, 0.0), pad));
+}`;
+/**
+ * Round 14: an instanced tree (or post) fades as one thing, judged at its trunk axis padded by its canopy's
+ * reach: worked out per vertex it left half-faded canopies and floating crowns over a trunk that had gone
+ * (session 56 s and 108-111 s: a ghost of a teal tree across the shot). -1 = not instanced (per fragment).
+ */
+const OCC_INSTANCE = `
+  #ifdef USE_INSTANCING
+  {
+    vec3 foot = (modelMatrix * vec4(instanceMatrix[3].xyz, 1.0)).xyz;
+    float sy = length(instanceMatrix[1].xyz);
+    float pad = 2.6 * length(instanceMatrix[0].xyz);
+    float oi = occTree(foot, 9.0 * sy, pad);
+    // Nearly all or nothing: a whole tree held half-faded is the same ghost (the ramp is short in space).
+    vOccI = smoothstep(0.3, 0.7, oi);
+  }
+  #else
+  vOccI = -1.0;
+  #endif`;
+const OCC_VERT_PARS = `varying vec3 vOccW;\nvarying float vOccI;\n${OCC_CORE}`;
+const OCC_VERT = `
+  vec4 occW = vec4(transformed, 1.0);
+  #ifdef USE_INSTANCING
+  occW = instanceMatrix * occW;
+  #endif
+  vOccW = (modelMatrix * occW).xyz;${OCC_INSTANCE}`;
+const OCC_FRAG_PARS = `
+varying vec3 vOccW;
+varying float vOccI;
+${OCC_CORE}
+float occAmount() {
+  return vOccI >= 0.0 ? vOccI : occAt(vOccW, 0.0);
 }`;
 
 function bindOcc(shader: { uniforms: Record<string, unknown> }, u: OccluderUniforms): void {
@@ -227,7 +280,7 @@ export function applyOccluder(shader: { uniforms: Record<string, unknown>; verte
  */
 export function applyOccluderPerVertex(shader: { uniforms: Record<string, unknown>; vertexShader: string; fragmentShader: string }, u: OccluderUniforms): void {
   bindOcc(shader, u);
-  const pars = OCC_FRAG_PARS.replace("varying vec3 vOccW;", "vec3 vOccW;");
+  const pars = OCC_FRAG_PARS.replace("varying vec3 vOccW;", "vec3 vOccW;").replace("varying float vOccI;", "float vOccI;");
   shader.vertexShader = shader.vertexShader
     .replace("#include <common>", `#include <common>\n${pars}\nvarying float vOccA;`)
     .replace("#include <project_vertex>", `#include <project_vertex>${OCC_VERT}\n  vOccA = 1.0 - min(1.0, occAmount() * 1.25);`);

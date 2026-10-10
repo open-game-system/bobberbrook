@@ -442,6 +442,18 @@ const SCENARIOS: Record<string, Scenario> = {
     warmUntil: () => true,
     hero: (l, now, s) => now - s > 3500 && areaAt(centroid(l)) === null && centroid(l).x < -38,
   },
+  // Round 14 (session 49-66 s): Dad and Juneau leave the Moonwell lawn and walk the whole trail
+  // into Mistmarsh; trees beside the path must never hang over them (54 s), half-faded or whole. The shot
+  // is mid-trail, in the woods.
+  "trail-walk": {
+    phase: 0.34,
+    fishers: [
+      { seat: 0, name: "Dad", spot: shoreIn("mistmarsh", -0.6, 1.5), at: onTrailAt(0, -0.36, 1.5) },
+      { seat: 2, name: "Juneau", spot: shoreIn("mistmarsh", -0.8, 1.5), at: onTrailAt(0, -0.33, -1.5) },
+    ],
+    setup: discoverOnly(["mistmarsh"]),
+    hero: (l, now, s) => now - s > 2200 && areaAt(centroid(l)) === null,
+  },
   // Round 13 (session 160 s: a golden swirl at Mistmarsh announced and never shown): the family on the
   // trail with a golden swirl in the marsh ahead; the beacon must read on the TV.
   "golden-trail": {

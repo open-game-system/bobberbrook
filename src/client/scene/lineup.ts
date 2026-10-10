@@ -3,6 +3,8 @@
  * axis for 40 s). The group camera yaws a little (and lifts a touch) until every pair reads.
  */
 export type Ground = { x: number; z: number };
+/** Something solid on the ground the camera must not look through at a fisher (a tower's deck and plinth). */
+export type Blocker = { x: number; z: number; r: number };
 
 /** A fisher's silhouette width (m) and how far a back fisher must rise on screen to show its head. */
 const BODY_W = 0.95;
@@ -37,19 +39,52 @@ export function hidden(pts: readonly Ground[], yaw: number, el: number, n = pts.
   return sum;
 }
 
+/**
+ * How many fishers stand behind a blocker seen from this yaw (round 14: the Dell's tower deck filled the
+ * foreground with the family beyond it, session 186-210 s). The camera stands `dist` metres out (on the
+ * ground) from the fishers' centre; a fisher is blocked when the ground line from it to the camera crosses a
+ * blocker's disc it is not standing on. A fisher only just behind the edge counts in part.
+ */
+export function blocked(pts: readonly Ground[], blockers: readonly Blocker[], yaw: number, dist: number, n = pts.length): number {
+  if (n === 0 || blockers.length === 0) return 0;
+  let cx = 0;
+  let cz = 0;
+  for (let i = 0; i < n; i++) {
+    cx += pts[i]!.x / n;
+    cz += pts[i]!.z / n;
+  }
+  const camX = cx + Math.sin(yaw) * dist;
+  const camZ = cz + Math.cos(yaw) * dist;
+  let sum = 0;
+  for (let i = 0; i < n; i++) {
+    const p = pts[i]!;
+    const dx = camX - p.x;
+    const dz = camZ - p.z;
+    const len2 = dx * dx + dz * dz || 1;
+    for (const b of blockers) {
+      // Standing on the deck itself (not on the steps round its foot, which it hides from the far side).
+      if (Math.hypot(p.x - b.x, p.z - b.z) < b.r - 0.6) continue;
+      const t = Math.min(1, Math.max(0, ((b.x - p.x) * dx + (b.z - p.z) * dz) / len2));
+      const d = Math.hypot(p.x + dx * t - b.x, p.z + dz * t - b.z);
+      sum += Math.min(1, Math.max(0, (b.r + 1 - d) / 2));
+    }
+  }
+  return sum;
+}
+
 /** Picks the smallest yaw (and lift) that shows everyone, and holds it while it still works (no flip-flop). */
 export class Lineup {
   private yaw = 0;
   private el = 0;
 
   /** The first `n` of `pts` are the fishers (the rest of the buffer is ignored). */
-  update(pts: readonly Ground[], baseYaw: number, baseEl: number, n = pts.length): { yaw: number; el: number } {
-    if (n < 2) {
+  update(pts: readonly Ground[], baseYaw: number, baseEl: number, n = pts.length, blockers: readonly Blocker[] = [], dist = 20): { yaw: number; el: number } {
+    if (n < 2 && (n === 0 || blockers.length === 0)) {
       this.yaw = 0;
       this.el = 0;
       return { yaw: 0, el: 0 };
     }
-    const cost = (y: number, e: number) => hidden(pts, baseYaw + y, baseEl + e, n) + 0.25 * Math.abs(y) + 0.6 * e;
+    const cost = (y: number, e: number) => hidden(pts, baseYaw + y, baseEl + e, n) + blocked(pts, blockers, baseYaw + y, dist * Math.cos(baseEl + e), n) + 0.25 * Math.abs(y) + 0.6 * e;
     // Hold the current choice unless another is clearly better; crossing to the other side (a big swing)
     // must be better still.
     let best = cost(this.yaw, this.el);

@@ -1,7 +1,7 @@
 import { PerspectiveCamera, Vector3 } from "three";
 import { CAMPFIRE, DOCK, EAST, NORTH, WEST, lakeRadius } from "../../game/world";
 import { damp } from "./noise";
-import { Lineup, type Ground } from "./lineup";
+import { Lineup, type Blocker, type Ground } from "./lineup";
 
 /** Critically damped spring toward a goal (exact step: no overshoot, stable at any dt). */
 export function spring(x: number, v: number, goal: number, omega: number, dt: number, out: { x: number; v: number }): void {
@@ -146,8 +146,8 @@ export class CameraRig {
     this.first = true;
   }
 
-  debug(): { dist: number; catchW: number; revealW: number; n: number; target: number[]; ahead: number; yaw: number; el: number; feet: number[][] } {
-    return { dist: this.dist, catchW: this.catchW, revealW: this.revealW, n: this.n, target: this.target.toArray(), ahead: this.ahead, yaw: this.yaw, el: this.el, feet: this.feet.slice(0, this.nf).map((f) => [f.x, f.z]) };
+  debug(): { dist: number; catchW: number; revealW: number; n: number; target: number[]; ahead: number; yaw: number; el: number; feet: number[][]; blockers: number[][] } {
+    return { blockers: this.blockers.map((b) => [b.x, b.z, b.r]), dist: this.dist, catchW: this.catchW, revealW: this.revealW, n: this.n, target: this.target.toArray(), ahead: this.ahead, yaw: this.yaw, el: this.el, feet: this.feet.slice(0, this.nf).map((f) => [f.x, f.z]) };
   }
 
   get view(): ViewName {
@@ -167,8 +167,11 @@ export class CameraRig {
     f.z = z;
   }
 
+  /** Solid things near the family the camera must not look through at them (tower decks), set each frame. */
+  readonly blockers: Blocker[] = [];
+
   private lineUp(yaw: number, el: number): { yaw: number; el: number } {
-    return this.lineup.update(this.feet, yaw, el, this.nf);
+    return this.lineup.update(this.feet, yaw, el, this.nf, this.blockers, this.wantDist);
   }
 
   /** A point that must stay in frame (feet; the rig adds the head and name tag above it). */

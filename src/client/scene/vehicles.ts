@@ -912,7 +912,9 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
       if (!rideLive || rideState.kind === 0) return 0;
       const v = rideLive.vehicle;
       v.updateMatrixWorld();
-      const pts = rideState.kind === 1 ? [[3.8, 0.5, 0], [-3.6, 0.5, 0], [0.4, 4, 0]] : [[2.6, 0.2, 0], [-2.6, 0.2, 0], [0, 5.6, 0]];
+      // Round 14: the airship's focus is its gondola (the family and their tags above it), not the envelope:
+      // with the envelope's top in the fit the family shrank to two tags at the bottom on landing (session 180 s).
+      const pts = rideState.kind === 1 ? [[3.8, 0.5, 0], [-3.6, 0.5, 0], [0.4, 4, 0]] : [[2.6, 0.2, 0], [-2.6, 0.2, 0], [0, 1.2, 0]];
       pts.forEach(([x, y, z], i) => out[i]!.set(x!, y!, z!).applyMatrix4(v.matrixWorld));
       return pts.length;
     },

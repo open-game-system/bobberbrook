@@ -58,3 +58,26 @@ describe("group camera with a fisher behind another", () => {
     expect(Math.abs(a.x - b.x)).toBeGreaterThan(0.035);
   });
 });
+
+describe("lineup: a tower deck between the camera and the family (round 14)", () => {
+  it("counts a fisher seen through a deck, not one standing on it or beside it", async () => {
+    const { blocked } = await import("./lineup");
+    const deck = [{ x: 0, z: 6, r: 6.4 }];
+    // The camera looks north from the south (yaw 0): the deck straight between it and Juneau.
+    expect(blocked([{ x: 0, z: -2 }], deck, 0, 20)).toBeGreaterThan(0.9);
+    expect(blocked([{ x: 0, z: 6 }], deck, 0, 20)).toBe(0);
+    expect(blocked([{ x: 12, z: -2 }], deck, 0, 20)).toBe(0);
+  });
+
+  it("yaws away so the family is not seen through the deck", () => {
+    const deck = [{ x: 4, z: 7, r: 6.4 }];
+    const pts = [{ x: -1, z: -1 }, { x: 2, z: -1.5 }];
+    const out = new Lineup().update(pts, 0, EL, 2, deck, 18);
+    expect(Math.abs(out.yaw)).toBeGreaterThan(0.05);
+  });
+
+  it("leaves the yaw alone with no blocker in the way", () => {
+    const out = new Lineup().update([{ x: -2, z: 0 }, { x: 2, z: 0 }], 0, EL, 2, [{ x: 0, z: -30, r: 6.4 }], 18);
+    expect(out.yaw).toBe(0);
+  });
+});

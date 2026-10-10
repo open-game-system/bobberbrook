@@ -58,9 +58,9 @@ import { BufferAttribute, DoubleSide, PlaneGeometry, PointLight } from "three";
 import type { Place } from "../../game/regions";
 import { createJobs } from "./stream";
 import { buildFogOfWar } from "./fow";
-import { buildVehicles } from "./vehicles";
+import { DECK_R, buildVehicles } from "./vehicles";
 import { buildShells } from "./shells";
-import { activeWorld, placesWithin, setWorld, trailsWithin } from "./worldQuery";
+import { activeWorld, placesWithin, platformsAround, setWorld, trailsWithin } from "./worldQuery";
 
 export type { LakeScene, SceneQuality } from "./types";
 
@@ -494,7 +494,10 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     rideSky += ((riding === 2 ? 1 : 0) - rideSky) * Math.min(1, dt * 0.8);
     rig.rateK += ((riding ? 3.2 : 1) - rig.rateK) * Math.min(1, dt * 2);
     rig.ride = riding ? { heading: vehicles.heading(), kind: riding } : null;
-    rig.minDist += ((riding === 2 ? 24 : riding === 1 ? 22 : sp.split || wide ? 23 : 17) - rig.minDist) * Math.min(1, dt * (riding ? 0.8 : 2));
+    // Coming in to land (the last 30 % of an airship ride) the shot closes in on the family in the gondola.
+    const rideK = lake?.ride ? Math.min(1, Math.max(0, (sn - lake.ride.departAt) / Math.max(1, lake.ride.arriveAt - lake.ride.departAt))) : 0;
+    const landing = riding === 2 ? Math.min(1, Math.max(0, (rideK - 0.7) / 0.2)) : 0;
+    rig.minDist += ((riding === 2 ? 24 - 6 * landing : riding === 1 ? 22 : sp.split || wide ? 23 : 17) - rig.minDist) * Math.min(1, dt * (riding ? 0.8 : 2));
     rig.beginFocus();
     fishers.forEachSeat((seat, x, y, z, _c, bob) => {
       if (!framed.has(seat)) return;
@@ -526,6 +529,19 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       if (wd < here.pond.r + here.clearing && wd > 0.5) {
         const k = Math.min(wd, 10) / wd;
         rig.addFocus(gx / n + wx * k, 0, gz / n + wz * k);
+      }
+    }
+    // Tower decks near the family: the group camera yaws so it never looks at them through one (round 14).
+    rig.blockers.length = 0;
+    if (n > 0 && !riding) {
+      const fxm = gx / n;
+      const fzm = gz / n;
+      for (const pl of platformsAround(fxm, fzm)) {
+        if (pl.kind !== "zeppelin") continue;
+        const place = activeWorld().placeById(pl.place);
+        if (!place) continue;
+        const tw = activeWorld().towerAt(place);
+        if (Math.hypot(tw.x - fxm, tw.z - fzm) < 45 && !rig.blockers.some((b) => b.x === tw.x && b.z === tw.z)) rig.blockers.push({ x: tw.x, z: tw.z, r: DECK_R + 0.3 });
       }
     }
     if (here) {

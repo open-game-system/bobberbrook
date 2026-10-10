@@ -385,6 +385,25 @@ function hollow(c: Ctx): void {
   c.group.add(rm);
 }
 
+let rainbow: ShaderMaterial | null = null;
+function rainbowMaterial(): ShaderMaterial {
+  rainbow ??= new ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    blending: AdditiveBlending,
+    side: DoubleSide,
+    fog: false,
+    uniforms: { uK: { value: 1 } },
+    vertexShader: "varying vec2 vP; void main(){ vP = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+    fragmentShader: `uniform float uK; varying vec2 vP;
+      vec3 hue(float h){ return clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0); }
+      void main(){ float band = (length(vP) - 6.2) / 1.4; float a = smoothstep(0.0, 0.25, band) * smoothstep(1.0, 0.75, band);
+        a *= smoothstep(0.0, 3.0, vP.y) * 0.55 + 0.45 * smoothstep(0.5, 4.0, vP.y);
+        gl_FragColor = vec4(hue(band * 0.78) * a * 0.22 * uK, 1.0); }`,
+  });
+  return rainbow;
+}
+
 // ---------- Whisperfall Pools ----------
 
 function pools(c: Ctx): void {
@@ -460,23 +479,11 @@ function pools(c: Ctx): void {
   const birch = instanced(birchGeometry(5), c.tree, birches, c.full);
   birch.name = "birches";
   c.group.add(birch);
-  // A faint rainbow in the spray over the steps (a half ring; the band is the radius).
-  const rb = new ShaderMaterial({
-    transparent: true,
-    depthWrite: false,
-    blending: AdditiveBlending,
-    side: DoubleSide,
-    fog: false,
-    uniforms: { uK: { value: 1 } },
-    vertexShader: "varying vec2 vP; void main(){ vP = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
-    fragmentShader: `uniform float uK; varying vec2 vP;
-      vec3 hue(float h){ return clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0); }
-      void main(){ float band = (length(vP) - 6.2) / 1.4; float a = smoothstep(0.0, 0.25, band) * smoothstep(1.0, 0.75, band);
-        a *= smoothstep(0.0, 3.0, vP.y) * 0.55 + 0.45 * smoothstep(0.5, 4.0, vP.y);
-        gl_FragColor = vec4(hue(band * 0.78) * a * 0.22 * uK, 1.0); }`,
-  });
-  c.extra.push(rb);
-  c.dayOnly.push(rb);
+  // A faint rainbow in the spray over the steps (a half ring; the band is the radius). One shared material,
+  // never disposed: a per-place one compiled at prewarm in the showroom was released with it, so the first
+  // Whisperfall Pools seen in play compiled it again (round 14, the arrival scenario).
+  const rb = rainbowMaterial();
+  if (!c.dayOnly.includes(rb)) c.dayOnly.push(rb);
   const arc = new Mesh(new RingGeometry(6.2, 7.6, 48, 1, 0, Math.PI), rb);
   const ap = at(a, -1.45, -2.5);
   arc.position.set(ap.x, -0.5, ap.z + 2.5);
