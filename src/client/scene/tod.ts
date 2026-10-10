@@ -57,19 +57,22 @@ const KEYS: Key[] = [
     hemiSky: 0xd4d4f4, hemiGround: 0x567a5a, hemiI: 1.3, fog: 0xccc8ea, fogNear: 60, fogFar: 300, exposure: 1.08, stars: 0, glow: 0.15, mist: 0.3,
     waterShallow: 0x5aeadc, waterDeep: 0x0e7e9a, moon: 0, mountain: 0xa0a0d4, discAz: 250 * D, discEl: 40 * D, grade: 0xfffaf4 },
   // Golden hour: rose-amber key low in the west, long shadows, pink-violet clouds.
-  { at: 0.4, skyTop: 0x4a3a92, skyHorizon: 0xffa890, skyGlow: 0xffa050, cloud: 0xffb8c8, cloudShade: 0x8a4a92, sun: 0xffb07a, sunI: 3.3, az: 160 * D, el: 15 * D,
-    hemiSky: 0xf0b4cc, hemiGround: 0x5a4a5a, hemiI: 1.4, fog: 0xd08aa8, fogNear: 50, fogFar: 250, exposure: 1.18, stars: 0.1, glow: 0.5, mist: 0.45,
-    waterShallow: 0x5ad6d0, waterDeep: 0x1a5a8a, moon: 0, mountain: 0x8a5a9a, discAz: 228 * D, discEl: 5 * D, grade: 0xfff0e0 },
-  { at: 0.47, skyTop: 0x36307e, skyHorizon: 0xf08a9a, skyGlow: 0xff8a5a, cloud: 0xf0a0c4, cloudShade: 0x6a4a8a, sun: 0xff9a70, sunI: 2.8, az: 168 * D, el: 9 * D,
+  // Round 14: an amber key and a warm grade (session 213 s: "Golden hour" did not visibly warm).
+  { at: 0.4, skyTop: 0x4a3a92, skyHorizon: 0xffa890, skyGlow: 0xffa050, cloud: 0xffb8c8, cloudShade: 0x8a4a92, sun: 0xff9a50, sunI: 3.6, az: 160 * D, el: 15 * D,
+    hemiSky: 0xf4b8a8, hemiGround: 0x5a4a5a, hemiI: 1.4, fog: 0xd08aa8, fogNear: 50, fogFar: 250, exposure: 1.18, stars: 0.1, glow: 0.5, mist: 0.45,
+    waterShallow: 0x5ad6d0, waterDeep: 0x1a5a8a, moon: 0, mountain: 0x8a5a9a, discAz: 228 * D, discEl: 5 * D, grade: 0xffe2c4 },
+  { at: 0.47, skyTop: 0x36307e, skyHorizon: 0xf08a9a, skyGlow: 0xff8a5a, cloud: 0xf0a0c4, cloudShade: 0x6a4a8a, sun: 0xff9058, sunI: 3.0, az: 168 * D, el: 9 * D,
     hemiSky: 0xd8a4d8, hemiGround: 0x4a4260, hemiI: 1.35, fog: 0xa878b0, fogNear: 45, fogFar: 235, exposure: 1.06, stars: 0.4, glow: 0.8, mist: 0.55,
-    waterShallow: 0x52ccd0, waterDeep: 0x16507e, moon: 0, mountain: 0x6a5498, discAz: 232 * D, discEl: 2 * D, grade: 0xffe0dc },
+    waterShallow: 0x52ccd0, waterDeep: 0x16507e, moon: 0, mountain: 0x6a5498, discAz: 232 * D, discEl: 2 * D, grade: 0xffdcc8 },
   // Night: deep indigo, the big moon over the falls, glowing water, mushrooms, wisps and lanterns.
-  { at: 0.55, skyTop: 0x101452, skyHorizon: 0x3a3488, skyGlow: 0x6a6ac0, cloud: 0x6a6ab0, cloudShade: 0x262660, sun: 0xb0c0ff, sunI: 2.1, az: 225 * D, el: 26 * D,
-    hemiSky: 0x6a70c4, hemiGround: 0x1c5664, hemiI: 1.55, fog: 0x2e2c70, fogNear: 45, fogFar: 220, exposure: 1.7, stars: 1, glow: 1, mist: 0.55,
-    waterShallow: 0x3ae0dc, waterDeep: 0x0a3070, moon: 1, mountain: 0x302c70, discAz: 271 * D, discEl: 4.5 * D, grade: 0xe6eeff },
-  { at: 0.82, skyTop: 0x0c1048, skyHorizon: 0x302c80, skyGlow: 0x6060b8, cloud: 0x5a5aa0, cloudShade: 0x1e1e58, sun: 0xb4c4ff, sunI: 2.2, az: 290 * D, el: 26 * D,
-    hemiSky: 0x6670c2, hemiGround: 0x1a5262, hemiI: 1.55, fog: 0x282a6c, fogNear: 45, fogFar: 215, exposure: 1.7, stars: 1, glow: 1, mist: 0.6,
-    waterShallow: 0x38e0dc, waterDeep: 0x082c6a, moon: 1, mountain: 0x2a2a6c, discAz: 273 * D, discEl: 5 * D, grade: 0xe6eeff },
+  // Round 14: a silver (not blue) moon key, a less saturated indigo fill and a warm grade, so lamps,
+  // fireflies and firelight read warm against the indigo instead of the whole frame going saturated blue.
+  { at: 0.55, skyTop: 0x101452, skyHorizon: 0x3a3488, skyGlow: 0x6a6ac0, cloud: 0x6a6ab0, cloudShade: 0x262660, sun: 0xc8c6ec, sunI: 1.9, az: 225 * D, el: 26 * D,
+    hemiSky: 0x5c5aa8, hemiGround: 0x1c5664, hemiI: 1.55, fog: 0x2e2c70, fogNear: 45, fogFar: 220, exposure: 1.7, stars: 1, glow: 1, mist: 0.55,
+    waterShallow: 0x3ae0dc, waterDeep: 0x0a3070, moon: 1, mountain: 0x302c70, discAz: 271 * D, discEl: 4.5 * D, grade: 0xfff0e2 },
+  { at: 0.82, skyTop: 0x0c1048, skyHorizon: 0x302c80, skyGlow: 0x6060b8, cloud: 0x5a5aa0, cloudShade: 0x1e1e58, sun: 0xc8c6ec, sunI: 2.0, az: 290 * D, el: 26 * D,
+    hemiSky: 0x5a58a6, hemiGround: 0x1a5262, hemiI: 1.55, fog: 0x282a6c, fogNear: 45, fogFar: 215, exposure: 1.7, stars: 1, glow: 1, mist: 0.6,
+    waterShallow: 0x38e0dc, waterDeep: 0x082c6a, moon: 1, mountain: 0x2a2a6c, discAz: 273 * D, discEl: 5 * D, grade: 0xfff0e2 },
   // Dawn: pink-cyan haze, the last stars, mist on the water.
   { at: 0.9, skyTop: 0x4a8ac8, skyHorizon: 0xf4b0cc, skyGlow: 0xffc8dc, cloud: 0xffd8ec, cloudShade: 0x7a7ab8, sun: 0xffc0d4, sunI: 1.8, az: 345 * D, el: 8 * D,
     hemiSky: 0xa8d4f0, hemiGround: 0x3a5a6a, hemiI: 1.3, fog: 0xc8b8e0, fogNear: 34, fogFar: 200, exposure: 1.06, stars: 0.35, glow: 0.6, mist: 0.85,

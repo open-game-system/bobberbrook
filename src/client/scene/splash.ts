@@ -67,12 +67,18 @@ varying vec2 vUv;
 varying float vShade;
 void main() {
   if (uAge < 0.0 || uAge > 0.8) discard;
-  // A jagged rim of points.
-  float spikes = 0.55 + 0.45 * pow(abs(sin(vUv.x * 3.14159 * 11.0)), 0.6);
-  if (vUv.y > spikes) discard;
-  float fade = 1.0 - smoothstep(0.45, 0.8, uAge);
-  float a = (0.55 + 0.45 * smoothstep(0.0, 0.5, vUv.y)) * fade;
-  vec3 col = mix(vec3(0.75, 0.92, 0.98), vec3(1.0), vUv.y) * vShade;
+  // Round 14: a sheet of thrown water, not an opaque white crown (hollow.png, session 75 s): translucent
+  // vertical streaks, a soft ragged lip with beads, clear at the foot where it leaves the water.
+  float x = vUv.x * 6.28318;
+  float sheet = 0.5 + 0.5 * sin(x * 7.0 + sin(x * 3.0) * 1.7);
+  float lip = 0.55 + 0.3 * pow(abs(sin(x * 4.5 + 1.3)), 0.5) + 0.15 * sheet;
+  float edge = 1.0 - smoothstep(lip - 0.22, lip, vUv.y);
+  float bead = smoothstep(0.06, 0.0, abs(vUv.y - lip - 0.05)) * step(0.82, fract(vUv.x * 23.0)) * 0.6;
+  float foot = smoothstep(0.0, 0.3, vUv.y);
+  float fade = 1.0 - smoothstep(0.4, 0.8, uAge);
+  float a = ((0.14 + 0.4 * sheet) * edge + bead) * foot * fade;
+  if (a < 0.01) discard;
+  vec3 col = mix(vec3(0.6, 0.86, 0.92), vec3(0.96, 1.0, 1.0), clamp(vUv.y * 0.6 + sheet * 0.4 + bead, 0.0, 1.0)) * vShade;
   gl_FragColor = vec4(col, a);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
