@@ -625,7 +625,7 @@ function board(d: Draft<Lake>, now: number, w: World): void {
     d.boarding = null;
     return;
   }
-  const platform = familyMooring(d.fishers, w);
+  const platform = boardingPlatform(d.boarding?.platformId ?? null, d.fishers, w);
   if (!platform) {
     d.boarding = null;
     return;
@@ -638,13 +638,17 @@ function board(d: Draft<Lake>, now: number, w: World): void {
   depart(d, platform, now);
 }
 
-/** The mooring everyone stands on, all together: the one they stand closest to in sum (moorings round one tower sit side by side). */
-function familyMooring(fishers: { pos: Vec }[], w: World): Platform | undefined {
+/**
+ * The mooring everyone stands on, all together: the one they're already boarding while everyone is still
+ * on it (a shuffle never flips the trip to the next mooring's destination), else the one they stand
+ * closest to in sum (moorings round one tower sit side by side).
+ */
+export function boardingPlatform(current: string | null, fishers: { pos: Vec }[], w: World): Platform | undefined {
   const mid = { x: fishers.reduce((a, f) => a + f.pos.x, 0) / fishers.length, z: fishers.reduce((a, f) => a + f.pos.z, 0) / fishers.length };
-  return w
-    .platformsNear(mid, 1)
-    .filter((p) => fishers.every((f) => distance(f.pos, p.at) <= PLATFORM_REACH))
-    .sort((a, b) => fishers.reduce((t, f) => t + distance(f.pos, a.at), 0) - fishers.reduce((t, f) => t + distance(f.pos, b.at), 0))[0];
+  const onIt = w.platformsNear(mid, 1).filter((p) => fishers.every((f) => distance(f.pos, p.at) <= PLATFORM_REACH));
+  const kept = onIt.find((p) => p.id === current);
+  if (kept) return kept;
+  return onIt.sort((a, b) => fishers.reduce((t, f) => t + distance(f.pos, a.at), 0) - fishers.reduce((t, f) => t + distance(f.pos, b.at), 0))[0];
 }
 
 /** Everyone aboard: the ride sets off from the platform. */

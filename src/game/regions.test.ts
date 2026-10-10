@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { BOARD_MS, PLATFORM_REACH, join, newLake, step, type Lake } from "./lake";
-import { BIOMES, REGION, cellKey, createWorld, isSea, worldFor, type Cell } from "./regions";
+import { BOARD_MS, PLATFORM_REACH, boardingPlatform, join, newLake, step, type Lake } from "./lake";
+import { BIOMES, REGION, cellKey, createWorld, isSea, worldFor, type Cell, type Platform } from "./regions";
 import { distance } from "./world";
 
 const seed = 12345;
@@ -109,6 +109,21 @@ describe("riding a zeppelin", () => {
     expect(l.discovered.length).toBe(before);
     l = step(l, l.ride!.arriveAt + 1);
     expect(l.discovered.slice(before)).toEqual([zep.toPlace]);
+  });
+  it("keeps the mooring it started boarding while everyone is still on it (no flip to the next mooring's destination)", () => {
+    const w = worldFor(seed);
+    const all = w.platformsNear({ x: 0, z: 0 }, 0).filter((x) => x.kind === "zeppelin");
+    // Two neighbouring moorings (side by side round the tower).
+    const pairs = all.flatMap((a, i) => all.slice(i + 1).map((b): [Platform, Platform] => [a, b]));
+    const [p, q] = pairs.reduce((best, pq) => (Math.hypot(pq[0].at.x - pq[1].at.x, pq[0].at.z - pq[1].at.z) < Math.hypot(best[0].at.x - best[1].at.x, best[0].at.z - best[1].at.z) ? pq : best));
+    const d = Math.hypot(q.at.x - p.at.x, q.at.z - p.at.z);
+    const toward = (m: number) => ({ x: p.at.x + ((q.at.x - p.at.x) / d) * m, z: p.at.z + ((q.at.z - p.at.z) / d) * m });
+    // Both a little nearer q in sum, but still within reach of p.
+    // Moorings round one tower are close enough that the middle between two is within reach of both.
+    expect(d / 2 + 0.05).toBeLessThanOrEqual(PLATFORM_REACH);
+    const fishers = [{ pos: toward(d / 2 + 0.05) }, { pos: toward(d / 2 + 0.05) }];
+    expect(boardingPlatform(p.id, fishers, w)?.id).toBe(p.id);
+    expect(boardingPlatform(null, fishers, w)?.id).toBe(q.id);
   });
   it("doesn't leave while someone is still elsewhere", () => {
     let l: Lake = { ...join(join(newLake(1, T0), { name: "A", ogsId: null }).lake, { name: "B", ogsId: null }).lake, worldSeed: seed };
