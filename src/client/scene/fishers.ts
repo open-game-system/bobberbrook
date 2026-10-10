@@ -28,18 +28,21 @@ import { heightAt } from "./terrain";
 import { towerDeckY } from "./vehicles";
 import { merge, paint, prep } from "./geo";
 import { layoutTags, type TagBox, type TagShift } from "./tagLayout";
-import { CARD_PX, FISH_PX, holdCard } from "./holdCard";
+import { CARD_PX, FISH_PX, holdCard, overhead } from "./holdCard";
 
 const DECK_Y = 0.42;
 const LINE_SEGS = 18;
-const LEAP_S = 0.95;
+/** The leap from the bobber into the raised hands (round 11: 0.95 s read as a float). */
+const LEAP_S = 0.6;
 /** The fish is held up until this age (s), then tucked away over TUCK_S. */
 const TUCK_AT = 2.75;
 const TUCK_S = 0.45;
 /** Half the fisher's head width with the hat brim (world units, at FISHER_SCALE). */
 const HEAD_HALF = 0.3 * FISHER_SCALE;
-/** How much longer the arms reach while holding up a catch (near arm under the belly, far arm across). */
-const HOLD_REACH = { near: 0.75, far: 0.5 };
+/** How much longer the arms reach while holding a catch up over the head. */
+const HOLD_REACH = 0.6;
+/** The top of the hat above the head group's origin (world units, at FISHER_SCALE). */
+const HEAD_TOP = 0.47 * FISHER_SCALE;
 
 const scratch: Vec = { x: 0, z: 0 };
 const predicted: Vec = { x: 0, z: 0 };
@@ -189,6 +192,8 @@ class FisherView {
   upgradeFlash = 0;
   /** Screen-space (NDC) shift of the name tag, so close fishers' tags don't overlap (eased). */
   tagDx = 0;
+  /** How far the name tag rises to stay above a fish held overhead (world units). */
+  tagLift = 0;
   tagDy = 0;
 
   constructor(
@@ -533,21 +538,14 @@ class FisherView {
         if (still) {
           rodVisible = age < LEAP_S * 0.6;
           const up = Math.min(1, age / LEAP_S) * (1 - out);
-          // Both hands under the fish on its side: the near arm out and up, the far arm across the chest.
-          // (Facing the camera, the fisher's left, +x, is the camera's right.)
-          const near = this.cardSide >= 0 ? 1 : -1;
-          const nx = -0.8 + (-0.2 + 0.8) * up;
-          const nz = near * 1.9 * up;
-          const fx2 = -0.8 + (-1.55 + 0.8) * up;
-          const fz = near * 0.55 * up;
-          if (near > 0) { target.armLx = nx; target.armLz = nz; target.armRx = fx2; target.armRz = fz; }
-          else { target.armRx = nx; target.armRz = nz; target.armLx = fx2; target.armLz = fz; }
-          // Round 09: the stubby arms only reached the fish's corner (held out, not gripped). The near arm
-          // reaches out under the belly, the far arm across to the near end: both hands on the lower edge.
-          const nearReach = 1 + HOLD_REACH.near * up;
-          const farReach = 1 + HOLD_REACH.far * up;
-          this.reachTarget.l = near > 0 ? nearReach : farReach;
-          this.reachTarget.r = near > 0 ? farReach : nearReach;
+          // Round 11: both arms straight up, the fish caught overhead (it read as floating beside the
+          // catcher when held out to one side). The arms reach a little longer to get under its belly.
+          target.armLx = -0.8 + (-0.12 + 0.8) * up;
+          target.armRx = target.armLx;
+          target.armLz = 2.75 * up;
+          target.armRz = -2.75 * up;
+          this.reachTarget.l = 1 + HOLD_REACH * up;
+          this.reachTarget.r = 1 + HOLD_REACH * up;
           target.lean = -0.08 * up;
           target.headX = -0.15 * up;
           target.headY = 0;
@@ -600,8 +598,9 @@ class FisherView {
     const biting = mode === "bite";
     rig.markerMat.opacity = biting ? 0.6 + 0.4 * Math.sin(t * 16) : 0.55 + 0.1 * Math.sin(t * 2);
     rig.marker.scale.setScalar(biting ? 1.25 : 1);
-    rig.tag.position.set(this.x, this.y + (lake.campfire ? 3.0 + (this.seat % 2) * 0.5 : 3.4) * Math.min(1, this.appear * 1.4), this.z);
-    // The name tag stays up through a catch (the fish is held beside the catcher, clear of it).
+    if (!inCatch) this.tagLift = 0;
+    rig.tag.position.set(this.x, this.y + (lake.campfire ? 3.0 + (this.seat % 2) * 0.5 : 3.4) * Math.min(1, this.appear * 1.4) + this.tagLift, this.z);
+    // The name tag stays up through a catch, lifted over the fish held overhead.
     rig.tag.visible = true;
     rig.tag.scale.set(0.17, 0.0374, 1);
 
@@ -659,9 +658,14 @@ class FisherView {
     this.toCam.copy(camera.position).sub(this.handA).setY(0).normalize();
     // The fish rests on the near hand (the one out under its belly); before the arms are up, on where
     // that hand will be.
-    const handsY = Math.max(this.cardSide >= 0 ? this.handB.y : this.handA.y, this.y + 1.1);
-    this.hold.set(this.x, handsY + held.lift, this.z);
-    this.hold.addScaledVector(this.camRight, this.cardSide * held.lateral).addScaledVector(this.toCam, -0.25);
+    // Overhead (round 11): the belly on both raised hands, the lower edge never below the hat.
+    this.rig.head.getWorldPosition(this.tmp);
+    const headTop = this.tmp.y + HEAD_TOP;
+    const holdY = overhead({ size: W0, aspect: this.catchAspect, headTop, handsY: Math.max(this.handA.y, this.handB.y) });
+    this.hold.set(this.x, holdY, this.z).addScaledVector(this.toCam, -0.25);
+    // The name tag rises over the fish while it is up.
+    const top = holdY + (W0 * (FISH_PX / CARD_PX)) / 2 / Math.max(0.3, this.catchAspect);
+    this.tagLift = Math.max(0, top + 0.3 - (this.y + 3.4)) * Math.min(1, age / LEAP_S) * (1 - out);
     // The leap: out of the water at the bobber, an arc into the raised hands.
     const e = s * s * (3 - 2 * s);
     let gx = this.catchFromX + (this.hold.x - this.catchFromX) * e;
@@ -941,9 +945,15 @@ export class FisherViews {
   }
 
   /** The catch the camera pushes toward: the first to start, held until it ends (null when none). */
+  /** The current catch shared the screen with another: no push-in for it. */
+  private focusShared = false;
+
   catchFocus(t: number, out: CatchFocus): CatchFocus | null {
     const cur = this.focusView;
-    if (cur && (!cur.present || cur.catchStart < 0)) this.focusView = null;
+    if (cur && (!cur.present || cur.catchStart < 0)) {
+      this.focusView = null;
+      this.focusShared = false;
+    }
     if (!this.focusView) {
       // Only a fresh catch takes the camera; one already under way when another ends does not.
       let best: FisherView | null = null;
@@ -954,6 +964,11 @@ export class FisherViews {
     }
     const found = this.focusView;
     if (!found) return null;
+    // Only one catch at a time gets the push-in: with two fish up the camera keeps both catchers.
+    let up = 0;
+    for (const v of this.views) if (v.present && v.catchStart >= 0) up++;
+    if (up > 1) this.focusShared = true;
+    if (this.focusShared) return null;
     out.x = found.x;
     out.y = found.y + 1.8;
     out.z = found.z;

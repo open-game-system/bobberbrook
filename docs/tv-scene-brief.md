@@ -68,7 +68,10 @@ on the water, and a warm fill plus a cool rim on the fishers so their faces read
   (`thrashingAt(fishDef.fight, reel, now)` from `src/game/reel.ts`) a splashing white-water burst; the
   bobber drifts toward the fisher with `reel.progress`.
 - `catch`: the fish (its painted sprite as a camera-facing card, with a wiggle) leaps out of the water
-  on an arc into the fisher's hands, held up beside the head (both arms reach to its lower edge; the visible fish is capped at 2.8 m wide, 1.7 m tall and 20 % of the screen, so a legend never covers its catcher, `holdCard.ts`), with sparkles; `catch.isNew` → a bigger golden burst
+  at the bobber on a 0.6 s arc into the fisher's hands, both arms raised straight up, and is held up over
+  the head (round 11; `overhead()` in `holdCard.ts`: the belly on the hands, the lower edge never below
+  the hat, so no face is covered; the name tag rises above the fish; the visible fish is still capped at
+  2.8 m wide, 1.7 m tall and 20 % of the screen), with sparkles; `catch.isNew` → a bigger golden burst
   and rays; `catch.golden` → gold confetti; junk (boot/teapot) gets a comic plop.
 - `missSeq` grew: the fish splashes away (a small "got away" splash).
 
@@ -95,7 +98,8 @@ appear and fade (`since`, `until`), never pop.
   distance, 0.03 rad) so shuffling fishers do not drift the shot; past it the critically damped follow takes the
   excess only. Leaving the campfire, and any jump across the world, cuts straight onto the family's own framing
   (25 % wide, a touch high) and settles in, never via the establishing view or a parked vehicle.
-- **Catch moment**: an eased push toward the catcher for ~2 s then back (only when one catch at a time).
+- **Catch moment**: an eased push toward the catcher for ~2 s then back, only when one catch is up at a time
+  (`catchFocus` drops the push for a catch that ever shares the screen with another).
 - **Campfire** (`lake.campfire`): the camera settles on the campfire; fishers sit around it.
 
 ## HUD (owned by the TV React layer, not the scene)

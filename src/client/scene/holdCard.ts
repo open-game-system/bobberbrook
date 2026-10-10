@@ -58,3 +58,16 @@ export function holdCard(i: HoldIn): Hold {
   const lift = halfH * 0.86;
   return { size, lateral, lift };
 }
+
+/** Clear space between the top of the hat and the held fish (world units). */
+export const OVERHEAD_GAP = 0.05;
+
+/**
+ * Round 11: the fish is held up above the head with both arms raised (it read as floating beside the
+ * catcher). Returns the card centre's height: the fish's belly rests on the raised hands, and its lower
+ * edge never comes below the hat (the face is never covered).
+ */
+export function overhead(i: { size: number; aspect: number; headTop: number; handsY: number }): number {
+  const halfH = (i.size * (FISH_PX / CARD_PX)) / 2 / Math.max(0.3, i.aspect);
+  return Math.max(i.handsY + halfH * 0.86, i.headTop + OVERHEAD_GAP + halfH);
+}

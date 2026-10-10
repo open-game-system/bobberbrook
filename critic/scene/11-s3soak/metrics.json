@@ -1,0 +1,42 @@
+{
+  "round": "11-s3soak",
+  "shots": [],
+  "soaks": {
+    "four-reel": {
+      "programsBefore": 79,
+      "programsAfter": 79,
+      "p50": 16.899999618530273,
+      "p95": 36.099998474121094,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 1460
+    },
+    "tower": {
+      "programsBefore": 79,
+      "programsAfter": 79,
+      "p50": 15.199999809265137,
+      "p95": 30.700000762939453,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 2883
+    },
+    "boarding": {
+      "programsBefore": 76,
+      "programsAfter": 76,
+      "p50": 13,
+      "p95": 19.5,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 4005
+    }
+  },
+  "soak": {
+    "programsBefore": 79,
+    "programsAfter": 79,
+    "p50": 16.899999618530273,
+    "p95": 36.099998474121094,
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+    "frames": 1460
+  },
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CARD_PX, FISH_PX, MAX_FISH_H, MAX_FISH_W, MAX_GROW, MAX_SCREEN_SHARE, MIN_SCREEN_SHARE, holdCard } from "./holdCard";
+import { CARD_PX, FISH_PX, MAX_FISH_H, MAX_FISH_W, MAX_GROW, MAX_SCREEN_SHARE, MIN_SCREEN_SHARE, holdCard, overhead } from "./holdCard";
 
 const k = FISH_PX / CARD_PX;
 
@@ -54,5 +54,26 @@ describe("the held fish card's cap (round 09: the Moonfin covered the catcher)",
     const h = holdCard({ base: 4.7, aspect, headHalf: 0.66, screenW: 40 });
     expect(h.lateral - (h.size * k) / 2).toBeGreaterThan(0.66);
     expect(h.lift - (h.size * k) / 2 / aspect).toBeLessThan(0);
+  });
+});
+
+describe("held up overhead (round 11: the fish leaps into raised hands and is shown above the head)", () => {
+  const k = FISH_PX / CARD_PX;
+  for (const aspect of [0.9, 1.6, 2.6]) {
+    it(`keeps the fish's lower edge above the head, aspect ${aspect}`, () => {
+      const size = 2.2;
+      const halfH = (size * k) / 2 / aspect;
+      for (const handsY of [1.5, 2.4, 3.2]) {
+        const y = overhead({ size, aspect, headTop: 2.6, handsY });
+        expect(y - halfH).toBeGreaterThanOrEqual(2.6 + 0.05 - 1e-9);
+      }
+    });
+  }
+  it("rests the belly on raised hands that are already above the head (a grip, not a balance)", () => {
+    const size = 2.2;
+    const halfH = (size * k) / 2 / 1.6;
+    const y = overhead({ size, aspect: 1.6, headTop: 2.6, handsY: 3.0 });
+    expect(y - halfH).toBeLessThan(3.0);
+    expect(y - halfH).toBeGreaterThan(3.0 - halfH);
   });
 });
