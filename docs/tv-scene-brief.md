@@ -91,11 +91,12 @@ cover a fisher's face (`Particles.setFaces`), and the catch bursts are capped (l
 - `reel`: the rod bends, the line goes taut, a fish shadow thrashes at the bobber; when thrashing
   (`thrashingAt(fishDef.fight, reel, now)` from `src/game/reel.ts`) a splashing white-water burst; the
   bobber drifts toward the fisher with `reel.progress`.
-- `catch`: the fish (its painted sprite as a camera-facing card, with a wiggle) leaps out of the water
-  at the bobber on a 0.6 s arc into the fisher's hands, both arms raised straight up, and is held up over
-  the head (round 11; `overhead()` in `holdCard.ts`: the belly on the hands, the lower edge never below
-  the hat, so no face is covered; the name tag rises above the fish; the visible fish is still capped at
-  2.8 m wide, 1.7 m tall and 20 % of the screen), with sparkles; `catch.isNew` → a bigger golden burst
+- `catch`: the fish (its painted sprite as a camera-facing card, with a slight wiggle) is lifted out of the water
+  in 0.3 s (from at most 2.2 m out toward the bobber, so a double catch never puts a fish between two fishers) into
+  the fisher's hands and held across the chest with both arms forward, a mitten at each end (round 13; `chestHold()` in
+  `holdCard.ts`: the visible fish fits between the chin and the feet, so it never covers a face; a big fish is held
+  lower; the card sits on the view ray through the chest point, in front of the body; the visible fish is still capped
+  at 2.8 m wide and 20 % of the screen), with sparkles; `catch.isNew` → a bigger golden burst
   and rays; `catch.golden` → gold confetti; junk (boot/teapot) gets a comic plop.
 - `missSeq` grew: the fish splashes away (a small "got away" splash).
 

@@ -29,21 +29,28 @@ import { towerDeckY } from "./vehicles";
 import { aroundFire } from "./campPath";
 import { merge, paint, prep } from "./geo";
 import { layoutTags, type TagBox, type TagShift } from "./tagLayout";
-import { CARD_PX, FISH_PX, holdCard, overhead } from "./holdCard";
+import { CARD_PX, FISH_PX, chestHold, holdCard, liftFrom } from "./holdCard";
 
 const DECK_Y = 0.42;
 const LINE_SEGS = 18;
-/** The leap from the bobber into the raised hands (round 11: 0.95 s read as a float). */
-const LEAP_S = 0.6;
+/** The lift from the water into the hands (round 11: 0.95 s read as a float; round 13: 0.6 -> 0.3 s). */
+const LEAP_S = 0.3;
+/** The lift starts at most this far from the catcher (round 13: a double catch flew a perch between two fishers). */
+const LIFT_REACH = 2.2;
+/** The arms while holding a catch across the chest: forward (rotation x) and out (rotation z). */
+const HOLD_ARM_X = -1.25;
+const HOLD_ARM_Z = 0.42;
+/** The held fish's plane in front of the catcher's centre (world units): past the belly, behind the mittens. */
+const HOLD_FRONT = 0.5;
+/** The chin above the feet (world units, at FISHER_SCALE): the held fish's top stays under it. */
+const CHIN_Y = 0.55 * FISHER_SCALE;
 /** The fish is held up until this age (s), then tucked away over TUCK_S. */
 const TUCK_AT = 2.75;
 const TUCK_S = 0.45;
 /** Half the fisher's head width with the hat brim (world units, at FISHER_SCALE). */
 const HEAD_HALF = 0.3 * FISHER_SCALE;
-/** How much longer the arms reach while holding a catch up over the head. */
-const HOLD_REACH = 0.6;
-/** The top of the hat above the head group's origin (world units, at FISHER_SCALE). */
-const HEAD_TOP = 0.47 * FISHER_SCALE;
+/** How much longer the arms reach while holding a catch. */
+const HOLD_REACH = 0.45;
 
 const scratch: Vec = { x: 0, z: 0 };
 const predicted: Vec = { x: 0, z: 0 };
@@ -173,11 +180,6 @@ class FisherView {
   private catchCm = 30;
   private catchEnd = -1;
   private catchAspect = 1.6;
-  /** Which side of the catcher the fish is held up on (camera right +1 / left -1; 0 = not chosen yet). */
-  private cardSide = 0;
-  /** Screen x (NDC) of the nearest other fisher on screen, set by FisherViews each frame (null: none near). */
-  neighbourX: number | null = null;
-  private readonly camRight = new Vector3();
   private sparkAcc = 0;
   readonly hold = new Vector3();
   private readonly handA = new Vector3();
@@ -510,8 +512,9 @@ class FisherView {
       if (f.catch && sn - f.catch.at < CATCH_SHOW_MS - 400) {
         const def = fishById(f.catch.fishId);
         this.catchStart = t - Math.max(0, Math.min(0.3, (sn - f.catch.at) / 1000));
-        this.catchFromX = this.lastBobX || this.x + Math.cos(this.facing) * 4;
-        this.catchFromZ = this.lastBobZ || this.z + Math.sin(this.facing) * 4;
+        const from = liftFrom({ x: this.x, z: this.z }, { x: this.lastBobX || this.x + Math.cos(this.facing) * 2, z: this.lastBobZ || this.z + Math.sin(this.facing) * 2 }, LIFT_REACH);
+        this.catchFromX = from.x;
+        this.catchFromZ = from.z;
         this.catchId = f.catch.fishId;
         this.catchNew = f.catch.isNew;
         this.catchGolden = f.catch.golden;
@@ -520,7 +523,6 @@ class FisherView {
         this.catchTier = rar === "legendary" ? 2 : rar === "rare" || rar === "treasure" ? 1 : 0;
         this.catchCm = f.catch.cm;
         this.catchEnd = -1;
-        this.cardSide = 0;
         this.catchAspect = this.card.paint(this.textures.image(this.catchId), def?.glow ? (def.colors.accent) : "rgba(255,255,255,0.95)");
         fx.leap(this.catchFromX, this.catchFromZ, t, this.catchJunk);
       }
@@ -545,16 +547,16 @@ class FisherView {
         if (still) {
           rodVisible = age < LEAP_S * 0.6;
           const up = Math.min(1, age / LEAP_S) * (1 - out);
-          // Round 11: both arms straight up, the fish caught overhead (it read as floating beside the
-          // catcher when held out to one side). The arms reach a little longer to get under its belly.
-          target.armLx = -0.8 + (-0.12 + 0.8) * up;
+          // Round 13: both arms out in front at chest height, a mitten under each end of the fish (overhead
+          // read as a sprite over the head). The arms reach a little longer to get round it.
+          target.armLx = -0.8 + (HOLD_ARM_X + 0.8) * up;
           target.armRx = target.armLx;
-          target.armLz = 2.75 * up;
-          target.armRz = -2.75 * up;
+          target.armLz = HOLD_ARM_Z * up;
+          target.armRz = -HOLD_ARM_Z * up;
           this.reachTarget.l = 1 + HOLD_REACH * up;
           this.reachTarget.r = 1 + HOLD_REACH * up;
-          target.lean = -0.08 * up;
-          target.headX = -0.15 * up;
+          target.lean = -0.06 * up;
+          target.headX = -0.1 * up;
           target.headY = 0;
           target.sq = -0.05 * up;
           this.turnToCamera = up;
@@ -641,43 +643,32 @@ class FisherView {
     const s = Math.min(1, age / LEAP_S);
     const tier = this.catchTier;
     const w = (2.3 + Math.min(1.4, this.catchCm / 60)) * (this.catchNew ? 1.12 : 1) * (tier === 2 ? 1.15 : 1);
-    // Held up beside the catcher (toward the middle of the frame), never over their body or name tag.
-    this.camRight.setFromMatrixColumn(camera.matrixWorld, 0);
-    if (this.cardSide === 0) {
-      this.tmp.set(this.x, this.y + 1.5, this.z).project(camera);
-      const sx = this.tmp.x;
-      // Away from a fisher standing close by on screen, else toward the middle of the frame.
-      this.cardSide = this.neighbourX !== null ? (this.neighbourX > sx ? -1 : 1) : sx > 0.1 ? -1 : 1;
-      if ((sx < -0.55 && this.cardSide < 0) || (sx > 0.55 && this.cardSide > 0)) this.cardSide = -this.cardSide;
-    }
-    // Held in the catcher's raised hands (holdCard.ts): both mittens under the fish's belly on the
-    // open side of the head, the card just behind them so the hands read as gripping it.
+    // Round 13: held in both hands across the chest (overhead it read as a sprite hovering over the head):
+    // the card sits on the hands, just behind them, sized so its top stays under the chin (holdCard.ts).
     let screenW = 0;
     if (camera instanceof PerspectiveCamera) {
       const dist = Math.hypot(camera.position.x - this.x, camera.position.y - this.y - 1.5, camera.position.z - this.z);
       screenW = 2 * Math.tan((camera.fov * Math.PI) / 360) * dist * camera.aspect;
     }
     const held = holdCard({ base: w * (CARD_PX / FISH_PX) * 0.8, aspect: this.catchAspect, headHalf: HEAD_HALF, screenW });
-    const W0 = held.size;
     this.rig.hand.getWorldPosition(this.handA);
     this.handB.set(0, -0.18, 0);
     this.rig.armL.localToWorld(this.handB);
     this.toCam.copy(camera.position).sub(this.handA).setY(0).normalize();
-    // The fish rests on the near hand (the one out under its belly); before the arms are up, on where
-    // that hand will be.
-    // Overhead (round 11): the belly on both raised hands, the lower edge never below the hat.
-    this.rig.head.getWorldPosition(this.tmp);
-    const headTop = this.tmp.y + HEAD_TOP;
-    const holdY = overhead({ size: W0, aspect: this.catchAspect, headTop, handsY: Math.max(this.handA.y, this.handB.y) });
-    this.hold.set(this.x, holdY, this.z).addScaledVector(this.toCam, -0.25);
-    // The name tag rises over the fish while it is up.
-    const top = holdY + (W0 * (FISH_PX / CARD_PX)) / 2 / Math.max(0.3, this.catchAspect);
-    this.tagLift = Math.max(0, top + 0.3 - (this.y + 3.4)) * Math.min(1, age / LEAP_S) * (1 - out);
-    // The leap: out of the water at the bobber, an arc into the raised hands.
+    const chest = chestHold({ size: held.size, aspect: this.catchAspect, handsY: (this.handA.y + this.handB.y) / 2, chinY: this.y + CHIN_Y, feetY: this.y });
+    const W0 = chest.size;
+    // In front of the body, slid toward the lens along the view ray through the chest point (so on screen
+    // it sits exactly where chestHold put it, top under the chin), just behind the mittens.
+    this.hold.set(this.x, chest.centreY, this.z);
+    this.tmp.copy(camera.position).sub(this.hold).normalize();
+    this.hold.addScaledVector(this.tmp, HOLD_FRONT);
+    this.tagLift = 0;
+    // The lift: out of the water on the way to the bobber (never more than LIFT_REACH out, so a double
+    // catch never puts a fish between two fishers), a short arc into the hands.
     const e = s * s * (3 - 2 * s);
     let gx = this.catchFromX + (this.hold.x - this.catchFromX) * e;
     let gz = this.catchFromZ + (this.hold.z - this.catchFromZ) * e;
-    let gy = -0.35 + (this.hold.y + 0.35) * e + Math.sin(s * Math.PI) * 2.0;
+    let gy = -0.35 + (this.hold.y + 0.35) * e + Math.sin(s * Math.PI) * 0.45;
     // Tucked away: down into the fisher's pack.
     const o = out * out * (3 - 2 * out);
     gx += (this.x - gx) * o;
@@ -694,7 +685,7 @@ class FisherView {
     this.card.cardMat.opacity = 1 - o;
     const W = W0 * Math.max(0.001, scale);
     this.card.card.scale.set(W, W, 1);
-    const wiggle = age < LEAP_S ? (this.catchJunk ? s * Math.PI * 4 : Math.sin(age * 22) * 0.35) : Math.sin(age * 7) * 0.12;
+    const wiggle = age < LEAP_S ? (this.catchJunk ? s * Math.PI * 2 : Math.sin(age * 22) * 0.2) : Math.sin(age * 6) * 0.05;
     this.card.card.rotation.z = wiggle * (1 - o);
     // Rays behind rare catches and new species (gold); legendary: bigger, brighter.
     const rayOn = tier >= 1 || this.catchNew || this.catchGolden;
@@ -826,24 +817,6 @@ export class FisherViews {
         }
       }
       this.upgradeSeq = lake.upgradeSeq;
-    }
-    // Each fisher's nearest neighbour on screen (a held fish goes up on the other side).
-    for (const v of this.views) {
-      v.neighbourX = null;
-      if (!v.present) continue;
-      this.tv.set(v.x, v.y + 1.5, v.z).project(camera);
-      const ax = this.tv.x;
-      const ay = this.tv.y;
-      let best = 0.45;
-      for (const o of this.views) {
-        if (o === v || !o.present) continue;
-        this.tv.set(o.x, o.y + 1.5, o.z).project(camera);
-        const d = Math.hypot(this.tv.x - ax, (this.tv.y - ay) * 0.6);
-        if (d < best) {
-          best = d;
-          v.neighbourX = this.tv.x;
-        }
-      }
     }
     let ci = 0;
     for (let i = 0; i < 4; i++) {

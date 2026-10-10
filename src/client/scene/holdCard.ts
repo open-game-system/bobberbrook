@@ -71,3 +71,35 @@ export function overhead(i: { size: number; aspect: number; headTop: number; han
   const halfH = (i.size * (FISH_PX / CARD_PX)) / 2 / Math.max(0.3, i.aspect);
   return Math.max(i.handsY + halfH * 0.86, i.headTop + OVERHEAD_GAP + halfH);
 }
+
+/** Clear space between the held fish's top edge and the catcher's chin (world units). */
+export const CHIN_GAP = 0.06;
+/** The held fish's lowest edge stays this far above the catcher's feet (world units). */
+export const FEET_CLEAR = 0.12;
+
+/**
+ * Round 13: the fish is held in both hands across the chest (overhead it still read as a sprite
+ * hovering over the head, and a double catch put a fish between two fishers). The card is centred on
+ * the hands, at chest height, and shrinks until its top edge sits below the chin (the face is never
+ * covered) and its lower edge stays above the feet; a big fish is held lower, never higher.
+ * Returns the card's side (world units) and its centre's height.
+ */
+export function chestHold(i: { size: number; aspect: number; handsY: number; chinY: number; feetY: number }): { size: number; centreY: number } {
+  const k = FISH_PX / CARD_PX;
+  const aspect = Math.max(0.3, i.aspect);
+  const room = Math.max(0.2, i.chinY - CHIN_GAP - (i.feetY + FEET_CLEAR));
+  // The visible fish's height (size * k / aspect) never exceeds the room between chin and feet.
+  const size = Math.min(i.size, (room * aspect) / k);
+  const halfH = (size * k) / 2 / aspect;
+  const centreY = Math.min(i.handsY, i.chinY - CHIN_GAP - halfH);
+  return { size, centreY: Math.max(centreY, i.feetY + FEET_CLEAR + halfH) };
+}
+
+/** Where the catch's short lift starts: on the way to the bobber, at most `reach` from the catcher. */
+export function liftFrom(catcher: { x: number; z: number }, bobber: { x: number; z: number }, reach: number): { x: number; z: number } {
+  const dx = bobber.x - catcher.x;
+  const dz = bobber.z - catcher.z;
+  const d = Math.hypot(dx, dz);
+  if (d <= reach || d < 1e-6) return { x: bobber.x, z: bobber.z };
+  return { x: catcher.x + (dx / d) * reach, z: catcher.z + (dz / d) * reach };
+}
