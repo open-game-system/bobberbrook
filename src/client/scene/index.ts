@@ -232,7 +232,9 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   const surfMats = { rock: rockMaterial(kit.rock), bark: barkMaterial(kit.bark, occ), tiles: tilesMaterial(kit.tiles) };
   setSurfaceMaterials(surfMats);
   // Painted alpha-card plants (one sheet, one program) for Moonwell and every place.
-  const plantTex = plantSheet();
+  // Round 12: the Codex bluebell, foxglove and glow-cap cards take their cells. The Codex fern (a whole
+  // clump) and grass card carpeted the foreground band dark and hid the path: the code-painted ones stay.
+  const plantTex = plantSheet({ bluebell: imageOf(kit.bluebell), foxglove: imageOf(kit.foxglove), glowcap: imageOf(kit.glowcapBlue), glowcapViolet: imageOf(kit.glowcapViolet) });
   const plantMat = plantMaterial(plantTex, time);
   const props = buildProps(opts.quality, sway, treeMat, plantMat);
   scene.add(props.group);

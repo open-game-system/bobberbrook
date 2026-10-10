@@ -79,17 +79,21 @@ export function cleanCardPixels(src: Uint8ClampedArray, w: number, h: number): U
   }
   // Separable box blur (radius 3), twice: the opaque colour spreads about 6 texels out.
   const blur = (s: Float32Array, horiz: boolean): Float32Array<ArrayBuffer> => {
+    // Running box sum (radius 3) along rows or columns, clamped at the edges.
     const o = new Float32Array(n);
     const R = 3;
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        let acc = 0;
-        for (let k = -R; k <= R; k++) {
-          const xx = horiz ? Math.min(w - 1, Math.max(0, x + k)) : x;
-          const yy = horiz ? y : Math.min(h - 1, Math.max(0, y + k));
-          acc += s[yy * w + xx]!;
-        }
-        o[y * w + x] = acc;
+    const len = horiz ? w : h;
+    const lines = horiz ? h : w;
+    for (let l = 0; l < lines; l++) {
+      const idx = (t: number) => {
+        const c = Math.min(len - 1, Math.max(0, t));
+        return horiz ? l * w + c : c * w + l;
+      };
+      let acc = 0;
+      for (let k = -R; k <= R; k++) acc += s[idx(k)]!;
+      for (let t = 0; t < len; t++) {
+        o[idx(t)] = acc;
+        acc += s[idx(t + R + 1)]! - s[idx(t - R)]!;
       }
     }
     return o;

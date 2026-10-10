@@ -1,0 +1,53 @@
+{
+  "round": "12-s4c",
+  "shots": [
+    {
+      "label": "moonwell",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 79,
+      "programs": 79,
+      "calls": 724,
+      "triangles": 2941617,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 96
+    },
+    {
+      "label": "mistmarsh",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 79,
+      "programs": 79,
+      "calls": 797,
+      "triangles": 3998765,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 54
+    },
+    {
+      "label": "hollow",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 79,
+      "programs": 79,
+      "calls": 618,
+      "triangles": 3394737,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 73
+    },
+    {
+      "label": "night-woods",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 79,
+      "programs": 79,
+      "calls": 665,
+      "triangles": 3225969,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 50
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}

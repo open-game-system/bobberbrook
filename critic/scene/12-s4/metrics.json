@@ -1,0 +1,64 @@
+{
+  "round": "12-s4",
+  "shots": [
+    {
+      "label": "moonwell",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 79,
+      "programs": 79,
+      "calls": 716,
+      "triangles": 2934365,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 97
+    },
+    {
+      "label": "mistmarsh",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 79,
+      "programs": 79,
+      "calls": 797,
+      "triangles": 3988665,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 55
+    },
+    {
+      "label": "hollow",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 79,
+      "programs": 80,
+      "calls": 618,
+      "triangles": 3390157,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 72
+    },
+    {
+      "label": "trail",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 79,
+      "programs": 79,
+      "calls": 658,
+      "triangles": 3027132,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 59
+    },
+    {
+      "label": "night-woods",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 79,
+      "programs": 79,
+      "calls": 665,
+      "triangles": 3218929,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 51
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}

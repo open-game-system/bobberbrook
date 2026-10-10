@@ -1,6 +1,7 @@
 import { BufferAttribute, BufferGeometry, CanvasTexture, Color, DoubleSide, LinearFilter, LinearMipmapLinearFilter, MeshLambertMaterial, SRGBColorSpace, Texture, type InstancedMesh } from "three";
 import { rng } from "./noise";
 import { instanced, type Inst } from "./kit";
+import { cleanCardTexture } from "./cards";
 
 /**
  * Painted plants (round 09-B: "fewer, bigger, fully painted"): a handful of alpha-card plants painted
@@ -364,8 +365,46 @@ function sheetTexture(cv: HTMLCanvasElement): Texture {
   return t;
 }
 
-/** Paints the plant sheet (and its glow sheet) once. */
-export function plantSheet(): PlantSheet {
+/**
+ * Round 12: the Codex-painted plant cards (keyed off black) that replace the code painting where they
+ * read better at TV distance. A kind with no image keeps its painter. The violet glow-cap fills the spare
+ * cell 6 and takes every other plane of a glow-cap cluster.
+ */
+export type PlantImages = Partial<Record<"fern" | "bluebell" | "foxglove" | "grass" | "glowcap" | "glowcapViolet", CanvasImageSource>>;
+const VIOLET_CELL = 6;
+/** Which kinds draw from a Codex image (their geometry follows the image's shape). */
+const painted = new Set<keyof PlantImages>();
+/** How much of an image's brightest strokes self-light (the cap undersides; the bells a little; leaves none). */
+const IMAGE_GLOW: Record<keyof PlantImages, number> = { fern: 0, grass: 0, bluebell: 0.45, foxglove: 0.3, glowcap: 1, glowcapViolet: 1 };
+
+/** Draws an image into a cell, and its glow (the brightest strokes, by luminance, alpha-weighted) into the glow sheet. */
+function imageCell(ctx: Ctx, glow: Ctx, img: CanvasImageSource, x0: number, y0: number, k: number): void {
+  ctx.clearRect(x0, y0, CS, CS);
+  ctx.drawImage(img, x0, y0, CS, CS);
+  if (k <= 0) return;
+  const d = ctx.getImageData(x0, y0, CS, CS);
+  const g = glow.createImageData(CS, CS);
+  const ss = (a: number, b: number, x: number) => {
+    const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  };
+  for (let i = 0; i < CS * CS; i++) {
+    const r = d.data[i * 4]! / 255;
+    const gg = d.data[i * 4 + 1]! / 255;
+    const b = d.data[i * 4 + 2]! / 255;
+    const a = d.data[i * 4 + 3]! / 255;
+    const w = a * ss(0.5, 0.85, Math.max(r, gg, b)) * k;
+    g.data[i * 4] = r * w * 255;
+    g.data[i * 4 + 1] = gg * w * 255;
+    g.data[i * 4 + 2] = b * w * 255;
+    g.data[i * 4 + 3] = 255;
+  }
+  glow.putImageData(g, x0, y0);
+}
+
+/** Paints the plant sheet (and its glow sheet) once; Codex images take their kinds' cells. */
+export function plantSheet(images: PlantImages = {}): PlantSheet {
+  painted.clear();
   if (typeof document === "undefined") {
     const map = new Texture();
     const glow = new Texture();
@@ -386,17 +425,30 @@ export function plantSheet(): PlantSheet {
     gtx.fillRect(0, 0, gv.width, gv.height);
     for (const k of PLANT_KINDS) {
       const i = CELL[k];
-      PAINTERS[k](ctx, gtx, rng(7100 + i * 31), (i % COLS) * CS, Math.floor(i / COLS) * CS);
+      const x0 = (i % COLS) * CS;
+      const y0 = Math.floor(i / COLS) * CS;
+      const img = k === "litter" ? undefined : images[k];
+      if (img && k !== "litter") {
+        imageCell(ctx, gtx, img, x0, y0, IMAGE_GLOW[k]);
+        painted.add(k);
+      } else {
+        PAINTERS[k](ctx, gtx, rng(7100 + i * 31), x0, y0);
+      }
+    }
+    if (images.glowcapViolet && painted.has("glowcap")) {
+      imageCell(ctx, gtx, images.glowcapViolet, (VIOLET_CELL % COLS) * CS, Math.floor(VIOLET_CELL / COLS) * CS, IMAGE_GLOW.glowcapViolet);
+      painted.add("glowcapViolet");
     }
   }
-  const map = sheetTexture(cv);
+  // Codex cards carry the black key in their soft edges: cleaned so mipmaps keep the edge colour.
+  const map = (painted.size > 0 ? cleanCardTexture(cv) : null) ?? sheetTexture(cv);
   const glow = sheetTexture(gv);
   return { map, glow, dispose: () => { map.dispose(); glow.dispose(); } };
 }
 
 /** The cell's uv rectangle (the canvas is flipped: its top row is v = 1). */
-function cellUv(k: PlantKind): { u0: number; u1: number; v0: number; v1: number } {
-  const i = CELL[k];
+function cellUv(k: PlantKind, cell = CELL[k]): { u0: number; u1: number; v0: number; v1: number } {
+  const i = cell;
   const col = i % COLS;
   const row = Math.floor(i / COLS);
   const inset = 1 / (CS * COLS);
@@ -406,13 +458,14 @@ function cellUv(k: PlantKind): { u0: number; u1: number; v0: number; v1: number 
 type Quad = { o: [number, number, number]; right: [number, number, number]; up: [number, number, number] };
 
 /** Cards from quads (origin = bottom centre), shaded dark at the root and full at the tip (baked light). */
-function cards(k: PlantKind, quads: Quad[], rootShade: number): BufferGeometry {
-  const { u0, u1, v0, v1 } = cellUv(k);
+function cards(k: PlantKind, quads: Quad[], rootShade: number, alt?: number): BufferGeometry {
   const pos: number[] = [];
   const nor: number[] = [];
   const uv: number[] = [];
   const col: number[] = [];
-  for (const { o, right, up } of quads) {
+  quads.forEach(({ o, right, up }, qi) => {
+    // Every other plane from the alternate cell (the violet glow-caps among the blue).
+    const { u0, u1, v0, v1 } = cellUv(k, alt !== undefined && qi % 2 === 1 ? alt : CELL[k]);
     const corners: [number, number, number, number][] = [[-1, 0, u0, v0], [1, 0, u1, v0], [1, 1, u1, v1], [-1, 1, u0, v1]];
     for (const q of [0, 1, 2, 0, 2, 3]) {
       const [sx, sy, uu, vv] = corners[q]!;
@@ -423,7 +476,7 @@ function cards(k: PlantKind, quads: Quad[], rootShade: number): BufferGeometry {
       const s = rootShade + (1 - rootShade) * sy;
       col.push(s, s, s);
     }
-  }
+  });
   const g = new BufferGeometry();
   g.setAttribute("position", new BufferAttribute(new Float32Array(pos), 3));
   g.setAttribute("normal", new BufferAttribute(new Float32Array(nor), 3));
@@ -476,12 +529,13 @@ function litterPatch(): BufferGeometry {
 
 export function plantGeometry(k: PlantKind): BufferGeometry {
   switch (k) {
-    case "fern": return fernRosette();
+    // A Codex fern is a whole clump (not one frond): crossed upright cards instead of the rosette.
+    case "fern": return painted.has("fern") ? cards("fern", crossedQuads(1.5, 1.3, 3), 0.7) : fernRosette();
     case "bluebell": return crossed("bluebell", 1.0, 1.0, 3);
-    case "foxglove": return crossed("foxglove", 1.25, 1.7, 3);
-    case "glowcap": return crossed("glowcap", 1.0, 0.9, 2);
+    case "foxglove": return painted.has("foxglove") ? crossed("foxglove", 1.4, 1.6, 3) : crossed("foxglove", 1.25, 1.7, 3);
+    case "glowcap": return painted.has("glowcapViolet") ? cards("glowcap", crossedQuads(1.1, 1.0, 2), 0.72, VIOLET_CELL) : crossed("glowcap", 1.0, 0.9, 2);
     case "litter": return litterPatch();
-    case "grass": return cards("grass", crossedQuads(1.0, 0.52, 3), 0.86);
+    case "grass": return painted.has("grass") ? cards("grass", crossedQuads(1.0, 0.7, 3), 0.86) : cards("grass", crossedQuads(1.0, 0.52, 3), 0.86);
   }
 }
 
