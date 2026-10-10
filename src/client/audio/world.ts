@@ -352,7 +352,9 @@ export function duckMusic(seconds: number): void {
   const a = audio();
   if (!a || !musicBus) return;
   const t = a.ctx.currentTime;
-  musicBus.gain.cancelScheduledValues(t);
+  // Hold the gain where it is before re-ramping: cancelScheduledValues alone jumps it mid-fade, a click
+  // on every narrator line (round 11's 8–9 kHz bursts at hooks and catches).
+  musicBus.gain.cancelAndHoldAtTime(t);
   musicBus.gain.setTargetAtTime(MUSIC_LEVEL * 0.45, t, 0.08);
   musicBus.gain.setTargetAtTime(MUSIC_LEVEL, t + seconds, 0.4);
 }
