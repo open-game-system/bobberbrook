@@ -192,7 +192,9 @@ const config: GameRigInput = {
   },
   // The scene reports its focal rect as {x, y, w, h}.
   focal: "(() => { const r = window.__focalRect?.(); return r ? { x: r.x, y: r.y, width: r.w, height: r.h } : null; })()",
-  chromeArgs: ["--use-angle=metal", "--ignore-gpu-blocklist"],
+  // A fake, timer-driven speaker: with the Mac's coreaudiod hung, every page that made an AudioContext
+  // blocked and the check screens timed out (rounds 14–16).
+  chromeArgs: ["--use-angle=metal", "--ignore-gpu-blocklist", "--disable-audio-output"],
   maxTapsPerScreen: 6,
   holdSelector: "button.action.reel",
   screens: [

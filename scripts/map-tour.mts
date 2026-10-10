@@ -10,7 +10,7 @@ const BASE = process.env.BB_URL ?? "http://127.0.0.1:8841";
 const out = process.argv[2] ?? "recordings/progress/map-tour.mp4";
 const raw = `${out}.raw`;
 mkdirSync(raw, { recursive: true });
-const browser = await chromium.launch({ channel: "chrome", args: ["--autoplay-policy=no-user-gesture-required"] });
+const browser = await chromium.launch({ channel: "chrome", args: ["--autoplay-policy=no-user-gesture-required", "--disable-audio-output"] });
 
 type V = { x: number; z: number };
 type Bb = { lake: () => { fishers: { seat: number; pos: V }[] }; seat: number; nav: (a: V, b: V) => V };

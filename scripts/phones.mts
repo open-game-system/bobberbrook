@@ -9,7 +9,8 @@ import { mkdirSync } from "node:fs";
 const BASE = process.env.BB_URL ?? "http://127.0.0.1:8841";
 const out = process.argv[2] ?? "critic/phones";
 mkdirSync(out, { recursive: true });
-const browser = await chromium.launch({ channel: "chrome" });
+// A fake speaker: a hung coreaudiod otherwise blocks every page that makes an AudioContext.
+const browser = await chromium.launch({ channel: "chrome", args: ["--disable-audio-output"] });
 
 type V = { x: number; z: number };
 const lakeOf = (p: Page) =>

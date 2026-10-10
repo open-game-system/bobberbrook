@@ -68,7 +68,8 @@ const only = typeof args.only === "string" ? args.only.split(",") : null;
 const shots = args.soak ? [] : SHOTS.filter(([s]) => !only || only.includes(s)).slice(0, args.quick ? 4 : undefined);
 
 // Real GPU: full Chromium (not the headless shell, which renders on SwiftShader).
-const flags = ["--use-angle=metal", "--enable-gpu", "--ignore-gpu-blocklist"];
+// --disable-audio-output: a fake speaker, so a hung coreaudiod never blocks the TV page's AudioContext.
+const flags = ["--use-angle=metal", "--enable-gpu", "--ignore-gpu-blocklist", "--disable-audio-output"];
 const SOAKS = ["four-reel", "tower", "boarding"];
 // The soak runs uncapped (no vsync) so frame times measure the real cost; screenshots need vsync.
 const perfFlags = [...flags, "--disable-gpu-vsync", "--disable-frame-rate-limit"];
