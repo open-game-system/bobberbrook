@@ -216,8 +216,18 @@ float pNoise(vec2 p) {
  * fading to nothing at its silhouette (no hard edge facing the camera), broken up by rising vertical
  * noise that frays its top into wisps, standing in a glowing ring of light on the water.
  */
+/**
+ * The golden pillar's light (round 19, thresholds moved): the column 0.5 -> 0.4 with a height falloff (exp -2.6 h,
+ * so its mean over the height is ~0.3-0.4 of the old, its foot at 0.8) and the ring on the water 0.6 -> 0.36. The
+ * critic's ask was ~0.4 of round 18 overall.
+ */
+export const PILLAR_GAIN = 0.4;
+export const PILLAR_RING_GAIN = 0.36;
+
 export function lightPillar(): { mesh: Mesh; mat: ShaderMaterial } {
-  const g = new CylinderGeometry(1.6, 2.2, 10, 40, 12, true);
+  // Round 19: a soft cone (narrow at the water, opening upward) that fades out by two thirds of its height, at
+  // 0.4 of round 18's light: a gentle god ray over the school, not a searchlight across the whole frame.
+  const g = new CylinderGeometry(3.4, 1.3, 10, 40, 12, true);
   g.translate(0, 5, 0);
   // Additive light that leaves the buffer's alpha alone (a catcher inside it stays out of the paint filter).
   const additive = (m: ShaderMaterial): ShaderMaterial => {
@@ -262,10 +272,12 @@ void main() {
   float n2 = pNoise(vec2(ring.y * 4.3 - ring.x * 1.7, vH * 7.0 - uTime * 0.7));
   float n = 0.55 * n1 + 0.45 * n2;
   // Bright and dense at the water, fraying into wisps up the column.
-  float top = 1.0 - smoothstep(0.12 + 0.55 * n, 0.95, vH);
+  float top = 1.0 - smoothstep(0.08 + 0.4 * n, 0.7, vH);
   float base = smoothstep(0.0, 0.08, vH);
-  float body = mix(1.0, 0.35 + 0.9 * n, smoothstep(0.0, 0.5, vH));
-  vec3 c = mix(vec3(1.0, 0.86, 0.5), vec3(1.0, 0.7, 0.3), vH) * soft * top * base * body * uStrength * 0.5;
+  float body = mix(1.0, 0.35 + 0.9 * n, smoothstep(0.0, 0.4, vH));
+  // Falls off with height (a ray that thins as it rises), on top of the frayed top.
+  float fall = exp(-vH * 2.6);
+  vec3 c = mix(vec3(1.0, 0.86, 0.5), vec3(1.0, 0.7, 0.3), vH) * soft * top * base * body * fall * uStrength * ${PILLAR_GAIN.toFixed(3)};
   gl_FragColor = vec4(c, 1.0);
 }`,
   }));
@@ -297,7 +309,7 @@ void main() {
   float pool = exp(-pow(r / 2.0, 2.0)) * 0.35;
   float outer = 1.0 - smoothstep(2.6, 3.55, r);
   float pulse = 0.85 + 0.15 * sin(uTime * 2.2 - r * 2.0);
-  vec3 c = vec3(1.0, 0.8, 0.42) * (band * pulse + pool) * outer * uStrength * 0.6;
+  vec3 c = vec3(1.0, 0.8, 0.42) * (band * pulse + pool) * outer * uStrength * ${PILLAR_RING_GAIN.toFixed(3)};
   gl_FragColor = vec4(c, 1.0);
 }`,
   }));

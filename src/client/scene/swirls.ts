@@ -108,7 +108,12 @@ export class SwirlViews {
         if (s.alpha < 0.3) continue;
         const a = Math.random() * Math.PI * 2;
         const rr = Math.random() * 2.6;
-        if (s.golden) this.fx.sparkle(s.x + Math.cos(a) * rr, 0.25, s.z + Math.sin(a) * rr, 2, 1, 0.85, 0.35, 1.2, 0.5);
+        if (s.golden) {
+          // Round 19: fewer bursting sparkles, more motes rising slowly through the light.
+          if (Math.random() < 0.5) this.fx.sparkle(s.x + Math.cos(a) * rr, 0.25, s.z + Math.sin(a) * rr, 1, 1, 0.85, 0.35, 1.0, 0.4);
+          this.fx.motes(s.x, s.z, 1.8);
+          this.fx.motes(s.x, s.z, 1.8);
+        }
         else if (Math.random() < 0.5) this.fx.sparkle(s.x + Math.cos(a) * rr, 0.15, s.z + Math.sin(a) * rr, 1, 0.85, 1, 1, 0.5, 0.3);
       }
     }

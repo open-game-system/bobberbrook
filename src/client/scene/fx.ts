@@ -132,6 +132,13 @@ export class Fx {
     }
   }
 
+  /** Golden motes rising slowly through a golden swirl's light (round 19), soft dots that drift and fade. */
+  motes(x: number, z: number, radius: number): void {
+    const a = this.r() * Math.PI * 2;
+    const rr = Math.sqrt(this.r()) * radius;
+    this.glow.emit({ x: x + Math.cos(a) * rr, y: 0.2 + this.r() * 0.6, z: z + Math.sin(a) * rr, vx: (this.r() - 0.5) * 0.25, vy: 0.7 + this.r() * 0.9, vz: (this.r() - 0.5) * 0.25, life: 2.2 + this.r() * 1.6, size: 0.12 + this.r() * 0.12, r: 1, g: 0.82 + this.r() * 0.12, b: 0.4, drag: 0.15 });
+  }
+
   /** Gold confetti for a golden-swirl catch. */
   confetti(x: number, y: number, z: number): void {
     const cols: [number, number, number][] = [[1, 0.84, 0.3], [1, 0.95, 0.6], [1, 0.7, 0.2], [1, 1, 1]];
