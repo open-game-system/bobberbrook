@@ -18,7 +18,7 @@ import {
 import { CAST_FLIGHT_MS, CATCH_SHOW_MS, type Fisher, type Lake } from "../../game/lake";
 import { REEL_START, thrashingAt } from "../../game/reel";
 import { fishById } from "../../game/fish";
-import { onDock, type Vec } from "../../game/world";
+import { CAMPFIRE, onDock, type Vec } from "../../game/world";
 import { activeWorld } from "./worldQuery";
 import { FISHER_SCALE, ROD_SEGMENTS, buildFisher, type FisherRig, type RigMaterials } from "./character";
 import { CatchCard, lightPillar, type FishShadows, type FishTextures } from "./fishviz";
@@ -26,6 +26,7 @@ import type { Fx } from "./fx";
 import { damp } from "./noise";
 import { heightAt } from "./terrain";
 import { towerDeckY } from "./vehicles";
+import { aroundFire } from "./campPath";
 import { merge, paint, prep } from "./geo";
 import { layoutTags, type TagBox, type TagShift } from "./tagLayout";
 import { CARD_PX, FISH_PX, holdCard, overhead } from "./holdCard";
@@ -335,6 +336,12 @@ class FisherView {
     const k = far || ride ? 1 : damp(lake.campfire ? 3 : 9, dt);
     this.x += (tx - this.x) * k;
     this.z += (tz - this.z) * k;
+    if (lake.campfire && campSeat && !far && !ride) {
+      // Round the fire to the seat, never through it.
+      const p = aroundFire({ x: px, z: pz }, { x: this.x, z: this.z }, campSeat, CAMPFIRE);
+      this.x = p.x;
+      this.z = p.z;
+    }
     const sp = dt > 0 ? Math.hypot(this.x - px, this.z - pz) / dt : 0;
     this.speed += (sp - this.speed) * damp(10, dt);
     const moving = this.speed > 0.4;

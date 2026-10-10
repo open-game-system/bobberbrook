@@ -1,4 +1,4 @@
-import { AdditiveBlending, BufferAttribute, BufferGeometry, Mesh, ShaderMaterial } from "three";
+import { AddEquation, BufferAttribute, BufferGeometry, CustomBlending, Mesh, OneFactor, ShaderMaterial, SrcAlphaFactor, ZeroFactor } from "three";
 import { rng } from "./noise";
 import { getCards } from "./cards";
 
@@ -149,7 +149,14 @@ export function buildCampfireFx(x: number, y: number, z: number): CampfireFx {
     fragmentShader: FRAG,
     transparent: true,
     depthWrite: false,
-    blending: AdditiveBlending,
+    // Additive light, but the scene buffer's alpha (the character mask, painter.ts) is left as it is: the
+    // flames used to add alpha over a fisher, so the painterly pass smeared them into a see-through ghost.
+    blending: CustomBlending,
+    blendEquation: AddEquation,
+    blendSrc: SrcAlphaFactor,
+    blendDst: OneFactor,
+    blendSrcAlpha: ZeroFactor,
+    blendDstAlpha: OneFactor,
     uniforms: { uTime: { value: 0 }, uFire: { value: 0 }, uPainted: { value: cards ? 1 : 0 }, tFlameA: { value: cards?.flameA ?? null }, tFlameB: { value: cards?.flameB ?? null }, tEmbers: { value: cards?.embers ?? null } },
   });
   const mesh = new Mesh(g, mat);

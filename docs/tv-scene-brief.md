@@ -124,7 +124,9 @@ appear and fade (`since`, `until`), never pop.
   (25 % wide, a touch high) and settles in, never via the establishing view or a parked vehicle.
 - **Catch moment**: an eased push toward the catcher for ~2 s then back, only when one catch is up at a time
   (`catchFocus` drops the push for a catch that ever shares the screen with another).
-- **Campfire** (`lake.campfire`): the camera settles on the campfire; fishers sit around it.
+- **Campfire** (`lake.campfire`): the camera settles on the campfire; fishers sit around it. The seats are a horseshoe 2.9 m out, open on the camera's axis so the fire burns in the gap and never in
+  front of a face (round 13); a fisher walking to a seat goes round the fire (`aroundFire`, 1.7 m clear); the flames add light
+  but never alpha, so the character mask stays intact.
 
 ## HUD (owned by the TV React layer, not the scene)
 

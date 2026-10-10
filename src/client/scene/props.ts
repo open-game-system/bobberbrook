@@ -538,20 +538,28 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   // --- campfire: logs to sit on, fire, string lights ---
   const campParts: BufferGeometry[] = [];
   const campSeats: { x: number; z: number; facing: number }[] = [];
-  const seatAngles = [0.45, 1.25, 2.05, 2.85];
-  seatAngles.forEach((a, i) => {
-    const sx = CAMPFIRE.x + Math.cos(a) * 2.3;
-    const sz = CAMPFIRE.z + Math.sin(a) * 2.3;
+  // A horseshoe open in the middle (round 13: Mom sat straight behind the fire, so its flames, drawn over
+  // her, read as her being see-through; seats were 2.3 m out, inside the flames' reach). The campfire camera
+  // looks from the north (yaw pi + 0.1), so the far side is at angle FAR; nobody sits within 0.6 rad of it.
+  // The inner pair comes first, so two fishers sit either side of the fire, not both on one side.
+  const FAR = Math.atan2(Math.cos(Math.PI + 0.1), Math.sin(Math.PI + 0.1)) + Math.PI;
+  const SEAT_R = 2.9;
+  const seatAngles = [FAR - 0.62, FAR + 0.62, FAR - 1.4, FAR + 1.4];
+  for (const a of seatAngles) {
+    const sx = CAMPFIRE.x + Math.cos(a) * SEAT_R;
+    const sz = CAMPFIRE.z + Math.sin(a) * SEAT_R;
     campSeats.push({ x: sx, z: sz, facing: Math.atan2(CAMPFIRE.z - sz, CAMPFIRE.x - sx) });
-    if (i % 2 === 0) {
-      const lx2 = CAMPFIRE.x + Math.cos(a + 0.55) * 2.5;
-      const lz2 = CAMPFIRE.z + Math.sin(a + 0.55) * 2.5;
-      const log = prep(new CylinderGeometry(0.22, 0.24, 1.6, 9).rotateZ(Math.PI / 2).rotateY(-(a + 0.55) + Math.PI / 2).translate(lx2, heightAt(lx2, lz2) + 0.18, lz2));
-      paint(log, 0x6a4628, 0x8a6038);
-      surf(log, PK.grain, 1);
-      campParts.push(log);
-    }
-  });
+  }
+  // A log behind each side's pair.
+  for (const side of [-1, 1]) {
+    const a = FAR + side * 1.01;
+    const lx2 = CAMPFIRE.x + Math.cos(a) * (SEAT_R + 0.15);
+    const lz2 = CAMPFIRE.z + Math.sin(a) * (SEAT_R + 0.15);
+    const log = prep(new CylinderGeometry(0.22, 0.24, 2.4, 9).rotateZ(Math.PI / 2).rotateY(-a + Math.PI / 2).translate(lx2, heightAt(lx2, lz2) + 0.18, lz2));
+    paint(log, 0x6a4628, 0x8a6038);
+    surf(log, PK.grain, 1);
+    campParts.push(log);
+  }
   for (let i = 0; i < 4; i++) {
     const a = (i / 4) * Math.PI * 2 + 0.3;
     const g = prep(new CylinderGeometry(0.07, 0.09, 0.9, 6).rotateZ(1.1).rotateY(a).translate(CAMPFIRE.x, heightAt(CAMPFIRE.x, CAMPFIRE.z) + 0.22, CAMPFIRE.z));
