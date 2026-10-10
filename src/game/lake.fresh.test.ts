@@ -39,3 +39,18 @@ describe("a golden swirl turns up where the family is", () => {
     expect(l.swirls.find((s) => s.golden)?.area).toBe("mistmarsh");
   });
 });
+
+describe("a golden swirl the family walks away from fades", () => {
+  it("ends once nobody is within reach of it (no stale race calls from a place left behind)", () => {
+    const T0 = 1_000_000;
+    let l: Lake = join(newLake(7, T0), { name: "A", ogsId: null }).lake;
+    l = step(l, T0 + GOLDEN_FIRST_MS + 1);
+    const golden = l.swirls.find((s) => s.golden);
+    expect(golden).toBeDefined();
+    const marsh = worldFor(l.worldSeed).placeById("mistmarsh")!;
+    l = { ...l, discovered: ["moonwell", "mistmarsh"], fishers: l.fishers.map((f) => ({ ...f, pos: { x: marsh.center.x + marsh.pond.r + 4, z: marsh.center.z }, vel: { x: 0, z: 0 } })) };
+    l = step(l, T0 + GOLDEN_FIRST_MS + 5_000);
+    const still = l.swirls.find((s) => s.id === golden!.id);
+    expect(still === undefined || still.until <= T0 + GOLDEN_FIRST_MS + 5_000).toBe(true);
+  });
+});

@@ -45,6 +45,8 @@ export function queueToasts(queue: Toast[], fresh: Toast[]): Toast[] {
   for (const t of fresh) {
     const host = t.kind === "new" && t.fishId && t.seat !== undefined ? out.find((q) => q.kind === "new" && q.also.length < 2) : undefined;
     if (host && t.fishId && t.seat !== undefined) host.also.push({ fishId: t.fishId, seat: t.seat, star: t.star });
+    // A new species jumps the queue: right after the banner on screen (round 19: it waited behind the rod toast).
+    else if (t.kind === "new" && t.star && out.length > 0) out.splice(1, 0, t);
     else out.push(t);
   }
   return out.slice(-4);

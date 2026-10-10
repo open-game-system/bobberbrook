@@ -49,3 +49,13 @@ describe("queueToasts", () => {
     expect(queueToasts(q, [golden]).at(-1)?.kind).toBe("golden");
   });
 });
+
+describe("a new species never waits behind other banners", () => {
+  it("a starred catch goes right after the banner on screen, ahead of queued rod/place/time banners", () => {
+    const up = { id: 1, kind: "upgrade" as const, tier: 1, also: [] };
+    const tod = { id: 2, kind: "tod" as const, also: [] };
+    const newFish = { id: 3, kind: "new" as const, fishId: "ember-shiner", seat: 1, star: true, also: [] };
+    const q = queueToasts([up, tod], [newFish]);
+    expect(q.map((t) => t.id)).toEqual([1, 3, 2]);
+  });
+});

@@ -756,9 +756,15 @@ export function isRevealed(lake: Pick<Lake, "revealed">, p: Vec): boolean {
 }
 
 /** Generated places keep a swirl while someone is there; their swirls fade when everyone is far away (the home valley's stay). */
+/** A golden swirl the whole family has walked this far away from ends (no stale race calls). */
+const GOLDEN_LEFT_BEHIND = 45;
+
 function keepSwirlsNear(d: Draft<Lake>, now: number, w: World): void {
   const kept = keptSwirls(d.swirls, d.fishers);
   if (kept.length !== d.swirls.length) d.swirls = kept;
+  for (const s of d.swirls) {
+    if (s.golden && s.until > now && d.fishers.length > 0 && d.fishers.every((f) => distance(f.pos, s.pos) > GOLDEN_LEFT_BEHIND)) s.until = now;
+  }
   for (const f of d.fishers) {
     const place = w.areaAt(f.pos);
     if (wantsSwirl(d, place)) spawnSwirl(d, now, false, place.id);
