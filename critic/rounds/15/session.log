@@ -1,0 +1,33 @@
+[3.1s] everyone in
+[69.2s] at the water
+[85.0s] Dad casts
+[94.2s] Juneau casts
+[126.5s] Dad no catch (never cast)
+[136.0s] Juneau no catch (never cast)
+[154.6s] Juneau casts
+[155.2s] Dad casts
+[181.3s] Juneau no catch (never cast)
+[186.0s] Dad no catch (never cast)
+[189.8s] explore: trail to Mistmarsh
+[610.7s] found Mistmarsh
+[615.3s] Juneau tagged along
+[704.0s] Juneau casts
+[707.2s] Dad casts
+[740.4s] Juneau no catch (never cast)
+[741.6s] Dad no catch (never cast)
+[759.1s] Juneau casts
+[759.8s] Dad casts
+[791.8s] Juneau no catch (never cast)
+[792.6s] Dad no catch (never cast)
+[798.3s] explore: back to the zeppelin tower
+[1370.1s] short of the zeppelin (bot stuck)
+[1945.1s] zeppelin did not leave
+[2034.6s] Juneau casts
+[2035.7s] Dad casts
+[2066.3s] Dad no catch (never cast)
+[2067.3s] Juneau no catch (never cast)
+[2089.0s] campfire
+locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('button', { name: 'Back to fishing' })
+
