@@ -17,6 +17,7 @@ import { jitter, merge, paint, prep, puffNormals, surf } from "./geo";
 import { PK } from "./painter";
 import { attachFoliage, coniferCards, leafCards, type Puff, type Tier } from "./foliage";
 import { barked } from "./surfaces";
+import { disc, stoneShade, steppingStone, surfBy } from "./decking";
 import { rng, vnoise } from "./noise";
 import { heightAt } from "./terrain";
 import { clearOfTrails } from "./valley";
@@ -55,7 +56,7 @@ function landmarkSpot(c: KitCtx, R: () => number, out: number, island: boolean):
     const th = base + (R() - 0.5) * 0.6;
     const p = at(c.a, th, -Math.min(5.5, c.a.pond.r * 0.36));
     const islet = paint(prep(new SphereGeometry(4.2, 16, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.26, 1)), 0x4a5a5a, 0x5a8a6a, (pp, _n, cc) => cc.multiplyScalar(0.85 + 0.25 * vnoise(pp.x, pp.z, 3)));
-    c.wood.push(put(islet, p.x, p.z, 0, 1, -heightAt(p.x, p.z) - 0.25));
+    c.wood.push(put(surf(islet, PK.moss), p.x, p.z, 0, 1, -heightAt(p.x, p.z) - 0.25));
     return { ...p, th, island: true };
   }
   const f = farSpot(c, R, out, base);
@@ -197,7 +198,7 @@ export function willowKit(c: KitCtx, willowGeo: () => BufferGeometry): void {
   const th0 = -Math.PI / 2 + (R() - 0.5) * 1.6;
   for (let i = 0; i < 6; i++) {
     const p = at(c.a, th0 + i * 0.12, -0.8 - i * 0.7);
-    c.wood.push(put(paint(prep(new CylinderGeometry(0.55, 0.65, 0.4, 9)), 0xd8d0e8, 0xf4f0ff), p.x, p.z, 0, 0.9 + R() * 0.3, -heightAt(p.x, p.z) + 0.02));
+    c.wood.push(put(steppingStone(0xb8b0d0, 0xf4f0ff, i), p.x, p.z, R() * 6, 0.9 + R() * 0.3, -heightAt(p.x, p.z) + 0.02));
   }
   // Lanterns hung from shepherd's crooks along the shore.
   for (let i = 0; i < 5; i++) {
@@ -282,7 +283,7 @@ export function frostKit(c: KitCtx): void {
     const g = new SphereGeometry(r, 12, 5, 0, Math.PI * 2, 0, Math.PI / 2).scale(1.4, 0.32, 0.9);
     jitter(g, 0.1 * r, i + 7);
     g.computeVertexNormals();
-    c.wood.push(put(surf(paint(prep(g), 0xb8c8e4, 0xffffff, (pp, n, cc) => cc.multiplyScalar(0.84 + 0.16 * Math.max(0, n.y))), PK.snow), p.x, p.z, th + Math.PI / 2, 1, -0.12));
+    c.wood.push(put(surf(paint(prep(g), 0x8090c0, 0xf4f8ff, (_pp, n, cc) => cc.multiplyScalar(0.8 + 0.2 * Math.max(0, n.y))), PK.snow), p.x, p.z, th + Math.PI / 2, 1, -0.12));
   }
   const rocks: Inst[] = [];
   for (let i = 0; i < 14; i++) {
@@ -294,7 +295,7 @@ export function frostKit(c: KitCtx): void {
   rm.name = "frost-rocks";
   c.group.add(rm);
   // Snow caps on the rocks (white domes).
-  for (const r of rocks) c.wood.push(put(surf(paint(prep(new SphereGeometry(r.s * 0.95, 9, 5, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.4, 0.85)), 0xe8f0ff, 0xffffff), PK.snow), r.x, r.z, r.ry, 1, r.s * 0.45 - 0.1));
+  for (const r of rocks) c.wood.push(put(surf(paint(prep(new SphereGeometry(r.s * 0.95, 9, 5, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.4, 0.85)), 0x98a6d4, 0xffffff), PK.snow), r.x, r.z, r.ry, 1, r.s * 0.45 - 0.1));
   // Faint blue ice lights in the snow.
   for (let i = 0; i < 6; i++) {
     const p = at(a, R() * Math.PI * 2, 1 + R() * 4);
@@ -385,13 +386,15 @@ function shrine(c: KitCtx, R: () => number): void {
   const p = landmarkSpot(c, R, 2.6, true);
   const dy = p.island ? -heightAt(p.x, p.z) + 0.1 : 0;
   const face = Math.atan2(c.a.center.x - p.x, c.a.center.z - p.z);
+  // Round 13: painted stone (tiles on a lit lip, runestone sides), a carved runestone pedestal, wooden
+  // posts and a shingled roof (was flat vertex colour throughout).
   const parts: BufferGeometry[] = [
-    paint(prep(new CylinderGeometry(1.5, 1.7, 0.5, 8).translate(0, 0.25, 0)), 0x6a6488, 0x8a84a8),
-    paint(prep(new CylinderGeometry(0.5, 0.6, 1.1, 8).translate(0, 1.05, 0)), 0x7a7498, 0x9a94b8),
+    surfBy(disc({ r: 1.7, top: 0.5, bottom: -0.25, lip: 0.12, flare: 0.1, rings: 2 }, 16, stoneShade(0x5a5478, 0x9a94b8)), (_c, n) => (n.y > 0.6 ? PK.tiles : PK.runestone)),
+    surf(paint(prep(new CylinderGeometry(0.5, 0.6, 1.1, 8).translate(0, 1.05, 0)), 0x5a5478, 0x9a94b8), PK.runestone),
   ];
-  for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) parts.push(paint(prep(new CylinderGeometry(0.1, 0.12, 2.6, 6).translate(x, 1.8, z)), 0x4a3220, 0x6a4a30));
-  const roof = new ConeGeometry(2.1, 1.4, 8).translate(0, 3.7, 0);
-  parts.push(paint(prep(roof), 0x3a2a7a, 0x8a6ad0));
+  for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) parts.push(surf(paint(prep(new CylinderGeometry(0.1, 0.12, 2.6, 6).translate(x, 1.8, z)), 0x3a2618, 0x6a4a30), PK.grain));
+  const roof = new ConeGeometry(2.1, 1.4, 8, 3).translate(0, 3.7, 0);
+  parts.push(surf(paint(prep(roof), 0x2e2068, 0x8a6ad0, (pp, _n, cc) => { if (pp.y < 3.05) cc.lerp(new Color(0xd8b878), 0.35); }), PK.shingles));
   parts.push(paint(prep(new SphereGeometry(0.16, 8, 6).translate(0, 4.5, 0)), 0xe8b860));
   c.wood.push(put(merge(parts), p.x, p.z, face + Math.PI / 8, 1.6, dy));
   c.glow.push(put(paint(prep(new SphereGeometry(0.42, 12, 8).translate(0, 2.0, 0)), 0xfff0c8), p.x, p.z, 0, 1.6, dy));
@@ -411,7 +414,7 @@ function spire(c: KitCtx, R: () => number): void {
   }
   c.crystal.push(put(merge(parts), p.x, p.z, R() * 6, 1, -heightAt(p.x, p.z) - 0.2));
   const islet = paint(prep(new SphereGeometry(2.8, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.32, 1)), 0x4a5a6a, 0x6a8a7a);
-  c.wood.push(put(islet, p.x, p.z, 0, 1, -heightAt(p.x, p.z) - 0.25));
+  c.wood.push(put(surf(islet, PK.moss), p.x, p.z, 0, 1, -heightAt(p.x, p.z) - 0.25));
 }
 
 const LANDMARK_BUILD: Record<LandmarkKind, (c: KitCtx, R: () => number) => void> = { giant, arch, shrine, spire };

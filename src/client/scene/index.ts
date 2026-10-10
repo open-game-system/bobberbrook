@@ -187,7 +187,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     setCards(clouds ? { flameA: asCard(kit.flameA.tex), flameB: asCard(kit.flameB.tex), embers: asCard(kit.embers.tex), clouds, poolWarm: asCard(kit.poolWarm.tex), poolCool: asCard(kit.poolCool.tex) } : null);
   }
   setCrystalTexture(kit.crystal);
-  setPaintImages({ planks: imageOf(kit.planks), canvas: imageOf(kit.canvas), shingles: imageOf(kit.shingles), runestone: imageOf(kit.runestone), snow: imageOf(kit.snow) });
+  setPaintImages({ planks: imageOf(kit.planks), canvas: imageOf(kit.canvas), shingles: imageOf(kit.shingles), runestone: imageOf(kit.runestone), snow: imageOf(kit.snow), tiles: imageOf(kit.tiles), rock: imageOf(kit.rock), moss: imageOf(kit.moss) });
   const groundMat = groundMaterial(kit);
   const water = buildWater();
   const ground = buildGroundStream(groundMat, water.sea, jobs, full);

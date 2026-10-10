@@ -1,0 +1,97 @@
+{
+  "round": "13-s1",
+  "shots": [
+    {
+      "label": "far-place",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 77,
+      "programs": 77,
+      "calls": 603,
+      "triangles": 2380728,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 81
+    },
+    {
+      "label": "shore-frost",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 77,
+      "programs": 77,
+      "calls": 624,
+      "triangles": 3109348,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 124
+    },
+    {
+      "label": "shore-ember",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 75,
+      "programs": 75,
+      "calls": 422,
+      "triangles": 2389806,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 93
+    },
+    {
+      "label": "biome-willow",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 75,
+      "programs": 75,
+      "calls": 471,
+      "triangles": 2462000,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 87
+    },
+    {
+      "label": "biome-frost",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 80,
+      "programs": 81,
+      "calls": 748,
+      "triangles": 3785369,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 122
+    },
+    {
+      "label": "tower",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 80,
+      "programs": 80,
+      "calls": 749,
+      "triangles": 3151754,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 88
+    },
+    {
+      "label": "arrival",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 77,
+      "programs": 77,
+      "calls": 652,
+      "triangles": 2939386,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 67
+    },
+    {
+      "label": "mistmarsh",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 80,
+      "programs": 80,
+      "calls": 802,
+      "triangles": 4014733,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 54
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}

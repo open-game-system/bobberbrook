@@ -30,6 +30,7 @@ import { fadeGlowMaterial, jitter, merge, paint, prep, puffNormals, surf } from 
 import { PK } from "./painter";
 import { attachFoliage, leafCards, splitRim, wisteriaCards, type Puff, type Strand } from "./foliage";
 import { barked } from "./surfaces";
+import { PLANK_BOARDS, disc, plankUV, stoneShade, surfBy } from "./decking";
 import { rng, vnoise } from "./noise";
 import { heightAt } from "./terrain";
 import type { TodState } from "./tod";
@@ -185,16 +186,24 @@ function mistmarsh(c: Ctx): void {
     const p = curve.getPointAt(t);
     const tan = curve.getTangentAt(t);
     const ry = Math.atan2(tan.x, tan.z);
-    const g = new BoxGeometry(2.0, 0.1, 0.34);
+    // One painted board per plank (round 13: the boardwalk read flat pink): the kit's board along the
+    // plank, occluded toward the rails and under the edges, worn lighter down the middle of the walk.
+    const g = prep(new BoxGeometry(2.0, 0.1, 0.34, 8, 1, 1));
+    const col = new Color(plankCols[Math.floor(R() * plankCols.length)]!).multiplyScalar(1.15);
+    paint(g, col, col, (pp, n, cc) => {
+      const across = Math.abs(pp.x) / 1.0;
+      cc.multiplyScalar(n.y < 0.5 ? 0.55 : 1.08 - 0.3 * across * across);
+    });
+    plankUV(g, 2.0, 0.34, Math.floor(R() * PLANK_BOARDS.length), R());
     g.rotateY(ry + (R() - 0.5) * 0.05);
     g.translate(p.x, p.y + (R() - 0.5) * 0.03, p.z);
-    c.wood.push(paint(prep(g), plankCols[Math.floor(R() * plankCols.length)]!, 0xffffff, (_pp, n, cc) => { if (n.y < 0.5) cc.multiplyScalar(0.6); }));
+    c.wood.push(g);
     if (i % 7 === 0) {
       for (const side of [-1, 1]) {
         const ox = Math.cos(ry) * side * 1.05;
         const oz = -Math.sin(ry) * side * 1.05;
         const post = new CylinderGeometry(0.11, 0.13, 2.2, 7).translate(p.x + ox, p.y - 0.6, p.z + oz);
-        c.wood.push(paint(prep(post), 0x4a3220, 0x6a4a30));
+        c.wood.push(surf(paint(prep(post), 0x2a1c14, 0x6a4a30), PK.grain));
         const rope = new TorusGeometry(0.13, 0.03, 4, 10).rotateX(Math.PI / 2).translate(p.x + ox, p.y + 0.3, p.z + oz);
         c.wood.push(paint(prep(rope), 0xd8b878));
         if (i % 14 === 0 && side === 1) {
@@ -224,19 +233,24 @@ function mistmarsh(c: Ctx): void {
   const py = heightAt(pv.x, pv.z);
   const face = Math.atan2(a.center.x - pv.x, a.center.z - pv.z);
   const pav: BufferGeometry[] = [];
-  pav.push(paint(prep(new CylinderGeometry(2.8, 3.0, 0.35, 12).translate(0, 0.17, 0)), 0x6a6280, 0x8a84a0));
-  pav.push(paint(prep(new CylinderGeometry(2.6, 2.6, 0.12, 12).translate(0, 0.4, 0)), 0x9a6c46, 0xb07e52));
+  // A painted stone plinth (tiles on top, a lit lip, occluded foot) under a plank floor.
+  pav.push(surfBy(disc({ r: 3.0, top: 0.35, bottom: -0.3, lip: 0.14, flare: 0.15, rings: 3 }, 24, stoneShade(0x5a5478, 0x9a94b8)), (_c, n) => (n.y > 0.6 ? PK.tiles : PK.runestone)));
+  pav.push(surf(disc({ r: 2.6, top: 0.47, bottom: 0.3, lip: 0.06, rings: 4 }, 24, (rho, _h, lip, out) => {
+    out.setHex(0xa07450);
+    // Occluded round the posts' ring and the rail, lighter where people stand.
+    out.multiplyScalar(lip ? 1.25 : 1.06 - 0.32 * Math.max(0, rho - 0.7) / 0.3);
+  }), PK.planks));
   for (let i = 0; i < 6; i++) {
     const ang = (i / 6) * Math.PI * 2;
-    pav.push(paint(prep(new CylinderGeometry(0.13, 0.16, 3.0, 7).translate(Math.cos(ang) * 2.3, 1.9, Math.sin(ang) * 2.3)), 0x4a2c3a, 0x6a3c4a));
-    if (i !== 0) pav.push(paint(prep(new BoxGeometry(2.3, 0.1, 0.1).rotateY(-ang - Math.PI / 2 - Math.PI / 6).translate(Math.cos(ang + Math.PI / 6) * 2.0, 1.1, Math.sin(ang + Math.PI / 6) * 2.0)), 0x5a3a2a));
+    pav.push(surf(paint(prep(new CylinderGeometry(0.13, 0.16, 3.0, 7).translate(Math.cos(ang) * 2.3, 1.9, Math.sin(ang) * 2.3)), 0x3a2230, 0x6a3c4a), PK.grain));
+    if (i !== 0) pav.push(surf(paint(prep(new BoxGeometry(2.3, 0.1, 0.1).rotateY(-ang - Math.PI / 2 - Math.PI / 6).translate(Math.cos(ang + Math.PI / 6) * 2.0, 1.1, Math.sin(ang + Math.PI / 6) * 2.0)), 0x5a3a2a), PK.grain, 1));
   }
   const prof: Vector2[] = [new Vector2(4.0, 0.45), new Vector2(3.8, 0.0)];
   for (let i = 1; i <= 12; i++) {
     const t = i / 12;
     prof.push(new Vector2(Math.max(0.02, 3.8 * Math.pow(1 - t, 2.0)), 3.4 * t));
   }
-  pav.push(paint(prep(new LatheGeometry(prof.reverse(), 12).translate(0, 3.35, 0)), 0x4e3a9a, 0xa88ae8, (p, _n, cc) => cc.multiplyScalar(0.82 + 0.16 * Math.abs(Math.sin((p.y - 3.35) * 7.5)))));
+  pav.push(surf(paint(prep(new LatheGeometry(prof.reverse(), 12).translate(0, 3.35, 0)), 0x3e2e88, 0xa88ae8, (p, _n, cc) => cc.multiplyScalar(0.86 + 0.14 * Math.abs(Math.sin((p.y - 3.35) * 7.5)))), PK.shingles));
   pav.push(paint(prep(new ConeGeometry(0.1, 0.9, 6).translate(0, 7.1, 0)), 0xd8c070));
   const pavGeo = merge(pav);
   c.wood.push(place(pavGeo, pv.x, pv.z, face, 1, py - heightAt(pv.x, pv.z)));

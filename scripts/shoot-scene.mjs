@@ -23,6 +23,8 @@ mkdirSync(out, { recursive: true });
 const SHOTS = [
   ["moonwell", null, true],
   ["far-place", null, true],
+  ["shore-frost", null, true],
+  ["shore-ember", null, true],
   ["biome-willow", null, true],
   ["biome-crystal", null, true],
   ["biome-ember", null, true],

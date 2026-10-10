@@ -32,6 +32,11 @@ by a cloud GPU Chrome and streamed to a Chromecast. References: `concept/web/*.j
   Codex cards (the code-painted fern rosette and grass stay: the Codex ones carpeted the foreground); crystals
   carry the crystal texture as an emissive gradient map (`crystal.ts`); pools of moonlight (pool-cool, additive,
   by moon) lie on the Moonwell lawn and in each clearing. Not used: embers-logs, forest-floor, glow-moss.
+- **Painted ground underfoot** (round 13, `decking.ts`): everything the family stands on is painted. Boardwalk
+  planks each carry one board of the Codex planks along the walk (explicit texture coordinates: `aPaint.x >= PK_UV`);
+  decks, plinths, stepping stones and terraces are lathe-turned discs (`disc`) with a bevelled lip that takes a painted
+  highlight and baked occlusion at the foot and under rails; the prop array adds stone tiles, rock and moss layers
+  (tops and sides picked per triangle, `surfBy`); shrine and pavilion roofs are shingled.
 - **Fewer, bigger, painted plants** (round 09-B): no carpet of small glossy props. Ground flora is a
   few clumps of painted alpha-card plants (`src/client/scene/plants.ts`: ferns, bluebells, foxgloves,
   glow-cap clusters, fallen-leaf drifts; canvas brushwork, matte, wind sway, only bell mouths and cap

@@ -2,6 +2,8 @@ import { BufferAttribute, BufferGeometry, Color, CylinderGeometry, Mesh, SphereG
 import { pondRadius, type PondPlace } from "../../game/world";
 import { instanced, reedGeometry, rockGeometry, type Inst } from "./kit";
 import { jitter, paint, prep } from "./geo";
+import { PK } from "./painter";
+import { disc, steppingStone, surfBy } from "./decking";
 import { rng, vnoise } from "./noise";
 import { heightAt } from "./terrain";
 import { clearOfTrails } from "./valley";
@@ -20,10 +22,10 @@ export type ShoreFeature = "sandbar" | "cove" | "terraces" | "reeds" | "stones" 
 const FEATURES: ShoreFeature[] = ["sandbar", "cove", "terraces", "reeds", "stones", "brook"];
 
 /** Snow, sand and grass by biome: the same shapes wear the place's own ground. */
-type Palette = { sand: [number, number]; grass: [number, number]; rock: Color; reed: boolean };
+type Palette = { sand: [number, number]; grass: [number, number]; rock: Color; reed: boolean; snow?: boolean };
 function paletteOf(biome: string): Palette {
   switch (biome) {
-    case "frost": return { sand: [0xd8e4f4, 0xf6faff], grass: [0xc8d6ea, 0xf2f6ff], rock: new Color(1.1, 1.15, 1.3), reed: false };
+    case "frost": return { sand: [0xd8e4f4, 0xf6faff], grass: [0xc8d6ea, 0xf2f6ff], rock: new Color(1.1, 1.15, 1.3), reed: false, snow: true };
     case "ember": return { sand: [0xb07a50, 0xe0b080], grass: [0x6a6a3a, 0xa09050], rock: new Color(1.05, 0.9, 0.85), reed: true };
     case "crystal": return { sand: [0xa8b8d8, 0xe0e8ff], grass: [0x3a6a7a, 0x6aa8b0], rock: new Color(0.95, 1.0, 1.2), reed: false };
     case "hollow": return { sand: [0x4a4a7a, 0x7a7ab0], grass: [0x1e3e58, 0x3a6a7a], rock: new Color(0.7, 0.75, 0.95), reed: true };
@@ -108,12 +110,18 @@ function terraces(c: ShoreCtx, R: () => number, th: number, pal: Palette): void 
     const p = at(c.a, th + (R() - 0.5) * 0.2, 2.5 + k * 2.6);
     const top = heightAt(p.x, p.z) + 0.7 + k * 0.75;
     const r = 4.2 - k * 0.7;
-    const g = new CylinderGeometry(r, r + 0.3, top + 1.2, 18, 2);
-    jitter(g, 0.12, k + 3);
-    g.computeVertexNormals();
-    c.wood.push(put(paint(prep(g), 0x5a4a3a, 0x7a6450, (pp, n, cc) => {
-      if (n.y > 0.6) cc.setHex(pal.grass[1]).lerp(new Color(pal.grass[0]), 0.5 * vnoise(pp.x, pp.z, 9));
-    }), p.x, (top - 1.2) / 2, p.z, R() * 6));
+    // Round 13: a turned terrace with a painted lip: moss (or snow) on top, painted earth and rock down
+    // the side, occluded at the foot (was a flat-coloured cylinder).
+    const half = (top + 1.2) / 2;
+    const g = disc({ r, top: half, bottom: -half, lip: 0.35, flare: 0.3, rings: 4 }, 22, (rho, h, lip, out) => {
+      if (h > 0.97 || lip) {
+        out.setHex(pal.grass[1]).lerp(new Color(pal.grass[0]), 0.35 + 0.25 * rho);
+        if (lip) out.lerp(new Color(0xffffff), 0.18);
+      } else out.setHex(0x4a3c30).lerp(new Color(0x7a6450), h).multiplyScalar(0.6 + 0.4 * h);
+    });
+    jitter(g, 0.08, k + 3);
+    surfBy(g, (_c, n) => (n.y > 0.55 ? (pal.snow ? PK.snow : PK.moss) : PK.rock));
+    c.wood.push(put(g, p.x, (top - 1.2) / 2, p.z, R() * 6));
   }
 }
 
@@ -144,7 +152,10 @@ function stones(c: ShoreCtx, R: () => number, th: number, pal: Palette): void {
     const t = i / n;
     const x = start.x + (end.x - start.x) * t + Math.sin(t * 6) * 0.5;
     const z = start.z + (end.z - start.z) * t + Math.cos(t * 5) * 0.4;
-    c.wood.push(put(paint(prep(new CylinderGeometry(0.55 + R() * 0.15, 0.7, 0.35, 9)), 0x6a6488, 0xb8b4d0), x, 0.06, z, R() * 6));
+    const st = steppingStone(0x6a6488, 0xb8b4d0, i + 11);
+    const s0 = 0.9 + R() * 0.25;
+    st.scale(s0, 1, s0);
+    c.wood.push(put(st, x, 0.06, z, R() * 6));
   }
   c.wood.push(put(mound(2.4, 0.7, pal.grass[0], pal.grass[1], 50), end.x, -0.25, end.z));
 }

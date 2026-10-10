@@ -30,6 +30,7 @@ import type { Platform } from "../../game/regions";
 import { blob } from "./kit";
 import { fadeGlowMaterial, jitter, merge, paint, prep, puffNormals, surf } from "./geo";
 import { PK } from "./painter";
+import { disc } from "./decking";
 import { buildCloudCards } from "./clouds";
 import { surfaceMaterial, tiled } from "./surfaces";
 import { rng, vnoise } from "./noise";
@@ -339,11 +340,14 @@ function towerGeometry(): { body: BufferGeometry; fade: BufferGeometry; glow: Bu
     stoneParts.push(paint(prep(new CylinderGeometry(r, r + 0.08, h + 1.2, 32).translate(0, (h + 1.2) / 2 - 1.2, 0)), 0x7a6e98, 0xa89cc8, stone));
   }
   // The wooden deck: planks round the centre.
-  parts.push(paint(prep(surf(new CylinderGeometry(DECK_R + 0.2, DECK_R + 0.2, 0.22, 40).translate(0, DECK_H - 0.08, 0), PK.planks)), 0xb88a58, 0xd0a070, (p, _n, c) => {
-    const a = Math.atan2(p.z, p.x);
-    if (Math.abs(((a / (Math.PI * 2)) * 48) % 1) < 0.1) c.multiplyScalar(0.78);
-    if (Math.hypot(p.x, p.z) > DECK_R - 0.2) c.setHex(0x8a5a38);
-  }));
+  // Round 13: a turned deck with a painted lip (the light catches its edge), occluded round the mast foot
+  // and under the rail, worn lighter where people stand.
+  parts.push(surf(disc({ r: DECK_R + 0.2, top: DECK_H + 0.03, bottom: DECK_H - 0.19, lip: 0.12, rings: 6 }, 48, (rho, _h, lip, c) => {
+    c.setHex(0xb07642);
+    if (lip) c.setHex(0xd8a470);
+    else if (rho > 0.97) c.setHex(0x5a3820);
+    else c.multiplyScalar((0.66 + 0.34 * Math.min(1, Math.max(0, (rho - 0.2) / 0.25))) * (1.0 - 0.32 * Math.max(0, rho - 0.82) / 0.15));
+  }), PK.planks));
   // A rail in eight arcs, open toward every mooring direction (multiples of 45 degrees).
   const RAIL = DECK_R + 0.05;
   const gap = 0.17;
@@ -369,7 +373,11 @@ function towerGeometry(): { body: BufferGeometry; fade: BufferGeometry; glow: Bu
   }
   // The mooring mast: a slender carved trunk with a lantern crown under a swept elven roof.
   const MH = 17;
-  parts.push(paint(prep(new CylinderGeometry(1.25, 1.4, 0.55, 16).translate(0, DECK_H + 0.27, 0)), 0x8a5a38, 0xa87a50));
+  parts.push(surf(disc({ r: 1.3, top: DECK_H + 0.55, bottom: DECK_H, lip: 0.12, flare: 0.12, rings: 2 }, 18, (rho, h, lip, c) => {
+    c.setHex(0x8a5a38).lerp(new Color(0xa87a50), h);
+    if (lip) c.lerp(new Color(0xf0c890), 0.4);
+    c.multiplyScalar(0.7 + 0.3 * Math.min(1, h * 2) * (rho < 0.3 ? 0.8 : 1));
+  }), PK.grain, 1));
   fade.push(paint(prep(surf(new CylinderGeometry(0.32, 0.55, MH, 10).translate(0, DECK_H + MH / 2, 0), PK.grain)), 0x4a3220, 0x7a5a38));
   for (const y of [4, 8.5, 12.5]) fade.push(paint(prep(new TorusGeometry(0.5 - y * 0.012, 0.09, 5, 14).rotateX(Math.PI / 2).translate(0, DECK_H + y, 0)), 0xd8a848));
   parts.push(paint(prep(new CylinderGeometry(1.5, 1.2, 0.25, 14).translate(0, DECK_H + MH - 1.2, 0)), 0x8a5a38, 0xa87a50));

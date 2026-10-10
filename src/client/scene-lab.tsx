@@ -12,6 +12,9 @@ import { thrashingAt } from "../game/reel";
 import { AREAS, DOCK, TRAILS, areaAt, areaById, castRing, castRingIn, distance, lakeRadius, pondRadius, type AreaId, type Vec } from "../game/world";
 import { worldFor, type Biome, type Place, type Platform } from "../game/regions";
 import { createLakeScene } from "./scene";
+import { landmarkFor } from "./scene/biomes";
+import { shoreFeatures, type ShoreFeature } from "./scene/shores";
+import { placeHash } from "./scene/valley";
 
 type Bot = { stay: boolean; noHook: boolean; target: Vec; hookAt: number; nextCastAt: number; stick: { x: number; y: number }; holding: boolean; reactAt: number; wander: boolean };
 type Scenario = {
@@ -112,6 +115,19 @@ function findPlatform(kind: "boat" | "zeppelin"): Platform {
   }
   throw new Error(`no ${kind} in this world`);
 }
+/** A generated place of a biome whose shore has one of `feats` (and the landmark, if asked); else the biome's first. */
+function findShore(biome: Biome, feats: ShoreFeature[], landmark: string | null): Place {
+  const ok = (p: Place) => p.biome === biome && shoreFeatures(Math.floor(placeHash(p.key, 5) * 1000)).some((f) => feats.includes(f));
+  const lm = (p: Place) => !landmark || landmarkFor(p.biome, placeHash(p.key, 6)) === landmark;
+  for (const test of [(p: Place) => ok(p) && lm(p), ok, (p: Place) => p.biome === biome]) {
+    try {
+      return findPlace(test);
+    } catch {
+      // try the next, looser test
+    }
+  }
+  throw new Error(`no ${biome} place in this world`);
+}
 /** The family fishing at a generated place (found, its fog lifted). */
 function atPlace(p: Place, phase: number): Scenario {
   // Where along the near shore they settle, and how spread, varies by place (not always a row).
@@ -159,6 +175,10 @@ const rideK = (l: Lake) => (l.ride ? (l.now - l.ride.departAt) / (l.ride.arriveA
 const LAZY: Record<string, () => Scenario> = {
   ...BIOME_SCENES,
   "far-place": () => atPlace(findPlace((p) => p.ring === 4), 0.32),
+  // Round 13: the painted surfaces the family stands near at generated places: a frost place with the
+  // lantern shrine and stepping stones or terraces (Winterglow in round 12), an ember place with terraces.
+  "shore-frost": () => atPlace(findShore("frost", ["stones", "terraces"], "shrine"), 0.3),
+  "shore-ember": () => atPlace(findShore("ember", ["terraces"], null), 0.3),
   // Mid-sea and mid-air: boarded by the real rules, then fast-forwarded to the middle of the ride.
   "boat-ride": () => atPlatform(findPlatform("boat"), 0.3, (l) => rideK(l) > 0.42, (l, now, s) => now - s > 3000 && l.ride !== null),
   "zeppelin-ride": () => atPlatform(findPlatform("zeppelin"), 0.36, (l) => rideK(l) > 0.4, (l, now, s) => now - s > 3000 && l.ride !== null),

@@ -9,16 +9,21 @@ import { rng } from "./noise";
  */
 
 /** Surface kinds (the texture-array layer; NONE = no painted detail, e.g. faces and glass). */
-export const PK = { brush: 0, grain: 1, planks: 2, cloth: 3, canvas: 4, shingles: 5, runestone: 6, snow: 7, none: 8 } as const;
+export const PK = { brush: 0, grain: 1, planks: 2, cloth: 3, canvas: 4, shingles: 5, runestone: 6, snow: 7, tiles: 8, rock: 9, moss: 10, none: 11 } as const;
 export type PaintKind = (typeof PK)[keyof typeof PK];
-const LAYERS = 8;
+const LAYERS = 11;
+/**
+ * aPaint.x at or above this marks explicit texture coordinates (aPaint.yz) on layer x - PK_UV, instead of
+ * the triplanar projection: boards that follow a curved boardwalk, one painted board per plank (round 13).
+ */
+export const PK_UV = 16;
 
 /**
  * Round 11: the Codex-painted kit (public/art/textures) replaces the code-painted planks and canvas and
  * adds shingles, runestone and snow layers. Set before the first painted program compiles; a kind with no
  * image keeps its code painting (planks, canvas) or the generic brushwork.
  */
-export type PaintImages = Partial<Record<"planks" | "canvas" | "shingles" | "runestone" | "snow", CanvasImageSource>>;
+export type PaintImages = Partial<Record<"planks" | "canvas" | "shingles" | "runestone" | "snow" | "tiles" | "rock" | "moss", CanvasImageSource>>;
 let images: PaintImages = {};
 export function setPaintImages(i: PaintImages): void {
   images = i;
@@ -279,7 +284,7 @@ export function paintArray(): PaintArray {
     const im = images[k];
     return im ? (ctx: Ctx) => ctx.drawImage(im, 0, 0, S, S) : fallback;
   };
-  const painters = [paintBrush, paintGrain, img("planks", paintPlanks), paintCloth, img("canvas", paintCanvas), img("shingles", paintBrush), img("runestone", paintBrush), img("snow", paintBrush)];
+  const painters = [paintBrush, paintGrain, img("planks", paintPlanks), paintCloth, img("canvas", paintCanvas), img("shingles", paintBrush), img("runestone", paintBrush), img("snow", paintBrush), img("tiles", paintBrush), img("rock", paintBrush), img("moss", paintBrush)];
   const c = canvas();
   const inv: Vector3[] = [];
   let data: Uint8Array;
@@ -386,17 +391,19 @@ export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexSh
       "#include <color_fragment>",
       `#include <color_fragment>
   {
-    float pk = floor(vPk.x + 0.5);
-    if (pk < 7.5) {
+    float pkRaw = floor(vPk.x + 0.5);
+    bool pkUv = pkRaw > ${PK_UV - 0.5};
+    float pk = pkUv ? pkRaw - ${PK_UV.toFixed(1)} : pkRaw;
+    if (pk < ${LAYERS - 0.5}) {
       vec3 n = normalize(vPkN);
       vec3 tx;
       // Per kind: triplanar scale (per metre) and detail strength (brush grain planks cloth canvas
-      // shingles runestone snow).
-      const float SCS[8] = float[8](0.8, 1.2, 0.36, 1.6, 1.0, 0.42, 0.45, 0.3);
-      const float STR[8] = float[8](0.55, 0.92, 0.72, 0.9, 0.75, 0.92, 0.9, 0.8);
+      // shingles runestone snow tiles rock moss).
+      const float SCS[${LAYERS}] = float[${LAYERS}](0.8, 1.2, 0.36, 1.6, 1.0, 0.42, 0.45, 0.4, 0.42, 0.5, 0.4);
+      const float STR[${LAYERS}] = float[${LAYERS}](0.55, 0.92, 0.72, 0.9, 0.75, 0.92, 0.9, 1.0, 0.9, 0.9, 0.85);
       int ki = int(pk);
-      if (pk > 3.5 && pk < 4.5) {
-        tx = texture(tPk, vec3(vPk.yz, 4.0)).rgb;
+      if (pkUv || (pk > 3.5 && pk < 4.5)) {
+        tx = texture(tPk, vec3(vPk.yz, pk)).rgb;
       } else {
         vec3 w = pow(abs(n), vec3(4.0)); w /= (w.x + w.y + w.z + 1e-4);
         float sc = SCS[ki];
