@@ -23,11 +23,11 @@ import {
   type ShaderMaterial as SM,
 } from "three";
 import { pondRadius, type Area, type AreaId, type PondPlace } from "../../game/world";
-import { cliffRockGeometry, crystalShard, instanced, rockGeometry, type Inst } from "./kit";
+import { RIM_SHARE, cliffRockGeometry, crystalShard, instanced, rockGeometry, type Inst } from "./kit";
 import { poolMesh } from "./pools";
 import { fadeGlowMaterial, jitter, merge, paint, prep, puffNormals, surf } from "./geo";
 import { PK } from "./painter";
-import { attachFoliage, hangingCards, leafCards, type Puff, type Strand } from "./foliage";
+import { attachFoliage, hangingCards, leafCards, splitRim, type Puff, type Strand } from "./foliage";
 import { barked } from "./surfaces";
 import { rng, vnoise } from "./noise";
 import { heightAt } from "./terrain";
@@ -107,7 +107,8 @@ export function willowGeometry(seed: number): BufferGeometry {
     r();
     strands.push({ x: Math.cos(a) * rr, y: 6.9 - (rr - 3.4) * 0.35, z: Math.sin(a) * rr, len, w, ox: Math.cos(a), oz: Math.sin(a) });
   }
-  return attachFoliage(barked(wood, parts), merge([cards, hangingCards(strands, 0x4a3478, 0xd0b4ff, seed * 17)]), "violet");
+  const [body, rimCards] = splitRim(cards, 0, 6.8, 0, RIM_SHARE);
+  return attachFoliage(barked(wood, parts), merge([body, hangingCards(strands, 0x4a3478, 0xd0b4ff, seed * 17)]), "violet", [rimCards, "glow"]);
 }
 
 /** A birch: a slim white trunk with dark marks, a light lavender crown. */
@@ -133,7 +134,8 @@ export function birchGeometry(seed: number): BufferGeometry {
   });
   parts.push(crown);
   const cards = leafCards(blobs.map(([x = 0, y = 0, z = 0, rr = 1]): Puff => [x, y, z, rr]), { cx: 0, cy: 5.8, cz: 0, size: 1.0, density: 2.2, inner: 0x7a5ab8, outer: 0xd0b0ff, top: 0xf0dcff, seed: seed * 13 + 1 });
-  return attachFoliage(merge(parts), cards, "violet");
+  const [body, rimCards] = splitRim(cards, 0, 5.8, 0, RIM_SHARE);
+  return attachFoliage(merge(parts), body, "violet", [rimCards, "glow"]);
 }
 
 /** A tall wooden post with a hanging amber lantern; the glass is a separate glow part. */

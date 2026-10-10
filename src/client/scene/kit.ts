@@ -19,7 +19,7 @@ import {
 import { rng, vnoise } from "./noise";
 import { jitter, merge, paint, prep, puffNormals, surf } from "./geo";
 import { PK } from "./painter";
-import { attachFoliage, coniferCards, foliageOf, hangingCards, leafCards, type Puff, type Strand, type Tier } from "./foliage";
+import { attachFoliage, coniferCards, foliageOf, hangingCards, leafCards, splitRim, type Puff, type Strand, type Tier } from "./foliage";
 import { barked, markRock, surfaceMaterial } from "./surfaces";
 import { rim } from "./matte";
 
@@ -74,6 +74,9 @@ export function blob(r: number, x: number, y: number, z: number, seed: number, w
   return prep(g);
 }
 
+/** Share of a canopy's leaf cards on its rim that take the glow sheet (round 12). */
+export const RIM_SHARE = 0.22;
+
 /** Canopy colours: bottom, top, sunlit tips. 0 violet, 1 teal, 2 rose. */
 export const CANOPY: [number, number, number][] = [
   [0x2a1f5c, 0x8a62d0, 0xc8a4ff],
@@ -101,7 +104,8 @@ export function oakGeometry(variant = 0): BufferGeometry {
   const cards = leafCards(blobs.map(([x, y, z, r]): Puff => [x, y, z, r]), {
     cx: 0, cy: 4.0, cz: 0, size: 1.15, density: 2.2, inner: CANOPY[variant]![0]!, outer: CANOPY[variant]![1]!, top: CANOPY[variant]![2]!, seed: 11 + variant,
   });
-  return attachFoliage(barked([trunk, roots], [canopy]), cards, "violet");
+  const [body, rimCards] = splitRim(cards, 0, 4.0, 0, RIM_SHARE);
+  return attachFoliage(barked([trunk, roots], [canopy]), body, variant === 1 ? "teal" : "violet", [rimCards, "glow"]);
 }
 
 /** A colossal ancient tree: flared roots, a leaning trunk, a mushroom-like canopy, hanging leaf strands. */
@@ -174,7 +178,8 @@ export function giantGeometry(variant: number): BufferGeometry {
     r();
     strands.push({ x: Math.cos(a) * rr, y: 16.9 - rr * 0.08, z: Math.sin(a) * rr, len, w, ox: Math.cos(a), oz: Math.sin(a) });
   }
-  return attachFoliage(barked(wood, parts), merge([cards, hangingCards(strands, 0x5a3a8a, 0xd8b8ff, 900 + variant)]), "violet");
+  const [body, rimCards] = splitRim(cards, 0, 18, 0, RIM_SHARE);
+  return attachFoliage(barked(wood, parts), merge([body, hangingCards(strands, 0x5a3a8a, 0xd8b8ff, 900 + variant)]), variant === 1 ? "teal" : "violet", [rimCards, "glow"]);
 }
 
 export function mushroomGeometry(): BufferGeometry {

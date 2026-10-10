@@ -31,8 +31,8 @@ import { buildProps } from "./props";
 import { buildSky } from "./sky";
 import { SwirlViews } from "./swirls";
 import { buildGroundStream } from "./terrain";
-import { imageOf, loadPaintKit } from "./paintkit";
-import { asCard, cloudSheetOf, needleSheetOf, setCards } from "./cards";
+import { imageOf, loadPaintKit, type PaintTex } from "./paintkit";
+import { asCard, cleanCardOf, cloudSheetOf, needleSheetOf, setCards } from "./cards";
 import { groundMaterial } from "./groundmat";
 import { leafMaterial, setFoliageMaterials } from "./foliage";
 import { CHAR_LIGHT, needleSheet, setPaintImages } from "./painter";
@@ -126,6 +126,8 @@ function swayMaterial(time: { value: number }): MeshLambertMaterial {
   return m;
 }
 
+/** Night self-light of the glow-rim leaves (round 12). */
+const LEAF_GLOW = 0.9;
 /** Character night light strengths (fill: warm lantern from the camera side; rim: cool moon edge). */
 const CHAR_NIGHT = { fill: 0.55, rim: 0.35, fire: 0.7 };
 const tmpFire = new Color();
@@ -200,6 +202,13 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   // Lamps, lantern posts and their glass, wherever they are built, dissolve through the same fade.
   registerFade(treeMat, occ);
   // Leaf cards for every canopy built from here on (one program for both leaf sheets).
+  const leafGlow = { value: 0 };
+  /** A kit card cleaned for mipmaps (falls back to the raw texture). */
+  const cleanPaint = (t: PaintTex): PaintTex => {
+    const img = imageOf(t);
+    const c = img ? cleanCardOf(img) : null;
+    return c ? { tex: c, inv: t.inv } : t;
+  };
   // Round 12: the Codex needle sprays (green, and snow-laden in frost) replace the code-painted sheet.
   const sprayImg = imageOf(kit.pineSpray);
   const snowImg = imageOf(kit.pineSnow);
@@ -211,6 +220,10 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     fern: leafMaterial(kit.leavesFern, occ, time),
     needle: leafMaterial(needleTex, occ, time),
     needleSnow: leafMaterial(snowTex ? { tex: snowTex, inv: kit.pineSnow.inv } : needleTex, occ, time, { hue: 0.7 }),
+    // Round 12: teal canopies take the painted teal sheet; every canopy's rim takes the glow sheet,
+    // which lights its bright strokes at night (leafGlow follows the moon).
+    teal: leafMaterial(cleanPaint(kit.leavesTeal), occ, time),
+    glow: leafMaterial(cleanPaint(kit.leavesGlow), occ, time, { hue: 0.6, glow: leafGlow }),
   };
   setFoliageMaterials(leafMats);
   // Painted rock on every boulder and cliff, painted bark on trunks, stone tiles on the tower dais.
@@ -353,6 +366,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     // the rim a cool edge on the side away from it.
     CHAR_LIGHT.fill.value.setRGB(1.0, 0.64, 0.36).multiplyScalar(CHAR_NIGHT.fill * tod.moon * (1 - campLight));
     CHAR_LIGHT.fill.value.add(tmpFire.setRGB(1.0, 0.52, 0.24).multiplyScalar(CHAR_NIGHT.fire * campLight));
+    leafGlow.value = LEAF_GLOW * tod.moon;
     CHAR_LIGHT.rim.value.setRGB(0.42, 0.6, 1.0).multiplyScalar(CHAR_NIGHT.rim * Math.max(tod.moon, campLight));
   };
 
@@ -769,8 +783,10 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       leafMats.fern.dispose();
       leafMats.needle.map?.dispose();
       leafMats.needle.dispose();
-      leafMats.needleSnow.map?.dispose();
-      leafMats.needleSnow.dispose();
+      for (const m of [leafMats.needleSnow, leafMats.teal, leafMats.glow]) {
+        m.map?.dispose();
+        m.dispose();
+      }
       setFoliageMaterials(null);
       for (const m of Object.values(surfMats)) m.dispose();
       setSurfaceMaterials(null);

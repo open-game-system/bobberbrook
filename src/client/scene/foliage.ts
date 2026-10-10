@@ -323,7 +323,8 @@ export function leafMaterial(tex: PaintTex, occ: OccluderUniforms, time: { value
       .replace(
         "#include <emissivemap_fragment>",
         `#include <emissivemap_fragment>
-  totalEmissiveRadiance += uLeafGlow * vColor.rgb * leafTex.rgb * smoothstep(0.25, 0.85, pkLum(leafTex.rgb));`,
+  vec3 leafLit = leafTex.rgb * uLeafInv;
+  totalEmissiveRadiance += uLeafGlow * vColor.rgb * leafLit * smoothstep(0.8, 1.7, pkLum(leafLit));`,
       )
       // Both faces take the crown's normal (a card seen from behind is not a dark hole in the canopy).
       .replace("#include <normal_fragment_begin>", "#include <normal_fragment_begin>\n  normal = normalize(vNormal);");
@@ -336,4 +337,45 @@ export function leafMaterial(tex: PaintTex, occ: OccluderUniforms, time: { value
   };
   m.customProgramCacheKey = () => "bobber-leaf";
   return m;
+}
+
+/**
+ * Splits a canopy's leaf cards into its body and its rim (round 12): the share of cards furthest out
+ * from the crown centre, weighted to the top, become the glow-rim set (leaves-glow), so a night canopy
+ * keeps lit edges instead of going one indigo. Six vertices per card, as leafCards builds them.
+ */
+export function splitRim(g: BufferGeometry, cx: number, cy: number, cz: number, share: number): [BufferGeometry, BufferGeometry] {
+  const pos = g.getAttribute("position");
+  const n = Math.floor(pos.count / 6);
+  const score: [number, number][] = [];
+  for (let i = 0; i < n; i++) {
+    let x = 0;
+    let y = 0;
+    let z = 0;
+    for (let k = 0; k < 6; k++) {
+      x += pos.getX(i * 6 + k) / 6;
+      y += pos.getY(i * 6 + k) / 6;
+      z += pos.getZ(i * 6 + k) / 6;
+    }
+    const d = Math.hypot(x - cx, y - cy, z - cz);
+    score.push([d * (1 + 0.35 * Math.max(0, (y - cy) / Math.max(d, 1e-3))), i]);
+  }
+  score.sort((a, b) => b[0] - a[0]);
+  const rim = new Set(score.slice(0, Math.round(n * share)).map(([, i]) => i));
+  const pick = (want: boolean): BufferGeometry => {
+    const out = new BufferGeometry();
+    for (const name of ["position", "normal", "uv", "color"]) {
+      const a = g.getAttribute(name);
+      const s = a.itemSize;
+      const arr: number[] = [];
+      for (let i = 0; i < n; i++) {
+        if (rim.has(i) !== want) continue;
+        for (let k = 0; k < 6; k++) for (let c = 0; c < s; c++) arr.push(a.getComponent(i * 6 + k, c));
+      }
+      out.setAttribute(name, new BufferAttribute(new Float32Array(arr), s));
+    }
+    out.computeBoundingSphere();
+    return out;
+  };
+  return [pick(false), pick(true)];
 }
