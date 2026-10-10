@@ -943,14 +943,11 @@ export class FisherViews {
   }
 
   /** The catch the camera pushes toward: the first to start, held until it ends (null when none). */
-  /** The current catch shared the screen with another: no push-in for it. */
-  private focusShared = false;
 
   catchFocus(t: number, out: CatchFocus): CatchFocus | null {
     const cur = this.focusView;
     if (cur && (!cur.present || cur.catchStart < 0)) {
       this.focusView = null;
-      this.focusShared = false;
     }
     if (!this.focusView) {
       // Only a fresh catch takes the camera; one already under way when another ends does not.
@@ -962,14 +959,25 @@ export class FisherViews {
     }
     const found = this.focusView;
     if (!found) return null;
-    // Only one catch at a time gets the push-in: with two fish up the camera keeps both catchers.
+    // Round 17: a second catch while the first fish is up no longer drops the push (round 16, session
+    // 331-335 s: Dad's catch 3 s after Juneau's cut it short and the shot snapped back): the push holds on
+    // the middle of every catcher with a fish up, on the first catch's timeline (the camera's fit still
+    // keeps the whole family in the safe margin).
     let up = 0;
-    for (const v of this.views) if (v.present && v.catchStart >= 0) up++;
-    if (up > 1) this.focusShared = true;
-    if (this.focusShared) return null;
-    out.x = found.x;
-    out.y = found.y + 1.8;
-    out.z = found.z;
+    let sx = 0;
+    let sz = 0;
+    let sy = 0;
+    for (const v of this.views) {
+      if (!v.present || v.catchStart < 0) continue;
+      up++;
+      sx += v.x;
+      sy += v.y;
+      sz += v.z;
+    }
+    const k = up > 0 ? 1 / up : 1;
+    out.x = up > 0 ? sx * k : found.x;
+    out.y = (up > 0 ? sy * k : found.y) + 1.8;
+    out.z = up > 0 ? sz * k : found.z;
     out.age = t - found.catchStart;
     return out;
   }

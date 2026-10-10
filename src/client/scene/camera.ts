@@ -487,7 +487,8 @@ export class CameraRig {
     let cw = 0;
     if (catchAt && groupMode && !campfire) {
       const a = catchAt.age;
-      cw = a < 0.7 ? a / 0.7 : a < 2.4 ? 1 : Math.max(0, 1 - (a - 2.4) / 0.9);
+      // Round 17: ~1 s in, held while the fish is up, ~1 s back out (a deeper push, below).
+      cw = a < 1.0 ? a / 1.0 : a < 2.6 ? 1 : Math.max(0, 1 - (a - 2.6) / 1.0);
       cw = cw * cw * (3 - 2 * cw);
     }
     this.catchW += (cw - this.catchW) * damp(6, dt);
@@ -504,7 +505,9 @@ export class CameraRig {
         const cw = this.catchW * k;
         const w = cw * (tight ? 0.8 : 0.62);
         this.wantTarget.copy(t0).lerp(this.tmp.set(catchAt.x, catchAt.y + 1.2, catchAt.z), w);
-        this.wantDist = d0 + ((tight ? Math.min(d0, 14) : Math.max(17, d0 * 0.58)) - d0) * (tight ? w : cw);
+        // Round 17: deeper (tight 14 -> min(12, 0.62 d), spread 0.58 d / 17 m -> 0.5 d / 13 m): the round-16
+        // session showed no readable push at 320-332 s.
+        this.wantDist = d0 + ((tight ? Math.min(d0 * 0.62, 12) : Math.max(13, d0 * 0.5)) - d0) * (tight ? w : cw);
         this.wantEl = e0 + (0.36 - e0) * cw * 0.8;
         if (k === 0 || this.fits(this.wantTarget, this.wantDist, this.wantYaw, this.wantEl, pitch)) break;
       }

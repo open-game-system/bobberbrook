@@ -115,6 +115,9 @@ void main() {
   vec3 deepV = mix(uDeep * uTintD, vec3(0.16, 0.1, 0.42) * (0.5 + 0.5 * length(uDeep) * 1.6), 0.38);
   vec3 base = mix(shallow * 1.05, deepV, dz);
   base = mix(base, mix(shallow, vec3(1.0), 0.3) * 1.15, (1.0 - smoothstep(0.0, 1.6, dw)) * 0.6);
+  // Round 17: deeper toward the pond's middle (by the share of the way in, so a small pond darkens too).
+  float centreK = smoothstep(0.3, 0.95, (depth + (vn(p * 0.21 + 3.0) - 0.5) * 1.6) / max(pondRadius(th), 1.0));
+  base = mix(base, mix(deepV, uDeep * uTintD, 0.35) * 0.68, centreK * 0.45);
   // Shallow-water shimmer (caustic-like).
   float c1 = vn(p * 1.7 + vec2(uTime * 0.3, -uTime * 0.2));
   float c2 = vn(p * 1.7 * 1.3 - vec2(uTime * 0.25, uTime * 0.31));
@@ -156,7 +159,14 @@ void main() {
     float st = step(0.955, rr) * smoothstep(0.2, 0.0, length(fract(sp) - 0.5)) * (0.6 + 0.4 * sin(uTime * (1.0 + rr * 3.0) + rr * 40.0));
     sky += vec3(0.9, 0.95, 1.0) * st * uStars * (0.4 + 1.6 * mirror);
   }
-  vec3 col = mix(base, sky, fres * 0.65 + mirror * 0.4);
+  // Round 17: the canopy round the water in the reflection: below a wandering crown line the mirrored
+  // ray meets the trees (dark violet), above it the sky; a little painted reflection even looking down.
+  float az = atan(R.z, R.x);
+  float crownH = 0.15 + 0.12 * vn(vec2(az * 7.0, 1.3)) + 0.06 * vn(vec2(az * 23.0, 4.1));
+  float treeRef = 1.0 - smoothstep(crownH - 0.06, crownH + 0.05, R.y + (g.x + g.y) * 0.15);
+  vec3 canopyRef = mix(uShoreTint * 0.7, vec3(0.22, 0.13, 0.36), 0.45) * (0.6 + 0.5 * uGlow) + uSkyHorizon * 0.08;
+  sky = mix(sky, canopyRef, treeRef * 0.85);
+  vec3 col = mix(base, sky, fres * 0.65 + mirror * 0.4 + 0.06 + 0.12 * treeRef);
   vec3 H = normalize(uSunDir + V);
   // Painted glints: soft-edged dabs, capped (never a white-hot speck that blooms the frame out).
   float nh = max(dot(N, H), 0.0);
@@ -176,9 +186,10 @@ void main() {
   float lap = sin(uTime * 1.3 + th * 23.0 + vn(p * 2.0) * 4.0) * 0.08;
   float edge = depth + lap;
   float dabs = smoothstep(0.32, 0.68, vn(p * 1.9 + vec2(uTime * 0.07, 0.0))) * 0.7 + vn(p * 5.3 - uTime * 0.1) * 0.3;
-  float lip = smoothstep(0.42, 0.04, edge - (dabs - 0.5) * 0.3) * (0.4 + 0.6 * smoothstep(0.25, 0.75, dabs));
+  // Round 17: a soft blend, not a hard white rim (the lip ramps over 0.75 m and is broken into dabs).
+  float lip = (1.0 - smoothstep(0.0, 0.75, edge - (dabs - 0.5) * 0.35)) * smoothstep(0.3, 0.8, dabs) * 0.6;
   float out2 = 0.62 + 0.14 * sin(uTime * 0.8 + th * 5.0);
-  float line2 = (1.0 - smoothstep(0.0, 0.09, abs(edge - out2))) * smoothstep(0.45, 0.75, vn(vec2(th * 34.0, uTime * 0.25))) * 0.7;
+  float line2 = (1.0 - smoothstep(0.0, 0.14, abs(edge - out2))) * smoothstep(0.45, 0.75, vn(vec2(th * 34.0, uTime * 0.25))) * 0.4;
   float foam = max(lip, line2);
   // The wet bank: right at the edge the water thins and darkens (wet stones and sand under it).
   base = mix(base, base * vec3(0.55, 0.7, 0.72), (1.0 - smoothstep(0.0, 0.35, depth)) * 0.5);
@@ -191,11 +202,11 @@ void main() {
   foam = max(foam, clamp(ringFoam, 0.0, 1.0));
   // Foam is pale painted teal-white, never paper white (round 08: bloom white-outs at the falls' foot).
   vec3 foamCol = mix(vec3(0.66, 0.88, 0.92), vec3(0.86, 0.95, 0.96), dabs) * (0.85 + 0.12 * uGlow);
-  col = mix(col, foamCol, clamp(foam, 0.0, 1.0) * 0.85);
+  col = mix(col, foamCol, clamp(foam, 0.0, 1.0) * 0.7);
   // Undiscovered: veiled, darker, lost in a lilac haze.
   col = mix(col, uVeilCol * (0.55 + 0.25 * vn(p * 0.2 + uTime * 0.05)), uVeil * 0.7);
   float alpha = mix(0.5, 0.96, smoothstep(0.0, 3.0, depth));
-  alpha = max(alpha, clamp(foam, 0.0, 1.0) * 0.9);
+  alpha = max(alpha, clamp(foam, 0.0, 1.0) * 0.75);
   gl_FragColor = vec4(max(col, vec3(0.0)), alpha);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
