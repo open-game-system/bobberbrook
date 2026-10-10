@@ -25,6 +25,9 @@ import { CameraRig, REVEAL_S, isView, VIEWS } from "./camera";
 import { FisherViews, type CatchFocus } from "./fishers";
 import { FishShadows, FishTextures, sharedCardGeometry } from "./fishviz";
 import { Fx } from "./fx";
+import { coverScene, makeCoverUniforms, setCoverFishers } from "./cover";
+import { coverCheck, type CoverReport } from "./coverCheck";
+import { keepPrograms } from "./keepPrograms";
 import { MAX_FOCUS, occluderDepthMaterial, occluderMaterial, patchLambertWrap, registerFade } from "./geo";
 import { makeParticles } from "./particles";
 import { TAG_LAYER, buildPost, type Post } from "./post";
@@ -99,6 +102,8 @@ export type SceneDebug = {
   cameraAt?(): { x: number; y: number; z: number };
   /** Turns the painterly post (contact shadow, knee, Kuwahara) off or on, for an in-page perf A/B. */
   painterly?(on: boolean): boolean;
+  /** Round 21 lab check: per framed fisher, the share of their body pixels scenery still covers (fade dither off). */
+  coverCheck?(detail?: boolean | string): CoverReport;
 };
 
 declare global {
@@ -324,6 +329,12 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   let framed: ReadonlySet<number> = new Set();
   const markers = new EdgeMarkers();
   scene.add(...markers.meshes);
+  // Round 21: every scenery material takes the cover fade (cover.ts); these keep their look: the fishers,
+  // the ground and water they stand in, the sky, effects, and the vehicles (the family rides in them).
+  const cover = makeCoverUniforms();
+  const coverFeet: { x: number; y: number; z: number }[] = [];
+  for (const o of [sky.dome, sky.mountains, ground.group, ...water.ponds, water.brook, water.falls, mist.mesh, fow.mesh, shells.mesh, vehicles.group, rays.mesh, parts.water.points, parts.glow.points, splashes.group, escape.group, shadows.mesh, fishers.group, swirls.group, ...markers.meshes])
+    o.userData.coverExempt = true;
   // Every dissolving tree casts its shadow through the same fade (no shadow without its tree).
   const treeDepth = occluderDepthMaterial(occ);
   scene.traverse((o) => {
@@ -644,6 +655,12 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     mist.update(tod, t, veilOf, near < Infinity ? far + 1.5 : 0);
     fow.update(tod, t, dt, rig.focus.x, rig.focus.z, lake ? lake.revealed : null, lake ? lake.discovered : [], camera.position.x, camera.position.z, farDist);
     stream(rig.focus.x, rig.focus.z, streamBudget);
+    // Nothing between the camera and a fisher (cover.ts): every framed fisher's body box, and whatever the
+    // streams just built takes the fade before it first draws.
+    coverFeet.length = 0;
+    fishers.forEachSeat((seat, x, y, z) => { if (framed.has(seat)) coverFeet.push({ x, y, z }); });
+    setCoverFishers(cover, camera, coverFeet);
+    coverScene(scene, cover);
     renderer.info.reset();
     if (post) post.render();
     else renderer.render(scene, camera);
@@ -695,9 +712,13 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   trails.update(tod, 0, rig.focus.x, rig.focus.z);
   areas.update(tod, camera, 0, rig.focus.x, rig.focus.z, () => 0, () => 0);
   stream(rig.focus.x, rig.focus.z, Infinity);
+  seaShow.userData.coverExempt = true;
+  coverScene(scene, cover);
   const prevTarget = renderer.getRenderTarget();
   if (post) renderer.setRenderTarget(post.target);
   await renderer.compileAsync(scene, camera);
+  // Keep every prewarmed program alive after the showroom is disposed (keepPrograms.ts).
+  const keepers = keepPrograms(renderer, scene, camera);
   renderer.setRenderTarget(prevTarget);
   if (post) post.render();
   else renderer.render(scene, camera);
@@ -763,6 +784,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       const shown = (o: Object3D | null): boolean => !o || (o.visible && shown(o.parent));
       return rc.intersectObjects(scene.children, true).filter((h) => shown(h.object)).slice(0, 8).map((h) => `${h.object.name || h.object.type}${h.object.parent?.name ? "<" + h.object.parent.name : ""} d=${h.distance.toFixed(1)} i=${h.instanceId ?? "-"}`);
     },
+    coverCheck: (detail) => coverCheck(renderer, scene, camera, fishers.group, cover, detail ?? false),
     names: () => scene.children.map((o, i) => o.name || `${o.type}#${i}`),
     toggle(name) {
       let n = 0;
@@ -869,6 +891,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       treeMat.dispose();
       treeMatDouble.dispose();
       treeDepth.dispose();
+      keepers.dispose();
       parts.water.dispose();
       parts.glow.dispose();
       shadows.dispose();

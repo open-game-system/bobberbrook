@@ -536,6 +536,8 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
 
   // --- campfire: logs to sit on, fire, string lights ---
   const campParts: BufferGeometry[] = [];
+  /** The seat logs the family sits against: furniture, kept out of the cover fade (cover.ts) like a floor. */
+  const seatLogs: BufferGeometry[] = [];
   const campSeats: { x: number; z: number; facing: number }[] = [];
   // A horseshoe open in the middle (round 13: Mom sat straight behind the fire, so its flames, drawn over
   // her, read as her being see-through; seats were 2.3 m out, inside the flames' reach). The campfire camera
@@ -562,7 +564,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
       if (Math.abs(Math.sin(a) * n.x - Math.cos(a) * n.z) > 0.8) c.setHex(0xb08a5a);
     });
     surf(log, PK.rodwood, 1);
-    campParts.push(log);
+    seatLogs.push(log);
   }
   for (let i = 0; i < 4; i++) {
     const a = (i / 4) * Math.PI * 2 + 0.3;
@@ -582,6 +584,10 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
     poleParts.push(surf(g, PK.grain));
   }
   add(new Mesh(merge(campParts), mat)).castShadow = true;
+  const seats = new Mesh(merge(seatLogs), mat);
+  seats.name = "camp-seats";
+  seats.userData.coverExempt = true;
+  add(seats).castShadow = true;
   add(new Mesh(merge(poleParts), treeMat)).castShadow = true;
   const bulbN = 15;
   const bulbGeo = new SphereGeometry(0.075, 8, 6);

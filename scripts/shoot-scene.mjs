@@ -52,6 +52,7 @@ const SHOTS = [
   ["double-catch", null, true],
   ["mistmarsh-catch", null, true],
   ["mistmarsh-reel", null, true],
+  ["mistmarsh-dock", null, true],
   ["miss", null, true],
   ["morning", null, false],
   ["morning", 0.97, false],
@@ -92,6 +93,8 @@ async function launch(f = flags) {
 let browser = await launch();
 const errors = [];
 const metrics = { round, shots: [] };
+/** Round 21: at most this share of any framed fisher's body pixels may be covered by scenery (see coverCheck.ts). */
+const COVER_MAX_FRAC = 0.02;
 const failures = [];
 const files = [];
 // Everything taken so far is on disk after every shot: a crash later never loses the stills.
@@ -133,8 +136,13 @@ async function shoot(scenario, phase, hero, tod) {
       for (let i = 0; i < d.length; i += 4) sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
       return sum / (d.length / 4);
     }, png.toString("base64")).catch(() => null);
-    metrics.shots.push({ label, renderer: info.renderer, programsAtStart: before.programs, programs: info.programs, calls: info.calls, triangles: info.triangles, p50: info.frameP50, p95: info.frameP95, meanLuma: luma === null ? null : Math.round(luma) });
+    // Round 21 cover check (ID-mask pass, fade dither off): the share of each framed fisher's body pixels
+    // that scenery still covers. Anything over COVER_MAX_FRAC is a broken "nothing over a fisher" veto.
+    const cover = await page.evaluate(() => window.__scene.coverCheck?.() ?? null).catch(() => null);
+    const coverWorst = cover ? Math.round(cover.worst * 1000) / 1000 : null;
+    metrics.shots.push({ label, renderer: info.renderer, programsAtStart: before.programs, programs: info.programs, calls: info.calls, triangles: info.triangles, p50: info.frameP50, p95: info.frameP95, meanLuma: luma === null ? null : Math.round(luma), cover: coverWorst, coverBoxes: cover?.boxes.map((b) => Math.round(b.frac * 1000) / 1000) });
     console.log(label, JSON.stringify(metrics.shots.at(-1)));
+    if (coverWorst !== null && coverWorst > COVER_MAX_FRAC) return { label, failed: `scenery covers a fisher (${coverWorst} of the body > ${COVER_MAX_FRAC})` };
     return { label };
   } finally {
     await page.close().catch(() => {});

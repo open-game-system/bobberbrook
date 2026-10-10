@@ -15,6 +15,7 @@ import { createLakeScene } from "./scene";
 import { landmarkFor } from "./scene/biomes";
 import { shoreFeatures, type ShoreFeature } from "./scene/shores";
 import { placeHash } from "./scene/valley";
+import { boardwalkPath } from "./scene/walkways";
 
 type Bot = { stay: boolean; noHook: boolean; target: Vec; hookAt: number; nextCastAt: number; stick: { x: number; y: number }; holding: boolean; reactAt: number; wander: boolean };
 type Scenario = {
@@ -41,6 +42,8 @@ const shoreIn = (id: AreaId, theta: number, out = 1.3): Vec => {
   const r = pondRadius(a, theta) + out;
   return { x: a.center.x + Math.cos(theta) * r, z: a.center.z + Math.sin(theta) * r };
 };
+/** A point on Mistmarsh's boardwalk (0 = its shore end, 14 = its far end). */
+const walkAt = (i: number): Vec => boardwalkPath(areaById("mistmarsh"))[i]!;
 const discoverAll = (l: Lake): Lake => produce(l, (d) => { d.discovered = AREAS.map((a) => a.id); });
 const discoverOnly = (ids: AreaId[]) => (l: Lake): Lake => produce(l, (d) => { d.discovered = ["moonwell", ...ids]; });
 const swirlIn = (id: AreaId, theta: number, golden: boolean) => (l: Lake, now: number): Lake =>
@@ -501,6 +504,18 @@ const SCENARIOS: Record<string, Scenario> = {
     fishers: [
       { seat: 0, name: "Dad", spot: shoreIn("mistmarsh", -0.45), easy: true, at: shoreIn("mistmarsh", -0.45, 2) },
       { seat: 2, name: "Juneau", spot: shoreIn("mistmarsh", -0.7), easy: true, at: shoreIn("mistmarsh", -0.7, 2) },
+    ],
+    setup: discoverOnly(["mistmarsh"]),
+    warmUntil: (l) => l.fishers.some((f) => f.mode === "reel"),
+    hero: (l, now) => inCatch(l, now, 1300, 2000),
+  },
+  // Round 21 (round 20 session 144-202 s): Dad out on Mistmarsh's boardwalk, Juneau on the shore at its
+  // foot, both catching; the shot is the catch push-in (wisteria over Dad at 184/202 s, Juneau in front of him).
+  "mistmarsh-dock": {
+    phase: 0.36,
+    fishers: [
+      { seat: 0, name: "Dad", spot: walkAt(4), easy: true, at: walkAt(4) },
+      { seat: 2, name: "Juneau", spot: shoreIn("mistmarsh", -1.62), easy: true, at: shoreIn("mistmarsh", -1.62, 2) },
     ],
     setup: discoverOnly(["mistmarsh"]),
     warmUntil: (l) => l.fishers.some((f) => f.mode === "reel"),

@@ -194,6 +194,15 @@ appear and fade (`since`, `until`), never pop.
   shot but a catch push-in may leave them, and the push aims 1.2 m up the catcher (it aimed at the fish overhead, so
   only the weakest push fitted). Lines are drawn taut over a walk over the water and a reeled bobber stops at its outer
   edge (`walkways.ts`).
+- **Round 21, nothing over a fisher, generally** (`cover.ts`): every scenery material in the scene takes the cover fade by
+  default (patched before the shader prewarm and on whatever the streams build later), so no new prop class can break the
+  veto; only subtrees marked `userData.coverExempt` keep their look (the fishers, ground, water, sky, effects, the vehicles
+  the family rides, the campfire seat logs). Per fragment, anything inside a framed fisher's screen box (body +-0.5 m, feet
+  to hat), not behind the fisher at that height and above their feet (decks and paths stay), and anything in the near band
+  (nearer than 0.42-0.62 of the nearest fisher's depth: a push-in clears hanging strands and drapes across the frame)
+  dithers to 0.15 of its pixels. Every program compiled at prewarm is kept alive (`keepPrograms.ts`), so the showroom's
+  disposal never forces a mid-play compile. The lab's cover check (`window.__scene.coverCheck()`, an ID-mask pass with the
+  dither off, in `shoot-scene.mjs` for every shot) fails a shot where scenery still covers more than 2 % of a fisher's body.
 - **Discovery** (round 17; round 18: it waits, up to 6 s, until a fisher is within the pond plus 45 % of the clearing, so it plays as the family arrives at the water, `revealGate.ts`): a 5 s reveal swings round behind the family (a three-quarter yaw that keeps every fisher
   apart, at most 1.6 rad off the place view), up and out until the whole new pond lies beyond them, then back.
 - **Campfire** (`lake.campfire`): the camera settles on the campfire; fishers sit around it. The seats are a horseshoe 2.9 m out, open on the camera's axis so the fire burns in the gap and never in
