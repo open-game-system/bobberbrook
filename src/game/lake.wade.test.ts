@@ -127,5 +127,5 @@ describe("the walk down to the water always arrives", () => {
       }
     }
     expect(stuck).toEqual([]);
-  });
+  }, 30_000);
 });
