@@ -708,15 +708,16 @@ class FisherView {
     if (age < LEAP_S && Math.random() < 0.7) fx.drip(gx, gy - 0.3, gz);
     if (age >= LEAP_S && age - dt < LEAP_S) {
       // Lands in the hands: the burst grows with rarity.
-      const n = tier === 2 ? 70 : tier === 1 ? 34 : 12;
+      // Round 11: capped (a legendary's 100-odd sparkles hid Juneau's face at night).
+      const n = tier === 2 ? 36 : tier === 1 ? 22 : 10;
       const gold = tier >= 1 || this.catchNew;
       fx.sparkle(gx, gy, gz, n, 1, gold ? 0.88 : 1, gold ? 0.45 : 0.95, tier === 2 ? 6 : tier === 1 ? 3.6 : 2.0, tier === 2 ? 0.6 : 0.4);
       if (this.catchGolden || tier === 2) fx.confetti(gx, gy + 0.5, gz);
-      if (this.catchNew) fx.sparkle(gx, gy, gz, 30, 1, 1, 1, 6, 0.3);
+      if (this.catchNew) fx.sparkle(gx, gy, gz, 14, 1, 1, 1, 6, 0.3);
       if (tier === 2) fx.upgradeBurst(gx, gy - 1.6, gz);
     }
     if (age >= LEAP_S && out === 0) {
-      this.sparkAcc += dt * (tier === 2 ? 30 : tier === 1 || this.catchNew ? 16 : 5);
+      this.sparkAcc += dt * (tier === 2 ? 12 : tier === 1 || this.catchNew ? 8 : 4);
       while (this.sparkAcc > 1) {
         this.sparkAcc -= 1;
         const a = Math.random() * Math.PI * 2;
@@ -936,6 +937,16 @@ export class FisherViews {
   }
 
   /** Every shown name tag (drawn over the finished frame, after the painterly post chain). */
+  /** Every present fisher's face (head centre, world): sparkles keep off it. */
+  forEachFace(fn: (x: number, y: number, z: number) => void): void {
+    for (const v of this.views) {
+      if (!v.present) continue;
+      v.rig.head.getWorldPosition(this.faceTmp);
+      fn(this.faceTmp.x, this.faceTmp.y, this.faceTmp.z);
+    }
+  }
+  private readonly faceTmp = new Vector3();
+
   forEachTag(fn: (tag: Object3D) => void): void {
     for (const v of this.views) if (v.rig.tag.visible && v.rig.tag.parent) fn(v.rig.tag);
   }

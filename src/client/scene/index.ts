@@ -126,7 +126,8 @@ function swayMaterial(time: { value: number }): MeshLambertMaterial {
 }
 
 /** Character night light strengths (fill: warm lantern from the camera side; rim: cool moon edge). */
-const CHAR_NIGHT = { fill: 0.55, rim: 0.35 };
+const CHAR_NIGHT = { fill: 0.55, rim: 0.35, fire: 0.7 };
+const tmpFire = new Color();
 
 export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality: SceneQuality; assetBase?: string; textureBase?: string }): Promise<LakeScene> {
   patchLambertWrap();
@@ -297,6 +298,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   let raf = 0;
   let disposed = false;
   const tmpO = new Vector3();
+  const faceList: { x: number; y: number; z: number; r: number }[] = [];
   const catchBuf: CatchFocus = { x: 0, y: 0, z: 0, age: 0 };
 
   /** 0..1: how far the sky has gone over to the zeppelin's twilight (eased; last frame's ride). */
@@ -326,8 +328,11 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     if (post) post.gain.copy(tod.grade);
     // Night: a warm lantern fill and a cool moonlit rim on the fishers (they stay readable on the TV).
     // By the campfire the fire itself is the warm key (no second lantern on the faces).
-    CHAR_LIGHT.fill.value.setRGB(1.0, 0.64, 0.36).multiplyScalar(CHAR_NIGHT.fill * tod.moon * (1 - 0.8 * campLight));
-    CHAR_LIGHT.rim.value.setRGB(0.42, 0.6, 1.0).multiplyScalar(CHAR_NIGHT.rim * tod.moon);
+    // Round 11: by the campfire the fill is the fire's own warm key (its direction set per frame below),
+    // the rim a cool edge on the side away from it.
+    CHAR_LIGHT.fill.value.setRGB(1.0, 0.64, 0.36).multiplyScalar(CHAR_NIGHT.fill * tod.moon * (1 - campLight));
+    CHAR_LIGHT.fill.value.add(tmpFire.setRGB(1.0, 0.52, 0.24).multiplyScalar(CHAR_NIGHT.fire * campLight));
+    CHAR_LIGHT.rim.value.setRGB(0.42, 0.6, 1.0).multiplyScalar(CHAR_NIGHT.rim * Math.max(tod.moon, campLight));
   };
 
   const serverNow = (now: number) => now + offset;
@@ -484,6 +489,14 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     trailW += (onTrail - trailW) * Math.min(1, dt * 1.5);
     const reveal = revealAge >= 0 && revealAge < 3.5 ? { x: revealArea.center.x, z: revealArea.center.z, age: revealAge } : null;
     rig.update(t, dt, lake?.campfire ?? false, cf, trailW, reveal);
+    // Sparkles keep off faces (round 11: they covered Juneau's at night).
+    faceList.length = 0;
+    fishers.forEachFace((x, y, z) => { if (faceList.length < 4) faceList.push({ x, y, z, r: 0.85 }); });
+    parts.glow.setFaces(faceList);
+    parts.water.setFaces(faceList);
+    // The campfire in view space: the fishers' warm key comes from it (painter.ts, characters only).
+    props.fireLight.getWorldPosition(tmpO).applyMatrix4(camera.matrixWorldInverse);
+    CHAR_LIGHT.fire.value.set(tmpO.x, tmpO.y, tmpO.z, campLight);
     // Trees between the camera and the action dissolve.
     occ.uCam.value.copy(camera.position);
     let fi = 0;

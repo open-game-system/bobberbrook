@@ -45,7 +45,10 @@ Morning (clear, warm-white sun, blue sky), golden hour (low orange sun, long sha
 night (deep blue, stars, moon, fireflies, glowing windows and lanterns, the dock lantern), dawn (mist,
 pastel). Night (round 10) keeps the indigo mood but reads: a silver moon key, a teal bounce from the
 glowing water, warm pools of lamplight on the ground round lamps and cottages (`pools.ts`), a moon road
-on the water, and a warm fill plus a cool rim on the fishers so their faces read on the TV. Lerp continuously; the light count stays fixed (no shader recompiles).
+on the water, and a warm fill plus a cool rim on the fishers so their faces read on the TV. Lerp continuously; the light count stays fixed (no shader recompiles). By the campfire (round 11) the fishers' warm fill comes from the
+fire itself (`CHAR_LIGHT.fire`, view-space fire position): the side away from it falls into shade and a cool
+rim sits on it, so the family is lit by the fire, not self-lit. Sparkles and confetti fade where they would
+cover a fisher's face (`Particles.setFaces`), and the catch bursts are capped (legendary 36 + 12/s).
 
 ## Fishers (from `lake.fishers`)
 

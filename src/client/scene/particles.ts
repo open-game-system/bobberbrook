@@ -5,6 +5,7 @@ import {
   NormalBlending,
   Points,
   ShaderMaterial,
+  Vector4,
   type Blending,
 } from "three";
 
@@ -18,6 +19,8 @@ attribute float aAlpha;
 attribute float aShape;
 attribute vec3 aColor;
 uniform float uScale;
+/** Faces (world xyz, radius w; w = 0 unused): sparkles in front of a face fade out (round 11). */
+uniform vec4 uFaces[4];
 varying float vAlpha;
 varying float vShape;
 varying vec3 vColor;
@@ -27,6 +30,17 @@ void main() {
   float dist = max(-mv.z, 0.5);
   gl_PointSize = clamp(aSize * uScale / dist, 0.0, 256.0);
   vAlpha = aAlpha;
+  vec2 pn = gl_Position.xy / max(gl_Position.w, 1e-3);
+  float aspect = projectionMatrix[1][1] / projectionMatrix[0][0];
+  for (int i = 0; i < 4; i++) {
+    vec4 f = uFaces[i];
+    if (f.w <= 0.0) continue;
+    vec4 fc = projectionMatrix * viewMatrix * vec4(f.xyz, 1.0);
+    if (fc.w <= 0.0 || fc.w < gl_Position.w - f.w) continue;
+    vec2 d = (pn - fc.xy / fc.w) * vec2(aspect, 1.0);
+    float r = f.w * projectionMatrix[1][1] / fc.w;
+    vAlpha *= smoothstep(r * 0.75, r * 1.25, length(d));
+  }
   vShape = aShape;
   vColor = aColor;
 }`;
@@ -85,6 +99,7 @@ export class Particles {
   private next = 0;
   private readonly geo: BufferGeometry;
   readonly material: ShaderMaterial;
+  private readonly faces = Array.from({ length: 4 }, () => new Vector4(0, 0, 0, 0));
 
   constructor(n: number, blending: Blending) {
     this.n = n;
@@ -113,13 +128,23 @@ export class Particles {
       transparent: true,
       depthWrite: false,
       blending,
-      uniforms: { uScale: { value: 500 } },
+      uniforms: { uScale: { value: 500 }, uFaces: { value: this.faces } },
     });
     this.points = new Points(this.geo, this.material);
     this.points.frustumCulled = false;
     this.points.renderOrder = blending === AdditiveBlending ? 12 : 10;
     // Seed one visible particle so the shader compiles in the prewarm.
     this.emit({ x: 0, y: -50, z: 0, vx: 0, vy: 0, vz: 0, life: 0.5, size: 0.01, r: 1, g: 1, b: 1 });
+  }
+
+  /** Up to four faces (world centre, radius) that sparkles must not cover; the rest are cleared. */
+  setFaces(faces: readonly { x: number; y: number; z: number; r: number }[]): void {
+    for (let i = 0; i < 4; i++) {
+      const v = this.faces[i]!;
+      const f = faces[i];
+      if (f) v.set(f.x, f.y, f.z, f.r);
+      else v.set(0, 0, 0, 0);
+    }
   }
 
   setScale(viewportHeightPx: number, fovDeg: number): void {
