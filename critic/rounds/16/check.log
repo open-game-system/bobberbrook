@@ -1,0 +1,12 @@
+FAIL tv-empty-lake @ 1920x1080
+     - overlay_covers_focal selector="div.tv > div.ticket:nth-of-type(4)" text="" overlapPx=157
+FAIL kid-hat-picker @ 1080x810
+     - screen_error message="page.goto: Timeout 90000ms exceeded."
+FAIL phone-controller @ 393x852
+     - screen_error message="page.goto: Timeout 90000ms exceeded."
+FAIL phone-controller @ 375x667
+     - screen_error message="page.goto: net::ERR_ABORTED; maybe frame was detached?"
+ok   ipad-controller @ 1080x810 (tapped 2: Open the map, cast)
+ok   tv-two-fishers @ 1920x1080
+
+6 screen×viewport shots, 4 findings → critic/rounds/16/check/report.json, critic/rounds/16/check/sheet.png

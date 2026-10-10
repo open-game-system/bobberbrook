@@ -1,0 +1,32 @@
+moonwell {"label":"moonwell","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":80,"programs":80,"calls":756,"triangles":3144161,"p50":16.700000762939453,"p95":33.20000076293945,"meanLuma":94}
+far-place {"label":"far-place","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":79,"programs":79,"calls":604,"triangles":2315904,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":78}
+shore-frost {"label":"shore-frost","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":78,"programs":78,"calls":583,"triangles":2620513,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":117}
+shore-ember {"label":"shore-ember","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":77,"programs":77,"calls":428,"triangles":2452712,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":89}
+biome-willow {"label":"biome-willow","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":77,"programs":77,"calls":469,"triangles":2448816,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":85}
+biome-crystal {"label":"biome-crystal","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":79,"programs":79,"calls":646,"triangles":2788541,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":96}
+biome-ember {"label":"biome-ember","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":78,"programs":78,"calls":627,"triangles":2884375,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":99}
+biome-frost {"label":"biome-frost","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":80,"programs":80,"calls":742,"triangles":3572072,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":115}
+biome-marsh {"label":"biome-marsh","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":80,"programs":81,"calls":793,"triangles":3822553,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":96}
+fog {"label":"fog","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":80,"programs":80,"calls":466,"triangles":2923878,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":64}
+boarding {"label":"boarding","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":79,"programs":79,"calls":530,"triangles":2264832,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":69}
+tower {"label":"tower","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":80,"programs":80,"calls":701,"triangles":2968116,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":86}
+tower-lamp {"label":"tower-lamp","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":80,"programs":80,"calls":665,"triangles":2967708,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":97}
+boat-ride {"label":"boat-ride","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":78,"programs":78,"calls":470,"triangles":1588354,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":118}
+zeppelin-ride {"label":"zeppelin-ride","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":79,"programs":79,"calls":585,"triangles":2546277,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":120}
+arrival {"label":"arrival","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":78,"programs":78,"calls":666,"triangles":3244300,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":59}
+mistmarsh {"label":"mistmarsh","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":80,"programs":80,"calls":807,"triangles":3895445,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":52}
+hollow {"label":"hollow","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":80,"programs":81,"calls":632,"triangles":3270833,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":67}
+pools {"label":"pools","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":80,"programs":80,"calls":624,"triangles":3282843,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":109}
+tarn {"label":"tarn","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":80,"programs":80,"calls":588,"triangles":2912749,"p50":16.700000762939453,"p95":16.700000762939453,"meanLuma":72}
+trail {"label":"trail","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":80,"programs":80,"calls":741,"triangles":3835297,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":63}
+trail-walk {"label":"trail-walk","renderer":"ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)","programsAtStart":80,"programs":80,"calls":741,"triangles":3887017,"p50":16.700000762939453,"p95":16.799999237060547,"meanLuma":76}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.evaluate: Target page, context or browser has been closed
+    at /Users/jonathanmumm/src/bobberbrook/scripts/shoot-scene.mjs:115:27 {
+  log: []
+}
+
+Node.js v24.9.0
