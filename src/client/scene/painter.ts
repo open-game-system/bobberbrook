@@ -9,21 +9,21 @@ import { rng } from "./noise";
  */
 
 /** Surface kinds (the texture-array layer; NONE = no painted detail, e.g. faces and glass). */
-export const PK = { brush: 0, grain: 1, planks: 2, cloth: 3, canvas: 4, shingles: 5, runestone: 6, snow: 7, tiles: 8, rock: 9, moss: 10, none: 11 } as const;
+export const PK = { brush: 0, grain: 1, planks: 2, cloth: 3, canvas: 4, shingles: 5, runestone: 6, snow: 7, tiles: 8, rock: 9, moss: 10, quilt: 11, felt: 12, leather: 13, knit: 14, rodwood: 15, none: 16 } as const;
 export type PaintKind = (typeof PK)[keyof typeof PK];
-const LAYERS = 11;
+const LAYERS = 16;
 /**
  * aPaint.x at or above this marks explicit texture coordinates (aPaint.yz) on layer x - PK_UV, instead of
  * the triplanar projection: boards that follow a curved boardwalk, one painted board per plank (round 13).
  */
-export const PK_UV = 16;
+export const PK_UV = 32;
 
 /**
  * Round 11: the Codex-painted kit (public/art/textures) replaces the code-painted planks and canvas and
  * adds shingles, runestone and snow layers. Set before the first painted program compiles; a kind with no
  * image keeps its code painting (planks, canvas) or the generic brushwork.
  */
-export type PaintImages = Partial<Record<"planks" | "canvas" | "shingles" | "runestone" | "snow" | "tiles" | "rock" | "moss", CanvasImageSource>>;
+export type PaintImages = Partial<Record<"planks" | "canvas" | "shingles" | "runestone" | "snow" | "tiles" | "rock" | "moss" | "quilt" | "felt" | "leather" | "knit" | "rodwood", CanvasImageSource>>;
 let images: PaintImages = {};
 export function setPaintImages(i: PaintImages): void {
   images = i;
@@ -248,6 +248,29 @@ function paintCanvas(ctx: Ctx, R: Rand): void {
   for (let x = 30; x < S - 30; x += 24) ctx.fillRect(x, cy + 7, 11, 3);
 }
 
+/**
+ * Draws the band [from, to) of an image (across x or y, 0..1) into the tile twice, the second copy mirrored,
+ * so the tile wraps without a seam along that axis (the other axis keeps the image's own wrap).
+ */
+function mirrorBand(ctx: Ctx, im: CanvasImageSource, axis: "x" | "y", from: number, to: number): void {
+  const w = "width" in im && typeof im.width === "number" ? im.width : S;
+  const h = "height" in im && typeof im.height === "number" ? im.height : S;
+  const half = S / 2;
+  for (const flip of [false, true]) {
+    ctx.save();
+    if (axis === "y") {
+      ctx.translate(0, flip ? S : 0);
+      ctx.scale(1, flip ? -1 : 1);
+      ctx.drawImage(im, 0, h * from, w, h * (to - from), 0, 0, S, half);
+    } else {
+      ctx.translate(flip ? S : 0, 0);
+      ctx.scale(flip ? -1 : 1, 1);
+      ctx.drawImage(im, w * from, 0, w * (to - from), h, 0, 0, half, S);
+    }
+    ctx.restore();
+  }
+}
+
 function luminanceMean(d: Uint8ClampedArray): Vector3 {
   const lin = (c: number) => {
     const v = c / 255;
@@ -284,7 +307,17 @@ export function paintArray(): PaintArray {
     const im = images[k];
     return im ? (ctx: Ctx) => ctx.drawImage(im, 0, 0, S, S) : fallback;
   };
-  const painters = [paintBrush, paintGrain, img("planks", paintPlanks), paintCloth, img("canvas", paintCanvas), img("shingles", paintBrush), img("runestone", paintBrush), img("snow", paintBrush), img("tiles", paintBrush), img("rock", paintBrush), img("moss", paintBrush)];
+  // Round 15 (kit part 3, the fishers' kit): the felt keeps its fuzz only (its stitched straps would land
+  // anywhere on a hat) and the rod wood its grain only (no brass bands): a band of each, mirrored so it tiles.
+  const band = (k: keyof PaintImages, fallback: (ctx: Ctx, R: Rand) => void, axis: "x" | "y", from: number, to: number) => {
+    const im = images[k];
+    if (!im) return fallback;
+    return (ctx: Ctx) => mirrorBand(ctx, im, axis, from, to);
+  };
+  const painters = [
+    paintBrush, paintGrain, img("planks", paintPlanks), paintCloth, img("canvas", paintCanvas), img("shingles", paintBrush), img("runestone", paintBrush), img("snow", paintBrush), img("tiles", paintBrush), img("rock", paintBrush), img("moss", paintBrush),
+    img("quilt", paintCloth), band("felt", paintCloth, "y", 0.08, 0.44), img("leather", paintBrush), img("knit", paintCloth), band("rodwood", paintGrain, "x", 0.36, 0.72),
+  ];
   const c = canvas();
   const inv: Vector3[] = [];
   let data: Uint8Array;
@@ -383,13 +416,15 @@ export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexSh
     float chFill = saturate((dot(normal, chDir) + 0.45) / 1.45);
     float rimSide = mix(1.0, 2.4 * smoothstep(0.3, -0.4, fireFace), uChFire.w);
     outgoingLight *= mix(1.0, 0.12 + 0.43 * smoothstep(-0.5, 0.6, fireFace), uChFire.w);
-    outgoingLight += diffuseColor.rgb * uChFill * chFill + uChRim * pow(1.0 - chNV, 2.5) * rimSide;
+    // The rim is painted too: on the clothes it follows the painted detail's value (no clean vinyl edge).
+    outgoingLight += diffuseColor.rgb * uChFill * chFill + uChRim * pow(1.0 - chNV, 2.5) * rimSide * pkRimK;
   }
   #include <opaque_fragment>`,
     )
     .replace(
       "#include <color_fragment>",
       `#include <color_fragment>
+  float pkRimK = 1.0;
   {
     float pkRaw = floor(vPk.x + 0.5);
     bool pkUv = pkRaw > ${PK_UV - 0.5};
@@ -398,9 +433,9 @@ export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexSh
       vec3 n = normalize(vPkN);
       vec3 tx;
       // Per kind: triplanar scale (per metre) and detail strength (brush grain planks cloth canvas
-      // shingles runestone snow tiles rock moss).
-      const float SCS[${LAYERS}] = float[${LAYERS}](0.8, 1.2, 0.36, 1.6, 1.0, 0.42, 0.45, 0.4, 0.42, 0.5, 0.4);
-      const float STR[${LAYERS}] = float[${LAYERS}](0.55, 0.92, 0.72, 0.9, 0.75, 0.92, 0.9, 1.0, 0.9, 0.9, 0.85);
+      // shingles runestone snow tiles rock moss, then the fishers' kit: quilt felt leather knit rod wood).
+      const float SCS[${LAYERS}] = float[${LAYERS}](0.8, 1.2, 0.36, 1.6, 1.0, 0.42, 0.45, 0.4, 0.42, 0.5, 0.4, 0.8, 1.0, 1.6, 2.6, 3.0);
+      const float STR[${LAYERS}] = float[${LAYERS}](0.55, 0.92, 0.72, 0.9, 0.75, 0.92, 0.9, 1.0, 0.9, 0.9, 0.85, 1.0, 0.55, 0.95, 1.0, 1.0);
       int ki = int(pk);
       if (pkUv || (pk > 3.5 && pk < 4.5)) {
         tx = texture(tPk, vec3(vPk.yz, pk)).rgb;
@@ -410,8 +445,10 @@ export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexSh
         vec3 p = vPkP * uPkScale * sc;
         vec2 ux = p.zy; vec2 uz = p.xy; vec2 uy = vPk.y > 0.5 ? p.zx : p.xz;
         // Grain runs up posts and poles (stretched along the grain).
-        if (pk > 0.5 && pk < 1.5 && vPk.y < 0.5) { ux = p.yz * vec2(0.3, 1.0); uz = p.yx * vec2(0.3, 1.0); }
-        if (pk > 0.5 && pk < 1.5 && vPk.y > 0.5) { ux = p.zy * vec2(0.3, 1.0); uz = p.xy * vec2(0.3, 1.0); uy = p.xz * vec2(0.3, 1.0); }
+        // The rod wood's grain runs along the rod (its own y) the same way.
+        bool along = (pk > 0.5 && pk < 1.5) || pk > 14.5;
+        if (along && vPk.y < 0.5) { ux = p.yz * vec2(0.3, 1.0); uz = p.yx * vec2(0.3, 1.0); }
+        if (along && vPk.y > 0.5) { ux = p.zy * vec2(0.3, 1.0); uz = p.xy * vec2(0.3, 1.0); uy = p.xz * vec2(0.3, 1.0); }
         tx = texture(tPk, vec3(ux, pk)).rgb * w.x + texture(tPk, vec3(uz + 0.37, pk)).rgb * w.z + texture(tPk, vec3(uy + 0.71, pk)).rgb * w.y;
       }
       vec3 d = tx * iPk[ki];
@@ -419,8 +456,10 @@ export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexSh
       float str = STR[ki];
       // Cloth (the fishers' clothes and hats) keeps a narrow value range: its broad fold strokes read as
       // white paint blotches on a 1 m figure (round 09 critic), so only the weave and soft folds show.
-      vec2 rng = pk > 2.5 && pk < 3.5 ? vec2(0.74, 1.24) : vec2(0.0, 2.4);
+      // The fishers' painted kit (round 15) keeps its stitches and quilting but not its blackest crevices.
+      vec2 rng = pk > 2.5 && pk < 3.5 ? vec2(0.74, 1.24) : pk > 10.5 ? vec2(0.5, 1.45) : vec2(0.0, 2.4);
       diffuseColor.rgb *= mix(vec3(1.0), clamp(mix(vec3(l), d, 0.55), rng.x, rng.y), str);
+      if (pk > 10.5) pkRimK = 0.55 * clamp(l * l, 0.0, 1.6);
       // Baked top light: painted surfaces are lit from above, shaded underneath.
       diffuseColor.rgb *= mix(0.82, 1.1, smoothstep(-0.6, 0.85, n.y));
     }

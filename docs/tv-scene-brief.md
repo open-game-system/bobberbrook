@@ -77,6 +77,13 @@ cover a fisher's face (`Particles.setFaces`), and the catch bursts are capped (l
   blue, pink) with a matching hat (bucket hat, rain hat, sun hat, flower hat), vest, boots, simple face.
 - Walk/run cycle when moving (interpolate `pos` + `vel` from `movedAt`, smooth toward new server
   positions, never snap), idle sway, turning toward `facing`.
+- **Painted clothes** (round 15, `character.ts`, `figurePaint.ts`): the Codex fishers' kit in the prop texture
+  array (layers quilt 11, felt 12, leather 13, knit 14, rod wood 15; `PK_UV` moved 16 -> 32): quilted coats and
+  sleeves, felt hats and trousers (fuzz band only), leather boots, belts and packs, knitted collars, hat bands and
+  bedrolls, all neutral and tinted by the seat colour; rods 0-2 carry the rod wood along the shaft. Clothing parts
+  bake soft occlusion from the figure's bulk (head, coat, arms, legs, pack as spheres) and a top light from shaded
+  boots to lit shoulders into their vertex colours. The cool character rim follows the painted detail's value on
+  clothes (no clean vinyl edge). Skin, faces, hair and the starlight rod are untouched.
 - A small name tag (pill in the seat colour) above each head, readable at TV distance.
 - Rod by tier `lake.rodTier`: 0 willow branch, 1 bamboo, 2 polished wood + brass reel, 3 starlight
   (glowing, sparkles). Visible change when `upgradeSeq` grows: a burst of light around every fisher.
