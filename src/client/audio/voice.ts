@@ -45,7 +45,7 @@ async function play(id: string, delay = 0): Promise<void> {
   // And no air above ~5 kHz: speech stays clear, the 8–12 kHz sibilant bursts go (round 09).
   const air = a.ctx.createBiquadFilter();
   air.type = "lowpass";
-  air.frequency.value = 5000;
+  air.frequency.value = 4000;
   air.Q.value = 0.6;
   src.connect(deEss).connect(air).connect(g).connect(a.out);
   src.start(start);

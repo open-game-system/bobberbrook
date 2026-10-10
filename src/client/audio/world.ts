@@ -166,13 +166,14 @@ function chirp(ctx: AudioContext, out: AudioNode, t: number): void {
   const g = ctx.createGain();
   const p = ctx.createStereoPanner();
   p.pan.value = Math.random() * 1.6 - 0.8;
-  // A mellow warbler (1.7–2.5 kHz, soft attack): 2.6–7 kHz chirps read as harsh ticks on TV speakers.
-  const base = 1700 + Math.random() * 800;
+  // A mellow warbler (1.5–2.9 kHz, soft attack): 2.6–7 kHz chirps read as harsh ticks on TV speakers.
+  const base = 1500 + Math.random() * 600;
   const n = 2 + Math.floor(Math.random() * 4);
   for (let i = 0; i < n; i++) {
     const s = t + i * 0.11;
     o.frequency.setValueAtTime(base, s);
-    o.frequency.exponentialRampToValueAtTime(base * (1.15 + Math.random() * 0.25), s + 0.07);
+    // Tops out under 3 kHz (round 17: sweeps to ~3.5 kHz were the last 'harsh' frames).
+    o.frequency.exponentialRampToValueAtTime(base * (1.1 + Math.random() * 0.25), s + 0.07);
     g.gain.setValueAtTime(0.0001, s);
     g.gain.exponentialRampToValueAtTime(0.018, s + 0.03);
     g.gain.exponentialRampToValueAtTime(0.0001, s + 0.1);
