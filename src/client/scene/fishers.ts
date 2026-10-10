@@ -1,4 +1,5 @@
 import { lineFloor, underWalk } from "./walkways";
+import { spaceOut, type Spot } from "./personalSpace";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -196,6 +197,9 @@ class FisherView {
   private readonly side = new Vector3();
   private readonly camDir = new Vector3();
   upgradeFlash = 0;
+  /** Round 20: drawn this far off the rules' position so nobody stands inside another (eased). */
+  spaceX = 0;
+  spaceZ = 0;
   /** Screen-space (NDC) shift of the name tag, so close fishers' tags don't overlap (eased). */
   tagDx = 0;
   /** How far the name tag rises to stay above a fish held overhead (world units). */
@@ -318,8 +322,9 @@ class FisherView {
       tFacing = campSeat.facing;
     } else {
       predict(f, sn, predicted);
-      tx = predicted.x;
-      tz = predicted.z;
+      // Round 20: plus the eased personal-space offset (personalSpace.ts; FisherViews sets it).
+      tx = predicted.x + this.spaceX;
+      tz = predicted.z + this.spaceZ;
       tFacing = f.facing;
     }
     if (!this.present) {
@@ -416,7 +421,10 @@ class FisherView {
       const fl = Math.min(1, Math.max(0, (c - 0.3) / 0.7));
       this.tipWorld();
       bob.set(this.tip.x + (f.bobber.x - this.tip.x) * fl, 0, this.tip.z + (f.bobber.z - this.tip.z) * fl);
-      bob.y = this.tip.y * (1 - fl) + Math.sin(fl * Math.PI) * 3.2 + 0.05 * fl;
+      // Round 20: an arc as high as a fifth of the cast (at most 1.4 m; it was 3.2 m whatever the cast, so a
+      // still mid-flight read as a bobber hanging in the air over the far bank, hollow.png).
+      const arc = Math.min(1.4, 0.2 * Math.hypot(f.bobber.x - this.tip.x, f.bobber.z - this.tip.z));
+      bob.y = this.tip.y * (1 - fl) + Math.sin(fl * Math.PI) * arc + 0.05 * fl;
       sag = 0.05;
       if (c >= 1 && !this.plopped) {
         this.plopped = true;
@@ -836,6 +844,7 @@ export class FisherViews {
   /** Where a riding seat stands on its boat or zeppelin (set by the scene). */
   rideOf: ((seat: number, out: { x: number; y: number; z: number; facing: number }) => boolean) | null = null;
   private readonly ridePose = { x: 0, y: 0, z: 0, facing: 0 };
+  private readonly spots: Spot[] = [];
 
   frame(lake: Lake | null, sn: number, t: number, dt: number, camera: Camera, campSeats: { x: number; z: number; facing: number }[]): void {
     for (let i = 0; i < 4; i++) this.bySeat[i] = undefined;
@@ -848,6 +857,17 @@ export class FisherViews {
         }
       }
       this.upgradeSeq = lake.upgradeSeq;
+    }
+    // Round 20: nobody stands inside another (arrival.png: the rules set four riders down on one spot).
+    const spots = this.spots;
+    spots.length = 0;
+    if (lake && !lake.campfire) for (const f of lake.fishers) if (f.seat >= 0 && f.seat < 4 && !(this.rideOf && this.rideOf(f.seat, this.ridePose))) spots.push({ seat: f.seat, x: f.pos.x, z: f.pos.z, ox: 0, oz: 0 });
+    spaceOut(spots);
+    const ks = damp(3, dt);
+    for (const v of this.views) {
+      const sp = spots.find((p) => p.seat === v.seat);
+      v.spaceX += ((sp ? sp.ox : 0) - v.spaceX) * ks;
+      v.spaceZ += ((sp ? sp.oz : 0) - v.spaceZ) * ks;
     }
     let ci = 0;
     for (let i = 0; i < 4; i++) {

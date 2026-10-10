@@ -428,6 +428,11 @@ export class CameraRig {
       const oz = pz * 0.85 - Math.sin(h) * 0.5;
       this.wantYaw = Math.atan2(ox, oz);
       this.wantEl = this.ride.kind === 2 ? 0.2 : 0.3;
+      // Round 20: the lineup runs on the travelling shot too (arrival.png: stepping off the airship the family
+      // stood in a row along the lens, Sis behind Dad, Juneau behind Mom).
+      const lu = this.lineUp(this.wantYaw, this.wantEl);
+      this.wantYaw += lu.yaw;
+      this.wantEl += lu.el;
       this.fitGroup(this.wantYaw, this.wantEl);
       rate = 1.6;
     } else if (groupMode && this.board) {

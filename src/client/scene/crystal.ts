@@ -47,7 +47,15 @@ export function crystalMaterial(): MeshBasicMaterial {
     // projection axes stay fixed: a facet-relative axis would swing with the smooth normal).
     vec2 w = pow(abs(n.xz), vec2(4.0));
     w /= (w.x + w.y + 1e-4);
-    vec3 d = (texture2D(tCrystal, vCrWp.zy * 1.3).rgb * w.x + texture2D(tCrystal, vCrWp.xy * 1.3 + 0.37).rgb * w.y) * uCrystalInv;
+    // Round 20: 1.3 repeats a metre tiled the painted fractures into an obvious zig-zag up a 12 m spire
+    // (far-place): two scales (0.42 and 0.17 a metre, the second turned and offset) averaged, so no
+    // repeat lines up along a facet.
+    vec2 pa = vCrWp.zy;
+    vec2 pb = vCrWp.xy;
+    mat2 rot = mat2(0.8, -0.6, 0.6, 0.8);
+    vec3 d1 = texture2D(tCrystal, pa * 0.42).rgb * w.x + texture2D(tCrystal, pb * 0.42 + 0.37).rgb * w.y;
+    vec3 d2 = texture2D(tCrystal, rot * pa * 0.17 + 0.61).rgb * w.x + texture2D(tCrystal, rot * pb * 0.17 + 0.13).rgb * w.y;
+    vec3 d = (d1 * 0.55 + d2 * 0.45) * uCrystalInv;
     float l = dot(d, vec3(0.3, 0.55, 0.15));
     // A soft value range: the facets read painted, never dark blotches on a glowing shard.
     vec3 pd = clamp(mix(vec3(l), d, 0.4), 0.6, 1.7);

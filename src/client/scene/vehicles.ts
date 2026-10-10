@@ -83,6 +83,9 @@ export type Vehicles = {
   dispose(): void;
 };
 
+/** How far round the rules' landing spot the riders are drawn stepping aboard and ashore (m). */
+const ASHORE_R = 1.6;
+
 // ---------- geometry ----------
 
 /** Turns a geometry built along +y to point along a direction. */
@@ -909,7 +912,9 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
       v.updateMatrixWorld();
       tmpV.applyMatrix4(v.matrixWorld);
       // Step aboard at the start, ashore at the end (from / to where the rules stand them).
-      const off = { x: Math.cos(i * 1.7) * 0.9, z: Math.sin(i * 1.7) * 0.9 };
+      // Round 20: on the rules' ring (i x 1.7 rad) but drawn 1.6 m out, not 0.9 (arrival.png: four fishers on one
+      // spot, Juneau inside Mom); personalSpace.ts keeps them apart once they are ashore.
+      const off = { x: Math.cos(i * 1.7) * ASHORE_R, z: Math.sin(i * 1.7) * ASHORE_R };
       const sx = rideState.from.x + off.x;
       const sz = rideState.from.z + off.z;
       const ex = rideState.to.x + off.x;
