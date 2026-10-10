@@ -1,0 +1,152 @@
+{
+  "videos": [
+    {
+      "role": "tv",
+      "path": "/Users/jonathanmumm/src/bobberbrook/critic/rounds/20/raw/page@7a618df3c671b8148c8a833a5107b64d.webm",
+      "startedAt": 1791672245452,
+      "label": "TV"
+    },
+    {
+      "role": "dad",
+      "path": "/Users/jonathanmumm/src/bobberbrook/critic/rounds/20/raw/page@f470739ec632cab35338471def6bd2bd.webm",
+      "startedAt": 1791672245619,
+      "label": "Dad's phone"
+    },
+    {
+      "role": "kid",
+      "path": "/Users/jonathanmumm/src/bobberbrook/critic/rounds/20/raw/page@778c9a073feb1e3b81b8be6a0343bd78.webm",
+      "startedAt": 1791672245745,
+      "label": "Juneau's iPad (5)"
+    }
+  ],
+  "audio": {
+    "path": "critic/rounds/20/raw/tv-audio.webm",
+    "startedAt": 1791672246509.2
+  },
+  "marks": [
+    {
+      "label": "everyone in",
+      "t": 4.7
+    },
+    {
+      "label": "at the water",
+      "t": 21.2
+    },
+    {
+      "label": "Dad casts",
+      "t": 21.4
+    },
+    {
+      "label": "Juneau casts",
+      "t": 21.6
+    },
+    {
+      "label": "Juneau hooks",
+      "t": 26
+    },
+    {
+      "label": "Dad hooks",
+      "t": 26.4
+    },
+    {
+      "label": "Juneau catch",
+      "t": 30.9
+    },
+    {
+      "label": "Dad catch",
+      "t": 31
+    },
+    {
+      "label": "Dad casts",
+      "t": 35
+    },
+    {
+      "label": "Juneau casts",
+      "t": 35.1
+    },
+    {
+      "label": "Juneau hooks",
+      "t": 38.6
+    },
+    {
+      "label": "Dad hooks",
+      "t": 40.8
+    },
+    {
+      "label": "Juneau catch",
+      "t": 47.9
+    },
+    {
+      "label": "Dad catch",
+      "t": 48.5
+    },
+    {
+      "label": "explore: trail to Mistmarsh",
+      "t": 52.1
+    },
+    {
+      "label": "found Mistmarsh",
+      "t": 133.9
+    },
+    {
+      "label": "Dad casts",
+      "t": 134.2
+    },
+    {
+      "label": "Dad hooks",
+      "t": 139.9
+    },
+    {
+      "label": "Dad catch",
+      "t": 145.9
+    },
+    {
+      "label": "Juneau tagged along",
+      "t": 170.6
+    },
+    {
+      "label": "Juneau casts",
+      "t": 171.1
+    },
+    {
+      "label": "Juneau hooks",
+      "t": 177.9
+    },
+    {
+      "label": "Juneau catch",
+      "t": 182
+    },
+    {
+      "label": "Juneau casts",
+      "t": 186
+    },
+    {
+      "label": "Dad casts",
+      "t": 186
+    },
+    {
+      "label": "Juneau hooks",
+      "t": 192.1
+    },
+    {
+      "label": "Dad hooks",
+      "t": 192.9
+    },
+    {
+      "label": "Dad catch",
+      "t": 196.3
+    },
+    {
+      "label": "Juneau catch",
+      "t": 200.8
+    },
+    {
+      "label": "campfire",
+      "t": 204.9
+    },
+    {
+      "label": "back to fishing",
+      "t": 212.2
+    }
+  ]
+}
