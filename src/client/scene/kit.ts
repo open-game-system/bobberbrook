@@ -46,8 +46,7 @@ export function instanced(geo: BufferGeometry, mat: Material, list: Inst[], shad
   mesh.computeBoundingSphere();
   void m4;
   // Leaf cards ride along as a child sharing the same instances.
-  const f = foliageOf(geo);
-  if (f) {
+  for (const f of foliageOf(geo)) {
     const leaf = new InstancedMesh(f.cards, f.mat, Math.max(1, list.length));
     leaf.instanceMatrix = mesh.instanceMatrix;
     leaf.instanceColor = mesh.instanceColor;

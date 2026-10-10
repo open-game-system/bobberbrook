@@ -15,7 +15,7 @@ import { pondRadius, type Area, type PondPlace } from "../../game/world";
 import { crystalShard, instanced, giantGeometry, rockGeometry, type Inst } from "./kit";
 import { jitter, merge, paint, prep, puffNormals, surf } from "./geo";
 import { PK } from "./painter";
-import { attachFoliage, leafCards, type Puff } from "./foliage";
+import { attachFoliage, coniferCards, leafCards, type Puff, type Tier } from "./foliage";
 import { barked } from "./surfaces";
 import { rng, vnoise } from "./noise";
 import { heightAt } from "./terrain";
@@ -128,8 +128,33 @@ export function paleOakGeometry(seed: number): BufferGeometry {
   return attachFoliage(barked([trunk, ...limbs], [canopy]), cards, "violet");
 }
 
-/** A pine heavy with snow. */
+/**
+ * A pine heavy with snow (round 12): a dark core and tiers of painted snow-laden needle-spray boughs
+ * (pine-snow), like the plain pines; the old snow-capped cones stay as its far stand-in.
+ */
 export function snowPineGeometry(): BufferGeometry {
+  const trunk = prep(new CylinderGeometry(0.12, 0.32, 4.6, 7).translate(0, 2.3, 0));
+  paint(trunk, 0x3a2c38, 0x5a4652);
+  const tiers: Tier[] = [
+    { y: 1.1, r: 1.95, h: 1.3 }, { y: 1.95, r: 1.66, h: 1.2 }, { y: 2.75, r: 1.36, h: 1.1 }, { y: 3.45, r: 1.04, h: 0.95 }, { y: 4.1, r: 0.72, h: 0.85 },
+  ];
+  const cones = tiers.map(({ y, r, h }, i) => {
+    const g = new ConeGeometry(r * 0.62, h * 1.25, 9, 1);
+    jitter(g, 0.06, i * 3.3 + 1);
+    g.computeVertexNormals();
+    g.translate(0, y + h * 0.62, 0);
+    const p = prep(g);
+    puffNormals(p, 0, y + h * 0.3, 0, 0.55);
+    paint(p, 0x142c3c, 0x3a5a6c);
+    return p;
+  });
+  // Lighter card colours than the green pine: the snow on the sheet stays white, the needles read dark under it.
+  const cards = coniferCards(tiers, { inner: 0x3a5468, outer: 0x9ab4c8, top: 0xd8e6f4, seed: 317 });
+  return attachFoliage(barked([trunk], cones), cards, "needleSnow");
+}
+
+/** The far stand-in for the snowy pine: snow-capped cones. */
+export function snowPineLo(): BufferGeometry {
   const trunk = prep(new CylinderGeometry(0.16, 0.3, 1.6, 7).translate(0, 0.8, 0));
   paint(trunk, 0x3a2c38, 0x5a4652);
   const layers: [number, number, number][] = [[1.3, 1.8, 2.3], [2.35, 1.42, 2.0], [3.3, 1.06, 1.75], [4.15, 0.68, 1.4]];

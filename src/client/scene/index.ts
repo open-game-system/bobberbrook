@@ -32,7 +32,7 @@ import { buildSky } from "./sky";
 import { SwirlViews } from "./swirls";
 import { buildGroundStream } from "./terrain";
 import { imageOf, loadPaintKit } from "./paintkit";
-import { asCard, cloudSheetOf, setCards } from "./cards";
+import { asCard, cloudSheetOf, needleSheetOf, setCards } from "./cards";
 import { groundMaterial } from "./groundmat";
 import { leafMaterial, setFoliageMaterials } from "./foliage";
 import { CHAR_LIGHT, needleSheet, setPaintImages } from "./painter";
@@ -200,7 +200,18 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   // Lamps, lantern posts and their glass, wherever they are built, dissolve through the same fade.
   registerFade(treeMat, occ);
   // Leaf cards for every canopy built from here on (one program for both leaf sheets).
-  const leafMats = { violet: leafMaterial(kit.leavesViolet, occ, time), fern: leafMaterial(kit.leavesFern, occ, time), needle: leafMaterial(needleSheet(), occ, time) };
+  // Round 12: the Codex needle sprays (green, and snow-laden in frost) replace the code-painted sheet.
+  const sprayImg = imageOf(kit.pineSpray);
+  const snowImg = imageOf(kit.pineSnow);
+  const sprayTex = sprayImg ? needleSheetOf(sprayImg) : null;
+  const snowTex = snowImg ? needleSheetOf(snowImg) : null;
+  const needleTex = sprayTex ? { tex: sprayTex, inv: kit.pineSpray.inv } : needleSheet();
+  const leafMats = {
+    violet: leafMaterial(kit.leavesViolet, occ, time),
+    fern: leafMaterial(kit.leavesFern, occ, time),
+    needle: leafMaterial(needleTex, occ, time),
+    needleSnow: leafMaterial(snowTex ? { tex: snowTex, inv: kit.pineSnow.inv } : needleTex, occ, time, { hue: 0.7 }),
+  };
   setFoliageMaterials(leafMats);
   // Painted rock on every boulder and cliff, painted bark on trunks, stone tiles on the tower dais.
   const surfMats = { rock: rockMaterial(kit.rock), bark: barkMaterial(kit.bark, occ), tiles: tilesMaterial(kit.tiles) };
@@ -758,6 +769,8 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       leafMats.fern.dispose();
       leafMats.needle.map?.dispose();
       leafMats.needle.dispose();
+      leafMats.needleSnow.map?.dispose();
+      leafMats.needleSnow.dispose();
       setFoliageMaterials(null);
       for (const m of Object.values(surfMats)) m.dispose();
       setSurfaceMaterials(null);

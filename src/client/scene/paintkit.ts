@@ -32,6 +32,23 @@ export type PaintKit = {
   cloudA: PaintTex;
   cloudB: PaintTex;
   poolWarm: PaintTex;
+  /** Round 12 (kit part 3): needle sprays, leaf variants, wisteria, plant cards, glow-caps, cool pool, embers bed, crystal, ground. */
+  pineSpray: PaintTex;
+  pineSnow: PaintTex;
+  leavesGlow: PaintTex;
+  leavesTeal: PaintTex;
+  wisteria: PaintTex;
+  foxglove: PaintTex;
+  fern: PaintTex;
+  bluebell: PaintTex;
+  grassCard: PaintTex;
+  glowcapBlue: PaintTex;
+  glowcapViolet: PaintTex;
+  poolCool: PaintTex;
+  embersLogs: PaintTex;
+  crystal: PaintTex;
+  forestFloor: PaintTex;
+  glowMoss: PaintTex;
   dispose(): void;
 };
 
@@ -105,15 +122,35 @@ let shared: Promise<PaintKit> | null = null;
 export function loadPaintKit(base = "/art/textures/"): Promise<PaintKit> {
   if (shared) return shared;
   const loader = new TextureLoader();
+  const files = {
+    grass: "grass", moss: "moss", path: "path", bark: "bark", rock: "rock", tiles: "stone-tiles", bed: "lakebed", leavesViolet: "leaves-violet", leavesFern: "leaves-fern",
+    planks: "planks", canvas: "canvas", shingles: "shingles", runestone: "runestone", snow: "snow", flameA: "flame-a", flameB: "flame-b", embers: "embers", cloudA: "cloud-a", cloudB: "cloud-b", poolWarm: "pool-warm",
+    pineSpray: "pine-spray", pineSnow: "pine-snow", leavesGlow: "leaves-glow", leavesTeal: "leaves-teal", wisteria: "wisteria", foxglove: "foxglove", fern: "fern", bluebell: "bluebell", grassCard: "grass-card",
+    glowcapBlue: "glowcap-blue", glowcapViolet: "glowcap-violet", poolCool: "pool-cool", embersLogs: "embers-logs", crystal: "crystal", forestFloor: "forest-floor", glowMoss: "glow-moss",
+  } as const;
+  type Key = keyof typeof files;
   const p = async (): Promise<PaintKit> => {
-    const [grass, moss, path, bark, rock, tiles, bed, leavesViolet, leavesFern, planks, canvas, shingles, runestone, snow, flameA, flameB, embers, cloudA, cloudB, poolWarm] = await Promise.all(
-      ["grass", "moss", "path", "bark", "rock", "stone-tiles", "lakebed", "leaves-violet", "leaves-fern", "planks", "canvas", "shingles", "runestone", "snow", "flame-a", "flame-b", "embers", "cloud-a", "cloud-b", "pool-warm"].map((n) => load(loader, `${base}${n}.webp`)),
-    );
-    if (!grass || !moss || !path || !bark || !rock || !tiles || !bed || !leavesViolet || !leavesFern || !planks || !canvas || !shingles || !runestone || !snow || !flameA || !flameB || !embers || !cloudA || !cloudB || !poolWarm) throw new Error("paint kit: missing texture");
+    const keys = Object.keys(files).filter((k): k is Key => k in files);
+    const loaded = await Promise.all(keys.map((k) => load(loader, `${base}${files[k]}.webp`)));
+    const m = new Map<Key, PaintTex>();
+    keys.forEach((k, i) => {
+      const t = loaded[i];
+      if (t) m.set(k, t);
+    });
+    const get = (k: Key): PaintTex => {
+      const t = m.get(k);
+      if (!t) throw new Error(`paint kit: missing texture ${k}`);
+      return t;
+    };
     return {
-      grass, moss, path, bark, rock, tiles, bed, leavesViolet, leavesFern, planks, canvas, shingles, runestone, snow, flameA, flameB, embers, cloudA, cloudB, poolWarm,
+      grass: get("grass"), moss: get("moss"), path: get("path"), bark: get("bark"), rock: get("rock"), tiles: get("tiles"), bed: get("bed"), leavesViolet: get("leavesViolet"), leavesFern: get("leavesFern"),
+      planks: get("planks"), canvas: get("canvas"), shingles: get("shingles"), runestone: get("runestone"), snow: get("snow"), flameA: get("flameA"), flameB: get("flameB"), embers: get("embers"),
+      cloudA: get("cloudA"), cloudB: get("cloudB"), poolWarm: get("poolWarm"),
+      pineSpray: get("pineSpray"), pineSnow: get("pineSnow"), leavesGlow: get("leavesGlow"), leavesTeal: get("leavesTeal"), wisteria: get("wisteria"), foxglove: get("foxglove"), fern: get("fern"),
+      bluebell: get("bluebell"), grassCard: get("grassCard"), glowcapBlue: get("glowcapBlue"), glowcapViolet: get("glowcapViolet"), poolCool: get("poolCool"), embersLogs: get("embersLogs"),
+      crystal: get("crystal"), forestFloor: get("forestFloor"), glowMoss: get("glowMoss"),
       dispose() {
-        for (const t of [grass, moss, path, bark, rock, tiles, bed, leavesViolet, leavesFern, planks, canvas, shingles, runestone, snow, flameA, flameB, embers, cloudA, cloudB, poolWarm]) t.tex.dispose();
+        for (const t of m.values()) t.tex.dispose();
         shared = null;
       },
     };

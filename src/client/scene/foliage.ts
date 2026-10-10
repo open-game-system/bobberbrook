@@ -11,7 +11,8 @@ import { PAINT_GLSL, type PaintTex } from "./paintkit";
  * and `instanced()` draws them as a child instanced mesh with the same instances.
  */
 
-export type LeafKind = "violet" | "fern" | "needle";
+/** Leaf sheets: the round-07 pair, the needle sprays (snowy in frost), and the round-12 teal, glow-rim and wisteria sheets. */
+export type LeafKind = "violet" | "fern" | "needle" | "needleSnow" | "teal" | "glow" | "wisteria";
 /** A canopy puff: centre, radius, vertical squash. */
 export type Puff = [x: number, y: number, z: number, r: number, sy?: number];
 
@@ -29,21 +30,30 @@ export type CardOpts = {
 };
 
 type Foliage = { cards: BufferGeometry; kind: LeafKind };
-const registry = new WeakMap<BufferGeometry, Foliage>();
-let mats: Record<LeafKind, Material> | null = null;
+const registry = new WeakMap<BufferGeometry, Foliage[]>();
+let mats: Partial<Record<LeafKind, Material>> | null = null;
+/** A leaf sheet with no material registered draws with this one (the scene always registers violet). */
+const FALLBACK: LeafKind = "violet";
 
-export function attachFoliage(geo: BufferGeometry, cards: BufferGeometry, kind: LeafKind): BufferGeometry {
+/** Registers a tree's leaf cards (one set per leaf sheet: the canopy, its glow rim, its wisteria). */
+export function attachFoliage(geo: BufferGeometry, cards: BufferGeometry, kind: LeafKind, ...more: [BufferGeometry, LeafKind][]): BufferGeometry {
   // The dark core under the leaf cards needs no painted detail (and the trees are many: keep them cheap).
   surf(geo, PK.none);
-  registry.set(geo, { cards, kind });
+  registry.set(geo, [{ cards, kind }, ...more.map(([c, k]) => ({ cards: c, kind: k }))]);
   return geo;
 }
-export function foliageOf(geo: BufferGeometry): { cards: BufferGeometry; mat: Material } | null {
+export function foliageOf(geo: BufferGeometry): { cards: BufferGeometry; mat: Material }[] {
   const f = registry.get(geo);
-  if (!f || !mats) return null;
-  return { cards: f.cards, mat: mats[f.kind] };
+  const m = mats;
+  if (!f || !m) return [];
+  const out: { cards: BufferGeometry; mat: Material }[] = [];
+  for (const p of f) {
+    const mat = m[p.kind] ?? m[FALLBACK];
+    if (mat && p.cards.getAttribute("position").count > 0) out.push({ cards: p.cards, mat });
+  }
+  return out;
 }
-export function setFoliageMaterials(m: Record<LeafKind, Material> | null): void {
+export function setFoliageMaterials(m: Partial<Record<LeafKind, Material>> | null): void {
   mats = m;
 }
 
@@ -273,12 +283,20 @@ export function hangingCards(strands: Strand[], top: number | Color, tip: number
  * canopy between the camera and the family dissolves like the rest of the tree. One program for both
  * leaf sheets.
  */
-export function leafMaterial(tex: PaintTex, occ: OccluderUniforms, time: { value: number }): MeshLambertMaterial {
+export type LeafLook = {
+  /** How much of the sheet's own hue shows over the card colour (0.45: the card colour leads). */
+  hue?: number;
+  /** Self-light of the sheet's bright strokes (the glow-rim leaves at night); a shared uniform the time of day drives. */
+  glow?: { value: number };
+};
+export function leafMaterial(tex: PaintTex, occ: OccluderUniforms, time: { value: number }, look: LeafLook = {}): MeshLambertMaterial {
   const m = new MeshLambertMaterial({ vertexColors: true, map: tex.tex, alphaTest: 0.5, side: DoubleSide });
   m.alphaToCoverage = true;
   m.onBeforeCompile = (shader) => {
     shader.uniforms.uTime = time;
     shader.uniforms.uLeafInv = { value: tex.inv };
+    shader.uniforms.uLeafHue = { value: look.hue ?? 0.45 };
+    shader.uniforms.uLeafGlow = look.glow ?? { value: 0 };
     shader.vertexShader = shader.vertexShader
       .replace("#include <common>", "#include <common>\nuniform float uTime;")
       .replace(
@@ -294,12 +312,18 @@ export function leafMaterial(tex: PaintTex, occ: OccluderUniforms, time: { value
 #endif`,
       );
     shader.fragmentShader = shader.fragmentShader
-      .replace("#include <common>", `#include <common>\nuniform vec3 uLeafInv;\n${PAINT_GLSL}`)
+      .replace("#include <common>", `#include <common>\nuniform vec3 uLeafInv;\nuniform float uLeafHue;\nuniform float uLeafGlow;\n${PAINT_GLSL}`)
       .replace(
         "#include <map_fragment>",
         `vec4 leafTex = texture2D(map, vMapUv);
   diffuseColor.a *= leafTex.a;
-  diffuseColor.rgb *= pkDetail(leafTex.rgb, uLeafInv, 0.45);`,
+  diffuseColor.rgb *= pkDetail(leafTex.rgb, uLeafInv, uLeafHue);`,
+      )
+      // Glow-rim leaves: the sheet's bright strokes light themselves (tinted by the card colour) at night.
+      .replace(
+        "#include <emissivemap_fragment>",
+        `#include <emissivemap_fragment>
+  totalEmissiveRadiance += uLeafGlow * vColor.rgb * leafTex.rgb * smoothstep(0.25, 0.85, pkLum(leafTex.rgb));`,
       )
       // Both faces take the crown's normal (a card seen from behind is not a dark hole in the canopy).
       .replace("#include <normal_fragment_begin>", "#include <normal_fragment_begin>\n  normal = normalize(vNormal);");

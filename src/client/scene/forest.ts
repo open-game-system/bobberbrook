@@ -2,7 +2,7 @@ import { BufferGeometry, Color, ConeGeometry, CylinderGeometry, Group, Instanced
 import { CAMPFIRE, SOUTH, TRAIL_HALF_WIDTH, angleGap } from "../../game/world";
 import { CANOPY, blob, bushGeometry, instanced, oakGeometry, pineGeometry, type Inst } from "./kit";
 import { birchGeometry, willowGeometry } from "./landmarks";
-import { paleOakGeometry, snowPineGeometry } from "./biomes";
+import { paleOakGeometry, snowPineGeometry, snowPineLo } from "./biomes";
 import { fbm, hash2, rng, vnoise } from "./noise";
 import { merge, paint, prep, puffNormals } from "./geo";
 import { FALLS, heightAt } from "./terrain";
@@ -89,7 +89,7 @@ export function buildForest(full: boolean, treeMat: Material, jobs: Jobs): Fores
     { hi: willowGeometry(3), lo: oakLo(0), shadows: true },
     { hi: birchGeometry(9), lo: oakLo(2), shadows: true },
     { hi: paleOakGeometry(31), lo: paleOakGeometry(31), shadows: true },
-    { hi: snowPineGeometry(), lo: snowPineGeometry(), shadows: true },
+    { hi: snowPineGeometry(), lo: snowPineLo(), shadows: true },
   ];
   const group = new Group();
   group.name = "forest";
