@@ -1,5 +1,6 @@
 import { lineFloor, underWalk } from "./walkways";
 import { spaceOut, type Spot } from "./personalSpace";
+import { READY_ARM_X, SLING_ARM, placeRod, slingTarget } from "./rodSling";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -150,6 +151,13 @@ class FisherView {
   private reach = { l: 1, r: 1 };
   private turnW = 0;
   speed = 0;
+  /** Round 21: 0 = rod in hand, 1 = slung on the back (rodSling.ts); how long the fisher has stood still. */
+  private sling = 0;
+  private stillFor = 0;
+  /** Round 21: how the rod rides (lab debug). */
+  rodDebug(): { sling: number; stillFor: number; speed: number; armRx: number } {
+    return { sling: Math.round(this.sling * 100) / 100, stillFor: Math.round(this.stillFor * 10) / 10, speed: Math.round(this.speed * 100) / 100, armRx: Math.round(this.pose.armRx * 100) / 100 };
+  }
   private pose = zeroPose();
   private target = zeroPose();
   private dispProgress = REEL_START;
@@ -402,6 +410,13 @@ class FisherView {
       target.lean = 0.14;
       target.headY *= 0.3;
     }
+    // Round 21: standing at the water with the rod in hand, it is held ready, tip up (not level like a lance).
+    if (mode === "walk" && !moving && !lake.campfire) target.armRx = READY_ARM_X;
+    // Carrying the rod over the shoulder, the right arm comes up to hold its butt at the chest.
+    if (this.sling > 0.01 && !lake.campfire) {
+      target.armRx += (SLING_ARM.x - target.armRx) * this.sling;
+      target.armRz += (SLING_ARM.z - target.armRz) * this.sling;
+    }
     if (lake.campfire) {
       target.sit = 1; target.legL = -1.45; target.legR = -1.45; target.armLx = -0.6; target.armRx = -0.6; target.armLz = 0.3; target.armRz = -0.3;
       target.headX = Math.sin(t * 0.8 + this.seat) * 0.06;
@@ -633,6 +648,15 @@ class FisherView {
     this.bobber.visible = showBobber;
     if (showBobber) this.bobber.position.copy(bob);
     root.updateMatrixWorld(true);
+    // The rod on the back while walking or riding, in hand at the water and whenever fishing.
+    this.stillFor = moving ? 0 : this.stillFor + dt;
+    const atWater = !moving && mode === "walk" && activeWorld().castFrom({ x: this.x, z: this.z }) !== null;
+    const slingTo = slingTarget({ mode, moving, stillFor: this.stillFor, riding: ride !== null, atWater });
+    this.sling += (slingTo - this.sling) * damp(mode === "walk" ? 5 : 14, dt);
+    if (rod.root.visible) {
+      placeRod(rod.root, root, rig.rodHand, rig.rodBack, this.sling);
+      rod.root.updateMatrixWorld(true);
+    }
     let lineTo: Vector3 | null = showBobber ? bob : null;
     if (inCatch && this.card.group.visible && t - this.catchStart < LEAP_S * 0.6 && rodVisible) lineTo = this.card.group.position;
     if (lineTo && rod.root.visible) {
@@ -1036,6 +1060,7 @@ export class FisherViews {
         cardScale: v.card.card.scale.toArray(),
         catchStart: v.catchStart,
         tag: { visible: v.rig.tag.visible, dx: v.tagDx, dy: v.tagDy },
+        rod: v.rodDebug(),
       };
     });
   }

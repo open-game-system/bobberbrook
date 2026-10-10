@@ -43,6 +43,13 @@ export type FisherRig = {
   armL: Group;
   armR: Group;
   hand: Object3D;
+  /**
+   * Round 21: where the rod rides. The rods hang off the fisher's root; each frame the scene blends them
+   * between `rodHand` (in the right mitten, along the forearm) and `rodBack` (over the right shoulder, tip up
+   * and back) by how far the fisher is walking (fishers.ts).
+   */
+  rodHand: Object3D;
+  rodBack: Object3D;
   rods: RodRig[];
   marker: Mesh;
   markerMat: MeshBasicMaterial;
@@ -361,7 +368,7 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials)
   const rods: RodRig[] = [];
   for (let tier = 0; tier < 4; tier++) {
     const rroot = new Group();
-    rroot.rotation.x = Math.PI / 2; // along the forearm's forward
+    // Placed every frame between the hand and the back (rodHand / rodBack).
     const pivots: Group[] = [];
     let parent: Object3D = rroot;
     for (let s = 0; s < ROD_SEGMENTS; s++) {
@@ -375,11 +382,21 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials)
     const tip = new Object3D();
     tip.position.y = ROD_LEN / ROD_SEGMENTS;
     parent.add(tip);
-    rroot.position.set(0, 0, 0.0);
-    rroot.translateY(-0.12);
-    hand.add(rroot);
+    root.add(rroot);
     rods.push({ root: rroot, pivots, tip });
   }
+  // The rod in the mitten: along the forearm's forward, its butt just behind the grip.
+  const rodHand = new Object3D();
+  rodHand.rotation.x = Math.PI / 2;
+  rodHand.translateY(-0.12);
+  hand.add(rodHand);
+  // Over the right shoulder (round 21): the butt in the mitten at the chest, the rod resting on the shoulder,
+  // its tip up and back over the pack, so it never points at the ground or out in front like a lance (round 20
+  // session 100/131 s). The arm comes up to hold it (fishers.ts, SLING_ARM).
+  const rodBack = new Object3D();
+  rodBack.position.set(-0.16, 0.4, 0.2);
+  rodBack.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), new Vector3(0.22, 0.62, -0.76).normalize());
+  body.add(rodBack);
 
   // The seat-coloured ring at the fisher's feet: the kid finds his own fisher by it.
   const ringGeo = new RingGeometry(0.42, 0.56, 36);
@@ -413,6 +430,8 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials)
     armL,
     armR,
     hand,
+    rodHand,
+    rodBack,
     rods,
     marker,
     markerMat,

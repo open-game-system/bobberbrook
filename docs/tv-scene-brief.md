@@ -131,6 +131,10 @@ cover a fisher's face (`Particles.setFaces`), and the catch bursts are capped (l
   bake soft occlusion from the figure's bulk (head, coat, arms, legs, pack as spheres) and a top light from shaded
   boots to lit shoulders into their vertex colours. The cool character rim follows the painted detail's value on
   clothes (no clean vinyl edge). Skin, faces, hair and the starlight rod are untouched.
+- **Rod carried, not levelled** (round 21, `rodSling.ts`): walking, riding and stepping ashore, the rod rests over the right
+  shoulder (butt in the mitten at the chest, tip up and back over the pack); standing still at the water (where the
+  world's `castFrom` would cast, after 0.7 s) it comes to hand held ready, tip up; fishing modes always hold it in hand.
+  The rods hang off the fisher's root and are blended each frame between the hand and shoulder mounts.
 - A small name tag (pill in the seat colour) above each head, readable at TV distance.
 - Rod by tier `lake.rodTier`: 0 willow branch, 1 bamboo, 2 polished wood + brass reel, 3 starlight
   (glowing, sparkles). Visible change when `upgradeSeq` grows: a burst of light around every fisher.
