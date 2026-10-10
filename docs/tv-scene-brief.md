@@ -169,6 +169,9 @@ appear and fade (`since`, `until`), never pop.
   anyone is past the margin in the live shot the follow hurries (up to x3.2). A discovery frames the new pond whole
   with the family (its rim joins the fit, a little higher). A golden swirl within 40 m of the family joins the
   framing, and its light pillar (on the golden swirl nearest the lens) rises to 34 m from afar as a beacon.
+- **Round 18**: Mistmarsh's boardwalk posts and rope rails dissolve with the lamp posts; entering the campfire lands on
+  the fire with the family seated (like leaving it), never a flight over the land; when a fisher stands in line a few
+  metres in front of another in a tight framing, the group camera steps back up to 16% so the near back never looms.
 - **Catch moment** (round 17): an eased push toward the catcher (~1 s in, held while the fish is up, ~1 s out); a second
   catch while the first fish is up keeps the push on the middle of both catchers (the safe-margin fit decides how deep).
 - **Discovery** (round 17): a 5 s reveal swings round behind the family (a three-quarter yaw that keeps every fisher

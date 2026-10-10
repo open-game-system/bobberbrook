@@ -205,9 +205,11 @@ function mistmarsh(c: Ctx): void {
         const ox = Math.cos(ry) * side * 1.05;
         const oz = -Math.sin(ry) * side * 1.05;
         const post = new CylinderGeometry(0.11, 0.13, 2.2, 7).translate(p.x + ox, p.y - 0.6, p.z + oz);
-        c.wood.push(surf(paint(prep(post), 0x2a1c14, 0x6a4a30), PK.grain));
+        // Round 18: posts, their rope collars and the rails dissolve between the camera and a fisher like the
+        // lamp posts (round 17 session 212-268 s: they hid Dad through every Mistmarsh catch).
+        c.lamps.push(surf(paint(prep(post), 0x2a1c14, 0x6a4a30), PK.grain));
         const rope = new TorusGeometry(0.13, 0.03, 4, 10).rotateX(Math.PI / 2).translate(p.x + ox, p.y + 0.3, p.z + oz);
-        c.wood.push(paint(prep(rope), 0xd8b878));
+        c.lamps.push(paint(prep(rope), 0xd8b878));
         if (i % 14 === 0 && side === 1) {
           const lp = lanternPost(1.9);
           for (const gg of [lp.wood, lp.glass]) gg.rotateY(ry + Math.PI / 2).translate(p.x + ox, p.y, p.z + oz);
@@ -228,7 +230,7 @@ function mistmarsh(c: Ctx): void {
       const ry = Math.atan2(tan.x, tan.z);
       rail.push(new Vector3(p.x + Math.cos(ry) * side * 1.05, p.y + 0.28 - Math.abs(Math.sin(t * Math.PI * 4)) * 0.1, p.z - Math.sin(ry) * side * 1.05));
     }
-    c.wood.push(paint(prep(new TubeGeometry(new CatmullRomCurve3(rail), 60, 0.03, 4, false)), 0xd2b070));
+    c.lamps.push(paint(prep(new TubeGeometry(new CatmullRomCurve3(rail), 60, 0.03, 4, false)), 0xd2b070));
   }
   // The pavilion on the far shore: six posts, a railing, a swept purple roof, lanterns under the eaves.
   const pv = at(a, -2.35, 4.5);

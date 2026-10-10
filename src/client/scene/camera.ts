@@ -44,6 +44,10 @@ const EST_PITCH = 0.19;
 /** Group framing limits (metres from the target). */
 const MIN_DIST = 17;
 const MAX_DIST = 64;
+/** Round 18: past LOOM_GAP m of depth between the nearest and farthest fisher, the framing steps back up to LOOM_BACK. */
+const LOOM_GAP = 2.5;
+const LOOM_BACK = 0.16;
+const LOOM_LAT = 4;
 /** Where the fishers' box must fit, in NDC (x: ±, y: bottom..top; the top leaves room for name tags). */
 /** 0.78: every fisher (feet to name tag) stays inside a 10% safe margin, with a little room to ease. */
 // Round 13: 0.78 -> 0.70. The fit works on each fisher's centre line, but a name tag and a body reach about
@@ -279,6 +283,26 @@ export class CameraRig {
       t.z += -offX * halfW * Math.sin(yaw) - up * Math.cos(yaw);
       d = Math.min(MAX_DIST, Math.max(this.minDist, d * (0.35 + 0.65 * s)));
     }
+    // Round 18 (round 17 session 15-21 s): in a tight framing, a fisher standing a few metres nearer the lens
+    // just in front of another let the near one's back loom over the middle of the TV (about a quarter of the
+    // frame tall) and cover the other: step back a little, by how far in front and how nearly in line they
+    // stand. Fishers' feet only (bobbers out on the water are no one's back); spread families are unchanged.
+    let deep = 0;
+    const sy = Math.sin(yaw);
+    const cy = Math.cos(yaw);
+    for (let i = 0; i < this.nf; i++) {
+      const a = this.feet[i]!;
+      for (let j = 0; j < this.nf; j++) {
+        if (i === j) continue;
+        const b = this.feet[j]!;
+        // a is the nearer one: depth grows away from the lens (the camera sits at +(sin yaw, cos yaw)).
+        const gap = (a.x - b.x) * sy + (a.z - b.z) * cy;
+        const lat = Math.abs((a.x - b.x) * cy - (a.z - b.z) * sy);
+        deep = Math.max(deep, Math.min(1, Math.max(0, (gap - LOOM_GAP) / 3)) * Math.max(0, 1 - lat / LOOM_LAT));
+      }
+    }
+    deep *= 1 - Math.min(1, Math.max(0, (d - 22) / 6));
+    d = Math.min(MAX_DIST, d * (1 + LOOM_BACK * deep));
     this.wantTarget.copy(t);
     this.wantDist = d;
   }
@@ -479,6 +503,13 @@ export class CameraRig {
     // over the tower and its airship before finding them).
     const camp = v === "auto" && campfire;
     if (this.wasCamp && !camp && groupMode && this.n > 0) {
+      this.first = true;
+      this.soft = true;
+    }
+    // Into the campfire likewise (round 17 session 259-262 s: from a place under the 150 m cut the camera flew
+    // over the land for ~1.5 s while the family already sat at the fire, an empty grassy slope on the TV):
+    // land on the fire with the family round it, a little wide and high, and settle in.
+    if (camp && !this.wasCamp) {
       this.first = true;
       this.soft = true;
     }
