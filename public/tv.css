@@ -70,3 +70,7 @@
 /* Sound started but not reaching the speakers: a small marker at the edge (outside the focal area). */
 .sound-stalled { position: absolute; right: 3vw; top: 14vh; width: 5vh; height: 5vh; padding: 0.8vh; border-radius: 50%; background: rgba(28, 20, 66, 0.8); border: 0.3vh solid #ff8a7a; }
 .toast-also { display: flex; align-items: center; gap: 0.8vw; padding-left: 1vw; border-left: 0.3vh solid rgba(255, 210, 90, 0.5); }
+/* A shared catch banner: one line per catcher, stacked; names never wrap or clip (round 20, 31 s). */
+.toast-text { white-space: nowrap; }
+.toast:has(.toast-also) { flex-wrap: wrap; max-height: none; border-radius: 2.4vh; row-gap: 0.6vh; }
+.toast:has(.toast-also) .toast-also { flex-basis: 100%; border-left: 0; padding-left: 0; }
