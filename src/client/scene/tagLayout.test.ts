@@ -32,14 +32,24 @@ describe("name tag layout", () => {
     noOverlap(placed([tag(0.1, 0.3, 0), tag(0.1, 0.3, 2, 0.08)]));
   });
 
-  it("staggers a huddle of four into two rows, each tag near its owner", () => {
+  // Round 14 (owner/critic: tower.png showed four tags stacked over one body): a huddle's tags stay in one row.
+  // This replaces round 11's "staggers a huddle of four into two rows" (the two rows were the stack).
+  it("keeps a huddle of four in one row, each tag near its owner", () => {
     const boxes = [tag(0, 0.3, 0), tag(0.02, 0.3, 1), tag(0.01, 0.31, 2, 0.08), tag(-0.01, 0.3, 3)];
     const out: TagShift[] = [];
     layoutTags(boxes, out);
     noOverlap(placed(boxes));
-    expect(out.filter((s) => s.dy > 0).length).toBe(2);
-    // Two rows of two instead of one row of four: no tag is pushed more than about two tag widths out.
-    for (const s of out) expect(Math.abs(s.dx)).toBeLessThan(0.2);
+    expect(out.filter((s) => s.dy > 0).length).toBe(0);
+    // One row of four: no tag is pushed more than about three tag widths out.
+    for (const s of out) expect(Math.abs(s.dx)).toBeLessThan(0.3);
+  });
+
+  it("staggers only a crowd too wide for one row", () => {
+    const boxes = Array.from({ length: 8 }, (_, i) => tag(i * 0.001, 0.3, i, 0.06));
+    const out: TagShift[] = [];
+    layoutTags(boxes, out);
+    noOverlap(placed(boxes));
+    expect(out.filter((s) => s.dy > 0).length).toBeGreaterThan(0);
   });
 
   it("keeps tags on screen at the edges", () => {

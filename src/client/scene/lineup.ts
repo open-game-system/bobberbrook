@@ -8,11 +8,16 @@ export type Blocker = { x: number; z: number; r: number };
 
 /** A fisher's silhouette width (m) and how far a back fisher must rise on screen to show its head. */
 const BODY_W = 0.95;
-const HEAD_H = 1.3;
+// Round 14: 1.3 -> 1.9 m. A back fisher only reads when its whole figure (with the hat) rises clear of the
+// front one's head; at 1.3 a pair 2.8 m apart in depth at the boarding view scored 0.16 while one body
+// covered the other (critic/scene/14-s2/tower.png before this change).
+const HEAD_H = 1.9;
 /** Pairs nearer than this in depth stand side by side (they cannot hide one another). */
 const MIN_DEPTH = 0.25;
 const YAWS = [0, 0.1, -0.1, 0.2, -0.2, 0.3, -0.3, 0.4, -0.4, 0.5, -0.5];
-const LIFTS = [0, 0.08, 0.16];
+// Round 14: up to 0.38 rad higher (was 0.16): a huddle (boarding, a dock walk in single file) is only
+// separated on screen by looking down on it, where depth becomes height.
+const LIFTS = [0, 0.08, 0.16, 0.26, 0.38];
 
 /**
  * How much the fishers hide one another seen from this yaw and elevation (0 = nobody; ~1 per fully
@@ -94,7 +99,8 @@ export class Lineup {
       for (const e of LIFTS) {
         // A change has to show at least a good part of a hidden fisher (fishers shuffling in a huddle
         // must not swing the camera about).
-        const flip = y * this.yaw < 0 ? 0.4 : 0.2;
+        // Round 14: 0.2 -> 0.08 (0.4 -> 0.25 to cross sides): a half-hidden pair (hidden ~0.3) never cleared it.
+        const flip = y * this.yaw < 0 ? 0.25 : 0.08;
         const c = cost(y, e) + flip;
         if (c < best - 1e-9) {
           best = c;

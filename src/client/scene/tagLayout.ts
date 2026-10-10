@@ -19,12 +19,20 @@ export type TagShift = { dx: number; dy: number };
 /** Clear space kept between two tags (NDC). */
 export const TAG_GAP = 0.014;
 const EDGE = 0.98;
+/** The widest single row of colliding tags (NDC) before a cluster staggers into two rows. */
+const ROW_MAX = 0.7;
+
+/**
+ * Round 14: tags in one column within this many tag heights of each other read as a stack (tower.png: Mom's tag
+ * sat right over Dad's though they did not touch), so they count as colliding and go side by side.
+ */
+const STACK_H = 1.6;
 
 function overlaps(a: TagBox, as: TagShift, b: TagBox, bs: TagShift, gap: number): { ox: number; oy: number } {
   const ox = a.hw + b.hw + gap - Math.abs(a.x + as.dx - (b.x + bs.dx));
   const ay = a.y + as.dy;
   const by = b.y + bs.dy;
-  const oy = Math.min(ay + a.h, by + b.h) + gap * 0.5 - Math.max(ay, by);
+  const oy = Math.min(ay + a.h, by + b.h) + gap * 0.5 + STACK_H * Math.max(a.h, b.h) - Math.max(ay, by);
   return { ox, oy };
 }
 
@@ -56,6 +64,14 @@ export function layoutTags(boxes: readonly TagBox[], out: TagShift[], gap = TAG_
     // Rows by seat rank inside the cluster, not by screen order: when two fishers walk past each other
     // their tags slide sideways instead of swapping rows.
     const members = order.slice(k, end + 1).sort((i, j) => boxes[i]!.seat - boxes[j]!.seat);
+    // Round 14: one row when it fits (a two-row stagger over a huddle read as four tags stacked on one
+    // body, tower.png); a second row only for a crowd wider than ROW_MAX side by side.
+    let row = 0;
+    for (const i of members) row += 2 * boxes[i]!.hw + gap;
+    if (row <= ROW_MAX) {
+      k = end + 1;
+      continue;
+    }
     for (let m = 1; m < members.length; m += 2) {
       const i = members[m]!;
       out[i]!.dy = boxes[i]!.h + gap;

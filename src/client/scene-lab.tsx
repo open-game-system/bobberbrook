@@ -157,7 +157,8 @@ function atPlatform(pl: Platform, phase: number, until: (l: Lake) => boolean, he
   const len = Math.hypot(dx, dz) || 1;
   // k metres along the route (toward the vehicle), side metres across it: all within PLATFORM_REACH - 1.
   const on = (k: number, side: number): Vec => ({ x: pl.at.x + (dx / len) * k - (dz / len) * side, z: pl.at.z + (dz / len) * k + (dx / len) * side });
-  const spots = [on(0.5, 0.75), on(0.5, -0.75), on(-0.55, 0.55), on(-0.55, -0.6)];
+  // Round 14: as far apart as the rules keep them (FISHER_SPACE 2.8 m), all within the 3.6 m boarding reach.
+  const spots = [on(1.4, 1.4), on(1.4, -1.4), on(-1.4, 1.4), on(-1.4, -1.4)];
   const names: [number, string][] = [[0, "Dad"], [1, "Mom"], [2, "Juneau"], [3, "Sis"]];
   return {
     phase,
@@ -258,6 +259,22 @@ const LAZY: Record<string, () => Scenario> = {
         return l;
       },
       hero: (_l, now) => outAt > 0 && now - outAt > 2500,
+    };
+  },
+  // Round 14 (session 204-220 s, the Dell): Dad and Juneau fishing 3 m apart along a shore that runs away
+  // from the camera, by an airship tower; one must never stand hidden behind the other on screen.
+  "shore-line": () => {
+    const pl = findPlatform("zeppelin");
+    const place = W.placeById(pl.place);
+    if (!place) throw new Error("the zeppelin place is missing");
+    return {
+      phase: 0.3,
+      fishers: [
+        { seat: 0, name: "Dad", spot: shoreOf(place, -0.17), at: shoreOf(place, -0.17, 2.5) },
+        { seat: 2, name: "Juneau", spot: shoreOf(place, 0.17), at: shoreOf(place, 0.17, 2.5) },
+      ],
+      setup: (l) => produce(l, (d) => { d.discovered = ["moonwell", pl.place]; }),
+      hero: calm,
     };
   },
   // Arrival: the airship settling at the far tower, the family stepping off.

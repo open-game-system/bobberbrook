@@ -356,9 +356,11 @@ export class CameraRig {
       const back = kind === 1 ? 0.55 : 0.25;
       const yaw0 = Math.atan2(sx * side + ux * back, sz * side + uz * back);
       const el0 = kind === 1 ? 0.5 : 0.4;
-      // No lineup here: a family huddled to board cannot be spread by a yaw, it would only swing the shot.
-      this.wantYaw = yaw0;
-      this.wantEl = el0;
+      // Round 14: the lineup runs here too (the boarding huddle stacked four fishers on one body, session
+      // 128-166 s): a yaw and above all a higher look down on the deck spread the huddle on screen.
+      const lu = this.lineUp(yaw0, el0);
+      this.wantYaw = yaw0 + lu.yaw;
+      this.wantEl = el0 + lu.el;
       this.fitGroup(this.wantYaw, this.wantEl);
       rate = 1.2;
     } else if (groupMode) {

@@ -43,6 +43,7 @@ const SHOTS = [
   ["tarn", null, true],
   ["trail", null, true],
   ["trail-walk", null, true],
+  ["shore-line", null, true],
   ["spread", null, true],
   ["split", null, true],
   ["night-woods", null, true],
