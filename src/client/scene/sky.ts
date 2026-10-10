@@ -44,10 +44,18 @@ void main() {
   vec3 d = normalize(vDir);
   float h = d.y;
   float up = clamp(h, 0.0, 1.0);
-  vec3 col = mix(uHorizon, uTop, pow(smoothstep(-0.02, 0.75, up), 0.65));
+  // Round 16: a painted gradient, not a flat wash. Three stops (a warm horizon, a glow-tinted middle, a
+  // deeper zenith), long horizontal brush streaks in the value, and a broad halo round the sun or moon.
+  float az = atan(d.z, d.x);
+  float streak = fbm(vec2(az * 3.0, h * 26.0)) - 0.5;
+  float hb = up + streak * 0.05;
+  vec3 mid = mix(uHorizon, uGlow, 0.22);
+  vec3 col = mix(uHorizon, mid, smoothstep(0.0, 0.16, hb));
+  col = mix(col, uTop, pow(smoothstep(0.08, 0.8, hb), 0.75));
+  col *= 1.0 + streak * 0.1 * smoothstep(0.0, 0.1, up);
   float sd = max(dot(d, uSunDir), 0.0);
   float horizonBand = 1.0 - smoothstep(0.0, 0.45, up);
-  col += uGlow * (pow(sd, 6.0) * 0.55 * horizonBand + pow(sd, 48.0) * 0.5);
+  col += uGlow * (pow(sd, 6.0) * 0.55 * horizonBand + pow(sd, 48.0) * 0.5 + pow(sd, 2.5) * 0.12);
   // Stars (night) with a faint band.
   if (uStars > 0.01 && h > 0.0) {
     vec2 sp = d.xz / (d.y + 0.35) * 90.0;
@@ -62,7 +70,7 @@ void main() {
   }
   // Sun or moon disc (no face): a soft-edged disc; the moon is big, with a wide silver halo.
   float disc = mix(smoothstep(0.9988, 0.9993, sd), smoothstep(0.9938, 0.9946, sd), uMoon);
-  col += vec3(0.5, 0.58, 1.0) * (pow(sd, 300.0) * 0.9 + pow(sd, 40.0) * 0.22) * uMoon;
+  col += vec3(0.5, 0.58, 1.0) * (pow(sd, 300.0) * 0.9 + pow(sd, 40.0) * 0.22 + pow(sd, 7.0) * 0.1) * uMoon;
   // The disc's own plane (a basis round the disc direction): the old xz projection stretched the maria
   // into vertical stripes whenever the moon stood high.
   vec3 mt1 = normalize(cross(uSunDir, abs(uSunDir.y) > 0.99 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0)));

@@ -301,7 +301,9 @@ void main() {
   vec3 V = normalize(cameraPosition - vWorld);
   float cosT = clamp(dot(N, V), 0.0, 1.0);
   float fres = 0.04 + 0.96 * pow(1.0 - cosT, 5.0);
-  float dz = smoothstep(0.2, 3.2, depth + (vn(p * 0.06) - 0.5) * 1.2);
+  // Round 16: a wider, noisier shelf (depth is interpolated over the coarse ground cells, and the narrow
+  // ramp drew their straight edges as a hard seam between the shallows and the deep).
+  float dz = smoothstep(0.1, 4.6, depth + (vn(p * 0.06) - 0.5) * 2.2 + (vn(p * 0.23) - 0.5) * 0.9);
   vec3 shallow = mix(uShallow, vec3(0.75, 1.0, 0.95), 0.25);
   vec3 deepC = vec3(0.12, 0.2, 0.42) * (0.55 + 0.45 * length(uShallow));
   vec3 base = mix(shallow * 1.05, deepC, dz);
@@ -324,8 +326,10 @@ void main() {
   float lap = sin(uTime * 1.1 + vSea.y * 1.4 + vn(p * 0.4) * 5.0) * 0.18;
   float foam = smoothstep(0.45, 0.0, depth + lap - (vn(p * 1.5 + uTime * 0.15) - 0.5) * 0.3);
   col = mix(col, vec3(0.97, 1.0, 1.0) * (0.85 + 0.15 * uGlow), clamp(foam, 0.0, 1.0) * 0.85);
-  float alpha = mix(0.7, 0.97, smoothstep(0.0, 2.0, depth));
-  alpha = max(alpha, foam);
+  // Round 16: the sea fades out over the last half metre (its mesh ends on the ground grid's cells, which
+  // drew hard planar seams along the coast), and the foam fades out above the waterline.
+  float alpha = mix(0.7, 0.97, smoothstep(0.0, 2.0, depth)) * smoothstep(-0.15, 0.6, depth);
+  alpha = max(alpha, foam * 0.9 * smoothstep(-0.5, 0.05, depth));
   gl_FragColor = vec4(max(col, vec3(0.0)), alpha);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>

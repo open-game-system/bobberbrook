@@ -47,14 +47,16 @@ const KEYS: Key[] = [
   // key light, sky and grade so a stranger can name it from one frame.
   // Sunrise: pink-cyan haze lifting.
   { at: 0.0, skyTop: 0x6a9ad0, skyHorizon: 0xf0c4dc, skyGlow: 0xffd8e4, cloud: 0xfff0f6, cloudShade: 0xb090c8, sun: 0xffd4c8, sunI: 2.0, az: 30 * D, el: 12 * D,
-    hemiSky: 0xd0d4f0, hemiGround: 0x4a6a5a, hemiI: 1.25, fog: 0xd0c4e0, fogNear: 30, fogFar: 220, exposure: 1.06, stars: 0.1, glow: 0.35, mist: 0.85,
+    hemiSky: 0xd0d4f0, hemiGround: 0x4a6a5a, hemiI: 1.25, fog: 0xc8acdc, fogNear: 30, fogFar: 220, exposure: 1.06, stars: 0.1, glow: 0.35, mist: 0.85,
     waterShallow: 0x5ce4dc, waterDeep: 0x147494, moon: 0, mountain: 0x9a90c4, discAz: 300 * D, discEl: 6 * D, grade: 0xfff4fa },
   // Morning: pale lilac-silver sky, soft warm low key light, light mist, readable greens.
-  { at: 0.1, skyTop: 0x8a98dc, skyHorizon: 0xe8e2f4, skyGlow: 0xfff0dc, cloud: 0xffffff, cloudShade: 0xb4acd8, sun: 0xffe6c8, sunI: 2.7, az: 55 * D, el: 24 * D,
-    hemiSky: 0xdcdaf6, hemiGround: 0x5a7c5a, hemiI: 1.35, fog: 0xd8d2ec, fogNear: 60, fogFar: 300, exposure: 1.1, stars: 0, glow: 0.12, mist: 0.35,
+  // Round 16: a deeper zenith, a rosier horizon and a lilac (not grey) haze: the far woods melt into
+  // violet the way Ashenvale's do, instead of flat grey fog sheets.
+  { at: 0.1, skyTop: 0x6a7cd6, skyHorizon: 0xf0d6ec, skyGlow: 0xffe4c8, cloud: 0xffffff, cloudShade: 0xb4acd8, sun: 0xffe6c8, sunI: 2.7, az: 55 * D, el: 24 * D,
+    hemiSky: 0xdcdaf6, hemiGround: 0x5a7c5a, hemiI: 1.35, fog: 0xbcaee8, fogNear: 60, fogFar: 300, exposure: 1.1, stars: 0, glow: 0.12, mist: 0.35,
     waterShallow: 0x62ecdc, waterDeep: 0x10809a, moon: 0, mountain: 0xa8a4d4, discAz: 305 * D, discEl: 28 * D, grade: 0xfffaf2 },
-  { at: 0.3, skyTop: 0x7a8ad8, skyHorizon: 0xdcd8f0, skyGlow: 0xfff0dc, cloud: 0xffffff, cloudShade: 0xaaa2d4, sun: 0xfff0dc, sunI: 2.7, az: 100 * D, el: 40 * D,
-    hemiSky: 0xd4d4f4, hemiGround: 0x567a5a, hemiI: 1.3, fog: 0xccc8ea, fogNear: 60, fogFar: 300, exposure: 1.08, stars: 0, glow: 0.15, mist: 0.3,
+  { at: 0.3, skyTop: 0x5e74d4, skyHorizon: 0xe8d4f0, skyGlow: 0xffecd0, cloud: 0xffffff, cloudShade: 0xaaa2d4, sun: 0xfff0dc, sunI: 2.7, az: 100 * D, el: 40 * D,
+    hemiSky: 0xd4d4f4, hemiGround: 0x567a5a, hemiI: 1.3, fog: 0xb4aae6, fogNear: 60, fogFar: 300, exposure: 1.08, stars: 0, glow: 0.15, mist: 0.3,
     waterShallow: 0x5aeadc, waterDeep: 0x0e7e9a, moon: 0, mountain: 0xa0a0d4, discAz: 250 * D, discEl: 40 * D, grade: 0xfffaf4 },
   // Golden hour: rose-amber key low in the west, long shadows, pink-violet clouds.
   // Round 14: an amber key and a warm grade (session 213 s: "Golden hour" did not visibly warm).
@@ -75,7 +77,7 @@ const KEYS: Key[] = [
     waterShallow: 0x38e0dc, waterDeep: 0x082c6a, moon: 1, mountain: 0x2a2a6c, discAz: 273 * D, discEl: 5 * D, grade: 0xfff0e2 },
   // Dawn: pink-cyan haze, the last stars, mist on the water.
   { at: 0.9, skyTop: 0x4a8ac8, skyHorizon: 0xf4b0cc, skyGlow: 0xffc8dc, cloud: 0xffd8ec, cloudShade: 0x7a7ab8, sun: 0xffc0d4, sunI: 1.8, az: 345 * D, el: 8 * D,
-    hemiSky: 0xa8d4f0, hemiGround: 0x3a5a6a, hemiI: 1.3, fog: 0xc8b8e0, fogNear: 34, fogFar: 200, exposure: 1.06, stars: 0.35, glow: 0.6, mist: 0.85,
+    hemiSky: 0xa8d4f0, hemiGround: 0x3a5a6a, hemiI: 1.3, fog: 0xbca4dc, fogNear: 34, fogFar: 200, exposure: 1.06, stars: 0.35, glow: 0.6, mist: 0.85,
     waterShallow: 0x58e8e0, waterDeep: 0x125a88, moon: 0, mountain: 0x8a8ac0, discAz: 292 * D, discEl: 3 * D, grade: 0xfff0f8 },
 ];
 

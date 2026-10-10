@@ -425,6 +425,7 @@ function wakeGeometry(): BufferGeometry {
   const strip = (side: number, angle: number, len: number, w0: number, w1: number, gain: number) => {
     const base = pos.length / 3;
     const n = 44;
+    const ph = R() * 6.28;
     for (let i = 0; i <= n; i++) {
       const t = i / n;
       const d = t * len;
@@ -434,13 +435,17 @@ function wakeGeometry(): BufferGeometry {
       // Across the strip: perpendicular to its direction (-cos a, side sin a).
       const px = side * Math.sin(angle) * w * 0.5;
       const pz = Math.cos(angle) * w * 0.5;
-      // Broken foam: bright clumps and gaps, not a solid beam.
-      const r = R();
-      const lump = r < 0.3 ? 0.12 : 0.6 + 0.4 * r;
+      // Broken foam: soft clumps and gaps along it (smooth, not per-row steps), and (round 16) a centre line
+      // fading to nothing at both edges, so the wake is soft water, not hard-edged planar stripes.
+      const lump = 0.35 + 0.65 * Math.max(0, Math.sin(t * 19 + ph) * 0.6 + Math.sin(t * 7.3 + ph * 2.1) * 0.4);
       const f = gain * Math.pow(1 - t, 1.6) * lump * Math.min(1, t * 8 + 0.2);
-      pos.push(cx - px, 0, cz - pz, cx + px, 0, cz + pz);
-      col.push(f * 0.85, f * 0.95, f, f * 0.85, f * 0.95, f);
-      if (i < n) idx.push(base + i * 2, base + i * 2 + 1, base + i * 2 + 2, base + i * 2 + 1, base + i * 2 + 3, base + i * 2 + 2);
+      pos.push(cx - px, 0, cz - pz, cx, 0, cz, cx + px, 0, cz + pz);
+      col.push(0, 0, 0, f * 0.85, f * 0.95, f, 0, 0, 0);
+      if (i < n) {
+        const a = base + i * 3;
+        const b = a + 3;
+        idx.push(a, a + 1, b, a + 1, b + 1, b, a + 1, a + 2, b + 1, a + 2, b + 2, b + 1);
+      }
     }
   };
   strip(1, 0.42, 11, 0.5, 1.6, 0.9);

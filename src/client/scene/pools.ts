@@ -47,12 +47,35 @@ function poolTexture(): CanvasTexture {
   return t;
 }
 
+/**
+ * Round 16: the painted pools fill their square cards, so at night they read as hard orange slabs. Every
+ * pool fades out radially (a long soft tail, nothing at the card's edge) and its painted dabs break the rim.
+ * Shared by the lamp and moon pools (same source and cache key: one program).
+ */
+function softEdge(m: MeshBasicMaterial): MeshBasicMaterial {
+  m.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <map_fragment>",
+      `#include <map_fragment>
+  {
+    vec2 q = vMapUv * 2.0 - 1.0;
+    float r = length(q);
+    float fall = 1.0 - smoothstep(0.0, 1.0, r);
+    diffuseColor.rgb *= 1.35 * fall * fall * (0.75 + 0.25 * smoothstep(0.2, 0.0, r));
+  }`,
+    );
+  };
+  m.customProgramCacheKey = () => "bobber-pool";
+  return m;
+}
+
 export function poolMaterial(): MeshBasicMaterial {
   if (!mat) {
     // Round 11: the Codex-painted warm pool (drawn additively: its black key adds nothing).
     const painted = getCards()?.poolWarm ?? null;
     tint = painted ? paintedTint : warm;
     mat = new MeshBasicMaterial({ map: painted ?? poolTexture(), color: 0x000000, transparent: true, blending: AdditiveBlending, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    softEdge(mat);
     mat.name = "lamp-pools";
   }
   return mat;
@@ -79,6 +102,7 @@ export function moonPoolMesh(list: Inst[]): InstancedMesh | null {
   if (!painted) return null;
   if (!moonMat) {
     moonMat = new MeshBasicMaterial({ map: painted, color: 0x000000, transparent: true, blending: AdditiveBlending, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    softEdge(moonMat);
     moonMat.name = "moon-pools";
   }
   if (!geo) geo = new PlaneGeometry(2, 2).rotateX(-Math.PI / 2).translate(0, 0.12, 0);

@@ -59,7 +59,9 @@ void main() {
   float n = vn(vUv * 3.0 + vec2(uTime * 0.03, vSeed * 7.0)) * 0.6 + vn(vUv * 7.0 - vec2(uTime * 0.05, 0.0)) * 0.4;
   float a = smoothstep(0.5, 0.1, d) * (0.45 + 0.55 * n) * vAlpha;
   if (a < 0.004) discard;
-  gl_FragColor = vec4(vColor, a);
+  // Painted: a lit top and a cooler, deeper foot (not one flat grey value).
+  vec3 pc = vColor * (0.88 + 0.26 * smoothstep(-0.35, 0.3, q.y)) * (0.94 + 0.12 * n);
+  gl_FragColor = vec4(pc, a);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
   #include <fog_fragment>
@@ -104,6 +106,7 @@ export function buildMist(full: boolean): Mist {
   const veilCol = new Color();
   const glowCol = new Color();
   const marshCol = new Color();
+  const white = new Color(1, 1, 1);
   let sig = "";
   return {
     mesh,
@@ -153,9 +156,10 @@ export function buildMist(full: boolean): Mist {
     update(tod, time, veilOf, near) {
       mat.uniforms.uTime!.value = time;
       mat.uniforms.uNear!.value = near;
-      veilCol.copy(tod.fog).lerp(tod.hemiSky, 0.35).multiplyScalar(0.95);
+      // Round 16: tinted by the sky light (lilac by day, indigo at night), not the grey of the fog alone.
+      veilCol.copy(tod.fog).lerp(tod.hemiSky, 0.6).multiplyScalar(0.95);
       glowCol.setRGB(0.75, 0.7, 1.0).lerp(tod.hemiSky, 0.2).multiplyScalar(1.2 + 0.8 * tod.glow);
-      marshCol.copy(tod.fog).lerp(new Color(1, 1, 1), 0.35);
+      marshCol.copy(tod.fog).lerp(tod.hemiSky, 0.4).lerp(white, 0.25);
       cards.forEach((c, i) => {
         const v = veilOf(c.area);
         let a = 0;
