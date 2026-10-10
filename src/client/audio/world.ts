@@ -23,8 +23,36 @@ export function setTraveling(on: boolean): void {
 let timers: number[] = [];
 /** The place the family is at sets the music's mode, pace and brightness (moods.ts). */
 let mood: Mood = moodFor("moonwell");
+let place: Biome = "moonwell";
 export function setPlaceMood(biome: Biome): void {
   mood = moodFor(biome);
+  place = biome;
+}
+
+/** A marsh frog: two or three low, throaty croaks (well under 3 kHz). */
+function frog(ctx: AudioContext, out: AudioNode, t: number): void {
+  const n = 2 + Math.floor(Math.random() * 2);
+  const base = 180 + Math.random() * 120;
+  const p = ctx.createStereoPanner();
+  p.pan.value = Math.random() * 1.4 - 0.7;
+  p.connect(out);
+  for (let i = 0; i < n; i++) {
+    const s = t + i * 0.22;
+    const o = ctx.createOscillator();
+    o.type = "triangle";
+    o.frequency.setValueAtTime(base, s);
+    o.frequency.exponentialRampToValueAtTime(base * 0.75, s + 0.12);
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 900;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, s);
+    g.gain.exponentialRampToValueAtTime(0.05, s + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, s + 0.14);
+    o.connect(lp).connect(g).connect(p);
+    o.start(s);
+    o.stop(s + 0.16);
+  }
 }
 /** On a boat or zeppelin: wind (and the zeppelin's louder) under the music. */
 let wind: Layer | null = null;
@@ -339,6 +367,8 @@ export function startWorld(): void {
     }
     if (tod !== "night" && Math.random() < 0.1) chirp(ctx, out, ctx.currentTime + Math.random());
     if (tod === "night" && Math.random() < 0.02) owl(ctx, out, ctx.currentTime + Math.random());
+    // Each place sounds like itself: frogs in the marsh and under the willows.
+    if ((place === "marsh" || place === "willow") && Math.random() < (tod === "night" ? 0.3 : 0.15)) frog(ctx, out, ctx.currentTime + Math.random());
     if (night && (tod === "night" || tod === "dawn") && Math.random() < 0.45) cricket(ctx, night.gain, ctx.currentTime + Math.random() * 0.4);
   };
   timers.push(window.setInterval(loop, 400));
