@@ -23,6 +23,7 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { FullScreenQuad, Pass } from "three/addons/postprocessing/Pass.js";
 import { CHAR_MASK } from "./painter";
+import { DissolvePass } from "./dissolve";
 
 /** The layer the name tags live on: drawn after the post chain, so the painterly filter never smears them. */
 export const TAG_LAYER = 1;
@@ -420,6 +421,8 @@ export type Post = {
   composer: EffectComposer;
   bloom: UnrealBloomPass;
   grade: ShaderPass;
+  /** Round 19: the painted dissolve over a campfire cut (set its k per frame). */
+  dissolve: DissolvePass;
   /** The time of day's colour gain (multiplied in before the grade). */
   gain: Color;
   /** The render target the scene is drawn into (shader prewarm compiles against it). */
@@ -454,6 +457,8 @@ export function buildPost(renderer: WebGLRenderer, scene: Scene, camera: Camera,
   bloom.blendMaterial.blendDstAlpha = OneFactor;
   const grade = new ShaderPass(GradeShader);
   composer.addPass(grade);
+  const dissolve = new DissolvePass(w, h);
+  composer.addPass(dissolve);
   composer.addPass(new OutputPass());
   setSmoothWidth(bloom.highPassUniforms, 0.3);
   const res = new Vector2();
@@ -470,6 +475,7 @@ export function buildPost(renderer: WebGLRenderer, scene: Scene, camera: Camera,
     composer,
     bloom,
     grade,
+    dissolve,
     target,
     gain,
     setSize(w2, h2) {
@@ -500,6 +506,7 @@ export function buildPost(renderer: WebGLRenderer, scene: Scene, camera: Camera,
     },
     dispose() {
       composer.dispose();
+      dissolve.dispose();
       paint.dispose();
       knee.dispose();
       target.dispose();

@@ -1,3 +1,4 @@
+import { applySightFade, type OccluderUniforms } from "./geo";
 import { BufferAttribute, BufferGeometry, CanvasTexture, Color, DoubleSide, LinearFilter, LinearMipmapLinearFilter, MeshLambertMaterial, SRGBColorSpace, Texture, type InstancedMesh } from "three";
 import { rng } from "./noise";
 import { instanced, type Inst } from "./kit";
@@ -542,7 +543,7 @@ export function plantGeometry(k: PlantKind): BufferGeometry {
  * (Lambert, no specular), alpha-tested edges, a wind sway that grows with height, both faces lit like
  * the ground, and the glow sheet as an emissive rim (its strength is `emissive`, driven by the night).
  */
-export function plantMaterial(sheet: PlantSheet, time: { value: number }): MeshLambertMaterial {
+export function plantMaterial(sheet: PlantSheet, time: { value: number }, occ?: OccluderUniforms): MeshLambertMaterial {
   const m = new MeshLambertMaterial({ vertexColors: true, map: sheet.map, emissiveMap: sheet.glow, alphaTest: 0.5, side: DoubleSide });
   m.emissive.setScalar(0.3);
   m.alphaToCoverage = true;
@@ -567,8 +568,10 @@ export function plantMaterial(sheet: PlantSheet, time: { value: number }): MeshL
       // The glow takes the plant's own tint (a teal cap glows teal).
       .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\n  totalEmissiveRadiance *= vColor.rgb;")
       .replace("#include <clipping_planes_fragment>", "if (texture2D(map, vMapUv).a < 0.25) discard;\n  #include <clipping_planes_fragment>");
+    // Round 19: a foxglove or bluebell between the camera and a fisher dissolves (session 79 s).
+    if (occ) applySightFade(shader, occ);
   };
-  m.customProgramCacheKey = () => "bobber-plant";
+  m.customProgramCacheKey = () => (occ ? "bobber-plant-sight" : "bobber-plant");
   return m;
 }
 

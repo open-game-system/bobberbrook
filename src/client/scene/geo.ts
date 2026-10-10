@@ -279,6 +279,58 @@ export function applyOccluder(shader: { uniforms: Record<string, unknown>; verte
 }
 
 /**
+ * Round 19: a dither fade for small things that stand between the camera and a fisher (foreground foxgloves,
+ * crystal shards): per fragment, only what lies within 0.9-1.6 m of a sight line from the camera to a fisher's
+ * body (three lines, low to high round each focus point) and at least 0.7 m in front of the fisher dissolves, by
+ * alpha-to-coverage, so the rest of the foreground keeps framing the shot. The material needs alphaToCoverage.
+ */
+const SIGHT_GLSL = `
+uniform vec3 uCam;
+uniform vec3 uFocus[${MAX_FOCUS}];
+varying vec3 vSfW;
+float sightFade(vec3 p) {
+  float occ = 0.0;
+  for (int i = 0; i < ${MAX_FOCUS}; i++) {
+    vec3 f = uFocus[i];
+    if (f.y < -50.0) continue;
+    for (int k = 0; k < 3; k++) {
+      vec3 b = f + vec3(0.0, -0.8 + float(k) * 1.0, 0.0);
+      vec3 ab = b - uCam;
+      float L = max(length(ab), 1e-3);
+      float s = dot(p - uCam, ab) / L;
+      if (s < 0.5 || s > L - 0.7) continue;
+      float d = length(p - (uCam + ab * (s / L)));
+      occ = max(occ, 1.0 - smoothstep(0.9, 1.6, d));
+    }
+  }
+  return occ;
+}`;
+export function applySightFade(shader: { uniforms: Record<string, unknown>; vertexShader: string; fragmentShader: string }, u: OccluderUniforms): void {
+  shader.uniforms.uCam = u.uCam;
+  shader.uniforms.uFocus = u.uFocus;
+  shader.vertexShader = shader.vertexShader
+    .replace("#include <common>", "#include <common>\nvarying vec3 vSfW;")
+    .replace(
+      "#include <project_vertex>",
+      `#include <project_vertex>
+  vec4 sfW = vec4(transformed, 1.0);
+  #ifdef USE_INSTANCING
+  sfW = instanceMatrix * sfW;
+  #endif
+  vSfW = (modelMatrix * sfW).xyz;`,
+    );
+  shader.fragmentShader = shader.fragmentShader
+    .replace("#include <common>", `#include <common>${SIGHT_GLSL}`)
+    .replace(
+      "#include <clipping_planes_fragment>",
+      `#include <clipping_planes_fragment>
+  float sfA = 1.0 - sightFade(vSfW);
+  if (sfA < 0.02) discard;`,
+    )
+    .replace("#include <alphatest_fragment>", "#include <alphatest_fragment>\n  diffuseColor.a *= sfA;");
+}
+
+/**
  * The occluder fade worked out per vertex (for small, many-layered leaf cards: the fade is smooth over
  * a card, and the fragment work stays light).
  */
@@ -329,6 +381,10 @@ let fadeUniforms: OccluderUniforms | null = null;
 export function registerFade(solid: Material, u: OccluderUniforms): void {
   fadeSolid = solid;
   fadeUniforms = u;
+}
+/** The scene's occluder uniforms (null when no scene registered them), for builders that add a fade of their own. */
+export function sceneOccluderUniforms(): OccluderUniforms | null {
+  return fadeUniforms;
 }
 /** The dissolving painted material for lamp posts and the like (`fallback` when no scene registered one). */
 export function fadeMaterial(fallback: Material): Material {

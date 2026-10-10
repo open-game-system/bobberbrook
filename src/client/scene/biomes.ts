@@ -65,7 +65,7 @@ function landmarkSpot(c: KitCtx, R: () => number, out: number, island: boolean):
 }
 
 /** A free spot round `base` (default: the far, north side): clear of trails, docks and towers. */
-function farSpot(c: KitCtx, R: () => number, out: number, base = -Math.PI / 2): { x: number; z: number; th: number } {
+export function farSpot(c: KitCtx, R: () => number, out: number, base = -Math.PI / 2): { x: number; z: number; th: number } {
   const a = c.a;
   const plats = platformsAround(a.center.x, a.center.z).filter((p) => p.place === a.id);
   const place = activeWorld().placeById(a.id);

@@ -66,6 +66,19 @@ by a cloud GPU Chrome and streamed to a Chromecast. References: `concept/web/*.j
   logs carry the rod-wood grain with pale cut ends; giant caps are hand-shaped (wavering rim, lumpy crown, banded
   painted light) and their pale strokes settle into the cap colour toward the rim; ride cloud banks are 14 smaller
   cards (cover from the painting's alpha, a long soft value ramp, hazier back cards).
+- **Round 19 (painted figures, soft light, deep marsh water, hero silhouettes)**: the fishers' hair is painted in
+  strands with a ragged edge of locks under every hat (sideburns, a fringe of three, locks round the back;
+  `fisherShape.ts`, never in the face), felt brims wave (calm at the front), mittens have thumbs and knitted cuffs,
+  the skull carries painted planes (cool rosy sides and back, hairline shadow, warm cheeks, a lighter brow), skin
+  takes half the clothes' light bands and the fire fill on skin keeps half its colour. The golden pillar is a soft
+  cone at ~0.4 of its old light that thins as it rises, with golden motes drifting up (`PILLAR_GAIN`). Mistmarsh
+  water keeps Moonwell's cyan shallows and bright rim over a violet deep (calm 0.3). Falling water is drawn as
+  painted droplet streaks along their flight (no round white discs, no ring of white puffs at a leap). Foreground
+  plants and crystal shards within ~1 m of a sight line to a fisher dissolve (`applySightFade`). Cuts into and out
+  of the campfire are brushed over by a painted dissolve of the last frame (`dissolve.ts`, 0.9 s; the camera still
+  lands at once). Every generated place has a hero silhouette on its far side (`heroes.ts`): a colossal ancient
+  tree with an elven platform (ring deck, upswept violet roof, hanging lanterns), or, beside a giant-tree
+  landmark and sometimes otherwise, a hamlet of three larger cottages.
 - **Painted ground underfoot** (round 13, `decking.ts`): everything the family stands on is painted. Boardwalk
   planks each carry one board of the Codex planks along the walk (explicit texture coordinates: `aPaint.x >= PK_UV`);
   decks, plinths, stepping stones and terraces are lathe-turned discs (`disc`) with a bevelled lip that takes a painted

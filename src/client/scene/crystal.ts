@@ -1,5 +1,6 @@
 import { MeshBasicMaterial } from "three";
 import type { PaintTex } from "./paintkit";
+import { applySightFade, sceneOccluderUniforms } from "./geo";
 
 /**
  * Painted crystal (round 12): the crystals are unlit glow (vertex colours: a deep root to a pale tip and
@@ -19,7 +20,11 @@ export function crystalMaterial(): MeshBasicMaterial {
   const t = tex;
   const m = new MeshBasicMaterial({ vertexColors: true });
   if (!t) return m;
+  // Round 19: a shard between the camera and a fisher dissolves round the sight line (biome-crystal).
+  const occ = sceneOccluderUniforms();
+  if (occ) m.alphaToCoverage = true;
   m.onBeforeCompile = (shader) => {
+    if (occ) applySightFade(shader, occ);
     shader.uniforms.tCrystal = { value: t.tex };
     shader.uniforms.uCrystalInv = { value: t.inv };
     shader.vertexShader = shader.vertexShader
@@ -50,6 +55,6 @@ export function crystalMaterial(): MeshBasicMaterial {
   }`,
       );
   };
-  m.customProgramCacheKey = () => "bobber-crystal";
+  m.customProgramCacheKey = () => (occ ? "bobber-crystal-sight" : "bobber-crystal");
   return m;
 }

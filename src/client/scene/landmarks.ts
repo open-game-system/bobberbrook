@@ -38,6 +38,7 @@ import { heightAt } from "./terrain";
 import type { TodState } from "./tod";
 import { flowMaterial, ribbon } from "./water";
 import { dressShore } from "./shores";
+import { buildHero } from "./heroes";
 import { buildPlaceLandmark, crystalKit, emberKit, frostKit, willowKit, type LandmarkKind } from "./biomes";
 
 /**
@@ -662,6 +663,8 @@ export function buildLandmark(a: PondPlace, style: LandmarkStyle, seed: number, 
   // Generated places: their own shoreline by seed, then their landmark.
   if (landmark) dressShore(c, id);
   if (landmark) buildPlaceLandmark(c, landmark);
+  // Round 19: and its hero silhouette (an ancient tree with an elven platform, or a hamlet of big cottages).
+  if (landmark) buildHero(c, landmark, rng(seed * 7 + 3)());
   // Pools of moonlight in the clearing (round 12, night only).
   {
     const R = rng(seed * 13 + 5);

@@ -50,6 +50,7 @@ import { buildForest } from "./forest";
 import { buildTrails } from "./trails";
 import { buildAreaDressing } from "./areas";
 import { plantMaterial, plantSheet } from "./plants";
+import { dissolveK } from "./dissolve";
 import { paintedMaterial } from "./geo";
 import { Mood } from "./mood";
 import { buildMist } from "./mist";
@@ -242,7 +243,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   // Round 12: the Codex bluebell, foxglove and glow-cap cards take their cells. The Codex fern (a whole
   // clump) and grass card carpeted the foreground band dark and hid the path: the code-painted ones stay.
   const plantTex = plantSheet({ bluebell: imageOf(kit.bluebell), foxglove: imageOf(kit.foxglove), glowcap: imageOf(kit.glowcapBlue), glowcapViolet: imageOf(kit.glowcapViolet) });
-  const plantMat = plantMaterial(plantTex, time);
+  const plantMat = plantMaterial(plantTex, time, occ);
   const props = buildProps(opts.quality, sway, treeMat, plantMat);
   scene.add(props.group);
   const painted = paintedMaterial();
@@ -328,7 +329,13 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   let post: Post | null = full ? buildPost(renderer, scene, camera, w, h) : null;
   // Without the post chain the name tags draw in the main pass.
   if (!post) camera.layers.enable(TAG_LAYER);
-  else post.overlay = (draw) => fishers.forEachTag(draw);
+  // Name tags wait out the campfire dissolve (over the held old frame they would float in the wrong places).
+  else {
+    const dissolve = post.dissolve;
+    post.overlay = (draw) => {
+      if (dissolve.k < 0.35) fishers.forEachTag(draw);
+    };
+  }
   const pr = renderer.getPixelRatio();
   post?.setSize(w, h);
   parts.water.setScale(h * pr, camera.fov);
@@ -569,6 +576,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     trailW += (onTrail - trailW) * Math.min(1, dt * 1.5);
     const reveal = revealAge >= 0 && revealAge < REVEAL_S + 0.4 ? { x: revealArea.center.x, z: revealArea.center.z, age: revealAge, r: revealArea.pond.r } : null;
     rig.update(t, dt, lake?.campfire ?? false, cf, trailW, reveal);
+    if (post) post.dissolve.k = dissolveK(t - rig.campCutAt);
     // Sparkles keep off faces (round 11: they covered Juneau's at night).
     faceList.length = 0;
     fishers.forEachFace((x, y, z) => { if (faceList.length < 4) faceList.push({ x, y, z, r: 0.85 }); });

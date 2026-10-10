@@ -135,6 +135,8 @@ export class CameraRig {
   /** A cut that lands on the family itself (framed, a little wide and high) instead of the establishing view. */
   private soft = false;
   private wasCamp = false;
+  /** Round 19: when the camera last cut into or out of the campfire (the post chain dissolves over it). */
+  campCutAt = -1e9;
   /** 0..1: how hard the follow hurries because a framed point is outside the safe margin right now. */
   private urge = 0;
   private readonly revealT = new Vector3();
@@ -505,6 +507,7 @@ export class CameraRig {
     if (this.wasCamp && !camp && groupMode && this.n > 0) {
       this.first = true;
       this.soft = true;
+      this.campCutAt = t;
     }
     // Into the campfire likewise (round 17 session 259-262 s: from a place under the 150 m cut the camera flew
     // over the land for ~1.5 s while the family already sat at the fire, an empty grassy slope on the TV):
@@ -512,6 +515,7 @@ export class CameraRig {
     if (camp && !this.wasCamp) {
       this.first = true;
       this.soft = true;
+      this.campCutAt = t;
     }
     this.wasCamp = camp;
     // The catch moment: an eased push toward the catcher (~0.7 s in), held while the fish is up, then back.
