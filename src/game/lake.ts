@@ -220,18 +220,24 @@ function freeFishers(d: Draft<Lake>, gone: ReadonlySet<number>): void {
   for (const f of d.fishers) if (f.swirlId !== null && gone.has(f.swirlId)) f.swirlId = null;
 }
 
+/** On a trail, the golden swirl is looked for again this often. */
+const GOLDEN_RETRY_MS = 15_000;
+
 function bringGolden(d: Draft<Lake>, now: number): void {
-  d.nextGoldenAt = now + GOLDEN_EVERY_MS;
-  if (d.swirls.some((s) => s.golden)) return;
-  // The golden swirl shows up somewhere the family has been, more often away from home.
+  if (d.swirls.some((s) => s.golden)) {
+    d.nextGoldenAt = now + GOLDEN_EVERY_MS;
+    return;
+  }
+  // The golden swirl turns up where the family is, so they can race to it. On a trail (between places)
+  // it waits until they arrive somewhere (round 17: one called at a place behind them was never reached).
   const w = worldFor(d.worldSeed);
-  const near = d.discovered.filter((id) => {
-    const p = w.placeById(id);
-    return p !== null && (d.fishers.length === 0 || d.fishers.some((f) => distance(f.pos, p.center) < 2.2 * 96));
-  });
-  const away = near.filter((a) => a !== "moonwell");
-  const places = away.length > 0 && roll(d) < 0.75 ? away : near.length > 0 ? near : d.discovered;
-  spawnSwirl(d, now, true, places[Math.floor(roll(d) * places.length)] ?? "moonwell");
+  const here = d.fishers.length === 0 ? w.placeById("moonwell") : d.fishers.map((f) => w.areaAt(f.pos)).find((p) => p !== null) ?? null;
+  if (!here) {
+    d.nextGoldenAt = now + GOLDEN_RETRY_MS;
+    return;
+  }
+  d.nextGoldenAt = now + GOLDEN_EVERY_MS;
+  spawnSwirl(d, now, true, here.id);
 }
 
 /** Whoever walks into a place nobody has found yet discovers it: a celebration and a swirl there. */
@@ -382,7 +388,17 @@ function swirlAt(d: Draft<Lake>, bobber: Vec): Swirl | undefined {
 
 // ---------- what bites ----------
 
-export type BiteContext = { water: Water; tod: TimeOfDay; tier: number; swirl: "none" | "plain" | "golden"; species: number; known: (id: string) => boolean; ring?: number };
+export type BiteContext = {
+  water: Water;
+  tod: TimeOfDay;
+  tier: number;
+  swirl: "none" | "plain" | "golden";
+  species: number;
+  known: (id: string) => boolean;
+  ring?: number;
+  /** The first catch at a place the family just found: its own (new) fish come first. */
+  freshPlace?: boolean;
+};
 
 /** Chooses what bites: treasure, junk, the Moonfin, or a fish that lives in this water at this time. */
 export function chooseCatch(ctx: BiteContext, r: () => number): FishDef {
@@ -420,14 +436,17 @@ const RARITY_BASE: Partial<Record<Rarity, (tier: number) => number>> = {
 };
 const PLAIN_SWIRL_BOOST: Partial<Record<Rarity, number>> = { rare: 2.5, uncommon: 1.5 };
 
+const FRESH_PLACE_BOOST = 12;
+
 /** How likely a fish is to be the one that bites, relative to the others in the pool. */
-export function catchWeight(f: FishDef, ctx: Pick<BiteContext, "tier" | "swirl" | "known" | "ring">): number {
+export function catchWeight(f: FishDef, ctx: Pick<BiteContext, "tier" | "swirl" | "known" | "ring" | "freshPlace">): number {
   const base = (RARITY_BASE[f.rarity] ?? ((tier: number) => 9 + 4 * tier))(ctx.tier);
   const swirlBoost = ctx.swirl === "plain" ? (PLAIN_SWIRL_BOOST[f.rarity] ?? 1) : 1;
   // The farther from home, the likelier the rare ones (up to triple).
   const farBoost = f.rarity === "rare" ? Math.min(3, 1 + 0.25 * Math.max(0, (ctx.ring ?? 0) - 1)) : 1;
   // Species the family hasn't met yet come along a little more often: the journal keeps filling.
-  return base * swirlBoost * farBoost * (ctx.known(f.id) ? 1 : 1.6);
+  // At a place just found, its new fish come first (the coach promises every place has its own fish).
+  return base * swirlBoost * farBoost * (ctx.known(f.id) ? 1 : ctx.freshPlace ? FRESH_PLACE_BOOST : 1.6);
 }
 
 function biteWait(d: Draft<Lake>, f: Draft<Fisher>, swirl: Swirl | undefined): number {
@@ -461,12 +480,21 @@ function hook(d: Draft<Lake>, f: Draft<Fisher>, at: number): void {
       species: speciesCount(d.journal),
       known: (id) => (d.journal[id]?.count ?? 0) > 0,
       ring: worldFor(d.worldSeed).areaAt(f.pos)?.ring ?? 0,
+      freshPlace: freshPlaceFor(d, f),
     },
     () => roll(d),
   );
   const cm = Math.round(def.cm[0] + (def.cm[1] - def.cm[0]) * Math.pow(roll(d), 1.4));
   f.mode = "reel";
   f.reel = { fishId: def.id, cm, hookAt: at, seed: Math.floor(roll(d) * 2 ** 31), progress: REEL_START, at, holding: false };
+}
+
+/** The place this fisher stands in was the last one found, and nobody has caught anything since. */
+function freshPlaceFor(d: Draft<Lake>, f: Draft<Fisher>): boolean {
+  const found = d.discovery;
+  if (!found) return false;
+  const here = worldFor(d.worldSeed).areaAt(f.pos);
+  return here?.id === found.area && !d.log.some((e) => e.at >= found.at);
 }
 
 export const LOG_LENGTH = 40;
