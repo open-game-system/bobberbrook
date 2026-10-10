@@ -51,6 +51,12 @@ by a cloud GPU Chrome and streamed to a Chromecast. References: `concept/web/*.j
   and a broad sun/moon halo; the day haze is lilac, not grey; mist puffs take the sky light; the sea's shallows ramp is
   wide and noisy and fades at the coast; the boat wake is soft lines. The held fish sits in a plane through the
   mittens (each half in front of it), tilted head up, with a thin soft rim instead of a thick white halo.
+- **Round 17 (soft light, soft water, soft fog)**: the golden swirl's pillar is a soft additive column (light by
+  facing^3, so no edge faces the camera; rising noise streaks fray its top) standing in a glowing ring on the water; the
+  sea's waterline is drawn from its signed distance, not the coarse ground cells (no water rectangle with a white rim at
+  a boat dock); the fog of war is billowing painted mist that thins near the camera, its flat blanket layers fading as
+  they turn edge-on; far oaks, willows and birches (75-300 m) are leaf-card clumps, not blobs; ponds darken toward the
+  middle by the share of the way in, mirror a canopy line along the far banks, and lap with soft broken foam.
 - **Painted ground underfoot** (round 13, `decking.ts`): everything the family stands on is painted. Boardwalk
   planks each carry one board of the Codex planks along the walk (explicit texture coordinates: `aPaint.x >= PK_UV`);
   decks, plinths, stepping stones and terraces are lathe-turned discs (`disc`) with a bevelled lip that takes a painted
@@ -154,8 +160,10 @@ appear and fade (`since`, `until`), never pop.
   anyone is past the margin in the live shot the follow hurries (up to x3.2). A discovery frames the new pond whole
   with the family (its rim joins the fit, a little higher). A golden swirl within 40 m of the family joins the
   framing, and its light pillar (on the golden swirl nearest the lens) rises to 34 m from afar as a beacon.
-- **Catch moment**: an eased push toward the catcher for ~2 s then back, only when one catch is up at a time
-  (`catchFocus` drops the push for a catch that ever shares the screen with another).
+- **Catch moment** (round 17): an eased push toward the catcher (~1 s in, held while the fish is up, ~1 s out); a second
+  catch while the first fish is up keeps the push on the middle of both catchers (the safe-margin fit decides how deep).
+- **Discovery** (round 17): a 5 s reveal swings round behind the family (a three-quarter yaw that keeps every fisher
+  apart, at most 1.6 rad off the place view), up and out until the whole new pond lies beyond them, then back.
 - **Campfire** (`lake.campfire`): the camera settles on the campfire; fishers sit around it. The seats are a horseshoe 2.9 m out, open on the camera's axis so the fire burns in the gap and never in
   front of a face (round 13); a fisher walking to a seat goes round the fire (`aroundFire`, 1.7 m clear); the flames add light
   but never alpha, so the character mask stays intact.
