@@ -32,6 +32,11 @@ by a cloud GPU Chrome and streamed to a Chromecast. References: `concept/web/*.j
   Codex cards (the code-painted fern rosette and grass stay: the Codex ones carpeted the foreground); crystals
   carry the crystal texture as an emissive gradient map (`crystal.ts`); pools of moonlight (pool-cool, additive,
   by moon) lie on the Moonwell lawn and in each clearing. Not used: embers-logs, forest-floor, glow-moss.
+- **Painted giant mushrooms** (round 15, `giantCap.ts`): the Hollow's giant caps carry the Codex cap-teal / cap-violet
+  painting laid on from above (planar, one painting per cap, the rim just inside its edge) and the radial gills painting
+  fanned four times, mirrored, under the cap; one shared glow material (`bobber-giant-cap`, compiled at prewarm, never
+  disposed with a place); the vertex colours carry only the cap's hue, the painted top-left light and a lifted rim lip;
+  stems take the grain brushwork run up them.
 - **Painted ground underfoot** (round 13, `decking.ts`): everything the family stands on is painted. Boardwalk
   planks each carry one board of the Codex planks along the walk (explicit texture coordinates: `aPaint.x >= PK_UV`);
   decks, plinths, stepping stones and terraces are lathe-turned discs (`disc`) with a bevelled lip that takes a painted

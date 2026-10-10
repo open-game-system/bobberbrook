@@ -24,6 +24,7 @@ import {
 } from "three";
 import { pondRadius, type Area, type AreaId, type PondPlace } from "../../game/world";
 import { crystalMaterial } from "./crystal";
+import { capLayerOf, capMaterial, capUV, gillUV } from "./giantCap";
 import { RIM_SHARE, WISTERIA_TIP, WISTERIA_TOP, cliffRockGeometry, crystalShard, instanced, rockGeometry, type Inst } from "./kit";
 import { moonPoolMesh, poolMesh } from "./pools";
 import { fadeGlowMaterial, jitter, merge, paint, prep, puffNormals, surf } from "./geo";
@@ -153,7 +154,7 @@ function lanternPost(h: number): { wood: BufferGeometry; glass: BufferGeometry }
 
 export type Landmark = { group: Group; update(tod: TodState, time: number, pulse: number): void; dispose(): void };
 
-type Ctx = { a: PondPlace; seed: number; wood: BufferGeometry[]; glow: BufferGeometry[]; crystal: BufferGeometry[]; /** Lamp posts and their glass: they dissolve between the camera and a fisher. */ lamps: BufferGeometry[]; lampGlow: BufferGeometry[]; full: boolean; group: Group; painted: Material; tree: Material; extra: { dispose(): void }[]; flows: SM[]; /** Fade out at night (a rainbow under the moon reads wrong). */ dayOnly: SM[] };
+type Ctx = { a: PondPlace; seed: number; wood: BufferGeometry[]; glow: BufferGeometry[]; /** Giant mushroom caps (painted, their own glow material). */ caps: BufferGeometry[]; crystal: BufferGeometry[]; /** Lamp posts and their glass: they dissolve between the camera and a fisher. */ lamps: BufferGeometry[]; lampGlow: BufferGeometry[]; full: boolean; group: Group; painted: Material; tree: Material; extra: { dispose(): void }[]; flows: SM[]; /** Fade out at night (a rainbow under the moon reads wrong). */ dayOnly: SM[] };
 
 // ---------- Mistmarsh ----------
 
@@ -317,35 +318,31 @@ function giantMushroom(seed: number, h: number, capR: number, hue: number): { st
     sp.setZ(i, c0.z + (sp.getZ(i) - c0.z) * k);
   }
   stemG.computeVertexNormals();
-  const stem = paint(prep(stemG), 0x8a9ac8, 0xd8e8ff, (p, _n, c) => c.multiplyScalar(0.8 + 0.25 * vnoise(p.x * 2, p.y * 0.8, seed)));
+  // Round 15: the stem carries painted fibres (the grain brushwork run up it).
+  const stem = surf(paint(prep(stemG), 0x8a9ac8, 0xd8e8ff, (p, _n, c) => c.multiplyScalar(0.8 + 0.25 * vnoise(p.x * 2, p.y * 0.8, seed))), PK.grain);
   const top = curve.getPointAt(1);
-  // Round 14: a painted cap, not a plain plastic dome (hollow.png): finer mesh for the brushwork, radial
-  // streaks from the crown, a painted light from above-left, a darker inked band at the rim, soft pale
-  // spots with a halo, and the crown's gloss painted in (it stays unlit glow, like WoW's glowcaps).
+  // Round 15: the Codex cap paintings laid on from above (giantCap.ts), not vertex-painted streaks (still read
+  // as plastic, round 14 critics). The vertex colours only carry the painted light: the cap's colour, lit from
+  // above and to the left, a lifted rim lip that glows, and a value low enough that the glow gain keeps the brushwork.
   const capG = new SphereGeometry(capR, 64, 18, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.42, 1);
-  const capCol = new Color().setHSL(hue, 0.7, 0.42);
-  const capTop = new Color().setHSL(hue, 0.55, 0.74);
-  const spot = new Color().setHSL(hue, 0.35, 0.93);
-  const ink = new Color().setHSL(hue + 0.06, 0.6, 0.2);
-  const cap = paint(prep(capG), capCol, capTop, (p, n, c) => {
-    const rho = Math.min(1, Math.hypot(p.x, p.z) / capR);
-    const ang = Math.atan2(p.z, p.x);
-    // Radial brush streaks running out from the crown.
-    c.multiplyScalar(0.82 + 0.3 * vnoise(ang * 9 + seed, rho * 2.5, seed + 7));
-    // Painted light from above and to the left.
-    c.multiplyScalar(0.8 + 0.35 * Math.max(0, n.x * -0.45 + n.y * 0.8 + n.z * 0.35));
-    // The crown's soft painted gloss.
-    c.lerp(spot, 0.45 * Math.max(0, 1 - Math.hypot(p.x + capR * 0.25, p.z - capR * 0.15) / (capR * 0.35)));
-    // Soft pale spots with a lighter halo.
-    const sp = vnoise(p.x * 1.1 + seed, p.z * 1.1, seed + 3);
-    c.lerp(spot, Math.min(1, Math.max(0, (sp - 0.62) / 0.12)) * 0.75 * (1 - rho * 0.4));
-    // An inked band round the rim.
-    c.lerp(ink, Math.min(1, Math.max(0, (rho - 0.88) / 0.12)) * 0.55);
-    // Painted in a lower value range: the glow gain (up to GLOW_CAP) clipped the brushwork to one flat tone.
-    c.multiplyScalar(0.62);
-  });
-  // The gills underneath: a brighter, glowing underside.
-  const gills = paint(prep(new CylinderGeometry(capR * 0.98, capR * 0.2, capR * 0.12, 22, 1, true).translate(0, -capR * 0.04, 0)), new Color().setHSL(hue, 0.9, 0.75), new Color().setHSL(hue, 0.7, 0.9));
+  const base = new Color().setHSL(hue, 0.5, 0.54);
+  const lip = new Color().setHSL(hue, 0.5, 0.86);
+  const cap = capUV(
+    paint(prep(capG), base, base, (p, n, c) => {
+      const rho = Math.min(1, Math.hypot(p.x, p.z) / capR);
+      c.multiplyScalar(0.78 + 0.32 * Math.max(0, n.x * -0.45 + n.y * 0.8 + n.z * 0.35));
+      c.lerp(lip, Math.min(1, Math.max(0, (rho - 0.93) / 0.07)) * 0.6);
+      c.multiplyScalar(0.62);
+    }),
+    capR,
+    capLayerOf(hue),
+  );
+  // The gills underneath: a brighter, glowing underside, the painted fan of gills.
+  const gills = gillUV(
+    paint(prep(new CylinderGeometry(capR * 0.98, capR * 0.2, capR * 0.12, 44, 1, true).translate(0, -capR * 0.04, 0)), new Color().setHSL(hue, 0.8, 0.6), new Color().setHSL(hue, 0.7, 0.78)),
+    capR * 0.2,
+    capR * 0.98,
+  );
   const capAll = merge([cap, gills]);
   capAll.translate(top.x, top.y, top.z);
   return { stem, cap: capAll };
@@ -364,7 +361,7 @@ function hollow(c: Ctx): void {
     // Lean toward the pond.
     const ry = Math.atan2(a.center.x - p.x, a.center.z - p.z);
     c.wood.push(place(m.stem, p.x, p.z, ry, 1, -0.3));
-    c.glow.push(place(m.cap, p.x, p.z, ry, 1, -0.3));
+    c.caps.push(place(m.cap, p.x, p.z, ry, 1, -0.3));
   });
   // Great roots arching overhead between the giants.
   for (const [t0, t1, hh] of [[-2.2, -1.5, 7], [-0.9, -0.15, 6], [1.9, 2.6, 5.5]] as [number, number, number][]) {
@@ -617,7 +614,7 @@ export function buildLandmark(a: PondPlace, style: LandmarkStyle, seed: number, 
   const id = style;
   const group = new Group();
   group.name = `landmark-${a.id}`;
-  const c: Ctx = { a, seed, wood: [], glow: [], crystal: [], lamps: [], lampGlow: [], full, group, painted, tree, extra: [], flows: [], dayOnly: [] };
+  const c: Ctx = { a, seed, wood: [], glow: [], caps: [], crystal: [], lamps: [], lampGlow: [], full, group, painted, tree, extra: [], flows: [], dayOnly: [] };
   BUILDERS[id](c);
   // Generated places: their own shoreline by seed, then their landmark.
   if (landmark) dressShore(c, id);
@@ -644,6 +641,12 @@ export function buildLandmark(a: PondPlace, style: LandmarkStyle, seed: number, 
   if (c.glow.length) {
     const m = new Mesh(merge(c.glow), glowMat);
     m.name = `${id}-glow`;
+    group.add(m);
+  }
+  const capMat = capMaterial();
+  if (c.caps.length) {
+    const m = new Mesh(merge(c.caps), capMat);
+    m.name = `${id}-caps`;
     group.add(m);
   }
   // Crystal shards glow like the rest, painted facets over their colours.
@@ -675,6 +678,7 @@ export function buildLandmark(a: PondPlace, style: LandmarkStyle, seed: number, 
       lampGlowMat.color.setScalar(Math.min(GLOW_CAP, (lo + (hi - lo) * tod.glow) * (1 + pulse * 0.3)));
       glowMat.color.setScalar(Math.min(GLOW_CAP, (lo + (hi - lo) * tod.glow) * (1 + pulse * (0.3 + 0.1 * Math.sin(time * 6)))));
       crystalMat.color.copy(glowMat.color);
+      if (c.caps.length) capMat.color.copy(glowMat.color);
       for (const m of c.dayOnly) m.uniforms.uK!.value = Math.max(0, 1 - tod.moon * 1.2 - tod.stars * 0.3);
       for (const f of c.flows) {
         f.uniforms.uTime!.value = time;
