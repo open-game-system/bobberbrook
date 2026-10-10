@@ -15,6 +15,7 @@ import { pondRadius, type Area, type PondPlace } from "../../game/world";
 import { crystalShard, instanced, giantGeometry, rockGeometry, type Inst } from "./kit";
 import { jitter, merge, paint, prep, puffNormals, surf } from "./geo";
 import { PK } from "./painter";
+import { valance } from "./valance";
 import { attachFoliage, coniferCards, leafCards, type Puff, type Tier } from "./foliage";
 import { barked } from "./surfaces";
 import { disc, stoneShade, steppingStone, surfBy } from "./decking";
@@ -396,6 +397,8 @@ function shrine(c: KitCtx, R: () => number): void {
   const roof = new ConeGeometry(2.1, 1.4, 8, 3).translate(0, 3.7, 0);
   parts.push(surf(paint(prep(roof), 0x2e2068, 0x8a6ad0, (pp, _n, cc) => { if (pp.y < 3.05) cc.lerp(new Color(0xd8b878), 0.35); }), PK.shingles));
   parts.push(paint(prep(new SphereGeometry(0.16, 8, 6).translate(0, 4.5, 0)), 0xe8b860));
+  // Round 15: a tent-canvas drape under the eave.
+  parts.push(valance({ r: 2.02, top: 3.02, depth: 0.32, scallops: 8, repeats: 4 }));
   c.wood.push(put(merge(parts), p.x, p.z, face + Math.PI / 8, 1.6, dy));
   c.glow.push(put(paint(prep(new SphereGeometry(0.42, 12, 8).translate(0, 2.0, 0)), 0xfff0c8), p.x, p.z, 0, 1.6, dy));
 }

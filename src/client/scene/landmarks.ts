@@ -25,6 +25,7 @@ import {
 import { pondRadius, type Area, type AreaId, type PondPlace } from "../../game/world";
 import { crystalMaterial } from "./crystal";
 import { capLayerOf, capMaterial, capUV, gillUV } from "./giantCap";
+import { valance } from "./valance";
 import { RIM_SHARE, WISTERIA_TIP, WISTERIA_TOP, cliffRockGeometry, crystalShard, instanced, rockGeometry, type Inst } from "./kit";
 import { moonPoolMesh, poolMesh } from "./pools";
 import { fadeGlowMaterial, jitter, merge, paint, prep, puffNormals, surf } from "./geo";
@@ -253,6 +254,8 @@ function mistmarsh(c: Ctx): void {
   }
   pav.push(surf(paint(prep(new LatheGeometry(prof.reverse(), 12).translate(0, 3.35, 0)), 0x3e2e88, 0xa88ae8, (p, _n, cc) => cc.multiplyScalar(0.86 + 0.14 * Math.abs(Math.sin((p.y - 3.35) * 7.5)))), PK.shingles));
   pav.push(paint(prep(new ConeGeometry(0.1, 0.9, 6).translate(0, 7.1, 0)), 0xd8c070));
+  // Round 15: a scalloped tent-canvas drape round under the eave (violet cloth, gold trim).
+  pav.push(valance({ r: 3.72, top: 3.38, depth: 0.42, scallops: 12, repeats: 6 }));
   const pavGeo = merge(pav);
   c.wood.push(place(pavGeo, pv.x, pv.z, face, 1, py - heightAt(pv.x, pv.z)));
   for (let i = 0; i < 6; i++) {
@@ -260,7 +263,8 @@ function mistmarsh(c: Ctx): void {
     const lamp = paint(prep(new SphereGeometry(0.2, 8, 6).scale(1, 1.3, 1)), 0xffc070);
     const lx = Math.cos(ang) * 3.0;
     const lz = Math.sin(ang) * 3.0;
-    lamp.translate(lx, 2.95, lz);
+    // Hung just under the drape's hem (round 15), so the drape never hides them.
+    lamp.translate(lx, 2.66, lz);
     c.glow.push(place(lamp, pv.x, pv.z, face));
   }
   // Lantern posts round the shore.

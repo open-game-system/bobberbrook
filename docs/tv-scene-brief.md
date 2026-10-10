@@ -37,6 +37,10 @@ by a cloud GPU Chrome and streamed to a Chromecast. References: `concept/web/*.j
   fanned four times, mirrored, under the cap; one shared glow material (`bobber-giant-cap`, compiled at prewarm, never
   disposed with a place); the vertex colours carry only the cap's hue, the painted top-left light and a lifted rim lip;
   stems take the grain brushwork run up them.
+- **Tent canvas** (round 15, `valance.ts`): the Codex tent canvas (violet cloth, gold trim) is layer 16 of the prop
+  array, by explicit texture coordinates and keeping its own colour; the Mistmarsh pavilion and every lantern shrine
+  hang a scalloped drape under their shingled eaves (the pavilion's lanterns hang just under its hem), and the boat's
+  cabin canopy is tent canvas.
 - **Painted ground underfoot** (round 13, `decking.ts`): everything the family stands on is painted. Boardwalk
   planks each carry one board of the Codex planks along the walk (explicit texture coordinates: `aPaint.x >= PK_UV`);
   decks, plinths, stepping stones and terraces are lathe-turned discs (`disc`) with a bevelled lip that takes a painted

@@ -103,7 +103,8 @@ function boatGeometry(): { body: BufferGeometry; sail: BufferGeometry; glow: Buf
   const mast = paint(prep(surf(new CylinderGeometry(0.09, 0.12, 6.2, 8).translate(0.4, 3.1, 0), PK.grain)), 0x5a3a28, 0x7a5a38);
   const yard = paint(prep(surf(new CylinderGeometry(0.06, 0.06, 3.4, 6).rotateX(Math.PI / 2).translate(0.4, 5.6, 0), PK.grain, 1)), 0x5a3a28);
   const cabin = paint(prep(surf(new BoxGeometry(1.4, 0.9, 1.6).translate(-2.3, 0.5, 0), PK.planks)), 0xa87a50, 0xc89a68);
-  const roof = paint(prep(new ConeGeometry(1.25, 0.8, 4).rotateY(Math.PI / 4).scale(1, 1, 1.15).translate(-2.3, 1.35, 0)), 0x5a3a9a, 0x8a6ad0);
+  // Round 15: the cabin's canopy is tent canvas (violet, gold trim), not a flat violet cone.
+  const roof = paint(prep(surf(new ConeGeometry(1.25, 0.8, 4).rotateY(Math.PI / 4).scale(1, 1, 1.15).translate(-2.3, 1.35, 0), PK.tent, 2, 1)), 0xc8bce0, 0xffffff);
   const pole = paint(prep(new CylinderGeometry(0.04, 0.05, 1.3, 6).translate(3.2, 0.7, 0)), 0x3a2a28);
   const body = merge([hullP, deck, rim, bow, mast, yard, cabin, roof, pole]);
   // The sail hangs from the yard (top at y = 0 so it can unfurl downward by scale.y).

@@ -9,9 +9,9 @@ import { rng } from "./noise";
  */
 
 /** Surface kinds (the texture-array layer; NONE = no painted detail, e.g. faces and glass). */
-export const PK = { brush: 0, grain: 1, planks: 2, cloth: 3, canvas: 4, shingles: 5, runestone: 6, snow: 7, tiles: 8, rock: 9, moss: 10, quilt: 11, felt: 12, leather: 13, knit: 14, rodwood: 15, none: 16 } as const;
+export const PK = { brush: 0, grain: 1, planks: 2, cloth: 3, canvas: 4, shingles: 5, runestone: 6, snow: 7, tiles: 8, rock: 9, moss: 10, quilt: 11, felt: 12, leather: 13, knit: 14, rodwood: 15, tent: 16, none: 17 } as const;
 export type PaintKind = (typeof PK)[keyof typeof PK];
-const LAYERS = 16;
+const LAYERS = 17;
 /**
  * aPaint.x at or above this marks explicit texture coordinates (aPaint.yz) on layer x - PK_UV, instead of
  * the triplanar projection: boards that follow a curved boardwalk, one painted board per plank (round 13).
@@ -23,7 +23,7 @@ export const PK_UV = 32;
  * adds shingles, runestone and snow layers. Set before the first painted program compiles; a kind with no
  * image keeps its code painting (planks, canvas) or the generic brushwork.
  */
-export type PaintImages = Partial<Record<"planks" | "canvas" | "shingles" | "runestone" | "snow" | "tiles" | "rock" | "moss" | "quilt" | "felt" | "leather" | "knit" | "rodwood", CanvasImageSource>>;
+export type PaintImages = Partial<Record<"planks" | "canvas" | "shingles" | "runestone" | "snow" | "tiles" | "rock" | "moss" | "quilt" | "felt" | "leather" | "knit" | "rodwood" | "tent", CanvasImageSource>>;
 let images: PaintImages = {};
 export function setPaintImages(i: PaintImages): void {
   images = i;
@@ -316,7 +316,7 @@ export function paintArray(): PaintArray {
   };
   const painters = [
     paintBrush, paintGrain, img("planks", paintPlanks), paintCloth, img("canvas", paintCanvas), img("shingles", paintBrush), img("runestone", paintBrush), img("snow", paintBrush), img("tiles", paintBrush), img("rock", paintBrush), img("moss", paintBrush),
-    img("quilt", paintCloth), band("felt", paintCloth, "y", 0.08, 0.44), img("leather", paintBrush), img("knit", paintCloth), band("rodwood", paintGrain, "x", 0.36, 0.72),
+    img("quilt", paintCloth), band("felt", paintCloth, "y", 0.08, 0.44), img("leather", paintBrush), img("knit", paintCloth), band("rodwood", paintGrain, "x", 0.36, 0.72), img("tent", paintCanvas),
   ];
   const c = canvas();
   const inv: Vector3[] = [];
@@ -434,10 +434,10 @@ export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexSh
       vec3 tx;
       // Per kind: triplanar scale (per metre) and detail strength (brush grain planks cloth canvas
       // shingles runestone snow tiles rock moss, then the fishers' kit: quilt felt leather knit rod wood).
-      const float SCS[${LAYERS}] = float[${LAYERS}](0.8, 1.2, 0.36, 1.6, 1.0, 0.42, 0.45, 0.4, 0.42, 0.5, 0.4, 0.8, 1.0, 1.6, 2.6, 3.0);
-      const float STR[${LAYERS}] = float[${LAYERS}](0.55, 0.92, 0.72, 0.9, 0.75, 0.92, 0.9, 1.0, 0.9, 0.9, 0.85, 1.0, 0.55, 0.95, 1.0, 1.0);
+      const float SCS[${LAYERS}] = float[${LAYERS}](0.8, 1.2, 0.36, 1.6, 1.0, 0.42, 0.45, 0.4, 0.42, 0.5, 0.4, 0.8, 1.0, 1.6, 2.6, 3.0, 1.0);
+      const float STR[${LAYERS}] = float[${LAYERS}](0.55, 0.92, 0.72, 0.9, 0.75, 0.92, 0.9, 1.0, 0.9, 0.9, 0.85, 1.0, 0.55, 0.95, 1.0, 1.0, 1.0);
       int ki = int(pk);
-      if (pkUv || (pk > 3.5 && pk < 4.5)) {
+      if (pkUv || (pk > 3.5 && pk < 4.5) || (pk > 15.5 && pk < 16.5)) {
         tx = texture(tPk, vec3(vPk.yz, pk)).rgb;
       } else {
         vec3 w = pow(abs(n), vec3(4.0)); w /= (w.x + w.y + w.z + 1e-4);
@@ -457,9 +457,11 @@ export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexSh
       // Cloth (the fishers' clothes and hats) keeps a narrow value range: its broad fold strokes read as
       // white paint blotches on a 1 m figure (round 09 critic), so only the weave and soft folds show.
       // The fishers' painted kit (round 15) keeps its stitches and quilting but not its blackest crevices.
-      vec2 rng = pk > 2.5 && pk < 3.5 ? vec2(0.74, 1.24) : pk > 10.5 ? vec2(0.5, 1.45) : vec2(0.0, 2.4);
-      diffuseColor.rgb *= mix(vec3(1.0), clamp(mix(vec3(l), d, 0.55), rng.x, rng.y), str);
-      if (pk > 10.5) pkRimK = 0.55 * clamp(l * l, 0.0, 1.6);
+      vec2 rng = pk > 2.5 && pk < 3.5 ? vec2(0.74, 1.24) : pk > 10.5 && pk < 15.5 ? vec2(0.5, 1.45) : vec2(0.0, 2.4);
+      // The tent canvas keeps its own violet and gold (round 15): the vertex colours only shade it.
+      float hueK = pk > 15.5 && pk < 16.5 ? 1.0 : 0.55;
+      diffuseColor.rgb *= mix(vec3(1.0), clamp(mix(vec3(l), d, hueK), rng.x, rng.y), str);
+      if (pk > 10.5 && pk < 15.5) pkRimK = 0.55 * clamp(l * l, 0.0, 1.6);
       // Baked top light: painted surfaces are lit from above, shaded underneath.
       diffuseColor.rgb *= mix(0.82, 1.1, smoothstep(-0.6, 0.85, n.y));
     }

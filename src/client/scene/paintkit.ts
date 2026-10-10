@@ -59,6 +59,8 @@ export type PaintKit = {
   capTeal: PaintTex;
   capViolet: PaintTex;
   gills: PaintTex;
+  /** Round 15: violet tent canvas with gold trim (the pavilion and shrine drapes, the boat's cabin canopy). */
+  tentCanvas: PaintTex;
   dispose(): void;
 };
 
@@ -138,7 +140,7 @@ export function loadPaintKit(base = "/art/textures/"): Promise<PaintKit> {
     pineSpray: "pine-spray", pineSnow: "pine-snow", leavesGlow: "leaves-glow", leavesTeal: "leaves-teal", wisteria: "wisteria", foxglove: "foxglove", fern: "fern", bluebell: "bluebell", grassCard: "grass-card",
     glowcapBlue: "glowcap-blue", glowcapViolet: "glowcap-violet", poolCool: "pool-cool", embersLogs: "embers-logs", crystal: "crystal", forestFloor: "forest-floor", glowMoss: "glow-moss",
     quilt: "cloth-quilt", felt: "felt", leather: "leather", knit: "knit", rodWood: "rod-wood",
-    capTeal: "cap-teal", capViolet: "cap-violet", gills: "gills",
+    capTeal: "cap-teal", capViolet: "cap-violet", gills: "gills", tentCanvas: "tent-canvas",
   } as const;
   type Key = keyof typeof files;
   const p = async (): Promise<PaintKit> => {
@@ -162,7 +164,7 @@ export function loadPaintKit(base = "/art/textures/"): Promise<PaintKit> {
       bluebell: get("bluebell"), grassCard: get("grassCard"), glowcapBlue: get("glowcapBlue"), glowcapViolet: get("glowcapViolet"), poolCool: get("poolCool"), embersLogs: get("embersLogs"),
       crystal: get("crystal"), forestFloor: get("forestFloor"), glowMoss: get("glowMoss"),
       quilt: get("quilt"), felt: get("felt"), leather: get("leather"), knit: get("knit"), rodWood: get("rodWood"),
-      capTeal: get("capTeal"), capViolet: get("capViolet"), gills: get("gills"),
+      capTeal: get("capTeal"), capViolet: get("capViolet"), gills: get("gills"), tentCanvas: get("tentCanvas"),
       dispose() {
         for (const t of m.values()) t.tex.dispose();
         shared = null;

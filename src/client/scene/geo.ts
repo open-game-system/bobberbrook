@@ -48,7 +48,7 @@ export function paintedMaterial(opts: { side?: Side; emissive?: number; /** Obje
 export function surf(g: BufferGeometry, kind: PaintKind, su = 0, sv = 0): BufferGeometry {
   const n = g.getAttribute("position").count;
   const a = new Float32Array(n * 3);
-  const uv = kind === PK.canvas ? g.getAttribute("uv") : undefined;
+  const uv = kind === PK.canvas || kind === PK.tent ? g.getAttribute("uv") : undefined;
   for (let i = 0; i < n; i++) {
     a[i * 3] = kind;
     a[i * 3 + 1] = uv ? uv.getX(i) * su : su;
