@@ -614,7 +614,9 @@ export function step(lake: Lake, now: number): Lake {
 // ---------- boats and zeppelins ----------
 
 /** How close to a dock or tower everyone must stand to board, and how long they wait there. */
-export const PLATFORM_REACH = 2.6;
+// Wider than FISHER_SPACE (2.8): keep-apart must never nudge someone off the mooring (round 13: with the
+// reach at 2.6, a kid kept 2.8 m from Dad on the mooring stood just outside it and boarding kept resetting).
+export const PLATFORM_REACH = 3.6;
 export const BOARD_MS = 3000;
 const RIDE_SPEED = { boat: 12, zeppelin: 20 } as const;
 export const RIDE_MIN_MS = 10_000;

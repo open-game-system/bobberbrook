@@ -257,7 +257,7 @@ const config: GameRigInput = {
       await walkTo(dad, zep.at, 0.6, 40_000);
       const onIt = await me(dad);
       // Marks say what happened, never what was meant to (round 09 logged a ride that never left).
-      rig.mark(Math.hypot(onIt.f.pos.x - zep.at.x, onIt.f.pos.z - zep.at.z) < 2.6 ? "at the zeppelin" : "short of the zeppelin (bot stuck)");
+      rig.mark(Math.hypot(onIt.f.pos.x - zep.at.x, onIt.f.pos.z - zep.at.z) < 3.6 ? "at the zeppelin" : "short of the zeppelin (bot stuck)");
       let rode = false;
       for (let i = 0; i < 160; i++) {
         const { lake } = await me(dad);

@@ -180,7 +180,7 @@ const exploreTip: Rule = (lake) => {
 };
 
 /** In priority order: what's happening to someone right now first, then news, then a tip. */
-const RULES: Rule[] = [campfireLine, riding, boardingNow, myBite, myCatch, theirBite, theirReel, freshCatch, freshMiss, wentAhead, freshDiscovery, goldenSwirl, rideNearby, exploreTip, timeTip, talkTip, rodTip];
+const RULES: Rule[] = [campfireLine, riding, boardingNow, myBite, myCatch, theirBite, theirReel, freshCatch, freshMiss, wentAhead, freshDiscovery, rideNearby, goldenSwirl, exploreTip, timeTip, talkTip, rodTip];
 
 /**
  * The host phone's one line to read aloud. The grown-up is the coach: what's happening to the kids

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BOARD_MS, PLATFORM_REACH, boardingPlatform, join, newLake, step, type Lake } from "./lake";
+import { BOARD_MS, FISHER_SPACE, PLATFORM_REACH, boardingPlatform, join, newLake, step, type Lake } from "./lake";
 import { BIOMES, REGION, cellKey, createWorld, isSea, worldFor, type Cell, type Platform } from "./regions";
 import { distance } from "./world";
 
@@ -124,6 +124,15 @@ describe("riding a zeppelin", () => {
     const fishers = [{ pos: toward(d / 2 + 0.05) }, { pos: toward(d / 2 + 0.05) }];
     expect(boardingPlatform(p.id, fishers, w)?.id).toBe(p.id);
     expect(boardingPlatform(null, fishers, w)?.id).toBe(q.id);
+  });
+  it("boards with one fisher on the mooring and the other kept FISHER_SPACE away (spacing never pushes anyone off the mooring)", () => {
+    let l: Lake = { ...join(join(newLake(1, T0), { name: "A", ogsId: null }).lake, { name: "B", ogsId: null }).lake, worldSeed: seed };
+    const zep = worldFor(seed).platformsNear({ x: 0, z: 0 }, 0).find((p) => p.kind === "zeppelin")!;
+    l = { ...l, fishers: l.fishers.map((f, i) => ({ ...f, pos: i ? { x: zep.at.x + FISHER_SPACE, z: zep.at.z } : { ...zep.at } })) };
+    l = step(l, T0 + 10);
+    expect(l.boarding?.platformId).toBe(zep.id);
+    l = step(l, T0 + 10 + BOARD_MS);
+    expect(l.ride).not.toBeNull();
   });
   it("doesn't leave while someone is still elsewhere", () => {
     let l: Lake = { ...join(join(newLake(1, T0), { name: "A", ogsId: null }).lake, { name: "B", ogsId: null }).lake, worldSeed: seed };

@@ -161,7 +161,9 @@ button { font: inherit; color: inherit; }
 .toggle input { width: 28px; height: 28px; }
 
 /* host join */
-.host-join { position: absolute; left: calc(env(safe-area-inset-left) + 2vmin); top: calc(env(safe-area-inset-top) + 2vmin); z-index: 10; }
+/* Folded, the invite sits at the bottom between the stick and the big button (top-left covered the coach line). */
+.host-join { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 2vmin); translate: -50% 0; z-index: 10; }
+.host-join.open { translate: none; }
 .host-join.open { inset: 0; display: grid; place-items: center; align-content: center; gap: 12px; background: rgba(4, 20, 24, 0.82); }
 .host-join-toggle { border: 0; border-radius: 12px; padding: 6px 12px; background: rgba(8,34,38,.85); font-weight: 700; font-size: 15px; }
 .host-join.open .host-join-toggle { order: 2; background: var(--sun); color: var(--ink); font-size: 22px; padding: 8px 28px; }
