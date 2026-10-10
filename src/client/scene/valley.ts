@@ -160,7 +160,7 @@ export const LOOKS: Record<AreaId, AreaLook> = {
   mistmarsh: {
     grassA: c(0x3e7a70), grassB: c(0x62a08a), grassC: c(0x9a8ad8),
     canopy: [c(0xc8a8ff), c(0xb090f0), c(0xe0b8ff)],
-    waterShallow: c(0xb8b0ff), waterDeep: c(0x9a80e0), calm: 0.55,
+    waterShallow: c(0xd4ecff), waterDeep: c(0x8a74e8), calm: 0.3,
     fog: c(0xb8b0e8), fogK: 0.6, fogScale: 0.6, sunK: 0.9, hemiK: 1.15, hemiSky: c(0xc8c0f4), glowAdd: 0.25, mistAdd: 0.5, exposureK: 1.06, grade: c(0xf6f2ff),
   },
   // Fresh rock pools: bright turquoise water, lavender birches, clean air.

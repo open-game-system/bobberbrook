@@ -18,15 +18,23 @@ attribute float aSize;
 attribute float aAlpha;
 attribute float aShape;
 attribute vec3 aColor;
+attribute vec3 aVel;
 uniform float uScale;
 /** Faces (world xyz, radius w; w = 0 unused): sparkles in front of a face fade out (round 11). */
 uniform vec4 uFaces[4];
 varying float vAlpha;
 varying float vShape;
 varying vec3 vColor;
+varying vec3 vDir;
 void main() {
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   gl_Position = projectionMatrix * mv;
+  // Round 19: which way a droplet travels on screen (point-coord frame, y down) and how fast, so falling
+  // water is drawn as a painted streak along its flight instead of a round white ball.
+  vec4 ahead = projectionMatrix * modelViewMatrix * vec4(position + aVel * 0.06, 1.0);
+  vec2 sd = (ahead.xy / max(ahead.w, 1e-3) - gl_Position.xy / max(gl_Position.w, 1e-3)) * vec2(projectionMatrix[1][1] / projectionMatrix[0][0], 1.0);
+  float sl = length(sd);
+  vDir = vec3(sl > 1e-6 ? vec2(sd.x, -sd.y) / sl : vec2(0.0, 1.0), smoothstep(0.002, 0.03, sl));
   float dist = max(-mv.z, 0.5);
   gl_PointSize = clamp(aSize * uScale / dist, 0.0, 256.0);
   vAlpha = aAlpha;
@@ -49,17 +57,23 @@ const FRAG = /* glsl */ `
 varying float vAlpha;
 varying float vShape;
 varying vec3 vColor;
+varying vec3 vDir;
 void main() {
   vec2 p = gl_PointCoord * 2.0 - 1.0;
   float d = length(p);
   float a;
   vec3 col = vColor;
   if (vShape > 1.5) {
-    // A painted water droplet: crisp round body, darker teal rim, a lit highlight up top-left, a pale core.
-    a = smoothstep(1.0, 0.78, d);
-    float rim = smoothstep(0.5, 0.95, d);
-    float hl = smoothstep(0.42, 0.0, length(p - vec2(-0.32, -0.38)));
-    col = mix(col, col * vec3(0.45, 0.78, 0.9), rim * 0.7) + vec3(1.0) * hl * 0.75;
+    // Round 19: a painted droplet streak along its flight (round white discs heaped into cotton balls,
+    // session 123/143 s): a bright head, a tail that tapers behind it, a teal body, translucent.
+    vec2 q = vec2(dot(p, vDir.xy), dot(p, vec2(-vDir.y, vDir.x)));
+    float wid = mix(0.62, 0.3, vDir.z) * (0.45 + 0.55 * smoothstep(-1.0, 0.55, q.x));
+    float body = length(vec2(q.x, q.y * 0.62 / max(wid, 0.05)));
+    a = smoothstep(0.98, 0.7, body) * 0.82;
+    float head = smoothstep(0.75, 0.1, length(vec2(q.x - 0.45, q.y * 1.6)));
+    float edge = smoothstep(0.45, 0.95, body);
+    col = mix(col * vec3(0.62, 0.86, 0.94), col, head) * (1.0 - 0.3 * edge) + vec3(1.0) * head * head * 0.35;
+    a *= mix(0.55, 1.0, head);
   } else if (vShape > 0.5) {
     float star = max(0.0, 1.0 - abs(p.x * p.y) * 18.0 - d * 0.6);
     a = clamp(star + smoothstep(0.45, 0.0, d), 0.0, 1.0);
@@ -122,6 +136,7 @@ export class Particles {
     this.geo.setAttribute("aSize", new BufferAttribute(this.size, 1));
     this.geo.setAttribute("aAlpha", new BufferAttribute(this.alpha, 1));
     this.geo.setAttribute("aShape", new BufferAttribute(this.shape, 1));
+    this.geo.setAttribute("aVel", new BufferAttribute(this.vel, 3));
     this.material = new ShaderMaterial({
       vertexShader: VERT,
       fragmentShader: FRAG,
@@ -208,6 +223,7 @@ export class Particles {
     this.geo.attributes.aSize!.needsUpdate = true;
     this.geo.attributes.aAlpha!.needsUpdate = true;
     this.geo.attributes.aShape!.needsUpdate = true;
+    this.geo.attributes.aVel!.needsUpdate = true;
   }
 
   dispose(): void {

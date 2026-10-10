@@ -1,0 +1,97 @@
+{
+  "round": "19-s3",
+  "shots": [
+    {
+      "label": "biome-marsh",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 82,
+      "calls": 936,
+      "triangles": 3934663,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 97
+    },
+    {
+      "label": "mistmarsh",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 950,
+      "triangles": 4062565,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 54
+    },
+    {
+      "label": "double-catch",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 736,
+      "triangles": 3179900,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 103
+    },
+    {
+      "label": "miss",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 763,
+      "triangles": 3239948,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 97
+    },
+    {
+      "label": "mistmarsh@tod-morning",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 913,
+      "triangles": 3983757,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 87
+    },
+    {
+      "label": "mistmarsh@tod-golden",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 951,
+      "triangles": 4067493,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 56
+    },
+    {
+      "label": "mistmarsh@tod-night",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 915,
+      "triangles": 3984509,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 57
+    },
+    {
+      "label": "mistmarsh@tod-dawn",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 81,
+      "programs": 81,
+      "calls": 951,
+      "triangles": 4044119,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 76
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}

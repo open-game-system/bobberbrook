@@ -72,7 +72,7 @@ export class Fx {
     for (let i = 0; i < 11 * k; i++) {
       const a = this.r() * Math.PI * 2;
       const s = 0.8 + this.r() * 1.6;
-      this.water.emit({ x: x + Math.cos(a) * 0.3, y: 0.08, z: z + Math.sin(a) * 0.3, vx: Math.cos(a) * s, vy: 2.4 + this.r() * 3.2, vz: Math.sin(a) * s, life: 0.85, size: 0.18 + this.r() * 0.2, r: 0.97, g: 1, b: 1, gravity: 10, alpha: 0.95 });
+      this.water.emit({ x: x + Math.cos(a) * 0.3, y: 0.08, z: z + Math.sin(a) * 0.3, vx: Math.cos(a) * s, vy: 2.4 + this.r() * 3.2, vz: Math.sin(a) * s, life: 0.85, size: 0.12 + this.r() * 0.12, r: 0.97, g: 1, b: 1, gravity: 10, alpha: 0.95 });
     }
   }
 
@@ -110,12 +110,9 @@ export class Fx {
     for (let i = 0; i < (this.lite ? 40 : junk ? 80 : 70); i++) {
       const a = this.r() * Math.PI * 2;
       const s = 0.6 + this.r() * (junk ? 2.6 : 2.0);
-      this.water.emit({ x: x + Math.cos(a) * 0.2, y: 0.1, z: z + Math.sin(a) * 0.2, vx: Math.cos(a) * s, vy: 3 + this.r() * (junk ? 5 : 4.5), vz: Math.sin(a) * s, life: 1.1, size: 0.16 + this.r() * 0.24, r: 0.96, g: 1, b: 1, gravity: 10, alpha: 0.95 });
+      this.water.emit({ x: x + Math.cos(a) * 0.2, y: 0.1, z: z + Math.sin(a) * 0.2, vx: Math.cos(a) * s, vy: 3 + this.r() * (junk ? 5 : 4.5), vz: Math.sin(a) * s, life: 1.1, size: 0.11 + this.r() * 0.15, r: 0.96, g: 1, b: 1, gravity: 10, alpha: 0.95 });
     }
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * Math.PI * 2;
-      this.water.emit({ x: x + Math.cos(a) * 0.4, y: 0.1, z: z + Math.sin(a) * 0.4, vx: Math.cos(a) * 0.9, vy: 0.5, vz: Math.sin(a) * 0.9, life: 0.9, size: 0.5, r: 0.94, g: 0.99, b: 1, alpha: 0.45, grow: 1.4, drag: 2 });
-    }
+    // Round 19: no ring of big soft white puffs (they read as cotton balls); the crown sheet carries the shape.
   }
 
   /** A trail of droplets behind a flying fish. */
