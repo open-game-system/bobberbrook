@@ -518,7 +518,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     fx.ambient(dt, tod, lake?.campfire ? 1 : 0, rig.focus.x, rig.focus.z);
     parts.water.update(dt, t);
     splashes.frame(t);
-    escape.frame(t, (x, z, ts, away) => fx.slap(x, z, ts, away));
+    escape.frame(t, (x, z, ts, away) => fx.slap(x, z, ts, away), camera.position.x, camera.position.z);
     parts.glow.update(dt, t);
     // Spread out: frame the active place (a line in the water, else the latest mover), mark the rest.
     members.length = 0;

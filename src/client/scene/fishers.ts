@@ -479,6 +479,8 @@ class FisherView {
         const age = sn - nt;
         if (age > 0 && age < 450) bob.y -= Math.sin((age / 450) * Math.PI) * 0.16;
       }
+      // Round 22: after a miss the bobber springs back up from its dive and bobs to rest.
+      if (mode === "wait" && f.missAt !== null && sn >= f.missAt && sn - f.missAt < 1200) bob.y += missBob((sn - f.missAt) / 1000);
       if (mode === "bite" || sn >= f.biteAt) {
         if (this.biteKey !== f.biteAt && sn < f.biteAt + 2500) {
           this.biteKey = f.biteAt;
@@ -845,6 +847,11 @@ class FisherView {
 }
 
 export type CatchFocus = { x: number; y: number; z: number; age: number };
+
+/** The bobber's height offset `a` s after a miss: up from its dive (-0.22 m) with a springy overshoot, at rest by ~1 s. */
+export function missBob(a: number): number {
+  return -0.28 * Math.exp(-a * 5.5) * Math.cos(a * 17);
+}
 
 export class FisherViews {
   readonly group = new Group();

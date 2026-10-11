@@ -79,6 +79,8 @@ export class Fx {
   /** A small "got away" splash. */
   missSplash(x: number, z: number, t: number, away = this.r() * Math.PI * 2): void {
     this.surface.ripple(x, z, t, 1.1);
+    // Round 22: a wider ring spreads out after it, so the miss reads from the far side of the room.
+    this.surface.ripple(x, z, t + 0.22, 1.8);
     // The tail breaks the surface: a burst of spray as it comes up, then (escape.ts) it flicks and slaps.
     for (let i = 0; i < (this.lite ? 14 : 24); i++) {
       const a = this.r() * Math.PI * 2;
