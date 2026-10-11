@@ -52,6 +52,10 @@ export function coverCheck(renderer: WebGLRenderer, scene: Scene, camera: Camera
   const nested: Object3D[] = [];
   for (const o of scene.children) if (o.userData.coverExempt !== true) o.traverse((c) => { if (c !== o && c.userData.coverExempt === true && c.visible) nested.push(c); });
   for (const c of nested) c.visible = false;
+  // Ground decals that belong to a fisher (the seat ring at the feet) are not the fisher's body.
+  const decals: Object3D[] = [];
+  fishers.traverse((c) => { if (c.userData.coverCheckSkip === true && c.visible) decals.push(c); });
+  for (const c of decals) c.visible = false;
   const show = (pick: (o: Object3D) => boolean) => {
     for (const o of scene.children) o.visible = (vis.get(o) ?? false) && (o instanceof Light || pick(o));
   };
@@ -129,6 +133,7 @@ export function coverCheck(renderer: WebGLRenderer, scene: Scene, camera: Camera
   } finally {
     for (const [o, v] of vis) o.visible = v;
     for (const c of nested) c.visible = true;
+    for (const c of decals) c.visible = true;
     scene.background = prevBg;
     cover.uCovKeep.value = prevKeep;
     renderer.setClearColor(prevClear, prevAlpha);

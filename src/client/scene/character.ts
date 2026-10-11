@@ -405,6 +405,9 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials)
   const marker = new Mesh(ringGeo, markerMat);
   marker.position.y = 0.03;
   marker.renderOrder = 6;
+  // Round 22: a ground decal, not the fisher's body: the lab's cover check leaves it out (grass tufts and
+  // snow over the ring counted as scenery covering a fisher, 1.5-3 % of a body box).
+  marker.userData.coverCheckSkip = true;
   geos.push(ringGeo);
   root.add(marker);
 
