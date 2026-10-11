@@ -532,6 +532,9 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     const sp = whole ? { split: false, lead: sp0.lead, framed: allSeats } : sp0;
     const wide = whole && familyFrame.spread > 18;
     framed = sp.framed;
+    // Riders step aboard and ashore in a row across the view (round 21).
+    camera.getWorldDirection(tmpO);
+    vehicles.setAcross(-tmpO.z, tmpO.x);
     const riding = vehicles.riding();
     rideSky += ((riding === 2 ? 1 : 0) - rideSky) * Math.min(1, dt * 0.8);
     rig.rateK += ((riding ? 3.2 : 1) - rig.rateK) * Math.min(1, dt * 2);

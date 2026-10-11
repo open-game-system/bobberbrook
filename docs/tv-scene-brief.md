@@ -207,6 +207,11 @@ appear and fade (`since`, `until`), never pop.
   dithers to 0.15 of its pixels. Every program compiled at prewarm is kept alive (`keepPrograms.ts`), so the showroom's
   disposal never forces a mid-play compile. The lab's cover check (`window.__scene.coverCheck()`, an ID-mask pass with the
   dither off, in `shoot-scene.mjs` for every shot) fails a shot where scenery still covers more than 2 % of a fisher's body.
+- **Round 21, never lined up on the camera axis** (`screenSpread.ts`): after personal space, any two fishers within 5 m
+  of each other along the view and nearer than 1.3 m across it are drawn eased apart across the screen (each half, along
+  the camera's right); a fisher on Moonwell's dock or Mistmarsh's boardwalk slides along it instead (`walkTangent`), so a
+  family on a dock spreads along it; offsets are capped at 1.6 m and the rules' positions are untouched. Riders step aboard
+  and ashore in a row across the view (`ashoreOffset`, 1.4 m apart), not on a ring.
 - **Discovery** (round 17; round 18: it waits, up to 6 s, until a fisher is within the pond plus 45 % of the clearing, so it plays as the family arrives at the water, `revealGate.ts`): a 5 s reveal swings round behind the family (a three-quarter yaw that keeps every fisher
   apart, at most 1.6 rad off the place view), up and out until the whole new pond lies beyond them, then back.
 - **Campfire** (`lake.campfire`): the camera settles on the campfire; fishers sit around it. The seats are a horseshoe 2.9 m out, open on the camera's axis so the fire burns in the gap and never in

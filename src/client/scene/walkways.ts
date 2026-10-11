@@ -60,3 +60,30 @@ export function lineFloor(x: number, z: number): number {
 export function underWalk(x: number, z: number): boolean {
   return lineFloor(x, z) > -Infinity;
 }
+
+/**
+ * Round 21: the direction of the walk a fisher stands on (Mistmarsh's boardwalk), or null off it; the TV
+ * spreads fishers along it rather than off it (screenSpread.ts).
+ */
+export function walkTangent(x: number, z: number): { x: number; z: number } | null {
+  const path = walks();
+  const c = path[7]!;
+  if (Math.abs(x - c.x) > 30 || Math.abs(z - c.z) > 30) return null;
+  let best = Infinity;
+  let out: { x: number; z: number } | null = null;
+  for (let i = 0; i + 1 < path.length; i++) {
+    const a = path[i]!;
+    const b = path[i + 1]!;
+    const dx = b.x - a.x;
+    const dz = b.z - a.z;
+    const l2 = dx * dx + dz * dz || 1;
+    const s = Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.z) * dz) / l2));
+    const d = Math.hypot(x - a.x - dx * s, z - a.z - dz * s);
+    if (d < best) {
+      best = d;
+      const l = Math.sqrt(l2);
+      out = { x: dx / l, z: dz / l };
+    }
+  }
+  return best < WALK_HALF + 0.35 ? out : null;
+}

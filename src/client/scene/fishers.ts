@@ -1,4 +1,5 @@
-import { lineFloor, underWalk } from "./walkways";
+import { lineFloor, underWalk, walkTangent } from "./walkways";
+import { spreadAcross } from "./screenSpread";
 import { spaceOut, type Spot } from "./personalSpace";
 import { READY_ARM_X, SLING_ARM, placeRod, slingTarget } from "./rodSling";
 import {
@@ -122,6 +123,8 @@ function bobberGeometry(): BufferGeometry {
 }
 
 type Pose = { legL: number; legR: number; armLx: number; armLz: number; armRx: number; armRz: number; bodyY: number; lean: number; tilt: number; headX: number; headY: number; sq: number; bend: number; sit: number };
+/** Moonwell's dock runs north-south (world.ts DOCK). */
+const DOCK_ALONG = { x: 0, z: 1 };
 const zeroPose = (): Pose => ({ legL: 0, legR: 0, armLx: 0, armLz: 0, armRx: 0, armRz: 0, bodyY: 0, lean: 0, tilt: 0, headX: 0, headY: 0, sq: 0, bend: 0, sit: 0 });
 
 class FisherView {
@@ -887,6 +890,9 @@ export class FisherViews {
     spots.length = 0;
     if (lake && !lake.campfire) for (const f of lake.fishers) if (f.seat >= 0 && f.seat < 4 && !(this.rideOf && this.rideOf(f.seat, this.ridePose))) spots.push({ seat: f.seat, x: f.pos.x, z: f.pos.z, ox: 0, oz: 0 });
     spaceOut(spots);
+    // Round 21: and never lined up on the camera axis (spread across the screen, along a dock or walk).
+    camera.getWorldDirection(this.camFwd);
+    spreadAcross(spots, { x: this.camFwd.x, z: this.camFwd.z }, (x, z) => (onDock({ x, z }) ? DOCK_ALONG : walkTangent(x, z)));
     const ks = damp(3, dt);
     for (const v of this.views) {
       const sp = spots.find((p) => p.seat === v.seat);
@@ -904,6 +910,7 @@ export class FisherViews {
     this.spreadTags(camera, dt);
   }
 
+  private readonly camFwd = new Vector3();
   private readonly right = new Vector3();
   private readonly up = new Vector3();
   private readonly cards: { v: FisherView; along: number; h: number; hw: number; dx: number }[] = [];

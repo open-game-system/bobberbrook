@@ -1,3 +1,4 @@
+import { ashoreOffset } from "./screenSpread";
 import {
   AdditiveBlending,
   BoxGeometry,
@@ -76,6 +77,8 @@ export type Vehicles = {
   boardFocus(out: Vector3[]): { n: number; ux: number; uz: number; kind: number } | null;
   /** 0 none, 1 boat, 2 zeppelin. */
   riding(): number;
+  /** Round 21: the camera's right on the ground; riders step aboard and ashore in a row across it. */
+  setAcross(x: number, z: number): void;
   /** The riding vehicle's heading (atan2(z, x)). */
   heading(): number;
   prewarm(on: boolean): void;
@@ -83,8 +86,6 @@ export type Vehicles = {
   dispose(): void;
 };
 
-/** How far round the rules' landing spot the riders are drawn stepping aboard and ashore (m). */
-const ASHORE_R = 1.6;
 
 // ---------- geometry ----------
 
@@ -610,6 +611,7 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
   const pose2: Pose = { x: 0, y: 0, z: 0, heading: 0, roll: 0, pitch: 0 };
   let rideLive: Live | null = null;
   let rideSeats: number[] = [];
+  const across = { x: 1, z: 0 };
   let rideState = { k: 0, board: 0, land: 0, from: { x: 0, z: 0 }, to: { x: 0, z: 0 }, kind: 0 };
   const rideOrder: number[] = [];
   let rideHeading = 0;
@@ -903,6 +905,10 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
         }
       }
     },
+    setAcross(x, z) {
+      across.x = x;
+      across.z = z;
+    },
     rideSeat(seat, out) {
       if (!rideLive || rideState.kind === 0 || !rideSeats.includes(seat)) return false;
       const i = Math.max(0, rideOrder.indexOf(seat));
@@ -914,7 +920,9 @@ export function buildVehicles(full: boolean, painted: Material, paintedDouble: M
       // Step aboard at the start, ashore at the end (from / to where the rules stand them).
       // Round 20: on the rules' ring (i x 1.7 rad) but drawn 1.6 m out, not 0.9 (arrival.png: four fishers on one
       // spot, Juneau inside Mom); personalSpace.ts keeps them apart once they are ashore.
-      const off = { x: Math.cos(i * 1.7) * ASHORE_R, z: Math.sin(i * 1.7) * ASHORE_R };
+      // Round 21: in a row across the camera's view (screenSpread.ts), not on a ring (arrival.png: the ring put
+      // riders behind one another on the TV).
+      const off = ashoreOffset(i, rideSeats.length, across);
       const sx = rideState.from.x + off.x;
       const sz = rideState.from.z + off.z;
       const ex = rideState.to.x + off.x;
