@@ -407,8 +407,10 @@ export function cottageGeometry(seed: number): { body: BufferGeometry; windows: 
   const r = rng(seed);
   const R = 1.5 + r() * 0.4;
   const h = 1.9 + r() * 0.5;
-  const walls = prep(new CylinderGeometry(R * 0.96, R, h, 14).translate(0, h / 2, 0));
-  paint(walls, 0xcab8a4, 0xf0e2cc, (p, _n, c) => c.multiplyScalar(0.9 + 0.1 * vnoise(p.x * 3, p.y * 3, 2)));
+  // Round 22: the walls are the kit's carved stone tiles (painted courses, moss in the joints), warm
+  // lilac stone darkening to the ground, not flat untextured beige.
+  const walls = surf(prep(new CylinderGeometry(R * 0.96, R, h, 14, 3).translate(0, h / 2, 0)), PK.tiles);
+  paint(walls, 0x8a7e98, 0xd8cce0, (p, _n, c) => c.multiplyScalar(0.88 + 0.16 * vnoise(p.x * 2, p.y * 2, 2)));
   const beams: BufferGeometry[] = [];
   for (let i = 0; i < 7; i++) {
     const a = (i / 7) * Math.PI * 2 + 0.2;
@@ -416,9 +418,9 @@ export function cottageGeometry(seed: number): { body: BufferGeometry; windows: 
     paint(g, 0x4a3226, 0x6a4632);
     beams.push(g);
   }
-  const band = prep(new TorusGeometry(R * 0.99, 0.07, 5, 18).rotateX(Math.PI / 2).translate(0, h * 0.98, 0));
+  const band = surf(prep(new TorusGeometry(R * 0.99, 0.07, 5, 18).rotateX(Math.PI / 2).translate(0, h * 0.98, 0)), PK.grain);
   paint(band, 0x4a3226);
-  const base = prep(new CylinderGeometry(R + 0.12, R + 0.2, 0.3, 14).translate(0, 0.15, 0));
+  const base = surf(prep(new CylinderGeometry(R + 0.12, R + 0.2, 0.3, 14).translate(0, 0.15, 0)), PK.rock);
   paint(base, 0x6a6280, 0x8a84a0);
   // A swooping night-elf roof: an upturned, curled eave lip, a concave sweep up to a tall point, a
   // second smaller tier above it, gold trim on both eaves and a gold finial. Profiles run from the eave

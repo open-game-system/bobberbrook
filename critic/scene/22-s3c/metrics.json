@@ -1,0 +1,78 @@
+{
+  "round": "22-s3c",
+  "shots": [
+    {
+      "label": "moonwell",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 90,
+      "programs": 90,
+      "calls": 893,
+      "triangles": 3329234,
+      "p50": 16.700000762939453,
+      "p95": 33.400001525878906,
+      "meanLuma": 93,
+      "cover": 0.005,
+      "coverBoxes": [
+        0.005,
+        0,
+        0.004
+      ]
+    },
+    {
+      "label": "biome-ember",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 89,
+      "programs": 89,
+      "calls": 770,
+      "triangles": 3094998,
+      "p50": 16.700000762939453,
+      "p95": 33.29999923706055,
+      "meanLuma": 98,
+      "cover": 0.004,
+      "coverBoxes": [
+        0,
+        0,
+        0.004
+      ]
+    },
+    {
+      "label": "mistmarsh",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 90,
+      "programs": 90,
+      "calls": 966,
+      "triangles": 4105114,
+      "p50": 16.700000762939453,
+      "p95": 33.400001525878906,
+      "meanLuma": 63,
+      "cover": 0.003,
+      "coverBoxes": [
+        0.003,
+        0,
+        0
+      ]
+    },
+    {
+      "label": "mistmarsh-dock",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 90,
+      "programs": 90,
+      "calls": 734,
+      "triangles": 3075709,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 80,
+      "cover": 0.046,
+      "coverBoxes": [
+        0.003,
+        0.046
+      ]
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": [
+    "mistmarsh-dock"
+  ]
+}

@@ -158,10 +158,13 @@ export const LOOKS: Record<AreaId, AreaLook> = {
   },
   // Misty lily marsh: blue-violet moss, willow purples, lavender haze.
   mistmarsh: {
-    grassA: c(0x3e7a70), grassB: c(0x62a08a), grassC: c(0x9a8ad8),
+    // Round 22: deeper moss (grassB 0x62a08a, grassC 0x9a8ad8 lavender washed the banks into the haze).
+    grassA: c(0x3e7a70), grassB: c(0x4e8a78), grassC: c(0x6e62b8),
     canopy: [c(0xc8a8ff), c(0xb090f0), c(0xe0b8ff)],
     waterShallow: c(0xd4ecff), waterDeep: c(0x8a74e8), calm: 0.3,
-    fog: c(0xb8b0e8), fogK: 0.6, fogScale: 0.6, sunK: 0.9, hemiK: 1.15, hemiSky: c(0xc8c0f4), glowAdd: 0.25, mistAdd: 0.5, exposureK: 1.06, grade: c(0xf6f2ff),
+    // Round 22: a thinner, bluer haze (fog 0xb8b0e8 K 0.6 at 0.6 of the distance, mist 0.5, sun 0.9, a pink
+    // fill 0xc8c0f4 flattened the marsh into pastel mush and the family into the water).
+    fog: c(0x9eaee6), fogK: 0.34, fogScale: 1.0, sunK: 1.0, hemiK: 1.1, hemiSky: c(0xbcc8f6), glowAdd: 0.25, mistAdd: 0.3, exposureK: 1.06, grade: c(0xf6f2ff),
   },
   // Fresh rock pools: bright turquoise water, lavender birches, clean air.
   pools: {
