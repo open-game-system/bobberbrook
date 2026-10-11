@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BoxGeometry, Group, Mesh, MeshBasicMaterial, MeshLambertMaterial, PerspectiveCamera, ShaderChunk, ShaderMaterial, Vector3 } from "three";
-import { COVER_MAX, coverScene, isCoverPatched, makeCoverUniforms, patchCover, setCoverFishers } from "./cover";
+import { COVER_CARD_REACH, COVER_MAX, coverScene, isCoverPatched, makeCoverUniforms, patchCover, setCoverFishers } from "./cover";
 
 const fakeShader = () => ({
   uniforms: {} as Record<string, unknown>,
@@ -36,6 +36,40 @@ describe("cover: every scenery material dissolves where it stands over a fisher"
     expect(s.uniforms.uCovBox).toBe(u.uCovBox);
     expect(m.customProgramCacheKey()).toBe("bobber-own|cover");
     expect(isCoverPatched(m)).toBe(true);
+  });
+
+  it("works the fade out per vertex for a material that asks (small leaf cards: light fragments), padded by a card's reach", () => {
+    const u = makeCoverUniforms();
+    const m = new MeshLambertMaterial();
+    m.userData.coverPerVertex = true;
+    m.customProgramCacheKey = () => "bobber-leaf";
+    patchCover(m, u);
+    const s = compile(m);
+    // The amount is worked out in the vertex shader, padded (a card whose corners straddle a fisher still fades)...
+    expect(s.vertexShader).toContain("vCovA = covAmount(");
+    expect(s.vertexShader).toContain("uCovPad");
+    // ...and the fragment only dithers by it (no per-pixel box loop).
+    expect(s.fragmentShader).toContain("vCovA");
+    expect(s.fragmentShader).not.toContain("covAmount(");
+    expect(s.uniforms.uCovPad).toBe(u.uCovPad);
+    expect(m.customProgramCacheKey()).toBe("bobber-leaf|cover-v");
+  });
+
+  it("pads the per-vertex fade by about a metre at each depth (wider when the lens is longer)", () => {
+    const u = makeCoverUniforms();
+    const wide = camAt(new Vector3(0, 6, 12), new Vector3(0, 1, 0));
+    setCoverFishers(u, wide, [{ x: 0, y: 0, z: 0 }]);
+    const a = u.uCovPad.value.clone();
+    // pad / depth is the screen share (0..1) of COVER_CARD_REACH metres at that depth.
+    const metre = (new Vector3(0.5, 1, 0).project(wide).x - new Vector3(-0.5, 1, 0).project(wide).x) / 2;
+    expect(a.x / Math.hypot(5, 12)).toBeCloseTo(COVER_CARD_REACH * metre, 3);
+    expect(a.y).toBeGreaterThan(a.x);
+    const tele = new PerspectiveCamera(20, 16 / 9, 0.1, 500);
+    tele.position.set(0, 6, 12);
+    tele.lookAt(0, 1, 0);
+    tele.updateMatrixWorld();
+    setCoverFishers(u, tele, [{ x: 0, y: 0, z: 0 }]);
+    expect(u.uCovPad.value.x).toBeGreaterThan(a.x);
   });
 
   it("patches once (a material shared by many meshes keeps one program)", () => {

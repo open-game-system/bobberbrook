@@ -1,4 +1,4 @@
-import { Matrix4, Mesh, Points, Line, Vector3, Vector4, type Camera, type Material, type Object3D } from "three";
+import { Matrix4, Mesh, Points, Line, Vector2, Vector3, Vector4, type Camera, type Material, type Object3D } from "three";
 
 /**
  * Round 21: nothing between the camera and a fisher, generally. Earlier rounds faded one class of
@@ -13,6 +13,12 @@ import { Matrix4, Mesh, Points, Line, Vector3, Vector4, type Camera, type Materi
  * well in front of the nearest fisher (a push-in), dithers away to `uCovKeep` (0.15) of its pixels.
  */
 export const COVER_MAX = 5;
+/**
+ * Round 22: per-vertex materials (leaf and wisteria cards, `userData.coverPerVertex`) work the fade out at
+ * their corners, so each fisher's box is padded by this reach (metres, about half a card) and a card that
+ * straddles a fisher still fades. Per pixel, the box loop over the canopies cost ~45 % of Mistmarsh's frame.
+ */
+export const COVER_CARD_REACH = 0.9;
 export type CoverUniforms = {
   /** Screen box (0..1, x0 y0 x1 y1, y up) of each fisher's body; x0 > x1 = unused. */
   uCovBox: { value: Vector4[] };
@@ -23,6 +29,8 @@ export type CoverUniforms = {
   uCovVP: { value: Matrix4 };
   /** Share of a covering surface's pixels kept (0.15; the lab's cover check sets 0). */
   uCovKeep: { value: number };
+  /** Per-vertex box padding: COVER_CARD_REACH metres as a screen share at 1 m depth (divide by depth). */
+  uCovPad: { value: Vector2 };
 };
 
 export function makeCoverUniforms(): CoverUniforms {
@@ -32,6 +40,7 @@ export function makeCoverUniforms(): CoverUniforms {
     uCovNear: { value: new Vector3(0, 0.001, -100) },
     uCovVP: { value: new Matrix4() },
     uCovKeep: { value: 0.15 },
+    uCovPad: { value: new Vector2() },
   };
 }
 
@@ -51,6 +60,8 @@ export function setCoverFishers(u: CoverUniforms, cam: Camera, feet: readonly { 
   cam.updateMatrixWorld();
   vp.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
   u.uCovVP.value.copy(vp);
+  const pe = cam.projectionMatrix.elements;
+  u.uCovPad.value.set(0.5 * pe[0]! * COVER_CARD_REACH, 0.5 * pe[5]! * COVER_CARD_REACH);
   // How view depth changes per metre up (negative when the camera looks down).
   const fwdY = -cam.matrixWorld.elements[9]!;
   let nearest = Infinity;
@@ -84,21 +95,19 @@ export function setCoverFishers(u: CoverUniforms, cam: Camera, feet: readonly { 
   else u.uCovNear.value.set(Math.min(7, Math.max(2.5, nearest * 0.42)), Math.min(11, Math.max(4, nearest * 0.62)), floor);
 }
 
-const COVER_PARS = `
+const COVER_FN = `
 uniform vec4 uCovBox[${COVER_MAX}];
 uniform vec4 uCovFish[${COVER_MAX}];
 uniform vec3 uCovNear;
-uniform float uCovKeep;
-varying vec3 vCovW;
-varying vec4 vCovClip;
-const float COV_BAYER[16] = float[16](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
-float covAmount(vec3 p, vec4 clip) {
+float covAmount(vec3 p, vec4 clip, vec2 pad) {
   if (clip.w <= 0.05) return 0.0;
   vec2 sc = clip.xy / clip.w * 0.5 + 0.5;
+  vec2 pd = pad / clip.w;
   float occ = 0.0;
   for (int i = 0; i < ${COVER_MAX}; i++) {
     vec4 b = uCovBox[i];
     if (b.z < b.x) continue;
+    b += vec4(-pd, pd);
     vec4 f = uCovFish[i];
     float inX = smoothstep(b.x - 0.014, b.x + 0.002, sc.x) * (1.0 - smoothstep(b.z - 0.002, b.z + 0.014, sc.x));
     float inY = smoothstep(b.y - 0.014, b.y + 0.002, sc.y) * (1.0 - smoothstep(b.w - 0.002, b.w + 0.014, sc.y));
@@ -111,15 +120,23 @@ float covAmount(vec3 p, vec4 clip) {
   float nearOcc = (1.0 - smoothstep(uCovNear.x, uCovNear.y, clip.w)) * smoothstep(uCovNear.z + 0.12, uCovNear.z + 0.28, p.y);
   return max(occ, nearOcc);
 }`;
-const COVER_FRAG = `
+const COVER_DITHER = `
+uniform float uCovKeep;
+const float COV_BAYER[16] = float[16](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);`;
+const COVER_PARS = `${COVER_FN}${COVER_DITHER}
+float covAmount(vec3 p, vec4 clip) { return covAmount(p, clip, vec2(0.0)); }
+varying vec3 vCovW;
+varying vec4 vCovClip;`;
+const ditherBy = (cov: string) => `
   {
-    float cov = covAmount(vCovW, vCovClip);
+    float cov = ${cov};
     if (cov > 0.0) {
       ivec2 cq = ivec2(mod(gl_FragCoord.xy, 4.0));
       float th = (COV_BAYER[cq.x + cq.y * 4] + 0.5) / 16.0;
       if (th >= 1.0 - cov * (1.0 - uCovKeep)) discard;
     }
   }`;
+const COVER_FRAG = ditherBy("covAmount(vCovW, vCovClip)");
 const COVER_VERT = `
   {
     vec4 covP = vec4(transformed, 1.0);
@@ -130,12 +147,21 @@ const COVER_VERT = `
     // Clip position is linear in world space, so it interpolates exactly (one matrix per vertex, not per pixel).
     vCovClip = uCovVP * vec4(vCovW, 1.0);
   }`;
+const COVER_VERT_V = `
+  {
+    vec4 covP = vec4(transformed, 1.0);
+    #ifdef USE_INSTANCING
+    covP = instanceMatrix * covP;
+    #endif
+    vec3 covW = (modelMatrix * covP).xyz;
+    vCovA = covAmount(covW, uCovVP * vec4(covW, 1.0), uCovPad);
+  }`;
 
 type Shader = { uniforms: Record<string, unknown>; vertexShader: string; fragmentShader: string };
 const ANCHORS = { vc: "#include <common>", vp: "#include <project_vertex>", fc: "#include <common>", fp: "#include <clipping_planes_fragment>" };
 
 /** Adds the fade to a compiling shader that has three's standard chunks (others are left as they are). */
-export function applyCover(shader: Shader, u: CoverUniforms): void {
+export function applyCover(shader: Shader, u: CoverUniforms, perVertex = false): void {
   const v = shader.vertexShader;
   const f = shader.fragmentShader;
   if (!v.includes(ANCHORS.vc) || !v.includes(ANCHORS.vp) || !f.includes(ANCHORS.fc) || !f.includes(ANCHORS.fp)) return;
@@ -144,6 +170,12 @@ export function applyCover(shader: Shader, u: CoverUniforms): void {
   shader.uniforms.uCovNear = u.uCovNear;
   shader.uniforms.uCovVP = u.uCovVP;
   shader.uniforms.uCovKeep = u.uCovKeep;
+  if (perVertex) {
+    shader.uniforms.uCovPad = u.uCovPad;
+    shader.vertexShader = v.replace(ANCHORS.vc, `${ANCHORS.vc}\nuniform mat4 uCovVP;\nuniform vec2 uCovPad;\nvarying float vCovA;${COVER_FN}`).replace(ANCHORS.vp, `${ANCHORS.vp}${COVER_VERT_V}`);
+    shader.fragmentShader = f.replace(ANCHORS.fc, `${ANCHORS.fc}${COVER_DITHER}\nvarying float vCovA;`).replace(ANCHORS.fp, `${ANCHORS.fp}${ditherBy("vCovA")}`);
+    return;
+  }
   shader.vertexShader = v.replace(ANCHORS.vc, `${ANCHORS.vc}\nuniform mat4 uCovVP;\nvarying vec3 vCovW;\nvarying vec4 vCovClip;`).replace(ANCHORS.vp, `${ANCHORS.vp}${COVER_VERT}`);
   shader.fragmentShader = f.replace(ANCHORS.fc, `${ANCHORS.fc}${COVER_PARS}`).replace(ANCHORS.fp, `${ANCHORS.fp}${COVER_FRAG}`);
 }
@@ -166,12 +198,13 @@ export function patchCover(m: Material, u: CoverUniforms): void {
   const hook = m.onBeforeCompile;
   const key = m.customProgramCacheKey();
   originals.set(m, { hook, key: () => key });
+  const perVertex = m.userData.coverPerVertex === true;
   const wrapped: Hook = function (this: Material, shader, renderer) {
     hook.call(this, shader, renderer);
-    applyCover(shader, u);
+    applyCover(shader, u, perVertex);
   };
   m.onBeforeCompile = wrapped;
-  m.customProgramCacheKey = () => `${key}|cover`;
+  m.customProgramCacheKey = () => `${key}|cover${perVertex ? "-v" : ""}`;
   m.needsUpdate = true;
 }
 

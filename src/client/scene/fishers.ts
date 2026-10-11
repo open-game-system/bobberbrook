@@ -285,6 +285,18 @@ class FisherView {
     this.pillar.position.set(0, -20, 0);
   }
 
+  /**
+   * Round 22: puts the prewarm set where the prewarm frame really draws it (in front of the lens), so every
+   * draw state (the catch card's blend, its alpha test) is built at load: parked 20 m under the ground they
+   * were culled, and the first catch stalled the TV ~0.2-0.3 s building them.
+   */
+  prewarmAt(x: number, y: number, z: number): void {
+    this.rig.root.position.set(x, y, z);
+    this.bobber.position.set(x + 0.6, y, z);
+    this.card.group.position.set(x, y + 1.2, z);
+    this.pillar.position.set(x, y, z);
+  }
+
   hideAll(): void {
     this.rig.root.visible = false;
     this.bobber.visible = false;
@@ -862,6 +874,11 @@ export class FisherViews {
 
   showAllForPrewarm(): void {
     for (const v of this.views) v.showAllForPrewarm();
+  }
+
+  /** Spreads the prewarm set in front of the camera (see FisherView.prewarmAt). */
+  prewarmAt(x: number, y: number, z: number): void {
+    this.views.forEach((v, i) => v.prewarmAt(x + (i - 1.5) * 1.2, y, z));
   }
 
   hideAll(): void {

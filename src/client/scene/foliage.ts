@@ -236,6 +236,8 @@ export type LeafLook = {
 export function leafMaterial(tex: PaintTex, occ: OccluderUniforms, time: { value: number }, look: LeafLook = {}): MeshLambertMaterial {
   const m = new MeshLambertMaterial({ vertexColors: true, map: tex.tex, alphaTest: 0.5, side: DoubleSide });
   m.alphaToCoverage = true;
+  // Round 22: the cover fade (cover.ts) per card corner, not per pixel: canopies are many overlapping layers.
+  m.userData.coverPerVertex = true;
   m.onBeforeCompile = (shader) => {
     shader.uniforms.uTime = time;
     shader.uniforms.uLeafInv = { value: tex.inv };
@@ -314,7 +316,9 @@ export function splitRim(g: BufferGeometry, cx: number, cy: number, cz: number, 
       const a = g.getAttribute(name);
       const s = a.itemSize;
       const arr: number[] = [];
-      for (let i = 0; i < n; i++) {
+      // Outermost cards first (score order): they draw before the cards sunk inside the crown, which the
+      // depth test then rejects unshaded (round 22: leaf overdraw was ~40 % of Mistmarsh's frame).
+      for (const [, i] of score) {
         if (rim.has(i) !== want) continue;
         for (let k = 0; k < 6; k++) for (let c = 0; c < s; c++) arr.push(a.getComponent(i * 6 + k, c));
       }

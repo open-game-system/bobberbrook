@@ -4,6 +4,7 @@ import {
   Fog,
   Group,
   HemisphereLight,
+  InstancedMesh,
   MeshBasicMaterial,
   Mesh,
   MeshLambertMaterial,
@@ -96,6 +97,10 @@ export type SceneDebug = {
   pick?(x: number, y: number): string[];
   /** Hides (or shows again) every object with this name; returns how many. */
   toggle?(name: string): number;
+  /** Perf probe: hides (on) or restores (off) the visible objects whose name starts with this prefix; returns how many. */
+  hide?(prefix: string, on: boolean): number;
+  /** Perf probe: visible meshes grouped by name, [name, meshes, triangles drawn incl. instances], heaviest first. */
+  breakdown?(): [string, number, number][];
   /** Names of the scene's top-level objects (for toggle). */
   names?(): string[];
   /** Where the TV camera is (world metres). */
@@ -708,6 +713,10 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   splashes.showAllForPrewarm();
   rig.update(0, 0, false, null);
   camera.updateMatrixWorld();
+  {
+    const ahead = camera.getWorldDirection(new Vector3()).multiplyScalar(9).add(camera.position);
+    fishers.prewarmAt(ahead.x, ahead.y - 1, ahead.z);
+  }
   applyTod(0.15);
   // Build the world round the start before the first frame (a loading pause, not a hitch).
   stream(rig.focus.x, rig.focus.z, Infinity);
@@ -745,6 +754,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   const dbg = gl.getExtension("WEBGL_debug_renderer_info");
   const rendererName = String(dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
 
+  const hidden: Object3D[] = [];
   window.__scene = {
     cameraAt: () => ({ x: camera.position.x, y: camera.position.y, z: camera.position.z }),
     info: () => ({
@@ -796,6 +806,37 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       scene.children.forEach((o, i) => { if (!o.name && `${o.type}#${i}` === name) { o.visible = !o.visible; n++; } });
       scene.traverse((o) => { if (o.name === name) { o.visible = !o.visible; n++; } });
       return n;
+    },
+    hide(prefix, on) {
+      let n = 0;
+      if (on) {
+        scene.traverseVisible((o) => {
+          if (o !== scene && o.name.startsWith(prefix)) hidden.push(o);
+        });
+        for (const o of hidden) o.visible = false;
+        n = hidden.length;
+      } else {
+        for (const o of hidden) o.visible = true;
+        n = hidden.length;
+        hidden.length = 0;
+      }
+      frameN = 0;
+      return n;
+    },
+    breakdown() {
+      const by = new Map<string, [number, number]>();
+      scene.traverseVisible((o) => {
+        if (!(o instanceof Mesh)) return;
+        const g = o.geometry;
+        const tris = (g.index ? g.index.count : g.getAttribute("position").count) / 3;
+        const inst = o instanceof InstancedMesh ? o.count : 1;
+        const key = `${o.parent?.name ?? ""}/${o.name || "?"}`;
+        const e = by.get(key) ?? [0, 0];
+        e[0] += 1;
+        e[1] += tris * inst;
+        by.set(key, e);
+      });
+      return [...by].map(([k, [m, t]]): [string, number, number] => [k, m, Math.round(t)]).sort((a, b) => b[2] - a[2]).slice(0, 40);
     },
     setPhase(p) {
       if (p !== null && (!Number.isFinite(p) || p < 0 || p > 1)) throw new Error(`phase must be 0..1 or null, got ${String(p)}`);

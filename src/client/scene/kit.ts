@@ -46,7 +46,7 @@ export function instanced(geo: BufferGeometry, mat: Material, list: Inst[], shad
   mesh.computeBoundingSphere();
   void m4;
   // Leaf cards ride along as a child sharing the same instances.
-  for (const f of foliageOf(geo)) {
+  for (const [fi, f] of foliageOf(geo).entries()) {
     const leaf = new InstancedMesh(f.cards, f.mat, Math.max(1, list.length));
     leaf.instanceMatrix = mesh.instanceMatrix;
     leaf.instanceColor = mesh.instanceColor;
@@ -56,7 +56,7 @@ export function instanced(geo: BufferGeometry, mat: Material, list: Inst[], shad
     leaf.receiveShadow = false;
     leaf.name = "leaves";
     // After the opaque set (cores, trunks, ground): alpha-tested cards behind them never get shaded.
-    leaf.renderOrder = 1;
+    leaf.renderOrder = fi === 0 ? 2 : 1;
     leaf.computeBoundingSphere();
     mesh.add(leaf);
     mesh.addEventListener("dispose", () => leaf.dispose());
