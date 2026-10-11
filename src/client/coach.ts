@@ -107,7 +107,8 @@ const talkTip: Rule = (lake, mySeat, now) => {
   const slot = Math.floor(now / TALK_MS);
   const kid = lake.fishers.find((f) => f.seat !== mySeat);
   if (slot % 2 === 0 || !kid) return null;
-  return TALK_PROMPTS[Math.floor(slot / 2) % TALK_PROMPTS.length]!(nameOf(lake, kid.seat));
+  // A prompt the grown-up reads aloud: an unnamed kid is "your fishing buddy", never a seat colour.
+  return TALK_PROMPTS[Math.floor(slot / 2) % TALK_PROMPTS.length]!(kid.name ?? "your fishing buddy");
 };
 
 const rodTip: Rule = (lake) => {

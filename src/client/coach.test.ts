@@ -42,6 +42,11 @@ describe("coachLine", () => {
     const l = withMode(withMode(family(), 0, { mode: "catch", catch: { fishId: "minnow", cm: 9, shells: 1, isNew: false, golden: false, at: 900, seq: 1 } }), 1, { mode: "reel" });
     expect(coachLine(l, 0, 1000)).toMatch(/^Dad caught/);
   });
+  it("an unnamed kid is 'your fishing buddy' in a talk prompt, never a seat colour", () => {
+    const l = withMode(family(), 1, { name: null });
+    expect(coachLine(l, 0, 15_000)).toMatch(/your fishing buddy/);
+    expect(coachLine(l, 0, 15_000)).not.toMatch(/Yellow|Green|Blue|Pink/);
+  });
   it("coaches the reel", () => {
     expect(coachLine(withMode(family(), 1, { mode: "reel" }), 0, 10)).toContain("Juneau is reeling");
   });

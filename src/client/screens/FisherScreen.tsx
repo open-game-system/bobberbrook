@@ -22,6 +22,18 @@ import { sittingReport } from "../sitting";
 import type { Stick } from "../stick";
 import { sfx } from "../audio/sfx";
 import { useDeviceSounds } from "../useDeviceSounds";
+import { FISH_IDS } from "../../game/fish";
+
+/** Fetched once on join, so a catch card never shows its rays before the fish (round 21: a slow load showed no fish). */
+const preloaded: HTMLImageElement[] = [];
+function preloadFish(): void {
+  if (preloaded.length > 0) return;
+  for (const id of FISH_IDS) {
+    const img = new Image();
+    img.src = `/art/fish/${id}.webp`;
+    preloaded.push(img);
+  }
+}
 
 /** Re-renders this often so time-driven pictures (nibbles, the bite, the reel) stay current. */
 const FRAME_MS = 100;
@@ -31,6 +43,7 @@ const FRAME_MS = 100;
  * and your bobber up close in the middle. The host's phone adds the words (HostStrip).
  */
 export function FisherScreen({ seat, host, hosting }: { seat: number; host: boolean; hosting: Hosting | null }) {
+  useEffect(preloadFish, []);
   const send = RoomContext.useSend();
   const lake = RoomContext.useSelector((s) => s.public.lake);
   const latestLake = useRef(lake);
