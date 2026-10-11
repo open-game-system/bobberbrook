@@ -212,6 +212,14 @@ appear and fade (`since`, `until`), never pop.
   the camera's right); a fisher on Moonwell's dock or Mistmarsh's boardwalk slides along it instead (`walkTangent`), so a
   family on a dock spreads along it; offsets are capped at 1.6 m and the rules' positions are untouched. Riders step aboard
   and ashore in a row across the view (`ashoreOffset`, 1.4 m apart), not on a ring.
+- **Round 22, a friendly miss, painted cottages, a cheaper fade**: a missed fish shows a bright orange forked tail (two round
+  lobes, golden tips) turned flat to the camera; it pops up, waggles twice, slaps and dives (`escape.ts`, `tailPose`), the
+  bobber springs back up from its dive (`missBob`) and a wider ring spreads after the splash; never a dark fin. Cottage walls
+  are the kit's carved stone tiles (plinth rock, grain eave band). Mistmarsh's haze is thinner and bluer (fog K 0.34 at the
+  full distance, mist 0.3, a cooler fill) over deeper moss. Leaf and wisteria cards take the cover fade per card corner
+  (`userData.coverPerVertex`, box padded 0.9 m) and draw their outermost cards first, which put Mistmarsh back in budget;
+  the prewarm draws the fisher set in front of the lens so the first catch builds nothing. The cover check leaves out the
+  seat ring at a fisher's feet (a ground decal, `userData.coverCheckSkip`).
 - **Discovery** (round 17; round 18: it waits, up to 6 s, until a fisher is within the pond plus 45 % of the clearing, so it plays as the family arrives at the water, `revealGate.ts`): a 5 s reveal swings round behind the family (a three-quarter yaw that keeps every fisher
   apart, at most 1.6 rad off the place view), up and out until the whole new pond lies beyond them, then back.
 - **Campfire** (`lake.campfire`): the camera settles on the campfire; fishers sit around it. The seats are a horseshoe 2.9 m out, open on the camera's axis so the fire burns in the gap and never in
