@@ -34,7 +34,7 @@ import { towerDeckY } from "./vehicles";
 import { aroundFire } from "./campPath";
 import { merge, paint, prep } from "./geo";
 import { layoutTags, type TagBox, type TagShift } from "./tagLayout";
-import { CARD_PX, FISH_PX, chestHold, holdCard, liftFrom } from "./holdCard";
+import { CARD_PX, FISH_PX, heldFishWidth, chestHold, holdCard, liftFrom } from "./holdCard";
 
 const DECK_Y = 0.42;
 /** Round 24: the name tag's foot above the hat's top (world units). */
@@ -54,8 +54,13 @@ export function reelInCap(d0: number): number {
 }
 /** Round 27: seconds between the hooked fish's tail flicks while it thrashes. */
 export const FLICK_EVERY = 1.1;
-/** The lift from the water into the hands (round 11: 0.95 s read as a float; round 13: 0.6 -> 0.3 s). */
-const LEAP_S = 0.3;
+/**
+ * The lift from the water into the hands (round 11: 0.95 s read as a float; round 13: 0.6 -> 0.3 s). Round 27:
+ * a leap (round 26: "no leap out of the water"): 0.5 s up a high arc (LEAP_ARC over the straight line, fast
+ * out of the splash, a flip of the body nose-up to nose-down), then the hold.
+ */
+const LEAP_S = 0.5;
+const LEAP_ARC = 1.5;
 /** The lift starts at most this far from the catcher (round 13: a double catch flew a perch between two fishers). */
 const LIFT_REACH = 2.2;
 /**
@@ -646,7 +651,8 @@ class FisherView {
       this.catchSeq = cseq;
       if (f.catch && sn - f.catch.at < CATCH_SHOW_MS - 400) {
         const def = fishById(f.catch.fishId);
-        this.catchStart = t - Math.max(0, Math.min(0.3, (sn - f.catch.at) / 1000));
+        // Round 27: at most 0.08 s of the leap is skipped when the catch is seen late (0.3 s skipped most of it).
+        this.catchStart = t - Math.max(0, Math.min(0.08, (sn - f.catch.at) / 1000));
         const from = liftFrom({ x: this.x, z: this.z }, { x: this.lastBobX || this.x + Math.cos(this.facing) * 2, z: this.lastBobZ || this.z + Math.sin(this.facing) * 2 }, LIFT_REACH);
         this.catchFromX = from.x;
         this.catchFromZ = from.z;
@@ -805,7 +811,8 @@ class FisherView {
     g.visible = true;
     const s = Math.min(1, age / LEAP_S);
     const tier = this.catchTier;
-    const w = (2.3 + Math.min(1.4, this.catchCm / 60)) * (this.catchNew ? 1.12 : 1) * (tier === 2 ? 1.15 : 1);
+    // Round 27: sized by the catch's length (heldFishWidth), a new species or a legend a touch bigger.
+    const w = (heldFishWidth(this.catchCm) / 0.8) * (this.catchNew ? 1.12 : 1) * (tier === 2 ? 1.15 : 1);
     // Round 13: held in both hands across the chest (overhead it read as a sprite hovering over the head):
     // the card sits on the hands, just behind them, sized so its top stays under the chin (holdCard.ts).
     let screenW = 0;
@@ -835,7 +842,10 @@ class FisherView {
     const e = s * s * (3 - 2 * s);
     let gx = this.catchFromX + (this.hold.x - this.catchFromX) * e;
     let gz = this.catchFromZ + (this.hold.z - this.catchFromZ) * e;
-    let gy = -0.35 + (this.hold.y + 0.35) * e + Math.sin(s * Math.PI) * 0.45;
+    // Round 27: a leap, not a lift: out of the water fast (time eased in, so it bursts up), high over the
+    // straight line, dropping into the hands.
+    const lp = 1 - (1 - s) * (1 - s * 0.35);
+    let gy = -0.35 + (this.hold.y + 0.35) * e + Math.sin(lp * Math.PI) * LEAP_ARC;
     // Tucked away: down into the fisher's pack.
     const o = out * out * (3 - 2 * out);
     gx += (this.x - gx) * o;
@@ -852,7 +862,8 @@ class FisherView {
     this.card.cardMat.opacity = 1 - o;
     const W = W0 * Math.max(0.001, scale);
     this.card.card.scale.set(W, W, 1);
-    const wiggle = age < LEAP_S ? (this.catchJunk ? s * Math.PI * 2 : Math.sin(age * 22) * 0.2) : Math.sin(age * 6) * 0.05;
+    // Round 27: through the leap the body turns nose-up to nose-down with a kick of the tail.
+    const wiggle = age < LEAP_S ? (this.catchJunk ? s * Math.PI * 2 : (0.5 - s) * 1.3 * Math.sin(Math.min(1, s * 1.4) * Math.PI) + Math.sin(age * 22) * 0.15) : Math.sin(age * 6) * 0.05;
     // Held, not pinned: tilted a touch, head up, toward the catcher's side of the frame.
     this.card.card.rotation.z = wiggle * (1 - o) + HOLD_TILT * Math.min(1, age / LEAP_S) * (1 - o);
     // Round 26: a body that bows toward the lens and a tail that flicks while it is held (a quick flap now and

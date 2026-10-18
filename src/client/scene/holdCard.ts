@@ -29,10 +29,23 @@ export type Hold = {
   lift: number;
 };
 
-/** The visible fish should be at least this share of the screen width (read at TV distance). */
-export const MIN_SCREEN_SHARE = 0.085;
+/**
+ * The visible fish should be at least this share of the screen width (read at TV distance). Round 27: 0.085 ->
+ * 0.05 and MAX_GROW 1.6 -> 1.25 (round 26 session 55.4 s: a 20 cm Bluegill grown to cover Dad's torso); the
+ * size now comes from the catch's length (heldFishWidth) and only a little from the screen.
+ */
+export const MIN_SCREEN_SHARE = 0.05;
 /** ...but never more than this many times its own base size (no giant minnows). */
-export const MAX_GROW = 1.6;
+export const MAX_GROW = 1.25;
+
+/**
+ * Round 27: the held fish's visible width (world units; a grown-up stands ~2.2) from its catch length: a
+ * 12 cm catch 1.14, a 20 cm Bluegill 1.24 (two hands at the chest; it was ~2.3 grown to fill the screen), a
+ * 60 cm carp 1.72, a 1 m pike 2.2, capped at MAX_FISH_W (0.65 + 0.0125 cm read as a sticker under the mittens). Bigger than life (a toy-scale world read from across the room), in proportion.
+ */
+export function heldFishWidth(cm: number): number {
+  return Math.min(MAX_FISH_W, 1.0 + Math.max(0, cm) * 0.012);
+}
 
 /**
  * Caps (round 09: a 96 cm Moonfin, new and legendary, was shown 3.8 m wide and covered the catcher):

@@ -545,6 +545,17 @@ const SCENARIOS: Record<string, Scenario> = {
     warmUntil: (l) => l.fishers.every((f) => f.mode === "reel"),
     hero: (l, now) => l.fishers.filter((f) => f.mode === "catch" && f.catch !== null && now - f.catch.at > 900 && now - f.catch.at < 2600).length >= 2,
   },
+  // Round 27: the moment a catch lands (for a frame strip of the leap out of the water into the hands).
+  "catch-leap": {
+    phase: 0.25,
+    fishers: [
+      { seat: 0, name: "Dad", spot: shore(2.3), easy: true, at: shore(2.3, 2) },
+      { seat: 2, name: "Juneau", spot: shore(2.9), easy: true, at: shore(2.9, 2), noHook: true },
+    ],
+    direct: (l) => produce(l, (d) => { for (const f of d.fishers) if (f.reel) f.reel.fishId = "bluegill"; }),
+    warmUntil: (l) => l.fishers.some((f) => f.mode === "reel"),
+    hero: (l, now) => l.fishers.some((f) => f.mode === "catch" && f.catch !== null && now - f.catch.at < 120),
+  },
   // Round 20 (round 19 session 216-257 s): Dad and Juneau fishing Mistmarsh from the shore they arrive
   // on (north-east, by the boardwalk), as the family really does; the shot is mid-catch (the push-in).
   "mistmarsh-catch": {
