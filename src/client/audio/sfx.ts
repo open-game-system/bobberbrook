@@ -24,7 +24,12 @@ function sfxBus(a: { ctx: AudioContext; out: AudioNode }): AudioNode {
   lp.type = "lowpass";
   lp.frequency.value = 4200;
   lp.Q.value = 0.5;
-  lp.connect(a.out);
+  // A second pole pair (24 dB/oct in all): round 23 still measured 6–10 kHz flecks on bite and catch onsets.
+  const lp2 = a.ctx.createBiquadFilter();
+  lp2.type = "lowpass";
+  lp2.frequency.value = 3800;
+  lp2.Q.value = 0.6;
+  lp.connect(lp2).connect(a.out);
   bus = { ctx: a.ctx, node: lp };
   return lp;
 }
