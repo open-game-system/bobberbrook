@@ -3,6 +3,7 @@ import { ROD_AT, ROD_NAMES, speciesCount, todOf, type Lake } from "../game/lake"
 import { waterAt, type Water } from "../game/world";
 import { worldFor, type Biome } from "../game/regions";
 import { atLeashEnd } from "./compass";
+import { REVEAL_WAIT_S, revealReady } from "./scene/revealGate";
 
 const WATER_NAME: Record<Water, string> = {
   dock: "off the dock",
@@ -145,11 +146,16 @@ const wentAhead: Rule = (lake, mySeat) => {
   return `${nameOf(lake, ahead.seat)} is far away${where ? ` at ${where.name}` : " on the trail"}: get back together!`;
 };
 
+/** How long the "found" line stays after the TV's reveal could start. */
+const FOUND_LINE_MS = 6000;
+
+/** A place just found: said when the TV reveals it (the family at the water, or after the TV's wait), not on the trail. */
 const freshDiscovery: Rule = (lake, _mySeat, now) => {
   const d = lake.discovery;
-  if (!d || now - d.at > 6000) return null;
+  if (!d || now - d.at > REVEAL_WAIT_S * 1000 + FOUND_LINE_MS) return null;
   const place = worldFor(lake.worldSeed).placeById(d.area);
-  return place ? `${nameOf(lake, d.seat)} found ${place.name}! ${BIOME_TIPS[place.biome]}` : null;
+  if (!place || !revealReady(lake.fishers.map((f) => f.pos), place, (now - d.at) / 1000)) return null;
+  return `${nameOf(lake, d.seat)} found ${place.name}! ${BIOME_TIPS[place.biome]}`;
 };
 
 const riding: Rule = (lake) => {
@@ -177,8 +183,11 @@ const rideNearby: Rule = (lake, mySeat) => {
   return p.kind === "zeppelin" ? `A zeppelin flies to ${to} from the tower: stand on its platform together to board.` : `A boat sails to ${to} from the dock: stand on it together to board.`;
 };
 
+/** Catches since the family found the place they're at (all catches before any discovery). */
+const catchesHere = (lake: Lake) => (lake.discovery ? lake.log.filter((c) => c.at > (lake.discovery?.at ?? 0)).length : lake.catchSeq);
+
 const exploreTip: Rule = (lake) => {
-  if (lake.catchSeq < 2) return null;
+  if (lake.catchSeq < 2 || catchesHere(lake) < 2) return null;
   const w = worldFor(lake.worldSeed);
   const here = lake.fishers[0]?.pos ?? { x: 0, z: 0 };
   const unfound = w.placesNear(here, 1).find((p) => !lake.discovered.includes(p.id));

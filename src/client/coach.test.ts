@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { join, newLake, setCampfire, type Lake } from "../game/lake";
 import { catchLine, coachLine } from "./coach";
+import { worldFor } from "../game/regions";
 
 function family(): Lake {
   let l = newLake(1, 0);
@@ -93,13 +94,27 @@ describe("coachLine", () => {
     expect(coachLine({ ...family(), rodTier: 3, shells: 200 }, 0, 0)).toBe("Fish the swirls: that's where the rare fish are.");
   });
 
-  it("celebrates a newly found place with what lives there", () => {
+  it("celebrates a newly found place with what lives there, when the TV shows it (round 23: 14 s early, still on the trail)", () => {
     const l = { ...family(), discovered: ["moonwell" as const, "mistmarsh" as const], discovery: { area: "mistmarsh" as const, seat: 1, at: 100, seq: 1 } };
-    expect(coachLine(l, 0, 200)).toBe("Juneau found Mistmarsh! Golden Koi and Ember Shiners come out at golden hour.");
-    expect(coachLine(l, 0, 7000)).not.toContain("found Mistmarsh");
+    const mist = worldFor(l.worldSeed).placeById("mistmarsh")!;
+    // Still on the trail (the family at Moonwell): not yet.
+    expect(coachLine(l, 0, 200)).not.toContain("found Mistmarsh");
+    // Arrived at the water: the line, as the TV reveals the place.
+    const there = { ...l, fishers: l.fishers.map((f) => ({ ...f, pos: { x: mist.center.x + mist.pond.r + 1, z: mist.center.z } })) };
+    expect(coachLine(there, 0, 3000)).toBe("Juneau found Mistmarsh! Golden Koi and Ember Shiners come out at golden hour.");
+    // The TV reveals anyway after its wait: so does the coach; then it moves on.
+    expect(coachLine(l, 0, 100 + 6500)).toContain("found Mistmarsh");
+    expect(coachLine(there, 0, 100 + 12_500)).not.toContain("found Mistmarsh");
   });
   it("sends the family exploring once they've caught a couple here", () => {
     expect(coachLine({ ...family(), catchSeq: 2 }, 0, 0)).toBe("Explore! Follow a trail into the fog: every new place has its own fish. 1 place found so far.");
+  });
+  it("just arrived somewhere new: fish here first, no 'Explore!' until a couple of catches here (round 23)", () => {
+    const found = { area: "mistmarsh" as const, seat: 1, at: 1000, seq: 1 };
+    const arrived = { ...family(), catchSeq: 4, discovered: ["moonwell" as const, "mistmarsh" as const], discovery: found, log: [{ seat: 0, fishId: "minnow", cm: 9, isNew: false, at: 500 }] };
+    expect(coachLine(arrived, 0, 40_000)).not.toMatch(/^Explore!/);
+    const fished = { ...arrived, log: [...arrived.log, { seat: 0, fishId: "minnow", cm: 9, isNew: false, at: 20_000 }, { seat: 1, fishId: "minnow", cm: 9, isNew: false, at: 30_000 }] };
+    expect(coachLine(fished, 0, 40_000)).toMatch(/^Explore!/);
   });
   it("names the far place a golden swirl is in", () => {
     const l = { ...family(), swirls: [{ id: 2, area: "hollow" as const, pos: { x: 70, z: -8 }, theta: 0, golden: true, since: 0, until: 1e9, catches: 0 }] };

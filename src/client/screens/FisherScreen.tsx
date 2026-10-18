@@ -14,6 +14,7 @@ import { SwirlCompass } from "../components/SwirlCompass";
 import { PlaceFound } from "../components/PlaceFound";
 import { worldFor } from "../../game/regions";
 import { compassShown, compassTo } from "../compass";
+import { revealedAt, type Revealed } from "../discoveryBeat";
 import { positionAt } from "../fisherUi";
 import { buttonState, needsTick } from "../fisherUi";
 import { localStore, readProgress, writeProgress } from "../progressStore";
@@ -60,6 +61,9 @@ export function FisherScreen({ seat, host, hosting }: { seat: number; host: bool
   const now = clock.now();
   const me = lake.fishers.find((f) => f.seat === seat);
   const state = me ? buttonState(lake, me, now) : null;
+  // The "new place" star bursts with the TV's reveal, not when the trail first enters the clearing.
+  const revealed = useRef<Revealed | null>(null);
+  revealed.current = revealedAt(revealed.current, lake, now);
 
   // Nudge the room's clock when a deadline this screen waits on has passed (the TV ticks too).
   const lastTick = useRef(0);
@@ -133,7 +137,7 @@ export function FisherScreen({ seat, host, hosting }: { seat: number; host: bool
           return c ? <SwirlCompass c={c} /> : null;
         })()}
         {me.catch && me.mode === "catch" && <CatchCard c={me.catch} words={host} />}
-        {lake.discovery && now - lake.discovery.at < 2800 && <PlaceFound biome={worldFor(lake.worldSeed).placeById(lake.discovery.area)?.biome ?? "moonwell"} seq={lake.discovery.seq} />}
+        {lake.discovery && revealed.current && now - revealed.current.at < 2800 && <PlaceFound biome={worldFor(lake.worldSeed).placeById(lake.discovery.area)?.biome ?? "moonwell"} seq={lake.discovery.seq} />}
       </div>
       <div className="fisher-bottom">
         <Joystick onStick={onStick} color={color} />
