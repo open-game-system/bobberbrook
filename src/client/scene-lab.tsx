@@ -350,6 +350,21 @@ const SCENARIOS: Record<string, Scenario> = {
     warmUntil: (l) => l.fishers.filter((f) => f.mode === "reel").length >= 2,
     hero: (l, now) => inCatch(l, now, 1100, 1900) && l.fishers.some((f) => f.mode === "reel"),
   },
+  // Round 23 (round 22 session 125-141 s: Dad's phone said "let go" for 16 s, the TV showed nothing): a reel
+  // while the fish thrashes, the bent rod, the taut line and the splash burst at the bobber.
+  "reel-thrash": {
+    phase: 0.3,
+    fishers: [
+      { seat: 0, name: "Dad", spot: shore(2.4), at: shore(2.4, 2) },
+      { seat: 2, name: "Juneau", spot: shore(2.9), at: shore(2.9, 2) },
+    ],
+    warmUntil: (l) => l.fishers.some((f) => f.mode === "reel"),
+    hero: (l, now) =>
+      l.fishers.some((f) => {
+        const def = f.reel ? fishById(f.reel.fishId) : undefined;
+        return f.mode === "reel" && f.reel !== null && def !== undefined && thrashingAt(def.fight, f.reel, now) && now - f.reel.hookAt > 1500;
+      }),
+  },
   "golden-swirl": {
     phase: 0.43,
     fishers: [

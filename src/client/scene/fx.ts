@@ -76,6 +76,27 @@ export class Fx {
     }
   }
 
+  /**
+   * Round 23: a reel pulse at the bobber (every ~0.5 s while reeling): a ring that grows as the fish comes in
+   * (`progress` 0..1) and, while the line is pulled, a little spurt of bright droplets.
+   */
+  reelTug(x: number, z: number, t: number, progress: number, pulled: boolean): void {
+    this.surface.ripple(x, z, t, 0.75 + 0.75 * progress);
+    if (!pulled) return;
+    for (let i = 0; i < (this.lite ? 3 : 6); i++) {
+      const a = this.r() * Math.PI * 2;
+      const s = 0.5 + this.r() * 0.7;
+      this.water.emit({ x, y: 0.06, z, vx: Math.cos(a) * s, vy: 1.6 + this.r() * 1.2, vz: Math.sin(a) * s, life: 0.6, size: 0.1 + this.r() * 0.06, r: 0.97, g: 1, b: 1, gravity: 9, alpha: 0.95 });
+    }
+  }
+
+  /** Round 23: the fish thrashes (the phone says let go): a bright crown of white water, a wide ring and glints. */
+  thrashBurst(x: number, z: number, t: number): void {
+    this.splashes?.spawn(x, z, t, 0.8);
+    this.surface.ripple(x, z, t, 1.5);
+    this.sparkle(x, 0.6, z, this.lite ? 4 : 8, 1, 0.95, 0.75, 1.8, 0.3);
+  }
+
   /** A small "got away" splash. */
   missSplash(x: number, z: number, t: number, away = this.r() * Math.PI * 2): void {
     this.surface.ripple(x, z, t, 1.1);

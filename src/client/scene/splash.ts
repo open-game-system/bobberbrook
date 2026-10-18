@@ -85,7 +85,8 @@ void main() {
   #include <fog_fragment>
 }`;
 
-const POOL = 4;
+// Round 23: 4 -> 10 (a thrashing fish bursts every 0.45 s; four reels at once must not steal a bite's splash).
+const POOL = 10;
 
 export class Splashes {
   readonly group = new Group();

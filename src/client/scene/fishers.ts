@@ -122,10 +122,10 @@ function bobberGeometry(): BufferGeometry {
   return merge([top, bottom, band, stick, tip]);
 }
 
-type Pose = { legL: number; legR: number; armLx: number; armLz: number; armRx: number; armRz: number; bodyY: number; lean: number; tilt: number; headX: number; headY: number; sq: number; bend: number; sit: number };
+type Pose = { legL: number; legR: number; armLx: number; armLz: number; armRx: number; armRz: number; bodyY: number; lean: number; tilt: number; headX: number; headY: number; sq: number; bend: number; sit: number; whip: number };
 /** Moonwell's dock runs north-south (world.ts DOCK). */
 const DOCK_ALONG = { x: 0, z: 1 };
-const zeroPose = (): Pose => ({ legL: 0, legR: 0, armLx: 0, armLz: 0, armRx: 0, armRz: 0, bodyY: 0, lean: 0, tilt: 0, headX: 0, headY: 0, sq: 0, bend: 0, sit: 0 });
+const zeroPose = (): Pose => ({ legL: 0, legR: 0, armLx: 0, armLz: 0, armRx: 0, armRz: 0, bodyY: 0, lean: 0, tilt: 0, headX: 0, headY: 0, sq: 0, bend: 0, sit: 0, whip: 0 });
 
 class FisherView {
   rig: FisherRig;
@@ -172,6 +172,9 @@ class FisherView {
   private missSeq = -1;
   private catchSeq = -1;
   private thrashAcc = 0;
+  /** Round 23: time since the last reel pulse ring and the last bright thrash burst at the bobber. */
+  private tugAcc = 0;
+  private burstAcc = 0;
   private biteAcc = 0;
   // Bobber display.
   bobberVisible = false;
@@ -397,7 +400,7 @@ class FisherView {
     const target = this.target;
     // Base pose: idle breathing.
     target.legL = 0; target.legR = 0; target.lean = 0; target.tilt = Math.sin(t * 1.6 + this.seat) * 0.03; target.headX = 0;
-    target.armLx = -0.15; target.armLz = 0.18; target.armRx = -0.15; target.armRz = -0.18; target.bodyY = Math.sin(t * 2 + this.seat) * 0.008; target.bend = 0; target.sit = 0;
+    target.armLx = -0.15; target.armLz = 0.18; target.armRx = -0.15; target.armRz = -0.18; target.bodyY = Math.sin(t * 2 + this.seat) * 0.008; target.bend = 0; target.sit = 0; target.whip = 0;
     target.sq = Math.sin(t * 2 + this.seat) * 0.02;
     // The face reads from the group camera: the head turns toward it (a glance back now and then).
     const toCam = Math.atan2(camera.position.z - this.z, camera.position.x - this.x);
@@ -526,19 +529,34 @@ class FisherView {
       target.armLz = -0.45;
       target.lean = thrash ? -0.34 + Math.sin(t * 18) * 0.05 : -0.24;
       target.headY *= 0.25;
-      target.bend = thrash ? 1.45 + Math.sin(t * 30) * 0.12 : hold ? 0.95 : 0.55;
+      // Round 23 (round 22 session 30/33/126 s: no tug on the TV): a deeper bend toward the bobber, a rod tip
+      // that whips side to side while the fish thrashes (a bend along the view reads from behind the fisher
+      // only as a shorter rod), rings pulsing out from the bobber that grow as the fish comes in, and on a
+      // thrash a bright splash burst with a jerking bobber. All water and light, nothing dark.
+      target.bend = thrash ? 1.7 + Math.sin(t * 30) * 0.15 : hold ? 1.25 + Math.sin(t * 9) * 0.06 : 0.7;
+      target.whip = thrash ? Math.sin(t * 13) * 0.55 + Math.sin(t * 31) * 0.12 : hold ? Math.sin(t * 4.5) * 0.08 : 0;
       sag = 0;
-      shake = thrash ? 0.16 : hold ? 0.035 : 0.015;
-      bob.y = thrash ? -0.12 + Math.sin(t * 26) * 0.08 : 0.02 + Math.sin(t * 5) * 0.03;
+      shake = thrash ? 0.2 : hold ? 0.05 : 0.015;
+      bob.y = thrash ? -0.08 + Math.abs(Math.sin(t * 13)) * 0.22 : 0.02 + Math.sin(t * 5) * 0.03;
+      this.tugAcc += dt;
+      if (this.tugAcc > (thrash ? 0.3 : hold ? 0.5 : 0.85)) {
+        this.tugAcc = 0;
+        fx.reelTug(bob.x, bob.z, t, pr, hold || thrash);
+      }
       if (thrash) {
-        bob.x += Math.sin(t * 19) * 0.12;
-        bob.z += Math.cos(t * 15) * 0.12;
+        bob.x += Math.sin(t * 19) * 0.22;
+        bob.z += Math.cos(t * 15) * 0.22;
         this.thrashAcc += dt;
         if (this.thrashAcc > 0.11) {
           this.thrashAcc = 0;
           fx.thrash(bob.x, bob.z, t, 1);
         }
-      }
+        this.burstAcc += dt;
+        if (this.burstAcc > 0.45) {
+          this.burstAcc = 0;
+          fx.thrashBurst(bob.x, bob.z, t);
+        }
+      } else this.burstAcc = 0.45;
       const head = Math.atan2(dz, dx) + Math.sin(t * (thrash ? 14 : 4)) * (thrash ? 0.8 : 0.4);
       const big = def ? 0.9 + Math.min(1.6, f.reel.cm / 60) : 1.2;
       shadows.add(bob.x + Math.cos(head) * 0.35, bob.z + Math.sin(head) * 0.35, head, big * 1.25, Math.sin(t * (thrash ? 24 : 8)) * 0.25, 0.03, 0.14, 0.18);
@@ -628,6 +646,7 @@ class FisherView {
     pz2.headY += (target.headY - pz2.headY) * damp(4, dt);
     pz2.sq += (target.sq - pz2.sq) * kk;
     pz2.bend += (target.bend - pz2.bend) * kk;
+    pz2.whip += (target.whip - pz2.whip) * Math.min(1, kk * 2.5);
     pz2.sit += (target.sit - pz2.sit) * kk;
     rig.legL.rotation.x = pz2.legL;
     rig.legR.rotation.x = pz2.legR;
@@ -649,7 +668,10 @@ class FisherView {
     const tier = Math.max(0, Math.min(3, lake.rodTier));
     for (let i = 0; i < rig.rods.length; i++) rig.rods[i]!.root.visible = rodVisible && i === tier;
     const rod = rig.rods[tier]!;
-    for (let s = 0; s < ROD_SEGMENTS; s++) rod.pivots[s]!.rotation.x = (pz2.bend / ROD_SEGMENTS) * (0.4 + s * 0.45);
+    for (let s = 0; s < ROD_SEGMENTS; s++) {
+      rod.pivots[s]!.rotation.x = (pz2.bend / ROD_SEGMENTS) * (0.4 + s * 0.45);
+      rod.pivots[s]!.rotation.z = (pz2.whip / ROD_SEGMENTS) * (0.3 + s * 0.5);
+    }
     // Marker ring pulse (brighter on a bite so the kid sees it's his).
     const biting = mode === "bite";
     rig.markerMat.opacity = biting ? 0.6 + 0.4 * Math.sin(t * 16) : 0.55 + 0.1 * Math.sin(t * 2);
