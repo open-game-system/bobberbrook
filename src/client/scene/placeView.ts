@@ -10,6 +10,13 @@
  * off straight behind them (Moonwell's own widest three-quarter, Dad at its west shore).
  */
 
+import { placeHash } from "./valley";
+
+/** A place's own camera side (yaw: the camera sits at +(sin yaw, cos yaw)): home places from the south, others hashed. */
+export function placeSideYaw(place: { home: boolean; key: string }): number {
+  return place.home ? 0 : (placeHash(place.key, 11) - 0.5) * 0.9;
+}
+
 /** How far (rad) the camera may sit from straight behind the family before it swings round. */
 export const SIDE_SLACK = 0.75;
 /** Under this resultant (0..1) the family stands all round the pond: keep the last side. */

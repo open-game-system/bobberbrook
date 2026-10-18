@@ -216,12 +216,15 @@ export class Fx {
     const cz = near.center.z;
     const edgeAt = (th: number) => pondRadius(near, th);
     // Falls mist + spray (only when Moonwell is in view).
-    this.mistAcc += dt * (this.lite ? 8 : 18) * (near.id === "moonwell" ? 1 : 0);
+    // Round 23 (round 22 moonwell_tod-night.png: a white ball at the foot of the falls): ~43 overlapping 1-2 m
+    // puffs at alpha up to 0.23 stacked into one opaque disc that the night bloom lit up. Now fewer, wider,
+    // fainter puffs that drift out over the pool: a soft veil of spray, never brighter at night.
+    this.mistAcc += dt * (this.lite ? 5 : 10) * (near.id === "moonwell" ? 1 : 0);
     while (this.mistAcc > 1) {
       this.mistAcc -= 1;
-      const x = (this.r() - 0.5) * 2.4;
-      const z = FALLS.footZ + (this.r() - 0.2) * 1.4;
-      this.water.emit({ x, y: 0.4 + this.r() * 0.6, z, vx: (this.r() - 0.5) * 0.8, vy: 0.5 + this.r() * 0.6, vz: 0.4 + this.r() * 0.6, life: 2.4, size: 1.1 + this.r() * 0.8, r: 0.74, g: 0.88, b: 0.94, alpha: 0.13 + 0.1 * tod.mist, grow: 1.2, drag: 0.6 });
+      const x = (this.r() - 0.5) * 4.2;
+      const z = FALLS.footZ + (this.r() - 0.1) * 2.4;
+      this.water.emit({ x, y: 0.3 + this.r() * 0.8, z, vx: (this.r() - 0.5) * 1.4, vy: 0.35 + this.r() * 0.5, vz: 0.6 + this.r() * 0.9, life: 2.6, size: 1.4 + this.r() * 1.0, r: 0.74, g: 0.88, b: 0.94, alpha: (0.045 + 0.025 * Math.min(1, tod.mist)) * (1 - 0.45 * tod.glow), grow: 1.5, drag: 0.5 });
       if (this.r() < 0.5) this.water.emit({ x, y: 0.3, z, vx: (this.r() - 0.5) * 1.8, vy: 2 + this.r() * 2, vz: 0.6 + this.r(), life: 0.8, size: 0.15, r: 0.84, g: 0.95, b: 0.98, gravity: 9, alpha: 0.7 });
     }
     // Wisps: glowing teal and violet motes drifting over the shore and water (more at night).

@@ -37,6 +37,7 @@ import { disc } from "./decking";
 import { buildCloudCards } from "./clouds";
 import { surfaceMaterial, tiled } from "./surfaces";
 import { rng, vnoise } from "./noise";
+import { placeSideYaw } from "./placeView";
 import { SEA_Y, heightAt } from "./terrain";
 import type { TodState } from "./tod";
 import { activeWorld, platformsWithin, towersAround } from "./worldQuery";
@@ -563,7 +564,13 @@ function mooringFacesPlace(p: Platform): boolean {
   const cz = place.center.z - t.z;
   const ml = Math.hypot(mx, mz);
   const cl = Math.hypot(cx, cz);
-  return ml > 0.5 && cl > 0.5 && (mx * cx + mz * cz) / (ml * cl) > 0.3;
+  if (ml < 0.5) return false;
+  if (cl > 0.5 && (mx * cx + mz * cz) / (ml * cl) > 0.3) return true;
+  // Round 23 (round 22 moonwell.png and every Moonwell shot: an envelope cut by the right edge): one hanging
+  // on the side of its tower toward the place's group camera (index.ts placeYaw: the camera sits at
+  // +(sin yaw, cos yaw); home places from the south) fills the frame edge too; it stays up and away until boarded.
+  const yaw = placeSideYaw(place);
+  return (mx * Math.sin(yaw) + mz * Math.cos(yaw)) / ml > 0.3;
 }
 /** How high a parked airship lifts off when it makes way. */
 const PARK_LIFT = 40;

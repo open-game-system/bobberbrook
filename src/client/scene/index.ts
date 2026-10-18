@@ -46,7 +46,7 @@ import { CHAR_LIGHT, needleSheet, setPaintImages } from "./painter";
 import { setCapImages } from "./giantCap";
 import { barkMaterial, rockMaterial, setSurfaceMaterials, tilesMaterial } from "./surfaces";
 import { placeHash } from "./valley";
-import { behindYaw, placeYaw, wrapAngle } from "./placeView";
+import { behindYaw, placeSideYaw, placeYaw, wrapAngle } from "./placeView";
 import { buildEscape } from "./escape";
 import { newTodState, rideTwilight, sampleTod } from "./tod";
 import type { LakeScene, SceneQuality } from "./types";
@@ -605,7 +605,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       // shore (placeView.ts: Mistmarsh's boardwalk shore was framed from across the pond).
       yawFeet.length = 0;
       fishers.forEachSeat((seat, x, _y, z) => { if (framed.has(seat) && yawFeet.length < 8) yawFeet.push({ x, z }); });
-      const pref = here.home ? 0 : (placeHash(here.key, 11) - 0.5) * 0.9;
+      const pref = placeSideYaw(here);
       if (here.key !== yawPlace) {
         yawPlace = here.key;
         yawNow = rig.placeYaw + wrapAngle(pref - rig.placeYaw);

@@ -238,3 +238,23 @@ draws edge HUD (journal count, rod meter, time of day). The scene draws name tag
   `renderer.info.programs` must not grow during play (expose under `window.__scene.info()`).
 - Instancing for grass, flowers, reeds, lily pads, trees. Guard against NaN (bloom turns a NaN black).
 - Dispose replaced meshes.
+
+## Round 23
+
+- **A steady camera** (`camera.ts`, `cameraJudder.ts`, `scripts/camera-trace.mts`): the catch push-in runs on its own
+  clock (`catchWeight`: in 0.9 s, held to 2.2 s, out by 3.2 s, continued after the scene drops the catch) and is laid
+  on top of the followed framing after the springs (`pushPose`), its strength chosen once per catch; the framing under
+  it holds still. The lineup holds a turn at least 1.6 s and eases back only after 4 s. The discovery look is an
+  absolute yaw (no doubling when the place's side swings mid-reveal). The look-ahead follows the fishers' feet only;
+  the follow hurries for fishers only. Measure: no pan or turn over 0.4 degrees, or zoom over 8 %, that turns back
+  within 1 s (`camera.judder.test.ts` replays 48 s of a live Moonwell trace).
+- **Nobody behind anybody on an end-on dock** (`screenSpread.ts`): the fisher on the bank takes the whole push when the
+  other stands on a walk running along the view; two on such a walk part along it in depth. 1.6 m across, 7 m deep.
+- **The reel reads from across the room** (`fishers.ts`, `fx.ts`): a deeper bend and a rod tip that whips side to side
+  on a thrash, rings pulsing out from the bobber that grow as the fish comes in, a bright crown burst every 0.45 s and
+  a jerking bobber while the fish thrashes. Water and light only. Lab: `reel-thrash`.
+- **No empty TV at start** (`opening.ts`): a painted still of the establishing view (`public/art/scene/establish.webp`)
+  covers the canvas while the scene compiles and dissolves into the live lake after its first frame.
+- **Last vinyl**: falls spray is a faint drifting veil (no white ball at night); Mistmarsh's deep is dark indigo and its
+  own blue haze wins over the golden hour's rose; giant caps carry a painted value break-up; an idle airship moored on
+  its tower's camera side stays up and away until boarded (`placeSideYaw`), so no envelope cuts Moonwell's frame edge.

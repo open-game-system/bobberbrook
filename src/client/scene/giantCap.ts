@@ -135,13 +135,22 @@ export function capMaterial(): MeshBasicMaterial {
       float spot = smoothstep(1.25, 1.75, l);
       vec3 dc = pow(max(d, vec3(0.0)), vec3(1.7));
       // Round 18: the pale spots sit lower still and lean to the cap's own colour (bright dabs read as glare).
-      d = mix(dc, mix(vec3(l), d, 0.6) * 0.66, spot);
+      // Round 23: the spots half-way into the cap (0.6 of the way): whole pale dabs read as vinyl decals.
+      d = mix(dc, mix(vec3(l), d, 0.6) * 0.66, spot * 0.6);
       float vein = smoothstep(1.05, 1.35, l) * (1.0 - spot) * smoothstep(0.15, 0.5, rho);
       d *= 1.0 + 0.55 * vein;
       d *= mix(1.0, 0.52, smoothstep(0.7, 0.9, rho) * (1.0 - smoothstep(0.95, 1.02, rho)));
       // Round 18: the planar painting stretches its pale spots into long streaks down the cap's steep side,
       // which read as glare on a glossy dome: toward the rim the pale strokes settle into the cap's colour.
       d = mix(d, vec3(0.5), smoothstep(0.45, 0.8, rho) * smoothstep(1.0, 1.4, l) * 0.9);
+      // Round 23 (round 22 discovery.png: the cap still read as a glossy dome): the painting's own strokes
+      // again at 3.3x, swirled, as a value break-up over the whole cap, so no area is one smooth gradient.
+      vec2 q = vCap.xy - 0.5;
+      float sw = 2.4 * length(q);
+      vec2 qr = mat2(cos(sw), -sin(sw), sin(sw), cos(sw)) * q;
+      vec3 b = texture(tCap, vec3(fract(qr * 3.3 + 0.5), vCap.z)).rgb * iCap[li];
+      float bl = dot(b, vec3(0.3, 0.55, 0.15));
+      d *= clamp(0.35 + 0.7 * bl, 0.5, 1.3);
     }
     diffuseColor.rgb *= clamp(d, 0.22, 2.2);
   }`,

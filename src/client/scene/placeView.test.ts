@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SIDE_SLACK, behindYaw, placeYaw, wrapAngle } from "./placeView";
+import { SIDE_SLACK, behindYaw, placeYaw, wrapAngle, placeSideYaw } from "./placeView";
 
 /** A fisher on a pond of radius 10 round (0, 0) at angle theta (x = cos, z = sin, as the shores are laid out). */
 const at = (theta: number) => ({ x: Math.cos(theta) * 10, z: Math.sin(theta) * 10 });
@@ -53,5 +53,14 @@ describe("placeYaw", () => {
   });
   it("holds the last yaw when the family stands all round", () => {
     expect(placeYaw(0, null, 1.2)).toBe(1.2);
+  });
+});
+
+describe("placeSideYaw (round 23: shared by the camera and the moored airships)", () => {
+  it("looks at home places from the south and at others from a hashed side within 0.45 rad", () => {
+    expect(placeSideYaw({ home: true, key: "moonwell" })).toBe(0);
+    const y = placeSideYaw({ home: false, key: "3,-2" });
+    expect(Math.abs(y)).toBeLessThanOrEqual(0.45);
+    expect(placeSideYaw({ home: false, key: "3,-2" })).toBe(y);
   });
 });
