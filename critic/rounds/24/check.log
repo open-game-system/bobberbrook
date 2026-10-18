@@ -1,0 +1,12 @@
+FAIL tv-empty-lake @ 1920x1080
+     - overlay_covers_focal selector="div.tv > div.ticket:nth-of-type(4)" text="" overlapPx=114
+FAIL kid-hat-picker @ 1080x810
+     - screen_error message="page.goto: Timeout 90000ms exceeded."
+FAIL phone-controller @ 393x852
+     - screen_error message="page.goto: Timeout 90000ms exceeded."
+ok   phone-controller @ 375x667
+ok   ipad-controller @ 1080x810 (tapped 2: Open the map, cast)
+FAIL tv-two-fishers @ 1920x1080
+     - screen_error message="locator.waitFor: Timeout 60000ms exceeded."
+
+6 screen×viewport shots, 4 findings → critic/rounds/24/check/report.json, critic/rounds/24/check/sheet.png
