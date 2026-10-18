@@ -1,5 +1,5 @@
 import { rand } from "./rng";
-import { apartAcross, clearOfProps } from "./spots";
+import { apartAcross, clearOfProps, dryBank } from "./spots";
 import {
   AREAS, OBSTACLES, STEER_HEADINGS, TRAILS, TRAIL_HALF_WIDTH, castFrom as homeCastFrom, distance, inClearing, inPond, onDock, polarIn, pondRadius,
   castRingIn, segmentDistance, turned, waterAt, type Area, type PondPlace, type Vec, type Water,
@@ -171,13 +171,16 @@ export type World = {
   fishingSpot(p: Vec, range: number, taken?: Vec[]): Vec | null;
   /** Round 26: fishing here keeps clear of the bank's props and stands apart across the TV's view from `taken` (true off the water). */
   ownSpot(p: Vec, taken: Vec[]): boolean;
+  /** Round 28: feet on dry land where you could cast from (a dock, or spots.ts dryBank up the bank); true off the water. */
+  dryFeet(p: Vec): boolean;
   /** Next point to head for on the way from `from` to `to` (round ponds, along trails). */
   navNext(from: Vec, to: Vec): Vec;
 };
 
 /** Fishing spots: tried every 7.5° round each pond, this far up the bank. */
 const SPOT_ANGLES = 48;
-const SPOT_BACK = 1.2;
+/** Round 28: 1.2 -> 1.6 (dry feet: spots.ts DRY_BANK, the TV draws water 0.9 m up the bank). */
+const SPOT_BACK = 1.6;
 /** Each fisher's own bit of bank: at least this far from where the others stand or are heading. */
 const SPOT_APART = 3.5;
 
@@ -375,7 +378,8 @@ export function createWorld(seed: number): World {
     // Round 26: clear of the bank's props (the campfire, the boardwalk's feet), and apart across the TV's view
     // from anyone near (not one behind the other along a bank the camera looks down); the nearest such spot
     // in range wins, else the nearest merely free one (a fisher always gets somewhere to fish).
-    const fair = (q: Vec, a: Place) => free(q) && clearOfProps(a.id, q);
+    // Round 28: and with dry feet (the TV draws the water past the edge: round 27, Juneau fished in it).
+    const fair = (q: Vec, a: Place) => free(q) && clearOfProps(a.id, q) && dry(q, a);
     const here = castFrom(p);
     if (here && fair(p, here.place) && apartAcross(here.place, p, taken)) return p;
     let best: Vec | null = null;
@@ -412,6 +416,16 @@ export function createWorld(seed: number): World {
   function ownSpot(p: Vec, taken: Vec[]): boolean {
     const here = castFrom(p);
     return here === null || (clearOfProps(here.place.id, p) && apartAcross(here.place, p, taken));
+  }
+
+  function dryFeet(p: Vec): boolean {
+    const here = castFrom(p);
+    return here === null || dry(p, here.place);
+  }
+
+  /** Dry feet: on a dock, or far enough up the bank (spots.ts dryBank). */
+  function dry(p: Vec, a: Place): boolean {
+    return onDock(p) || dryBank(a, p);
   }
 
   function crossesWater(a: Vec, b: Vec): boolean {
@@ -595,6 +609,7 @@ export function createWorld(seed: number): World {
     advance,
     castFrom,
     fishingSpot,
+    dryFeet,
     ownSpot,
     navNext,
   };

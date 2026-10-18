@@ -8,7 +8,7 @@
  * only apart on the ground. The camera's side of a place is pure geometry (the scene's placeView.ts uses the
  * same functions), so the rules can ask it.
  */
-import { CAMPFIRE, areaById, distance, pondRadius, type PondPlace, type Vec } from "./world";
+import { CAMPFIRE, areaById, distance, pondRadius, polarIn, segmentDistance, type PondPlace, type Vec } from "./world";
 
 /** Wraps an angle into (-pi, pi]. */
 export function wrapAngle(a: number): number {
@@ -88,6 +88,35 @@ export function boardwalkPath(a: PondPlace): Vec[] {
   return out;
 }
 
+/**
+ * Round 28 (round 27 session 119-146 s: Juneau fished standing in the water at Mistmarsh's boardwalk foot): the
+ * TV draws a pond's water 0.9 m past its edge and the bank rises above it only after that, while anyone could
+ * fish from 0.4 m up. A fisher the rules place fishes with their feet at least this far up the bank (spots are 1.6 m up).
+ */
+export const DRY_BANK = 1.5;
+/** Round the feet (this far any way, about their ring) no water is drawn either (the TV draws it to 0.9 m up: a bay or a lobe). */
+const DRY_RING = 0.6;
+const DRY_NEAR = 0.9;
+
+/** How far up the bank from a pond's edge a point stands (negative: in the water), measured out from the centre. */
+export function upBank(a: PondPlace, q: Vec): number {
+  const { r, theta } = polarIn(a, q);
+  return r - pondRadius(a, theta);
+}
+
+/** Feet on dry land by this pond: DRY_BANK up its bank, and no water just round them either. */
+export function dryBank(a: PondPlace, q: Vec): boolean {
+  if (upBank(a, q) < DRY_BANK) return false;
+  for (let k = 0; k < 8; k++) {
+    const t = (k / 8) * Math.PI * 2;
+    if (upBank(a, { x: q.x + Math.cos(t) * DRY_RING, z: q.z + Math.sin(t) * DRY_RING }) < DRY_NEAR) return false;
+  }
+  return true;
+}
+
+/** Round 28: the boardwalk's feet keep this clear (was 2.2: Dad and Juneau fished shoulder to shoulder at the east foot). */
+export const FOOT_CLEAR = 3.5;
+
 /** A prop on a bank that nobody fishes from: its centre and how far round it stays clear. */
 export type KeepClear = { at: Vec; r: number };
 
@@ -97,7 +126,7 @@ const KEEP_CLEAR: Record<string, KeepClear[]> = (() => {
     // The campfire with its logs and string-light poles (round 26: moved back off the bank; kept clear anyway).
     moonwell: [{ at: CAMPFIRE, r: 6 }],
     // The boardwalk's two feet: posts, lanterns and rope rails where it leaves the bank.
-    mistmarsh: [{ at: walk[0]!, r: 2.2 }, { at: walk[walk.length - 1]!, r: 2.2 }],
+    mistmarsh: [{ at: walk[0]!, r: FOOT_CLEAR }, { at: walk[walk.length - 1]!, r: FOOT_CLEAR }],
   };
 })();
 
@@ -106,15 +135,41 @@ export function keepClear(placeId: string): readonly KeepClear[] {
   return KEEP_CLEAR[placeId] ?? [];
 }
 
-/** Clear of every prop the place keeps clear. */
+/**
+ * Round 28 (round 27 session 119-146 s; lab mistmarsh-foot-tag): past its east foot Mistmarsh's boardwalk runs
+ * along the bank for metres, its posts, lanterns and rails beside anyone fishing there and the shallows it
+ * crosses at their feet. A fisher keeps this far from the walk anywhere along it (the feet keep FOOT_CLEAR).
+ */
+export const RAIL_CLEAR = 2.7;
+const WALKS: Record<string, Vec[]> = { mistmarsh: boardwalkPath(areaById("mistmarsh")) };
+
+/** Clear of the place's walk along its whole length. */
+export function clearOfWalk(placeId: string, q: Vec): boolean {
+  const walk = WALKS[placeId];
+  if (!walk) return true;
+  for (let i = 1; i < walk.length; i++) if (segmentDistance(q, walk[i - 1]!, walk[i]!) < RAIL_CLEAR) return false;
+  return true;
+}
+
+/** Mistmarsh's pavilion on the bank (the scene builds it here): theta and metres up the bank from the water. */
+export const PAVILION = { theta: -2.35, up: 4.5 };
+/** Round 28 (lab mistmarsh-dock-foot: Juneau fished from under its roof): its roof is 4 m round; fishers keep 5 m off. */
+const PAVILION_CLEAR = 5;
+export function pavilionAt(a: PondPlace): Vec {
+  const r = pondRadius(a, PAVILION.theta) + PAVILION.up;
+  return { x: a.center.x + Math.cos(PAVILION.theta) * r, z: a.center.z + Math.sin(PAVILION.theta) * r };
+}
+const ROOFS: Record<string, KeepClear[]> = { mistmarsh: [{ at: pavilionAt(areaById("mistmarsh")), r: PAVILION_CLEAR }] };
+
+/** Clear of every prop the place keeps clear (round 28: and of its boardwalk and from under its pavilion's roof). */
 export function clearOfProps(placeId: string, q: Vec): boolean {
-  return keepClear(placeId).every((k) => distance(k.at, q) >= k.r);
+  return keepClear(placeId).every((k) => distance(k.at, q) >= k.r) && clearOfWalk(placeId, q) && (ROOFS[placeId] ?? []).every((k) => distance(k.at, q) >= k.r);
 }
 
 /** Two fishers within this much of each other must also stand apart across the TV's view. */
 export const ACROSS_NEAR = 9;
-/** At least this far apart across the TV's view (m): a grown-up's silhouette with the rod arm, and a gap. */
-export const SPOT_ACROSS = 2.2;
+/** At least this far apart across the TV's view (m): a grown-up's silhouette with the rod arm, and a gap. Round 28: 2.2 -> 2.8 (a body width between catchers on screen; the held fish is 1.2 m+ wide). */
+export const SPOT_ACROSS = 2.8;
 
 /**
  * The TV camera's sideways directions at a place with the family standing at `feet`: one, or two when the

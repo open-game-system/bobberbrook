@@ -55,6 +55,7 @@ const SHOTS = [
   ["mistmarsh-reel", null, true],
   ["mistmarsh-tag", null, true],
   ["mistmarsh-tag-wait", null, true],
+  ["mistmarsh-foot-tag", null, true],
   ["moonwell-spawn", null, true],
   ["mistmarsh-dock", null, true],
   ["mistmarsh-dock-foot", null, true],
@@ -82,7 +83,7 @@ const TOD_VIEWS = ["moonwell", "far-place", "mistmarsh", "hollow", "tower", "tra
 // from the first catch landing, coverCheck runs on each rendered frame for PUSH_MS (rules running) with the
 // fade's dither as drawn (live: a faded surface's kept pixels count), and the worst frame must stay under
 // COVER_MAX_FRAC. The still is the end of the push (not the worst frame).
-const PUSH_VIEWS = ["mistmarsh-catch", "mistmarsh-dock", "mistmarsh-dock-foot", "mistmarsh-tag", "double-catch", "catch-leap", "night-catch"];
+const PUSH_VIEWS = ["mistmarsh-catch", "mistmarsh-dock", "mistmarsh-dock-foot", "mistmarsh-tag", "mistmarsh-foot-tag", "double-catch", "catch-leap", "night-catch"];
 const PUSH_MS = 2000;
 const only = typeof args.only === "string" ? args.only.split(",") : null;
 const matrix = args["no-tod"] ? [] : TOD_VIEWS.flatMap((v) => TOD.map(([name, ph]) => [v, ph, true, name]));
@@ -111,6 +112,9 @@ const metrics = { round, shots: [] };
 const COVER_MAX_FRAC = 0.02;
 /** Round 24: at most this share of any fisher (body and held fish) may be covered by another fisher (stackCheck). */
 const STACK_MAX_FRAC = 0.02;
+/** Round 28: shots whose fishers fish a shore together (spotCheck): dry feet, and at least this many body widths between neighbours on screen. */
+const SPOT_VIEWS = ["mistmarsh", "mistmarsh-catch", "mistmarsh-tag", "mistmarsh-foot-tag", "mistmarsh-tag-wait", "mistmarsh-dock-foot", "moonwell-spawn", "double-catch", "catch-leap"];
+const SPOT_MIN_GAP = 1;
 const failures = [];
 const files = [];
 // Everything taken so far is on disk after every shot: a crash later never loses the stills.
@@ -145,7 +149,7 @@ async function shoot(scenario, phase, hero, tod, push) {
     // Frame times and programs before the checks (their passes are not play).
     const info = await page.evaluate(() => window.__scene.info());
     await page.evaluate(() => window.__lab?.pause?.(true)).catch(() => {});
-    const checks = await page.evaluate(() => ({ cover: window.__scene.coverCheck?.() ?? null, stack: window.__scene.stackCheck?.() ?? null })).catch(() => ({ cover: null, stack: null }));
+    const checks = await page.evaluate(() => ({ cover: window.__scene.coverCheck?.() ?? null, stack: window.__scene.stackCheck?.() ?? null, spots: window.__scene.spotCheck?.() ?? null })).catch(() => ({ cover: null, stack: null, spots: null }));
     const png = await page.screenshot({ path: file, timeout: 120_000 });
     files.push([label, file]);
     const luma = await page.evaluate(async (b64) => {
@@ -167,10 +171,15 @@ async function shoot(scenario, phase, hero, tod, push) {
     const coverWorst = cover ? Math.round(cover.worst * 1000) / 1000 : null;
     const stack = checks.stack;
     const stackWorst = stack ? Math.round(stack.worst * 1000) / 1000 : null;
-    metrics.shots.push({ label, renderer: info.renderer, programsAtStart: before.programs, programs: info.programs, calls: info.calls, triangles: info.triangles, p50: info.frameP50, p95: info.frameP95, meanLuma: luma === null ? null : Math.round(luma), cover: coverWorst, coverBoxes: cover?.boxes.map((b) => Math.round(b.frac * 1000) / 1000), stack: stackWorst, stackSeats: stack?.seats.map((b) => [b.seat, Math.round(b.frac * 1000) / 1000]) });
+    metrics.shots.push({ label, renderer: info.renderer, programsAtStart: before.programs, programs: info.programs, calls: info.calls, triangles: info.triangles, p50: info.frameP50, p95: info.frameP95, meanLuma: luma === null ? null : Math.round(luma), cover: coverWorst, coverBoxes: cover?.boxes.map((b) => Math.round(b.frac * 1000) / 1000), stack: stackWorst, stackSeats: stack?.seats.map((b) => [b.seat, Math.round(b.frac * 1000) / 1000]), feet: checks.spots?.feet.map((f) => [f.seat, f.bank]), minGap: checks.spots && Number.isFinite(checks.spots.minGap) ? checks.spots.minGap : null });
     console.log(label, JSON.stringify(metrics.shots.at(-1)));
     if (coverWorst !== null && coverWorst > COVER_MAX_FRAC) return { label, failed: `scenery covers a fisher (${coverWorst} of the body > ${COVER_MAX_FRAC})` };
     if (stackWorst !== null && stackWorst > STACK_MAX_FRAC) return { label, failed: `a fisher covers another (${stackWorst} > ${STACK_MAX_FRAC})` };
+    // Round 28 (the Mistmarsh dock foot): feet on dry land, and at a place's shore neighbours a body width apart on screen.
+    if (SPOT_VIEWS.includes(scenario) && checks.spots) {
+      if (checks.spots.wet > 0) return { label, failed: `a fisher stands in the water (${JSON.stringify(checks.spots.feet)})` };
+      if (checks.spots.minGap < SPOT_MIN_GAP) return { label, failed: `neighbours ${checks.spots.minGap} body widths apart on screen < ${SPOT_MIN_GAP}` };
+    }
     return { label };
   } finally {
     await page.close().catch(() => {});

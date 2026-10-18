@@ -1,0 +1,85 @@
+{
+  "round": "28-s2pre",
+  "shots": [
+    {
+      "label": "mistmarsh-tag",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 92,
+      "programs": 92,
+      "calls": 694,
+      "triangles": 3237789,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 73,
+      "cover": 0,
+      "coverBoxes": [
+        0,
+        0
+      ],
+      "stack": 0,
+      "stackSeats": [
+        [
+          0,
+          0
+        ],
+        [
+          2,
+          0
+        ]
+      ],
+      "feet": [
+        [
+          0,
+          1.2
+        ],
+        [
+          2,
+          2.18
+        ]
+      ],
+      "minGap": 2.2
+    },
+    {
+      "label": "mistmarsh-foot-tag",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 92,
+      "programs": 92,
+      "calls": 667,
+      "triangles": 3119779,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 74,
+      "cover": 0,
+      "coverBoxes": [
+        0,
+        0
+      ],
+      "stack": 0,
+      "stackSeats": [
+        [
+          0,
+          0
+        ],
+        [
+          2,
+          0
+        ]
+      ],
+      "feet": [
+        [
+          0,
+          1.2
+        ],
+        [
+          2,
+          2.5
+        ]
+      ],
+      "minGap": 2.56
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}

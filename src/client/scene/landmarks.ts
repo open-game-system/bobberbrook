@@ -31,6 +31,7 @@ import { moonPoolMesh, poolMesh } from "./pools";
 import { fadeGlowMaterial, fadeMaterial, jitter, merge, paint, prep, puffNormals, surf } from "./geo";
 import { PK } from "./painter";
 import { attachFoliage, leafCards, splitRim, wisteriaCards, type Puff, type Strand } from "./foliage";
+import { PAVILION } from "../../game/spots";
 import { barked } from "./surfaces";
 import { PLANK_BOARDS, disc, plankUV, stoneShade, surfBy } from "./decking";
 import { rng, vnoise } from "./noise";
@@ -230,7 +231,7 @@ function mistmarsh(c: Ctx): void {
     c.lamps.push(paint(prep(new TubeGeometry(new CatmullRomCurve3(rail), 60, 0.03, 4, false)), 0xd2b070));
   }
   // The pavilion on the far shore: six posts, a railing, a swept purple roof, lanterns under the eaves.
-  const pv = at(a, -2.35, 4.5);
+  const pv = at(a, PAVILION.theta, PAVILION.up);
   const py = heightAt(pv.x, pv.z);
   const face = Math.atan2(a.center.x - pv.x, a.center.z - pv.z);
   const pav: BufferGeometry[] = [];

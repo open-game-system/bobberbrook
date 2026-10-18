@@ -45,7 +45,8 @@ import { leafMaterial, setFoliageMaterials } from "./foliage";
 import { CHAR_LIGHT, needleSheet, setPaintImages } from "./painter";
 import { setCapImages } from "./giantCap";
 import { barkMaterial, rockMaterial, setSurfaceMaterials, tilesMaterial } from "./surfaces";
-import { placeHash } from "./valley";
+import { newPondInfo, placeHash, pondAt } from "./valley";
+import { spotCheck, type SpotBody, type SpotReport } from "./spotCheck";
 import { behindYaw, placeSideYaw, placeYaw, wrapAngle } from "./placeView";
 import { buildEscape } from "./escape";
 import { newTodState, rideTwilight, sampleTod } from "./tod";
@@ -118,6 +119,8 @@ export type SceneDebug = {
    */
   coverLog?(on: boolean): CoverSample[];
   stackCheck?(only?: number[]): StackReport;
+  /** Round 28 lab check: every present fisher's feet up the bank (dry?), and the screen gap between near pairs in body widths. */
+  spotCheck?(): SpotReport;
   /** Round 25 lab probe: per present seat, where it is drawn and its spacing offsets (fishers.debugBodies). */
   bodies?(): { seat: number; x: number; z: number; spaceX: number; spaceZ: number; wantX: number; wantZ: number }[];
 };
@@ -838,6 +841,12 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     },
     coverCheck: (detail, live) => coverCheck(renderer, scene, camera, fishers.group, cover, detail ?? false, live ?? false),
     bodies: () => fishers.debugBodies(),
+    spotCheck: () => {
+      const bs: SpotBody[] = [];
+      fishers.forEachBody((seat, x, y, z, top) => bs.push({ seat, x, y, z, top }));
+      const pi = newPondInfo();
+      return spotCheck(camera, bs, (x, z) => pondAt(x, z, pi).d);
+    },
     stackCheck: (only) => stackCheck(renderer, scene, camera, fishers.group, fishers.stackParts().filter((p) => !only || only.includes(p.seat))),
     names: () => scene.children.map((o, i) => o.name || `${o.type}#${i}`),
     toggle(name) {

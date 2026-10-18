@@ -1005,8 +1005,11 @@ function wadeIn(d: Draft<Lake>, now: number, w: World): void {
     // line with someone as the TV sees them): walk on to the spot, and cast there.
     // At the spot (within a metre: the bank's edge can hold a walker just short of it, but off any prop) and able
     // to cast: cast.
+    // Round 28: with dry feet (walking up from the water's edge to a spot: round 27's Juneau cast standing in it),
+    // or right at the (dry) spot.
+    const dryHere = w.dryFeet(f.pos) || distance(f.pos, f.fishSpot) < ARRIVED;
     const there = distance(f.pos, f.fishSpot) < AT_SPOT && w.ownSpot(f.pos, []);
-    if (cast && (there || ownSpot(w, f.pos, fishingSpots(d.fishers, f)))) {
+    if (cast && dryHere && (there || ownSpot(w, f.pos, fishingSpots(d.fishers, f)))) {
       f.fishSpot = null;
       f.following = false;
       startCast(d, f, cast, now);

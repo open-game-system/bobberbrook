@@ -607,6 +607,19 @@ const SCENARIOS: Record<string, Scenario> = {
     warmUntil: (l) => l.fishers.every((f) => f.mode === "reel" || f.mode === "wait" || f.mode === "bite") && l.fishers.some((f) => f.mode === "reel"),
     hero: (l, now) => inCatch(l, now, 1300, 2000),
   },
+  // Round 28 (round 27 session 119-146 s): Dad presses 2.75 m from the boardwalk's east foot (theta -0.5, allowed
+  // by round 26's 2.2 m keep-clear) and Juneau tags along from the trail; they fished shoulder to shoulder at the
+  // foot, Juneau in the water. The shot is a catch (spot check: dry feet, a body width apart on screen).
+  "mistmarsh-foot-tag": {
+    phase: 0.36,
+    fishers: [
+      { seat: 0, name: "Dad", spot: shoreIn("mistmarsh", -0.5, 1.2), easy: true, at: shoreIn("mistmarsh", -0.5, 1.2) },
+      { seat: 2, name: "Juneau", spot: onTrailAt(0, 0.75), at: onTrailAt(0, 0.75), tag: 6 },
+    ],
+    setup: discoverOnly(["mistmarsh"]),
+    warmUntil: (l) => l.fishers.every((f) => f.mode === "reel" || f.mode === "wait" || f.mode === "bite") && l.fishers.some((f) => f.mode === "reel"),
+    hero: (l, now) => inCatch(l, now, 1300, 2000),
+  },
   // The same pair the first moment both are fishing (the bobbers out, nobody holding a fish).
   "mistmarsh-tag-wait": {
     phase: 0.36,

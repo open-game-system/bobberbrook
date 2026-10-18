@@ -1,0 +1,243 @@
+{
+  "round": "28-s2b",
+  "shots": [
+    {
+      "label": "mistmarsh-catch",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 92,
+      "programs": 92,
+      "calls": 661,
+      "triangles": 3064746,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 80,
+      "cover": 0,
+      "coverBoxes": [
+        0,
+        0
+      ],
+      "stack": 0,
+      "stackSeats": [
+        [
+          0,
+          0
+        ],
+        [
+          2,
+          0
+        ]
+      ],
+      "feet": [
+        [
+          0,
+          1.33
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "minGap": null
+    },
+    {
+      "label": "mistmarsh-tag",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 92,
+      "programs": 92,
+      "calls": 684,
+      "triangles": 3236945,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 73,
+      "cover": 0,
+      "coverBoxes": [
+        0,
+        0
+      ],
+      "stack": 0,
+      "stackSeats": [
+        [
+          0,
+          0
+        ],
+        [
+          2,
+          0
+        ]
+      ],
+      "feet": [
+        [
+          0,
+          1.2
+        ],
+        [
+          2,
+          2.45
+        ]
+      ],
+      "minGap": 1.95
+    },
+    {
+      "label": "mistmarsh-tag-wait",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 92,
+      "programs": 92,
+      "calls": 698,
+      "triangles": 3000107,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 73,
+      "cover": 0,
+      "coverBoxes": [
+        0,
+        0
+      ],
+      "stack": 0,
+      "stackSeats": [
+        [
+          0,
+          0
+        ],
+        [
+          2,
+          0
+        ]
+      ],
+      "feet": [
+        [
+          0,
+          1.2
+        ],
+        [
+          2,
+          2.45
+        ]
+      ],
+      "minGap": 1.72
+    },
+    {
+      "label": "mistmarsh-foot-tag",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 92,
+      "programs": 92,
+      "calls": 691,
+      "triangles": 3238027,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 72,
+      "cover": 0,
+      "coverBoxes": [
+        0,
+        0
+      ],
+      "stack": 0,
+      "stackSeats": [
+        [
+          0,
+          0
+        ],
+        [
+          2,
+          0
+        ]
+      ],
+      "feet": [
+        [
+          0,
+          1.23
+        ],
+        [
+          2,
+          2.45
+        ]
+      ],
+      "minGap": 1.89
+    },
+    {
+      "label": "mistmarsh-dock-foot",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 92,
+      "programs": 92,
+      "calls": 894,
+      "triangles": 3498818,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 69,
+      "cover": 0,
+      "coverBoxes": [
+        0,
+        0
+      ],
+      "stack": 0,
+      "stackSeats": [
+        [
+          0,
+          0
+        ],
+        [
+          2,
+          0
+        ]
+      ],
+      "feet": [
+        [
+          0,
+          1.2
+        ],
+        [
+          2,
+          1.2
+        ]
+      ],
+      "minGap": 2.27
+    },
+    {
+      "label": "mistmarsh-catch@push",
+      "frames": 58,
+      "cover": 0.005,
+      "coverAt": 422,
+      "coverBy": {},
+      "coverOver": 0,
+      "p95": 33.29999923706055,
+      "programs": 118
+    },
+    {
+      "label": "mistmarsh-dock-foot@push",
+      "frames": 17,
+      "cover": 0.061,
+      "coverAt": 640,
+      "coverBy": {
+        "areas#17": 0.061
+      },
+      "coverOver": 17,
+      "p95": 16.799999237060547,
+      "programs": 132
+    },
+    {
+      "label": "mistmarsh-tag@push",
+      "frames": 54,
+      "cover": 0.004,
+      "coverAt": 299,
+      "coverBy": {},
+      "coverOver": 0,
+      "p95": 33.29999923706055,
+      "programs": 119
+    },
+    {
+      "label": "mistmarsh-foot-tag@push",
+      "frames": 51,
+      "cover": 0.004,
+      "coverAt": 1149,
+      "coverBy": {},
+      "coverOver": 0,
+      "p95": 16.799999237060547,
+      "programs": 119
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": [
+    "mistmarsh-dock-foot@push"
+  ]
+}
