@@ -6,7 +6,7 @@ import { ROD_AT, ROD_NAMES, speciesCount, todOf, type Lake } from "../../game/la
 import { createLakeScene, type LakeScene } from "../scene";
 import { lakeEvents } from "../lakeEvents";
 import { createLiveSounds, playLakeEvents } from "../tvSounds";
-import { startWorld, setPlaceMood, setRiding, setTimeOfDayMood, setTraveling } from "../audio/world";
+import { startWorld, setOnTrail, setPlaceMood, setRiding, setTimeOfDayMood, setTraveling } from "../audio/world";
 import { audioClock, unlockAudio } from "../audio/engine";
 import { audioStalled } from "../audio/health";
 import { voice } from "../audio/voice";
@@ -119,6 +119,7 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
     const lead = lake.fishers[0]?.pos;
     const here = lead ? worldFor(lake.worldSeed).areaAt(lead) : null;
     if (here) setPlaceMood(here.biome);
+    setOnTrail(!here && !lake.ride);
     const todNow = todOf({ startedAt: lake.startedAt, now: clock.now() });
     setTimeOfDayMood(todNow);
     const fresh: Toast[] = [];

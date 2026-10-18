@@ -29,6 +29,47 @@ export function setPlaceMood(biome: Biome): void {
   place = biome;
 }
 
+/**
+ * On a trail between places (round 22: the trail was music only): the lake's lapping fades, leaves rustle
+ * overhead and the birds come closer and more often.
+ */
+let onTrail = false;
+let forest: Layer | null = null;
+export function setOnTrail(on: boolean): void {
+  if (on === onTrail) return;
+  onTrail = on;
+  const a = audio();
+  if (!a) return;
+  const t = a.ctx.currentTime;
+  water?.gain.gain.setTargetAtTime(on ? 0.1 : 0.32, t, 1.5);
+  forest?.gain.gain.setTargetAtTime(on ? 0.05 : 0.012, t, 1.5);
+}
+
+/** Leaves in a breeze: soft band-passed noise (well under 3 kHz) that swells and settles. */
+function startForest(ctx: AudioContext, out: AudioNode): Layer {
+  const src = noiseSource(ctx, 5, false);
+  const bp = ctx.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.frequency.value = 900;
+  bp.Q.value = 0.7;
+  const lp = ctx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 2200;
+  const swell = ctx.createGain();
+  swell.gain.value = 0.6;
+  const lfo = ctx.createOscillator();
+  lfo.frequency.value = 0.09;
+  const lfoGain = ctx.createGain();
+  lfoGain.gain.value = 0.4;
+  lfo.connect(lfoGain).connect(swell.gain);
+  const gain = ctx.createGain();
+  gain.gain.value = 0.012;
+  src.connect(bp).connect(lp).connect(swell).connect(gain).connect(out);
+  src.start();
+  lfo.start();
+  return { gain };
+}
+
 /** A marsh frog: two or three low, throaty croaks (well under 3 kHz). */
 function frog(ctx: AudioContext, out: AudioNode, t: number): void {
   const n = 2 + Math.floor(Math.random() * 2);
@@ -161,7 +202,7 @@ function cricket(ctx: AudioContext, out: AudioNode, t: number): void {
   }
 }
 
-function chirp(ctx: AudioContext, out: AudioNode, t: number): void {
+function chirp(ctx: AudioContext, out: AudioNode, t: number, level: number): void {
   const o = ctx.createOscillator();
   const g = ctx.createGain();
   const p = ctx.createStereoPanner();
@@ -175,7 +216,7 @@ function chirp(ctx: AudioContext, out: AudioNode, t: number): void {
     // Tops out under 3 kHz (round 17: sweeps to ~3.5 kHz were the last 'harsh' frames).
     o.frequency.exponentialRampToValueAtTime(base * (1.1 + Math.random() * 0.25), s + 0.07);
     g.gain.setValueAtTime(0.0001, s);
-    g.gain.exponentialRampToValueAtTime(0.018, s + 0.03);
+    g.gain.exponentialRampToValueAtTime(level, s + 0.03);
     g.gain.exponentialRampToValueAtTime(0.0001, s + 0.1);
   }
   o.connect(g).connect(p).connect(out);
@@ -340,6 +381,7 @@ export function startWorld(): void {
   water = startWater(ctx, out);
   night = startNight(ctx, out);
   wind = startWind(ctx, out);
+  forest = startForest(ctx, out);
   musicBus = ctx.createGain();
   // The bed sits under the effects but must read as music between catches (round 01: too faint;
   // round 05: still −23 dBFS between events, lifted ~2 dB).
@@ -366,7 +408,7 @@ export function startWorld(): void {
       scheduleBar(ctx, bar++, next);
       next += beat() * 4;
     }
-    if (tod !== "night" && Math.random() < 0.1) chirp(ctx, out, ctx.currentTime + Math.random());
+    if (tod !== "night" && Math.random() < (onTrail ? 0.3 : 0.1)) chirp(ctx, out, ctx.currentTime + Math.random(), onTrail ? 0.032 : 0.022);
     if (tod === "night" && Math.random() < 0.02) owl(ctx, out, ctx.currentTime + Math.random());
     // Each place sounds like itself: frogs in the marsh and under the willows.
     if ((place === "marsh" || place === "willow") && Math.random() < (tod === "night" ? 0.3 : 0.15)) frog(ctx, out, ctx.currentTime + Math.random());
