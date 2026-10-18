@@ -58,7 +58,8 @@ const HOLD_FRONT = 0.5;
 /** The held fish's tilt (radians, head up). */
 const HOLD_TILT = 0.14;
 /** The fish is held up until this age (s), then tucked away over TUCK_S. */
-const TUCK_AT = 2.75;
+/** Round 26: 2.75 -> 3.0 s, with the camera's longer hold (the rules show a catch 3.4 s). */
+const TUCK_AT = 3.0;
 const TUCK_S = 0.45;
 /** How much longer the arms reach while holding a catch (a grown-up's arms are long enough). */
 const HOLD_REACH = 0.3;

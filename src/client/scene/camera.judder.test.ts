@@ -197,11 +197,13 @@ describe("the recorded Moonwell session (camera-trace.mts)", () => {
 });
 
 describe("catchWeight", () => {
-  it("eases in over 0.9 s, holds, and is out by 3.2 s", () => {
+  it("eases in over 0.9 s, holds 2.5 s, and is out by 4.4 s", () => {
     expect(catchWeight(0)).toBe(0);
     expect(catchWeight(0.45)).toBeCloseTo(0.5, 2);
     expect(catchWeight(1.5)).toBe(1);
-    expect(catchWeight(2.7)).toBeCloseTo(0.5, 2);
-    expect(catchWeight(3.2)).toBe(0);
+    // Round 26: held to 3.4 s and out by 4.4 s (was held to 2.2 s, out by 3.2 s: the round 25 critic's abrupt pull-out).
+    expect(catchWeight(3.3)).toBe(1);
+    expect(catchWeight(3.9)).toBeCloseTo(0.5, 2);
+    expect(catchWeight(4.4)).toBe(0);
   });
 });

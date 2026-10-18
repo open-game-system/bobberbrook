@@ -117,7 +117,7 @@ export type RigFrame = {
 
 const MAX_POINTS = 24;
 /** Push-in strengths tried in turn (the first that keeps the family in the safe margin wins). */
-const PUSH_STEPS = [1, 0.8, 0.6, 0.4, 0.2, 0];
+const PUSH_STEPS = [1, 0.85, 0.7, 0.55, 0.4, 0.28, 0.16, 0];
 /** Heights above each focus point that must be in frame: the foot ring's front edge and the name tag. */
 const LIFTS = [-0.7, 4.0];
 const SIDES = [-1, 1];
@@ -229,8 +229,8 @@ export class CameraRig {
     this.first = true;
   }
 
-  debug(): { dist: number; catchW: number; revealW: number; n: number; target: number[]; ahead: number; yaw: number; el: number; feet: number[][]; blockers: number[][] } {
-    return { blockers: this.blockers.map((b) => [b.x, b.z, b.r]), dist: this.shownDist, catchW: this.catchW, revealW: this.revealW, n: this.n, target: this.shownT.toArray(), ahead: this.ahead, yaw: this.yaw, el: this.shownEl, feet: this.feet.slice(0, this.nf).map((f) => [f.x, f.z]) };
+  debug(): { dist: number; catchW: number; catchK: number; revealW: number; n: number; target: number[]; ahead: number; yaw: number; el: number; feet: number[][]; blockers: number[][] } {
+    return { blockers: this.blockers.map((b) => [b.x, b.z, b.r]), dist: this.shownDist, catchW: this.catchW, catchK: this.catchK, revealW: this.revealW, n: this.n, target: this.shownT.toArray(), ahead: this.ahead, yaw: this.yaw, el: this.shownEl, feet: this.feet.slice(0, this.nf).map((f) => [f.x, f.z]) };
   }
 
   get view(): ViewName {
@@ -612,7 +612,9 @@ export class CameraRig {
       }
       // Round 23: while a catch push is on, the framing under it holds still (the fish going up drops the
       // bobbers from the fit, which drifted the shot back the other way under the push).
-      const holding = this.catchAge >= 0 || catchAt !== null;
+      // Round 26: until the push starts easing out (with the longer hold, a framing released only at its end
+      // zoomed out past the new framing and back, judder replay 22 s).
+      const holding = (this.catchAge >= 0 && this.catchAge < CATCH_HOLD) || catchAt !== null;
       const zone = holding ? Infinity : DEAD_M + DEAD_K * this.wantDist;
       const dx = this.wantTarget.x - this.held.x;
       const dy = this.wantTarget.y - this.held.y;
@@ -743,6 +745,8 @@ export class CameraRig {
 
   /** The catch timeline (s since the catch, continued on the rig's clock after the scene drops the focus). */
   private catchAge = -1;
+  /** Added to the scene's catch age when a catch picked up a push already under way. */
+  private catchShift = 0;
   private catchLastT = 0;
   private readonly catchPt = new Vector3();
   /** The push strength held for this catch (the strongest that fits; it only ever eases down). */
@@ -755,15 +759,20 @@ export class CameraRig {
   /** Advances the catch timeline and its weight (catchW): ~0.9 s in, held, ~1 s out, ending ~3.2 s in. */
   private catchClock(t: number, catchAt: CatchAt | null, on: boolean): void {
     if (catchAt && on) {
-      const fresh = this.catchAge < 0 || catchAt.age < this.catchAge - 0.05;
-      if (fresh) {
+      const fresh = this.catchAge < 0 || catchAt.age + this.catchShift < this.catchAge - 0.05;
+      if (fresh && this.catchAge < 0) {
         this.catchPt.set(catchAt.x, catchAt.y - CATCH_UP + 1.2, catchAt.z);
         this.catchK = -1;
+        this.catchShift = 0;
       } else {
         // A second catcher joins: the push point eases to the middle of both (no step).
         this.catchPt.lerp(this.tmp.set(catchAt.x, catchAt.y - CATCH_UP + 1.2, catchAt.z), Math.min(1, (t - this.catchLastT) * 3));
+        // Round 26: a new catch while the last push is still easing out picks the push up where it is (on the
+        // way in at the same weight), not from nothing: with the longer hold the two overlapped and the shot
+        // zoomed out and straight back in (judder replay, 22 s).
+        if (fresh) this.catchShift = rampAt(catchWeight(this.catchAge)) - catchAt.age;
       }
-      this.catchAge = catchAt.age;
+      this.catchAge = catchAt.age + this.catchShift;
     } else if (this.catchAge >= 0) {
       this.catchAge += Math.max(0, t - this.catchLastT);
       if (!on || this.catchAge > CATCH_END) this.catchAge = -1;
@@ -805,10 +814,27 @@ export class CameraRig {
   }
 }
 
+/**
+ * Round 26 (round 25 critic: a ~3 s beat that pulled out abruptly, 84 -> 84.7 s): held to CATCH_HOLD (2.5 s at
+ * full, the length of the rules' catch show, 3.4 s) and eased out over a second. Was held to 2.2, out by 3.2.
+ */
+const CATCH_HOLD = 3.4;
 /** When the catch push has eased all the way out (s after the catch). */
-const CATCH_END = 3.2;
-/** The catch push weight at this age: smooth in over 0.9 s, held to 2.2 s, smooth out by CATCH_END. */
+const CATCH_END = 4.4;
+/** The catch push weight at this age: smooth in over 0.9 s, held to CATCH_HOLD, smooth out by CATCH_END. */
+/** The age on the way in at which the push has weight `w` (the inverse of catchWeight's first 0.9 s). */
+export function rampAt(w: number): number {
+  let lo = 0;
+  let hi = 0.9;
+  for (let i = 0; i < 24; i++) {
+    const mid = (lo + hi) / 2;
+    if (catchWeight(mid) < w) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
 export function catchWeight(age: number): number {
-  const w = age < 0.9 ? age / 0.9 : age < 2.2 ? 1 : Math.max(0, 1 - (age - 2.2) / (CATCH_END - 2.2));
+  const w = age < 0.9 ? age / 0.9 : age < CATCH_HOLD ? 1 : Math.max(0, 1 - (age - CATCH_HOLD) / (CATCH_END - CATCH_HOLD));
   return w * w * (3 - 2 * w);
 }
