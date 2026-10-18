@@ -18,6 +18,9 @@ import {
   LatheGeometry,
   Vector2,
   BoxGeometry,
+  CatmullRomCurve3,
+  CircleGeometry,
+  TubeGeometry,
   type Material,
   type MeshLambertMaterial,
   Vector3,
@@ -29,6 +32,7 @@ import { PK, type PaintKind } from "./painter";
 import { hairLocks, paintSkull, waveBrim } from "./fisherShape";
 import { crownLift, onFace, shapeHead } from "./fisherFace";
 import { SEAT_HEX } from "./types";
+import { vnoise } from "./noise";
 import { BUILDS, CHIN, HEAD_HALF, figureTop, type Build, type Role } from "./fisherBuild";
 
 /** World scale of a fisher (model is built ~1 unit tall). */
@@ -65,6 +69,8 @@ export type FisherRig = {
   sitDrop: number;
   sitLeg: number;
   marker: Mesh;
+  /** Round 25: the soft dark contact shadow on the ground under the fisher. */
+  contact: Mesh;
   markerMat: MeshBasicMaterial;
   tag: Sprite;
   tagMat: SpriteMaterial;
@@ -130,7 +136,9 @@ function torsoGeometry(B: Build, role: Role, shell: { from: number; to: number; 
     let r: number;
     if (role === "adult") {
       // bottom round-off, hips 0.9, waist 0.84, chest 1.0, shoulders 0.96, then round into the neck.
-      const prof = t < -0.8 ? 0.9 * Math.sqrt(Math.max(0, 1 - ((t + 0.8) / 0.2) ** 2)) : t < -0.3 ? 0.9 - 0.06 * ((t + 0.8) / 0.5) : t < 0.45 ? 0.84 + 0.16 * Math.sin(((t + 0.3) / 0.75) * (Math.PI / 2)) : t < 0.8 ? 1.0 - 0.06 * ((t - 0.45) / 0.35) : 0.94 * Math.sqrt(Math.max(0, 1 - ((t - 0.8) / 0.2) ** 2)) + 0.0;
+      // Round 25 (round 24 critic: "peg dolls"): a narrower waist (0.84 -> 0.78) under a fuller chest (1.0 ->
+      // 1.06) and squarer shoulders (0.94 -> 1.0), so the figure reads with shoulders and a waist, not a tube.
+      const prof = t < -0.8 ? 0.9 * Math.sqrt(Math.max(0, 1 - ((t + 0.8) / 0.2) ** 2)) : t < -0.3 ? 0.9 - 0.12 * ((t + 0.8) / 0.5) : t < 0.45 ? 0.78 + 0.28 * Math.sin(((t + 0.3) / 0.75) * (Math.PI / 2)) : t < 0.8 ? 1.06 - 0.06 * ((t - 0.45) / 0.35) : 1.0 * Math.sqrt(Math.max(0, 1 - ((t - 0.8) / 0.2) ** 2)) + 0.0;
       r = prof;
     } else {
       // A bean: fuller below the middle.
@@ -243,6 +251,55 @@ function rodGeometry(tier: number, seg: number): BufferGeometry {
   return merge(parts);
 }
 
+/** Round 25: the torso's radius (figure units, across) at height y above the torso's centre (same profile as torsoGeometry). */
+function torsoRadiusAt(B: Build, role: Role, y: number): number {
+  const g = torsoGeometry(B, role);
+  const pos = g.getAttribute("position");
+  let best = 0;
+  let bestD = Infinity;
+  for (let i = 0; i < pos.count; i++) {
+    const d = Math.abs(pos.getY(i) - y);
+    if (d < bestD - 1e-6 || (Math.abs(d - bestD) < 1e-6 && Math.hypot(pos.getX(i), pos.getZ(i) * (B.torsoW / B.torsoD)) > best)) {
+      bestD = d;
+      best = Math.hypot(pos.getX(i), pos.getZ(i) * (B.torsoW / B.torsoD));
+    }
+  }
+  g.dispose();
+  return best;
+}
+
+/** Round 25: a point on the vest's surface at angle phi (0 = the front) and height y over the torso's centre. */
+function onVest(B: Build, role: Role, phi: number, y: number, grow: number, out = 0.006): Vector3 {
+  const r = torsoRadiusAt(B, role, y) * grow + out;
+  return new Vector3(Math.sin(phi) * r, y, Math.cos(phi) * r * (B.torsoD / B.torsoW));
+}
+
+/** Round 25: the contact shadow's disc (unit radius, flat on the ground) and its shared material. */
+const CONTACT_GEO = new CircleGeometry(1, 28).rotateX(-Math.PI / 2);
+let contactMat: MeshBasicMaterial | null = null;
+function contactMaterial(): MeshBasicMaterial {
+  if (contactMat) return contactMat;
+  const cv = typeof document === "undefined" ? null : document.createElement("canvas");
+  const m = new MeshBasicMaterial({ color: 0x1a1030, transparent: true, opacity: 0.55, depthWrite: false });
+  if (cv) {
+    cv.width = 64;
+    cv.height = 64;
+    const ctx = cv.getContext("2d");
+    if (ctx) {
+      const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      g.addColorStop(0, "rgba(255,255,255,1)");
+      g.addColorStop(0.45, "rgba(255,255,255,0.75)");
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 64, 64);
+      const t = new CanvasTexture(cv);
+      m.alphaMap = t;
+    }
+  }
+  contactMat = m;
+  return m;
+}
+
 /** Shared materials for every fisher (compiled once). */
 export type RigMaterials = { body: MeshLambertMaterial; glowRod: MeshBasicMaterial };
 
@@ -336,14 +393,52 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials,
   // A kid's shirt in a light tint of the seat colour (Juneau's blue sleeves in the concept), a grown-up's cream.
   const shirt = role === "adult" ? SHIRT : new Color(SHIRT).lerp(vest, 0.45).getHex();
   const torso = part(torsoGeometry(B, role).translate(0, B.torsoY, 0), shade(shirt, 0.86), shirt, PK.cloth);
-  const vestShell = quilt(torsoGeometry(B, role, { from: -0.62, to: 0.84, grow: 1.07, gap: role === "adult" ? 0.34 : 0.24 }).translate(0, B.torsoY, 0), shade(vest.getHex(), 0.74), lighten(vest.getHex(), 0.08));
+  // Round 25 (round 24 critic: "flat colour blocks, Mom's vest a solid orange slab"): the vest is painted
+  // canvas with folds (darker at the hem and the sides, a lighter breast, soft creases), piped in a dark
+  // stitched edge down the opening and round the hem, and crossed by a leather strap from the shoulder to the
+  // hip; the pockets have big flaps with a button.
+  const vestShellSpec = { from: -0.62, to: 0.84, grow: 1.07, gap: role === "adult" ? 0.34 : 0.24 };
+  const vestHex = vest.getHex();
+  const vestShell = surf(paint(prep(torsoGeometry(B, role, vestShellSpec).translate(0, B.torsoY, 0)), shade(vestHex, 0.5), shade(vestHex, 0.86), (p, n, c) => {
+    const ty = (p.y - B.torsoY) / B.torsoH;
+    c.multiplyScalar(0.86 + 0.18 * Math.max(0, n.z) - 0.12 * Math.abs(n.x));
+    c.multiplyScalar(0.9 + 0.2 * vnoise(p.x * 18, p.y * 9, seat + 3) - 0.08 * Math.max(0, -ty - 0.4));
+  }), PK.cloth);
+  const edge = shade(vestHex, 0.38);
+  const piping: BufferGeometry[] = [];
+  for (const sg of [-1, 1]) {
+    const pts: Vector3[] = [];
+    for (let i = 0; i <= 10; i++) pts.push(onVest(B, role, sg * vestShellSpec.gap, B.torsoH * (vestShellSpec.from + (vestShellSpec.to - vestShellSpec.from) * (i / 10)), vestShellSpec.grow, 0.004).add(new Vector3(0, B.torsoY, 0)));
+    piping.push(part(new TubeGeometry(new CatmullRomCurve3(pts), 12, 0.011, 5, false), edge, edge, PK.leather));
+  }
+  {
+    const pts: Vector3[] = [];
+    const n = 18;
+    for (let i = 0; i <= n; i++) {
+      const phi = vestShellSpec.gap + (Math.PI * 2 - vestShellSpec.gap * 2) * (i / n);
+      pts.push(onVest(B, role, phi, B.torsoH * (vestShellSpec.from + 0.03), vestShellSpec.grow, 0.004).add(new Vector3(0, B.torsoY, 0)));
+    }
+    piping.push(part(new TubeGeometry(new CatmullRomCurve3(pts), 36, 0.012, 5, false), edge, edge, PK.leather));
+  }
+  // The strap: from the left shoulder's front down across the chest to the right hip, over the vest.
+  const strapPts: Vector3[] = [];
+  for (let i = 0; i <= 10; i++) {
+    const k = i / 10;
+    const y = B.torsoH * (0.82 - 1.32 * k);
+    const phi = 0.95 - 1.9 * k;
+    strapPts.push(onVest(B, role, phi, y, vestShellSpec.grow, 0.022).add(new Vector3(0, B.torsoY, 0)));
+  }
+  const strap = leather(new TubeGeometry(new CatmullRomCurve3(strapPts), 20, 0.022, 5, false), 0x6a4024, 0x8a5634);
+  const strapMid = onVest(B, role, 0.95 - 1.9 * 0.42, B.torsoH * (0.82 - 1.32 * 0.42), vestShellSpec.grow, 0.036).add(new Vector3(0, B.torsoY, 0));
+  const strapBuckle = part(new BoxGeometry(0.045, 0.04, 0.02).rotateZ(-0.7).translate(strapMid.x, strapMid.y, strapMid.z), 0xd8b040);
   const pockets: BufferGeometry[] = [];
   for (const sx of [1, -1]) {
     const px = sx * B.torsoW * 0.5;
     const py = B.torsoY + B.torsoH * 0.18;
     const pz = Math.sqrt(Math.max(0, 1 - 0.25)) * B.torsoD * 1.07;
     pockets.push(felt(new BoxGeometry(B.torsoW * 0.42, B.torsoH * 0.36, 0.03).rotateY(sx * 0.5).translate(px, py, pz), shade(vest.getHex(), 0.8)));
-    pockets.push(felt(new BoxGeometry(B.torsoW * 0.46, B.torsoH * 0.11, 0.036).rotateY(sx * 0.5).translate(px, py + B.torsoH * 0.18, pz + 0.006), shade(vest.getHex(), 0.68)));
+    pockets.push(felt(new BoxGeometry(B.torsoW * 0.5, B.torsoH * 0.15, 0.04).rotateY(sx * 0.5).translate(px, py + B.torsoH * 0.17, pz + 0.008), shade(vest.getHex(), 0.5)));
+    pockets.push(part(new SphereGeometry(0.014, 6, 4).translate(px + sx * 0.004, py + B.torsoH * 0.12, pz + 0.03), 0xe0c070));
   }
   const collarY = B.torsoY + B.torsoH * 0.96;
   const scarf = BANDANA[colorName] ?? 0xd8553a;
@@ -359,7 +454,7 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials,
   const packY = B.torsoY + B.torsoH * 0.2;
   const pack = leather(new SphereGeometry(0.13, 10, 8).scale(1, 1.05, 0.62).translate(0, packY, -B.torsoD - 0.04), 0x8a5a32, 0xb07a48);
   const roll = knit(new CylinderGeometry(0.05, 0.05, 0.26, 10).rotateZ(Math.PI / 2).translate(0, packY + 0.14, -B.torsoD - 0.04), 0xd8c49a);
-  body.add(mesh(merge([shaded(merge([torso, vestShell, ...pockets, bandana, belt, ...pouches, pack, roll])), buckle])));
+  body.add(mesh(merge([shaded(merge([torso, vestShell, ...piping, strap, ...pockets, bandana, belt, ...pouches, pack, roll])), buckle, strapBuckle])));
 
   // Arms (pivot at the shoulder; hang along -y): sleeves and mittens.
   const armS = B.armR / 0.05;
@@ -565,6 +660,16 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials,
   geos.push(ringGeo);
   root.add(marker);
 
+  // Round 25 (round 24 critic: "no cast shadows from fishers anywhere"): a soft dark contact shadow on the
+  // ground under the feet, at every time of day (the sun's shadow map does not reach the fishers' feet from
+  // the TV's view). One texture and one program for every fisher; a ground decal like the ring.
+  const contact = new Mesh(CONTACT_GEO, contactMaterial());
+  contact.position.y = 0.022;
+  contact.scale.set(B.torsoW * 3.6, 1, B.torsoW * 3.2);
+  contact.renderOrder = 5;
+  contact.userData.coverCheckSkip = true;
+  root.add(contact);
+
   const canvas = document.createElement("canvas");
   canvas.width = 512;
   canvas.height = 112;
@@ -598,6 +703,7 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials,
     sitDrop: B.sitDrop,
     sitLeg: B.sitLeg,
     marker,
+    contact,
     markerMat,
     tag,
     tagMat,

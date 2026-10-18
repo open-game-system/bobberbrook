@@ -436,9 +436,14 @@ class FisherView {
       target.stance = 0;
       const s = Math.sin(this.walkPhase);
       target.legL = s * 0.75; target.legR = -s * 0.75;
-      target.armLx = -s * 0.6; target.armRx = s * 0.6 - 0.1;
+      // Round 25 (round 24 critic: "the walk is a stiff glide"): the free arm swings wider and out from the
+      // body, the body rolls over each planted foot and the head nods with the step.
+      target.armLx = -s * 0.85; target.armRx = s * 0.6 - 0.1;
+      target.armLz = 0.24 + 0.08 * Math.abs(s);
+      target.tilt = s * 0.07;
+      target.headX = 0.12 + Math.abs(Math.cos(this.walkPhase)) * 0.06;
       const hop = Math.abs(Math.cos(this.walkPhase));
-      target.bodyY = hop * 0.06;
+      target.bodyY = hop * 0.07;
       // Squash at the bottom of each step, stretch at the top.
       target.sq = (hop - 0.5) * 0.16;
       target.lean = 0.14;
