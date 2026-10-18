@@ -78,12 +78,15 @@ describe("the lake's shape, pinned (the scene draws the same one)", () => {
     expect(mid).toBeCloseTo(32 - 0.5 * (32 - (lakeRadius(NORTH + 0.375) + 6)), 9);
     expect(outerRadius(NORTH + 0.75)).toBe(32);
   });
-  it("puts the campfire on land near the south-east shore", () => {
+  // Round 26: was "near the south-east shore" (under 6 m from the water at x 9): the fire stood on the fishing
+  // bank and Juneau fished from inside it (round 25 session 66-139 s). Now back from the south shore, below the
+  // spawn row, well away from the water.
+  it("puts the campfire on land back from the south shore, off the fishing bank", () => {
     expect(walkable(CAMPFIRE)).toBe(true);
     const { r, theta } = polar(CAMPFIRE);
-    expect(r - lakeRadius(theta)).toBeLessThan(6);
-    expect(CAMPFIRE.x).toBe(9);
-    expect(CAMPFIRE.z).toBeGreaterThan(0);
+    expect(r - lakeRadius(theta)).toBeGreaterThan(10);
+    expect(CAMPFIRE).toEqual({ x: 0.5, z: 27.2 });
+    expect(castFrom(CAMPFIRE)).toBeNull();
   });
   it("ends the dock at its root", () => {
     expect(onDock({ x: 0, z: DOCK.rootZ + 1 })).toBe(false);

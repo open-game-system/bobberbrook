@@ -9,7 +9,7 @@ import { CATCH_SKIP_MS, SEAT_COLORS, action, join, move, newLake, reelHold, setC
 import { DAY_MS, DAY_START } from "../game/daycycle";
 import { fishById } from "../game/fish";
 import { thrashingAt } from "../game/reel";
-import { AREAS, DOCK, TRAILS, areaAt, areaById, castRing, castRingIn, distance, lakeRadius, pondRadius, type AreaId, type Vec } from "../game/world";
+import { AREAS, DOCK, TRAILS, areaAt, spawnPoint, areaById, castRing, castRingIn, distance, lakeRadius, pondRadius, type AreaId, type Vec } from "../game/world";
 import { worldFor, type Biome, type Place, type Platform } from "../game/regions";
 import { createLakeScene } from "./scene";
 import { landmarkFor } from "./scene/biomes";
@@ -17,14 +17,14 @@ import { shoreFeatures, type ShoreFeature } from "./scene/shores";
 import { placeHash } from "./scene/valley";
 import { boardwalkPath } from "./scene/walkways";
 
-type Bot = { stay: boolean; noHook: boolean; target: Vec; hookAt: number; nextCastAt: number; stick: { x: number; y: number }; holding: boolean; reactAt: number; wander: boolean };
+type Bot = { stay: boolean; noHook: boolean; tag: number; target: Vec; hookAt: number; nextCastAt: number; stick: { x: number; y: number }; holding: boolean; reactAt: number; wander: boolean };
 type Scenario = {
   phase: number;
   /**
    * Round 24: `kid` (a wordless join: drawn child-sized) defaults to the family's kids by name (Juneau, Sis);
    * `easy` is the little one (Sis), and the grown-ups' bots may use it to hook faster (still drawn grown-up).
    */
-  fishers: { seat: number; name: string; spot: Vec | "swirl" | "golden"; easy?: boolean; kid?: boolean; at?: Vec; stay?: boolean; noHook?: boolean }[];
+  fishers: { seat: number; name: string; spot: Vec | "swirl" | "golden"; easy?: boolean; kid?: boolean; at?: Vec; stay?: boolean; noHook?: boolean; tag?: number }[];
   setup?: (lake: Lake, now: number) => Lake;
   /** Tweaks every step (the "director"). */
   direct?: (lake: Lake, now: number) => Lake;
@@ -432,6 +432,19 @@ const SCENARIOS: Record<string, Scenario> = {
     setup: discoverAll,
     hero: calm,
   },
+  // Round 26 (round 25 session 62-139 s): Dad fishing at the dock's foot, Juneau at his spawn spot (the
+  // row's east end) pressing the big button without steering; the rules choose where he fishes (he fished
+  // from the campfire's bank). The shot is Juneau's catch.
+  "moonwell-spawn": {
+    phase: 0.3,
+    fishers: [
+      { seat: 0, name: "Dad", spot: { x: -1.2, z: DOCK.rootZ + 0.6 }, easy: true, at: spawnPoint(0) },
+      { seat: 2, name: "Juneau", spot: spawnPoint(3), at: spawnPoint(3), tag: 99 },
+    ],
+    setup: discoverAll,
+    warmUntil: (l) => l.fishers.some((f) => f.seat === 2 && f.mode === "reel"),
+    hero: (l, now) => l.fishers.some((f) => f.seat === 2 && f.mode === "catch" && f.catch !== null && now - f.catch.at > 1300 && now - f.catch.at < 2000),
+  },
   mistmarsh: {
     phase: 0.44,
     fishers: [
@@ -570,6 +583,30 @@ const SCENARIOS: Record<string, Scenario> = {
     warmUntil: (l) => l.fishers.some((f) => f.seat === 0 && f.mode === "reel"),
     hero: (l, now) => inCatch(l, now, 1300, 2000),
   },
+  // Round 26 (round 25 session 246-280 s): Dad fishes the Mistmarsh shore the rig walks him to
+  // (theta -0.6, by the boardwalk's east foot); Juneau never steers: he tags along by the rules and
+  // presses the big button within 6 m of Dad, so the rules alone pick his spot. The shot is a catch.
+  "mistmarsh-tag": {
+    phase: 0.36,
+    fishers: [
+      { seat: 0, name: "Dad", spot: shoreIn("mistmarsh", -0.6, 1.2), easy: true, at: shoreIn("mistmarsh", -0.6, 1.2) },
+      { seat: 2, name: "Juneau", spot: onTrailAt(0, 0.75), at: onTrailAt(0, 0.75), tag: 6 },
+    ],
+    setup: discoverOnly(["mistmarsh"]),
+    warmUntil: (l) => l.fishers.every((f) => f.mode === "reel" || f.mode === "wait" || f.mode === "bite") && l.fishers.some((f) => f.mode === "reel"),
+    hero: (l, now) => inCatch(l, now, 1300, 2000),
+  },
+  // The same pair the first moment both are fishing (the bobbers out, nobody holding a fish).
+  "mistmarsh-tag-wait": {
+    phase: 0.36,
+    fishers: [
+      { seat: 0, name: "Dad", spot: shoreIn("mistmarsh", -0.6, 1.2), easy: true, at: shoreIn("mistmarsh", -0.6, 1.2), noHook: true },
+      { seat: 2, name: "Juneau", spot: onTrailAt(0, 0.75), at: onTrailAt(0, 0.75), tag: 6, noHook: true },
+    ],
+    setup: discoverOnly(["mistmarsh"]),
+    warmUntil: (l) => l.fishers.every((f) => f.mode === "wait" || f.mode === "bite"),
+    hero: (_l, now, s) => now - s > 2500,
+  },
   // The same, while both reel in (the lines and bobbers by the boardwalk).
   "mistmarsh-reel": {
     phase: 0.36,
@@ -674,7 +711,18 @@ function joinAs(lake: Lake, seat: number, name: string, at: Vec | undefined, eas
 function botStep(lake: Lake, f: Fisher, bot: Bot, now: number): Lake {
   let l = lake;
   if (l.campfire || bot.stay) return l;
-  if (f.mode === "walk") {
+  if (f.mode === "walk" && bot.tag > 0) {
+    // Round 26: a kid who never steers: the rules' tag-along walks them over, and they press the big button
+    // once within `tag` m of someone (the session's Juneau: 6), the rules choosing where they fish.
+    const near = l.fishers.some((o) => o.seat !== f.seat && distance(o.pos, f.pos) < bot.tag);
+    if (near && f.fishSpot === null && now >= bot.nextCastAt) {
+      bot.nextCastAt = now + 1500;
+      l = action(l, f.seat, now);
+    }
+  } else if (f.mode === "walk" && f.fishSpot !== null) {
+    // Round 26: the rules are walking them to a spot of their own (stepping aside from the bot's target): let them.
+    return l;
+  } else if (f.mode === "walk") {
     const dx = bot.target.x - f.pos.x;
     const dz = bot.target.z - f.pos.z;
     const len = Math.hypot(dx, dz);
@@ -740,7 +788,7 @@ async function main(): Promise<void> {
   const bots = new Map<number, Bot>();
   for (const spec of sc.fishers) {
     lake = joinAs(lake, spec.seat, spec.name, spec.at, spec.easy ?? false, spec.kid ?? (spec.name === "Juneau" || spec.name === "Sis"));
-    bots.set(spec.seat, { stay: spec.stay ?? false, noHook: spec.noHook ?? false, target: { x: 0, z: 0 }, hookAt: 0, nextCastAt: 0, stick: { x: 0, y: 0 }, holding: false, reactAt: 0, wander: false });
+    bots.set(spec.seat, { stay: spec.stay ?? false, noHook: spec.noHook ?? false, tag: spec.tag ?? 0, target: { x: 0, z: 0 }, hookAt: 0, nextCastAt: 0, stick: { x: 0, y: 0 }, holding: false, reactAt: 0, wander: false });
   }
   if (sc.setup) lake = sc.setup(lake, now);
   // ?swapColors=1: colours are chosen per device, not by seat; reverse them to prove the TV follows `color`.

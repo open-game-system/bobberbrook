@@ -58,8 +58,8 @@ export const OBSTACLES: readonly { x: number; z: number; r: number; kind: "oak" 
 ];
 // Stryker restore all
 
-/** The campfire (Campfire time) sits on the south-east shore. */
-export const CAMPFIRE: Vec = { x: 9, z: lakeRadius(1.15) * Math.sin(1.15) + 5 };
+/** The campfire (Campfire time) sits back from the south shore, below the spawn row (round 26: off the fishing bank). */
+export const CAMPFIRE: Vec = { x: 0.5, z: 27.2 };
 
 export function polar(p: Vec): { r: number; theta: number } {
   return { r: Math.hypot(p.x, p.z), theta: Math.atan2(p.z, p.x) };

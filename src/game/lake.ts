@@ -946,8 +946,12 @@ export function action(lake: Lake, seat: number, now: number): Lake {
     const w = worldFor(d.worldSeed);
     const cast = w.castFrom(f.pos);
     const taken = d.fishers.filter((o) => o !== f).map((o) => o.fishSpot ?? o.pos);
-    // Right beside someone fishing: step aside to a free spot first (round 24: Juneau fished from inside Dad's spot).
-    const aside = cast && f.mode === "walk" && crowded(f.pos, fishingSpots(d.fishers, f)) ? w.fishingSpot(f.pos, STEP_ASIDE_RANGE, taken) : null;
+    // Right beside someone fishing: step aside to a free spot first (round 24: Juneau fished from inside Dad's spot);
+    // round 26: also off a prop on the bank, or out of line with someone near as the TV sees them. A spot no
+    // better than here (the nearest one is where they stand) casts here.
+    const spots = fishingSpots(d.fishers, f);
+    const want = cast && f.mode === "walk" && !ownSpot(w, f.pos, spots) ? w.fishingSpot(f.pos, STEP_ASIDE_RANGE, taken) : null;
+    const aside = want && distance(want, f.pos) > ARRIVED ? want : null;
     if (cast && !aside) return startCast(d, f, cast, now);
     if (f.mode !== "walk") return;
     f.fishSpot = aside ?? w.fishingSpot(f.pos, WADE_RANGE, taken);
@@ -972,6 +976,16 @@ function crowded(p: Vec, taken: Vec[]): boolean {
   return taken.some((t) => distance(t, p) < CROWD);
 }
 
+/** Round 26: a spot of one's own: not crowded, clear of the bank's props, apart across the TV's view. */
+function ownSpot(w: World, p: Vec, taken: Vec[]): boolean {
+  return !crowded(p, taken) && w.ownSpot(p, taken);
+}
+
+/** Within this of the spot they walked to: there. */
+const ARRIVED = 0.4;
+/** Within this of the spot they walked to and able to cast: cast there. */
+const AT_SPOT = 1;
+
 /** How far from the water the big button still walks a fisher down to it. */
 export const WADE_RANGE = 16;
 
@@ -984,12 +998,16 @@ function wadeIn(d: Draft<Lake>, now: number, w: World): void {
       continue;
     }
     const cast = w.castFrom(f.pos);
-    // Cast on the way in once at the water, but not right beside someone fishing: walk on to the free spot.
-    if (cast && !crowded(f.pos, fishingSpots(d.fishers, f))) {
+    // Cast on the way in once at the water, but not right beside someone fishing (round 26: nor by a prop or in
+    // line with someone as the TV sees them): walk on to the spot, and cast there.
+    // At the spot (within a metre: the bank's edge can hold a walker just short of it, but off any prop) and able
+    // to cast: cast.
+    const there = distance(f.pos, f.fishSpot) < AT_SPOT && w.ownSpot(f.pos, []);
+    if (cast && (there || ownSpot(w, f.pos, fishingSpots(d.fishers, f)))) {
       f.fishSpot = null;
       f.following = false;
       startCast(d, f, cast, now);
-    } else if (distance(f.pos, f.fishSpot) < 0.4) {
+    } else if (distance(f.pos, f.fishSpot) < ARRIVED) {
       f.fishSpot = null;
       halt(f);
     } else {

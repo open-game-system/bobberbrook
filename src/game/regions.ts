@@ -1,4 +1,5 @@
 import { rand } from "./rng";
+import { apartAcross, clearOfProps } from "./spots";
 import {
   AREAS, OBSTACLES, STEER_HEADINGS, TRAILS, TRAIL_HALF_WIDTH, castFrom as homeCastFrom, distance, inClearing, inPond, onDock, polarIn, pondRadius,
   castRingIn, segmentDistance, turned, waterAt, type Area, type PondPlace, type Vec, type Water,
@@ -168,6 +169,8 @@ export type World = {
   castFrom(p: Vec): { bobber: Vec; water: Water; place: Place } | null;
   /** The nearest spot within `range` to stand and cast from (just up the bank), or null when no water is that close. */
   fishingSpot(p: Vec, range: number, taken?: Vec[]): Vec | null;
+  /** Round 26: fishing here keeps clear of the bank's props and stands apart across the TV's view from `taken` (true off the water). */
+  ownSpot(p: Vec, taken: Vec[]): boolean;
   /** Next point to head for on the way from `from` to `to` (round ponds, along trails). */
   navNext(from: Vec, to: Vec): Vec;
 };
@@ -369,22 +372,46 @@ export function createWorld(seed: number): World {
 
   function fishingSpot(p: Vec, range: number, taken: Vec[] = []): Vec | null {
     const free = (q: Vec) => taken.every((t) => distance(t, q) >= SPOT_APART);
-    if (castFrom(p) && free(p)) return p;
+    // Round 26: clear of the bank's props (the campfire, the boardwalk's feet), and apart across the TV's view
+    // from anyone near (not one behind the other along a bank the camera looks down); the nearest such spot
+    // in range wins, else the nearest merely free one (a fisher always gets somewhere to fish).
+    const fair = (q: Vec, a: Place) => free(q) && clearOfProps(a.id, q);
+    const here = castFrom(p);
+    if (here && fair(p, here.place) && apartAcross(here.place, p, taken)) return p;
     let best: Vec | null = null;
     let bestD = range;
+    let fallback: Vec | null = here && fair(p, here.place) ? p : null;
+    let fallbackD = fallback ? 0 : range;
     for (const a of placesNear(p, 1)) {
       for (let k = 0; k < SPOT_ANGLES; k++) {
         const theta = (k / SPOT_ANGLES) * 2 * Math.PI;
         const r = pondRadius(a, theta) + SPOT_BACK;
         const q = { x: a.center.x + Math.cos(theta) * r, z: a.center.z + Math.sin(theta) * r };
         const d = distance(p, q);
-        if (d < bestD && walkable(q) && castFrom(q) && free(q)) {
+        if (d >= Math.max(bestD, fallbackD) || !walkable(q) || !castFrom(q) || !fair(q, a)) continue;
+        if (d < bestD && apartAcross(a, q, taken) && clearWay(p, q)) {
           best = q;
           bestD = d;
         }
+        if (d < fallbackD) {
+          fallback = q;
+          fallbackD = d;
+        }
       }
     }
-    return best;
+    return best ?? fallback;
+  }
+
+  /** No tree or rock on the straight way from `a` to `b` (a spot picked for the view, further off, is one you can walk to). */
+  function clearWay(a: Vec, b: Vec): boolean {
+    const n = Math.max(1, Math.ceil(distance(a, b) / 0.5));
+    for (let i = 1; i < n; i++) if (hitsObstacle({ x: a.x + ((b.x - a.x) * i) / n, z: a.z + ((b.z - a.z) * i) / n })) return false;
+    return true;
+  }
+
+  function ownSpot(p: Vec, taken: Vec[]): boolean {
+    const here = castFrom(p);
+    return here === null || (clearOfProps(here.place.id, p) && apartAcross(here.place, p, taken));
   }
 
   function crossesWater(a: Vec, b: Vec): boolean {
@@ -568,6 +595,7 @@ export function createWorld(seed: number): World {
     advance,
     castFrom,
     fishingSpot,
+    ownSpot,
     navNext,
   };
 

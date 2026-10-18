@@ -82,6 +82,14 @@ Mom (phone). Works with 1–4 fishers.
 - **A spot of your own:** a press at the water within 3.4 m of someone fishing first steps aside to a free
   shore spot (3.5 m apart along the bank), then casts; a walk down to the water doesn't cast on the way in
   beside someone either (round 25: the TV saw one fisher behind the other).
+- **Where a spot may be (round 26, `src/game/spots.ts`):** never within a bank prop's keep-clear (Moonwell's
+  campfire 6 m, Mistmarsh's two boardwalk feet 2.2 m), and, next to anyone fishing within 9 m, at least 2.2 m
+  to the side of them as the TV sees the place (the group camera's side of a place is the same pure geometry the
+  scene uses, `placeYaw`) and no more than 1.5x that apart in depth. The nearest such spot wins (one you can walk
+  to in a straight line past trees and rocks); with none in range, the nearest merely free spot (everyone always
+  gets to fish). A press at a castable place that breaks these steps aside first; a walk down to the water casts
+  on the way only at such a place, and casts on arriving within 1 m of its spot. The campfire moved back off the
+  south bank to (0.5, 27.2), below the spawn row (it stood 5 m from the water, in front of the east spawn spot).
 - **Trail treasures:** glowing shells along trails, a shell each, back after 3 minutes.
 - **A new place's own fish:** for the first 4 catches at a just-found place, species the family hasn't met
   are 12× likelier (round 25; was the first catch only).

@@ -1,4 +1,5 @@
-import { pondRadius, areaById, type PondPlace } from "../../game/world";
+import { areaById } from "../../game/world";
+import { boardwalkPath } from "../../game/spots";
 
 /**
  * Round 20: the walks built over the water (Mistmarsh's boardwalk), shared by the landmark that builds
@@ -12,16 +13,7 @@ export const WALK_HALF = 1.05;
 const CLEAR = 0.35;
 
 /** Mistmarsh's boardwalk centre line: from the north shore out over the water and along it. */
-export function boardwalkPath(a: PondPlace): { x: number; z: number }[] {
-  const out: { x: number; z: number }[] = [];
-  for (let i = 0; i <= 14; i++) {
-    const t = i / 14;
-    const th = -1.55 + t * 1.25;
-    const r = pondRadius(a, th) + 1.5 - Math.sin(t * Math.PI) * 5.5 - t * 0.5;
-    out.push({ x: a.center.x + Math.cos(th) * r, z: a.center.z + Math.sin(th) * r });
-  }
-  return out;
-}
+export { boardwalkPath };
 
 let cached: { x: number; z: number }[] | null = null;
 function walks(): { x: number; z: number }[] {

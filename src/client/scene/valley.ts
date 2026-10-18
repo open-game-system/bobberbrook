@@ -2,6 +2,7 @@ import { Color } from "three";
 import { NORTH, TRAIL_HALF_WIDTH, angleGap, pondRadius, segmentDistance, type AreaId } from "../../game/world";
 const HOME_IDS: readonly AreaId[] = ["moonwell", "mistmarsh", "pools", "hollow", "tarn"];
 import type { Biome, Place } from "../../game/regions";
+import { placeHash } from "../../game/spots";
 import { smoothstep } from "./noise";
 import { clearingEdge, placesAround, trailsAround, type SceneTrail } from "./worldQuery";
 
@@ -239,13 +240,8 @@ export function biomeLook(b: Biome): AreaLook {
   return LOOKS[HOME_OF[b]];
 }
 
-/** A cheap hash of a place key in [0, 1) per salt. */
-export function placeHash(key: string, salt: number): number {
-  let h = 2166136261 ^ salt;
-  for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 16777619);
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
-}
+/** A cheap hash of a place key in [0, 1) per salt (in the rules: they use it for the camera side too). */
+export { placeHash };
 
 const lookCache = new Map<string, AreaLook>();
 const hsl = { h: 0, s: 0, l: 0 };
