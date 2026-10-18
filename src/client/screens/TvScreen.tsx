@@ -6,7 +6,7 @@ import { ROD_AT, ROD_NAMES, speciesCount, todOf, type Lake } from "../../game/la
 import { createLakeScene, type LakeScene } from "../scene";
 import { lakeEvents } from "../lakeEvents";
 import { createLiveSounds, playLakeEvents } from "../tvSounds";
-import { startWorld, setOnTrail, setPlaceMood, setRiding, setTimeOfDayMood, setTraveling } from "../audio/world";
+import { startWorld, setCampfireSound, setOnTrail, setPlaceMood, setRiding, setTimeOfDayMood, setTraveling } from "../audio/world";
 import { audioClock, unlockAudio } from "../audio/engine";
 import { audioStalled } from "../audio/health";
 import { voice } from "../audio/voice";
@@ -114,7 +114,10 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
       // After a few catches at home, nudge the family down a trail (once).
       if (events.some((e) => e.kind === "caught") && lake.catchSeq >= 3 && lake.discovered.length === 1 && shouldTeach("teach-explore", "all", teachMem.current)) voice.line("teach-explore");
     }
-    if (lake.campfire !== (campfireSince !== null)) setCampfireSince(lake.campfire ? clock.now() : null);
+    if (lake.campfire !== (campfireSince !== null)) {
+      setCampfireSince(lake.campfire ? clock.now() : null);
+      setCampfireSound(lake.campfire);
+    }
     setRiding(lake.ride?.kind ?? null);
     const lead = lake.fishers[0]?.pos;
     const here = lead ? worldFor(lake.worldSeed).areaAt(lead) : null;

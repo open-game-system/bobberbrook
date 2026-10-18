@@ -45,6 +45,38 @@ export function setOnTrail(on: boolean): void {
   forest?.gain.gain.setTargetAtTime(on ? 0.05 : 0.012, t, 1.5);
 }
 
+/** The campfire (round 25: it had no sound of its own): a low, flickering hearth bed, no sharp pops. */
+let fire: Layer | null = null;
+export function setCampfireSound(on: boolean): void {
+  const a = audio();
+  if (!a || !fire) return;
+  fire.gain.gain.setTargetAtTime(on ? 0.16 : 0, a.ctx.currentTime, 0.8);
+  water?.gain.gain.setTargetAtTime(on ? 0.12 : onTrail ? 0.1 : 0.32, a.ctx.currentTime, 1.2);
+}
+
+function startFire(ctx: AudioContext, out: AudioNode): Layer {
+  const src = noiseSource(ctx, 3, true);
+  const lp = ctx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 650;
+  const flicker = ctx.createGain();
+  flicker.gain.value = 0.7;
+  // Two slow, unrelated wobbles: the fire breathes rather than pulsing on a beat.
+  for (const [hz, depth] of [[0.7, 0.2], [1.9, 0.12]] as const) {
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = hz;
+    const d = ctx.createGain();
+    d.gain.value = depth;
+    lfo.connect(d).connect(flicker.gain);
+    lfo.start();
+  }
+  const gain = ctx.createGain();
+  gain.gain.value = 0;
+  src.connect(lp).connect(flicker).connect(gain).connect(out);
+  src.start();
+  return { gain };
+}
+
 /** Leaves in a breeze: soft band-passed noise (well under 3 kHz) that swells and settles. */
 function startForest(ctx: AudioContext, out: AudioNode): Layer {
   const src = noiseSource(ctx, 5, false);
@@ -382,6 +414,7 @@ export function startWorld(): void {
   night = startNight(ctx, out);
   wind = startWind(ctx, out);
   forest = startForest(ctx, out);
+  fire = startFire(ctx, out);
   musicBus = ctx.createGain();
   // The bed sits under the effects but must read as music between catches (round 01: too faint;
   // round 05: still −23 dBFS between events, lifted ~2 dB).
