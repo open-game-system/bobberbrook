@@ -64,12 +64,17 @@ const KEYS: Key[] = [
     waterShallow: 0x5aeadc, waterDeep: 0x0e7e9a, moon: 0, mountain: 0xa0a0d4, discAz: 250 * D, discEl: 40 * D, grade: 0xfffaf4 },
   // Golden hour: rose-amber key low in the west, long shadows, pink-violet clouds.
   // Round 14: an amber key and a warm grade (session 213 s: "Golden hour" did not visibly warm).
-  { at: 0.4, skyTop: 0x4a3a92, skyHorizon: 0xffa890, skyGlow: 0xffa050, cloud: 0xffb8c8, cloudShade: 0x8a4a92, sun: 0xff9a50, sunI: 3.6, az: 160 * D, el: 15 * D,
-    hemiSky: 0xe4bce0, hemiGround: 0x4a5070, hemiI: 2.3, fog: 0xd08aa8, fogNear: 50, fogFar: 250, exposure: 1.3, stars: 0.1, glow: 0.5, mist: 0.45,
-    waterShallow: 0x5ad6d0, waterDeep: 0x1a5a8a, moon: 0, mountain: 0x8a5a9a, discAz: 228 * D, discEl: 5 * D, grade: 0xffe2c4 },
-  { at: 0.47, skyTop: 0x36307e, skyHorizon: 0xf08a9a, skyGlow: 0xff8a5a, cloud: 0xf0a0c4, cloudShade: 0x6a4a8a, sun: 0xff9058, sunI: 3.0, az: 168 * D, el: 9 * D,
-    hemiSky: 0xc4ace4, hemiGround: 0x3e4a6c, hemiI: 2.2, fog: 0xa878b0, fogNear: 45, fogFar: 235, exposure: 1.26, stars: 0.4, glow: 0.8, mist: 0.55,
-    waterShallow: 0x52ccd0, waterDeep: 0x16507e, moon: 0, mountain: 0x6a5498, discAz: 232 * D, discEl: 2 * D, grade: 0xffdcc8 },
+  // Round 24 (round 23 moonwell_tod-golden.png, trail_tod-golden.png: "a magenta filter over everything"): the
+  // warmth is the light, not a tint. A stronger, lower amber key from the west (sunI 3.6 -> 4.2, el 15 -> 12)
+  // over a cool fill (hemi sky rose-pink 0xe4bce0 -> lilac-blue 0xa8b4e4, ground slate -> teal 0x2c5866,
+  // hemiI 2.3 -> 1.8), so shade sides read teal-violet and lit sides amber; a lilac fog (0xd08aa8 -> 0x9c8cc4)
+  // and an almost neutral grade (0xffe2c4 -> 0xfff2e6). The canopies keep their own purple.
+  { at: 0.4, skyTop: 0x4a3a92, skyHorizon: 0xffb08a, skyGlow: 0xffa050, cloud: 0xffc0b8, cloudShade: 0x7a5a9e, sun: 0xffa050, sunI: 4.2, az: 160 * D, el: 12 * D,
+    hemiSky: 0xa8b4e4, hemiGround: 0x2c5866, hemiI: 1.8, fog: 0x9c8cc4, fogNear: 50, fogFar: 250, exposure: 1.3, stars: 0.1, glow: 0.5, mist: 0.4,
+    waterShallow: 0x5ad6d0, waterDeep: 0x1a5a8a, moon: 0, mountain: 0x7a64a4, discAz: 228 * D, discEl: 5 * D, grade: 0xfff2e6 },
+  { at: 0.47, skyTop: 0x36307e, skyHorizon: 0xf09a8a, skyGlow: 0xff8a5a, cloud: 0xf0a8b8, cloudShade: 0x5e4e8e, sun: 0xff9058, sunI: 3.5, az: 168 * D, el: 8 * D,
+    hemiSky: 0xa4a8de, hemiGround: 0x2a4e66, hemiI: 1.9, fog: 0x8c7cb8, fogNear: 45, fogFar: 235, exposure: 1.26, stars: 0.4, glow: 0.8, mist: 0.5,
+    waterShallow: 0x52ccd0, waterDeep: 0x16507e, moon: 0, mountain: 0x60589c, discAz: 232 * D, discEl: 2 * D, grade: 0xffeee4 },
   // Night: deep indigo, the big moon over the falls, glowing water, mushrooms, wisps and lanterns.
   // Round 14: a silver (not blue) moon key, a less saturated indigo fill and a warm grade, so lamps,
   // fireflies and firelight read warm against the indigo instead of the whole frame going saturated blue.
