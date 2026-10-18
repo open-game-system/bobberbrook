@@ -66,6 +66,7 @@ const HOLD_REACH_ADULT = 0.05;
 
 const scratch: Vec = { x: 0, z: 0 };
 const predicted: Vec = { x: 0, z: 0 };
+const spotAt: Vec = { x: 0, z: 0 };
 
 /** Dead reckoning with the room's own walkability (no allocation). Capped at 1.2 s of prediction. */
 function predict(f: Fisher, serverNow: number, out: Vec): void {
@@ -970,7 +971,13 @@ export class FisherViews {
     // Round 20: nobody stands inside another (arrival.png: the rules set four riders down on one spot).
     const spots = this.spots;
     spots.length = 0;
-    if (lake && !lake.campfire) for (const f of lake.fishers) if (f.seat >= 0 && f.seat < 4 && !(this.rideOf && this.rideOf(f.seat, this.ridePose))) spots.push({ seat: f.seat, x: f.pos.x, z: f.pos.z, ox: 0, oz: 0 });
+    // Round 25: from where each fisher is drawn (dead-reckoned), not the last snapshot. Walkers are drawn up to
+    // 1.2 s ahead of their snapshot, each by its own lead, so spacing worked out on the snapshots put a walker a
+    // metre off from where it was drawn and the trail walk stacked (lab trail: Juneau over Dad, 28-45 %).
+    if (lake && !lake.campfire) for (const f of lake.fishers) if (f.seat >= 0 && f.seat < 4 && !(this.rideOf && this.rideOf(f.seat, this.ridePose))) {
+      predict(f, sn, spotAt);
+      spots.push({ seat: f.seat, x: spotAt.x, z: spotAt.z, ox: 0, oz: 0 });
+    }
     spaceOut(spots);
     // Round 21: and never lined up on the camera axis (spread across the screen, along a dock or walk).
     camera.getWorldDirection(this.camFwd);
@@ -1185,6 +1192,14 @@ export class FisherViews {
    */
   stackParts(): { seat: number; own: Object3D[] }[] {
     return this.views.filter((v) => v.present && !(this.rideOf && this.rideOf(v.seat, this.ridePose))).map((v) => ({ seat: v.seat, own: [v.rig.root, v.card.group] }));
+  }
+
+  /** Lab probe (round 25): per present seat, where it is drawn, its draw offset and the offset the spacing passes want. */
+  debugBodies(): { seat: number; x: number; z: number; spaceX: number; spaceZ: number; wantX: number; wantZ: number }[] {
+    return this.views.filter((v) => v.present).map((v) => {
+      const sp = this.spots.find((p) => p.seat === v.seat);
+      return { seat: v.seat, x: v.x, z: v.z, spaceX: v.spaceX, spaceZ: v.spaceZ, wantX: sp ? sp.ox : 0, wantZ: sp ? sp.oz : 0 };
+    });
   }
 
   presentCount(): number {

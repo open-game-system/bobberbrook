@@ -113,6 +113,8 @@ export type SceneDebug = {
   /** Round 21 lab check: per framed fisher, the share of their body pixels scenery still covers (fade dither off). */
   coverCheck?(detail?: boolean | string): CoverReport;
   stackCheck?(only?: number[]): StackReport;
+  /** Round 25 lab probe: per present seat, where it is drawn and its spacing offsets (fishers.debugBodies). */
+  bodies?(): { seat: number; x: number; z: number; spaceX: number; spaceZ: number; wantX: number; wantZ: number }[];
 };
 
 declare global {
@@ -815,6 +817,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       return rc.intersectObjects(scene.children, true).filter((h) => shown(h.object)).slice(0, 8).map((h) => `${h.object.name || h.object.type}${h.object.parent?.name ? "<" + h.object.parent.name : ""} d=${h.distance.toFixed(1)} i=${h.instanceId ?? "-"}`);
     },
     coverCheck: (detail) => coverCheck(renderer, scene, camera, fishers.group, cover, detail ?? false),
+    bodies: () => fishers.debugBodies(),
     stackCheck: (only) => stackCheck(renderer, scene, camera, fishers.group, fishers.stackParts().filter((p) => !only || only.includes(p.seat))),
     names: () => scene.children.map((o, i) => o.name || `${o.type}#${i}`),
     toggle(name) {

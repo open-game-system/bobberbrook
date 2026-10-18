@@ -43,6 +43,7 @@ const SHOTS = [
   ["tarn", null, true],
   ["trail", null, true],
   ["trail-walk", null, true],
+  ["trail-file", null, true],
   ["shore-line", null, true],
   ["spread", null, true],
   ["split", null, true],
@@ -124,9 +125,17 @@ async function shoot(scenario, phase, hero, tod) {
       if (!ok) return { label, failed: "hero moment not reached (no shot taken)" };
     } else await page.waitForTimeout(6500);
     const file = join(out, `${label.replace(/@tod-/, "_tod-").replace(/[@.]/g, "_")}.png`);
+    // Round 25: the checks measure the frame the still shows. They used to run after the screenshot and an
+    // in-page PNG decode (seconds under load), so a family still stepping off the airship was checked in
+    // another pose than the one shot (round 24: arrival 0-70 % stacked on a frame where nobody overlapped).
+    // Now the rules hold still (the page is closed after the shot) while both checks run in one task, and the
+    // still is taken right after.
+    // Frame times and programs before the checks (their passes are not play).
+    const info = await page.evaluate(() => window.__scene.info());
+    await page.evaluate(() => window.__lab?.pause?.(true)).catch(() => {});
+    const checks = await page.evaluate(() => ({ cover: window.__scene.coverCheck?.() ?? null, stack: window.__scene.stackCheck?.() ?? null })).catch(() => ({ cover: null, stack: null }));
     const png = await page.screenshot({ path: file, timeout: 120_000 });
     files.push([label, file]);
-    const info = await page.evaluate(() => window.__scene.info());
     const luma = await page.evaluate(async (b64) => {
       const c = new Image();
       c.src = `data:image/png;base64,${b64}`;
@@ -142,9 +151,9 @@ async function shoot(scenario, phase, hero, tod) {
     }, png.toString("base64")).catch(() => null);
     // Round 21 cover check (ID-mask pass, fade dither off): the share of each framed fisher's body pixels
     // that scenery still covers. Anything over COVER_MAX_FRAC is a broken "nothing over a fisher" veto.
-    const cover = await page.evaluate(() => window.__scene.coverCheck?.() ?? null).catch(() => null);
+    const cover = checks.cover;
     const coverWorst = cover ? Math.round(cover.worst * 1000) / 1000 : null;
-    const stack = await page.evaluate(() => window.__scene.stackCheck?.() ?? null).catch(() => null);
+    const stack = checks.stack;
     const stackWorst = stack ? Math.round(stack.worst * 1000) / 1000 : null;
     metrics.shots.push({ label, renderer: info.renderer, programsAtStart: before.programs, programs: info.programs, calls: info.calls, triangles: info.triangles, p50: info.frameP50, p95: info.frameP95, meanLuma: luma === null ? null : Math.round(luma), cover: coverWorst, coverBoxes: cover?.boxes.map((b) => Math.round(b.frac * 1000) / 1000), stack: stackWorst, stackSeats: stack?.seats.map((b) => [b.seat, Math.round(b.frac * 1000) / 1000]) });
     console.log(label, JSON.stringify(metrics.shots.at(-1)));

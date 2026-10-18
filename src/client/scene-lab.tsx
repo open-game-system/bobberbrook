@@ -484,6 +484,19 @@ const SCENARIOS: Record<string, Scenario> = {
     warmUntil: () => true,
     hero: (l, now, s) => now - s > 3500 && areaAt(centroid(l)) === null && centroid(l).x < -38,
   },
+  // Round 25 (round 24 session 215-255 s): the family walking the trail single file, Dad leading and the others
+  // 1.5 m apart behind him on the path's centre line; the TV must show them side by side, not hidden in a row.
+  "trail-file": {
+    phase: 0.36,
+    fishers: [
+      { seat: 0, name: "Dad", spot: shoreIn("mistmarsh", -0.6, 1.5), at: onTrailAt(0, -0.1, 0) },
+      { seat: 2, name: "Juneau", spot: shoreIn("mistmarsh", -0.6, 1.5), at: onTrailAt(0, -0.14, 0) },
+      { seat: 1, name: "Mom", spot: shoreIn("mistmarsh", -0.6, 1.5), at: onTrailAt(0, -0.18, 0) },
+      { seat: 3, name: "Sis", spot: shoreIn("mistmarsh", -0.6, 1.5), at: onTrailAt(0, -0.22, 0) },
+    ],
+    warmUntil: () => true,
+    hero: (l, now, s) => now - s > 3500 && areaAt(centroid(l)) === null && centroid(l).x < -38,
+  },
   // Round 14 (session 49-66 s): Dad and Juneau leave the Moonwell lawn and walk the whole trail
   // into Mistmarsh; trees beside the path must never hang over them (54 s), half-faded or whole. The shot
   // is mid-trail, in the woods.
