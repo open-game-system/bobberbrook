@@ -211,9 +211,11 @@ const config: GameRigInput = {
     const { tv, dad, kid } = await hostAndJoin(fromSession(rig));
     rig.mark("everyone in");
     await rig.wait(2500);
-    // Dad walks out on the dock; Juneau stays beside him and just presses the big button (it walks him
+    // Dad goes down to the bank; Juneau stays beside him and just presses the big button (it walks him
     // down the bank and casts), like a 5-year-old next to his dad.
-    await walkTo(dad, { x: 0, z: 17 }, 0.6, 45_000).then(() => walkTo(dad, { x: 0, z: 9 }, 0.6, 45_000));
+    // Round 26: down to the bank by the dock, then the big button walks Dad to a free spot and casts (the bot's
+    // own steering onto the narrow dock dithered for 30-60 s with Juneau at his side).
+    await walkTo(dad, { x: 0, z: 17 }, 1.2, 45_000);
     rig.mark("at the water");
     for (let i = 0; i < 2; i++) {
       await Promise.all([fishOnce(rig, kid, "Juneau", i > 0), fishOnce(rig, dad, "Dad", true)]);
