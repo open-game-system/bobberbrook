@@ -22,7 +22,7 @@ import {
 } from "three";
 import { dayPhase } from "../../game/daycycle";
 import type { Lake } from "../../game/lake";
-import { CameraRig, REVEAL_S, isView, VIEWS } from "./camera";
+import { CameraRig, REVEAL_S, isView, VIEWS, type RigFrame } from "./camera";
 import { FisherViews, type CatchFocus } from "./fishers";
 import { FishShadows, FishTextures, sharedCardGeometry } from "./fishviz";
 import { Fx } from "./fx";
@@ -103,6 +103,8 @@ export type SceneDebug = {
   breakdown?(): [string, number, number][];
   /** Names of the scene's top-level objects (for toggle). */
   names?(): string[];
+  /** Round 23 judder probe: starts (on) or stops and returns (off) the camera rig's per-frame input/pose log. */
+  camLog?(on: boolean): RigFrame[];
   /** Where the TV camera is (world metres). */
   cameraAt?(): { x: number; y: number; z: number };
   /** Turns the painterly post (contact shadow, knee, Kuwahara) off or on, for an in-page perf A/B. */
@@ -756,6 +758,11 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
 
   const hidden: Object3D[] = [];
   window.__scene = {
+    camLog(on) {
+      const got = rig.record ?? [];
+      rig.record = on ? [] : null;
+      return on ? [] : got;
+    },
     cameraAt: () => ({ x: camera.position.x, y: camera.position.y, z: camera.position.z }),
     info: () => ({
       renderer: rendererName,

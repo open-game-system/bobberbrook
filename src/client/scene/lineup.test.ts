@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Vector3 } from "three";
 import { CameraRig } from "./camera";
-import { Lineup, hidden } from "./lineup";
+import { Lineup, RELEASE_S, hidden } from "./lineup";
 
 const EL = 0.32;
 
@@ -79,5 +79,25 @@ describe("lineup: a tower deck between the camera and the family (round 14)", ()
   it("leaves the yaw alone with no blocker in the way", () => {
     const out = new Lineup().update([{ x: -2, z: 0 }, { x: 2, z: 0 }], 0, EL, 2, [{ x: 0, z: -30, r: 6.4 }], 18);
     expect(out.yaw).toBe(0);
+  });
+});
+
+describe("Lineup hold (round 23: a fisher dithering behind another swung the camera out and back)", () => {
+  it("holds a turn for HOLD_S and eases back only after RELEASE_S", () => {
+    const lu = new Lineup();
+    const front = { x: 0, z: 0 };
+    // Straight behind (3 m further from a camera at +z): the lineup turns.
+    const yaw1 = lu.update([front, { x: 0, z: -3 }], 0, 0.32, 2, [], 20, 10).yaw;
+    expect(yaw1).not.toBe(0);
+    // A second later the back fisher has stepped clear: still held.
+    expect(lu.update([front, { x: 3, z: -3 }], 0, 0.32, 2, [], 20, 11).yaw).toBe(yaw1);
+    expect(lu.update([front, { x: 3, z: -3 }], 0, 0.32, 2, [], 20, 13).yaw).toBe(yaw1);
+    // Past RELEASE_S it eases back to the plain view.
+    expect(lu.update([front, { x: 3, z: -3 }], 0, 0.32, 2, [], 20, 10 + RELEASE_S + 0.1).yaw).toBe(0);
+  });
+  it("without a clock it behaves as before (no hold)", () => {
+    const lu = new Lineup();
+    expect(lu.update([{ x: 0, z: 0 }, { x: 0, z: -3 }], 0, 0.32).yaw).not.toBe(0);
+    expect(lu.update([{ x: 0, z: 0 }, { x: 3, z: -3 }], 0, 0.32).yaw).toBe(0);
   });
 });

@@ -18,6 +18,10 @@ const YAWS = [0, 0.1, -0.1, 0.2, -0.2, 0.3, -0.3, 0.4, -0.4, 0.5, -0.5];
 // Round 14: up to 0.38 rad higher (was 0.16): a huddle (boarding, a dock walk in single file) is only
 // separated on screen by looking down on it, where depth becomes height.
 const LIFTS = [0, 0.08, 0.16, 0.26, 0.38];
+/** The least time (s) a lineup choice is held once made, when the caller passes the time (round 23). */
+export const HOLD_S = 1.6;
+/** The least time (s) before the lineup eases back toward the plain view (round 23). */
+export const RELEASE_S = 4;
 
 /**
  * How much the fishers hide one another seen from this yaw and elevation (0 = nobody; ~1 per fully
@@ -81,14 +85,23 @@ export function blocked(pts: readonly Ground[], blockers: readonly Blocker[], ya
 export class Lineup {
   private yaw = 0;
   private el = 0;
+  /** When the choice last changed (s; round 23). */
+  private changedAt = -Infinity;
 
   /** The first `n` of `pts` are the fishers (the rest of the buffer is ignored). */
-  update(pts: readonly Ground[], baseYaw: number, baseEl: number, n = pts.length, blockers: readonly Blocker[] = [], dist = 20): { yaw: number; el: number } {
+  /**
+   * `now` (s), when given, holds each choice for at least HOLD_S (round 23: a fisher walking past behind
+   * another flipped the yaw 0.1 -> -0.1 -> 0 -> 0.1 inside half a second, a visible wobble; a passer-by is
+   * hidden only for a moment, a fisher standing behind another stays hidden and still gets the turn).
+   */
+  update(pts: readonly Ground[], baseYaw: number, baseEl: number, n = pts.length, blockers: readonly Blocker[] = [], dist = 20, now = Number.NaN): { yaw: number; el: number } {
     if (n < 2 && (n === 0 || blockers.length === 0)) {
       this.yaw = 0;
       this.el = 0;
       return { yaw: 0, el: 0 };
     }
+    const since = now - this.changedAt;
+    if (since < HOLD_S) return { yaw: this.yaw, el: this.el };
     const cost = (y: number, e: number) => hidden(pts, baseYaw + y, baseEl + e, n) + blocked(pts, blockers, baseYaw + y, dist * Math.cos(baseEl + e), n) + 0.25 * Math.abs(y) + 0.6 * e;
     // Hold the current choice unless another is clearly better; crossing to the other side (a big swing)
     // must be better still.
@@ -109,6 +122,11 @@ export class Lineup {
         }
       }
     }
+    // Easing back toward the plain view waits longer (a fisher dithering behind another swung the camera out
+    // and back every 1.6 s in the round-23 trace): only RELEASE_S after the last change.
+    const easing = Math.abs(by) <= Math.abs(this.yaw) && be <= this.el && (by !== this.yaw || be !== this.el);
+    if (easing && since < RELEASE_S) return { yaw: this.yaw, el: this.el };
+    if (by !== this.yaw || be !== this.el) this.changedAt = now;
     this.yaw = by;
     this.el = be;
     return { yaw: by, el: be };

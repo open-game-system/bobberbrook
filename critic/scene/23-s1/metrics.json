@@ -1,0 +1,57 @@
+{
+  "round": "23-s1",
+  "shots": [
+    {
+      "label": "double-catch",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 90,
+      "programs": 90,
+      "calls": 784,
+      "triangles": 3262309,
+      "p50": 16.700000762939453,
+      "p95": 33.29999923706055,
+      "meanLuma": 104,
+      "cover": 0,
+      "coverBoxes": [
+        0,
+        0
+      ]
+    },
+    {
+      "label": "mistmarsh-catch",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 90,
+      "programs": 90,
+      "calls": 661,
+      "triangles": 2882267,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 79,
+      "cover": 0.002,
+      "coverBoxes": [
+        0.002,
+        0
+      ]
+    },
+    {
+      "label": "night-catch",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 90,
+      "programs": 90,
+      "calls": 845,
+      "triangles": 3362323,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 86,
+      "cover": 0,
+      "coverBoxes": [
+        0,
+        0
+      ]
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}

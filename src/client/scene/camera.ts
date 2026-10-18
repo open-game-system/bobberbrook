@@ -3,6 +3,11 @@ import { CAMPFIRE, DOCK, EAST, NORTH, WEST, lakeRadius } from "../../game/world"
 import { damp } from "./noise";
 import { Lineup, type Blocker, type Ground } from "./lineup";
 
+/** Wraps an angle into (-pi, pi]. */
+function wrapPi(a: number): number {
+  return Math.atan2(Math.sin(a), Math.cos(a));
+}
+
 /** Critically damped spring toward a goal (exact step: no overshoot, stable at any dt). */
 export function spring(x: number, v: number, goal: number, omega: number, dt: number, out: { x: number; v: number }): void {
   const y = x - goal;
@@ -74,6 +79,26 @@ const INTRO_S = 3.2;
 
 export type CatchAt = { x: number; y: number; z: number; age: number };
 
+/** One frame of the rig's inputs and its pose (round 23: recorded in the live TV and replayed in tests). */
+export type RigFrame = {
+  t: number;
+  dt: number;
+  campfire: boolean;
+  catchAt: CatchAt | null;
+  trail: number;
+  reveal: Reveal | null;
+  pts: number[][];
+  feet: number[][];
+  blockers: number[][];
+  placeYaw: number;
+  minDist: number;
+  rateK: number;
+  ride: { heading: number; kind: number } | null;
+  board: { ux: number; uz: number; kind: number } | null;
+  /** The pose after the update: look-at target xyz, distance, yaw, elevation. */
+  out: number[];
+};
+
 const MAX_POINTS = 24;
 /** Push-in strengths tried in turn (the first that keeps the family in the safe margin wins). */
 const PUSH_STEPS = [1, 0.8, 0.6, 0.4, 0.2, 0];
@@ -134,6 +159,8 @@ export class CameraRig {
   private readonly feet: Ground[] = Array.from({ length: MAX_POINTS }, () => ({ x: 0, z: 0 }));
   private nf = 0;
   private readonly lineup = new Lineup();
+  /** The rig's clock (s), for the lineup's hold. */
+  private now = 0;
   private first = true;
   /** A cut that lands on the family itself (framed, a little wide and high) instead of the establishing view. */
   private soft = false;
@@ -154,6 +181,24 @@ export class CameraRig {
   private readonly cx = new Vector3();
   private readonly base = new Vector3();
 
+  /** Round 23: when set, every update appends its inputs and pose here (the camera judder probe). */
+  record: RigFrame[] | null = null;
+
+  /** Feeds one recorded frame's inputs (a replay of the live TV's camera in a test). */
+  replay(f: RigFrame): void {
+    this.beginFocus();
+    for (const p of f.pts) this.addFocus(p[0] ?? 0, p[1] ?? 0, p[2] ?? 0, p[3] === 1);
+    for (const p of f.feet) this.addFisher(p[0] ?? 0, p[1] ?? 0);
+    this.blockers.length = 0;
+    for (const b of f.blockers) this.blockers.push({ x: b[0] ?? 0, z: b[1] ?? 0, r: b[2] ?? 0 });
+    this.placeYaw = f.placeYaw;
+    this.minDist = f.minDist;
+    this.rateK = f.rateK;
+    this.ride = f.ride;
+    this.board = f.board;
+    this.update(f.t, f.dt, f.campfire, f.catchAt, f.trail, f.reveal);
+  }
+
   constructor(aspect: number) {
     this.camera = new PerspectiveCamera(36, aspect, 0.5, 1200);
     this.probe = new PerspectiveCamera(36, aspect, 0.5, 1200);
@@ -165,7 +210,7 @@ export class CameraRig {
   }
 
   debug(): { dist: number; catchW: number; revealW: number; n: number; target: number[]; ahead: number; yaw: number; el: number; feet: number[][]; blockers: number[][] } {
-    return { blockers: this.blockers.map((b) => [b.x, b.z, b.r]), dist: this.dist, catchW: this.catchW, revealW: this.revealW, n: this.n, target: this.target.toArray(), ahead: this.ahead, yaw: this.yaw, el: this.el, feet: this.feet.slice(0, this.nf).map((f) => [f.x, f.z]) };
+    return { blockers: this.blockers.map((b) => [b.x, b.z, b.r]), dist: this.shownDist, catchW: this.catchW, revealW: this.revealW, n: this.n, target: this.shownT.toArray(), ahead: this.ahead, yaw: this.yaw, el: this.shownEl, feet: this.feet.slice(0, this.nf).map((f) => [f.x, f.z]) };
   }
 
   get view(): ViewName {
@@ -189,7 +234,7 @@ export class CameraRig {
   readonly blockers: Blocker[] = [];
 
   private lineUp(yaw: number, el: number): { yaw: number; el: number } {
-    return this.lineup.update(this.feet, yaw, el, this.nf, this.blockers, this.wantDist);
+    return this.lineup.update(this.feet, yaw, el, this.nf, this.blockers, this.wantDist, this.now);
   }
 
   /**
@@ -206,7 +251,7 @@ export class CameraRig {
 
   /** The point the camera is about (for occlusion fading). */
   get focus(): Vector3 {
-    return this.target;
+    return this.shownT;
   }
 
   /** Places a camera at the orbit pose (no smoothing). */
@@ -218,9 +263,13 @@ export class CameraRig {
     cam.updateMatrixWorld(true);
   }
 
-  /** Whether any focus point (feet to name tag) is past the safe margin in the camera's current shot. */
-  private outside(cam: PerspectiveCamera): boolean {
+  /**
+   * Whether any focus point (feet to name tag) is past the safe margin in the camera's current shot. Round 23:
+   * the follow hurries for fishers only (hardOnly); a bobber in mid-cast above the frame made it lurch.
+   */
+  private outside(cam: PerspectiveCamera, hardOnly: boolean): boolean {
     for (let i = 0; i < this.n; i++) {
+      if (hardOnly && this.softPt[i]) continue;
       const p = this.pts[i]!;
       for (const lift of LIFTS) {
         this.tmp.set(p.x, p.y + lift, p.z).project(cam);
@@ -324,7 +373,32 @@ export class CameraRig {
    * discovered (the camera eases up and out to show it, unless a catch push-in is running).
    */
   update(t: number, dt: number, campfire: boolean, catchAt: CatchAt | null, trail = 0, reveal: Reveal | null = null): void {
+    const rec = this.record;
+    const frame: RigFrame | null = rec
+      ? {
+          t, dt, campfire, trail,
+          catchAt: catchAt ? { ...catchAt } : null,
+          reveal: reveal ? { ...reveal } : null,
+          pts: this.pts.slice(0, this.n).map((p, i) => [p.x, p.y, p.z, this.softPt[i] ?? 0]),
+          feet: this.feet.slice(0, this.nf).map((f) => [f.x, f.z]),
+          blockers: this.blockers.map((b) => [b.x, b.z, b.r]),
+          placeYaw: this.placeYaw, minDist: this.minDist, rateK: this.rateK,
+          ride: this.ride ? { ...this.ride } : null,
+          board: this.board ? { ...this.board } : null,
+          out: [],
+        }
+      : null;
+    this.step(t, dt, campfire, catchAt, trail, reveal);
+    if (rec && frame) {
+      frame.out = [this.shownT.x, this.shownT.y, this.shownT.z, this.shownDist, this.yaw, this.shownEl];
+      rec.push(frame);
+      if (rec.length > 20000) rec.splice(0, rec.length - 20000);
+    }
+  }
+
+  private step(t: number, dt: number, campfire: boolean, catchAt: CatchAt | null, trail: number, reveal: Reveal | null): void {
     const cam = this.camera;
+    this.now = t;
     const v = this.override;
     let rate = 1.4;
     this.wantYaw = 0;
@@ -371,19 +445,25 @@ export class CameraRig {
           best = dy;
         }
       }
-      this.revealYaw = best;
+      // Round 23: kept as an absolute yaw. As an offset from placeYaw it doubled up when the family stepped
+      // into the new place's clearing mid-reveal and placeYaw swung to it (session trace: 1.5 rad past, then back).
+      this.revealYaw = this.placeYaw + best;
     }
     this.revealAge = reveal ? reveal.age : -1;
-    // Where the family is heading: smoothed centroid motion.
-    if (this.n > 0) {
+    // Where the family is heading: smoothed centroid motion of the fishers' feet (round 23: it took every
+    // focus point, so a bobber flying out on a cast read as the family walking and a look-ahead point swung
+    // into the framing for a second).
+    const nm = this.nf > 0 ? this.nf : this.n;
+    if (nm > 0) {
       let cx = 0;
       let cz = 0;
-      for (let i = 0; i < this.n; i++) {
-        cx += this.pts[i]!.x;
-        cz += this.pts[i]!.z;
+      for (let i = 0; i < nm; i++) {
+        const p = this.nf > 0 ? this.feet[i]! : this.pts[i]!;
+        cx += p.x;
+        cz += p.z;
       }
-      cx /= this.n;
-      cz /= this.n;
+      cx /= nm;
+      cz /= nm;
       if (this.haveCentre && dt > 0) {
         const k = damp(1.6, dt);
         this.motion.x += ((cx - this.lastCentre.x) / dt - this.motion.x) * k;
@@ -461,7 +541,7 @@ export class CameraRig {
       // Each generated place is framed from its own side (home places keep the classic view).
       // Nobody hidden behind another fisher: a slight yaw (and lift) when one stands behind another.
       // The reveal swings the base view round behind the family; the lineup then works on that view.
-      const yaw0 = this.placeYaw + this.revealYaw * this.revealW;
+      const yaw0 = this.placeYaw + wrapPi(this.revealYaw - this.placeYaw) * this.revealW;
       const el0 = EL + (REVEAL_EL - EL) * this.revealW;
       const lu = this.lineUp(yaw0, el0);
       this.wantYaw = yaw0 + lu.yaw;
@@ -503,15 +583,20 @@ export class CameraRig {
         this.heldYaw = this.wantYaw;
         this.heldEl = this.wantEl;
       }
-      const zone = DEAD_M + DEAD_K * this.wantDist;
+      // Round 23: while a catch push is on, the framing under it holds still (the fish going up drops the
+      // bobbers from the fit, which drifted the shot back the other way under the push).
+      const holding = this.catchAge >= 0 || catchAt !== null;
+      const zone = holding ? Infinity : DEAD_M + DEAD_K * this.wantDist;
       const dx = this.wantTarget.x - this.held.x;
       const dy = this.wantTarget.y - this.held.y;
       const dz = this.wantTarget.z - this.held.z;
       const len = Math.hypot(dx, dy, dz);
       if (len > zone) this.held.addScaledVector(this.tmp.set(dx, dy, dz), (len - zone) / len);
-      this.heldDist = deadBand(this.heldDist, this.wantDist, this.heldDist * DEAD_DIST);
-      this.heldYaw = deadBand(this.heldYaw, this.wantYaw, DEAD_ANG);
-      this.heldEl = deadBand(this.heldEl, this.wantEl, DEAD_ANG);
+      if (!holding) {
+        this.heldDist = deadBand(this.heldDist, this.wantDist, this.heldDist * DEAD_DIST);
+        this.heldYaw = deadBand(this.heldYaw, this.wantYaw, DEAD_ANG);
+        this.heldEl = deadBand(this.heldEl, this.wantEl, DEAD_ANG);
+      }
       this.wantTarget.copy(this.held);
       this.wantDist = this.heldDist;
       this.wantYaw = this.heldYaw;
@@ -534,37 +619,12 @@ export class CameraRig {
       this.campCutAt = t;
     }
     this.wasCamp = camp;
-    // The catch moment: an eased push toward the catcher (~0.7 s in), held while the fish is up, then back.
-    let cw = 0;
-    if (catchAt && groupMode && !campfire) {
-      const a = catchAt.age;
-      // Round 17: ~1 s in, held while the fish is up, ~1 s back out (a deeper push, below).
-      cw = a < 1.0 ? a / 1.0 : a < 2.6 ? 1 : Math.max(0, 1 - (a - 2.6) / 1.0);
-      cw = cw * cw * (3 - 2 * cw);
-    }
-    this.catchW += (cw - this.catchW) * damp(6, dt);
-    if (catchAt && this.catchW > 0.001) {
-      // Close in on a lone catcher; with others spread round the water, a gentler push.
-      // Round 09: only as far as keeps every fisher inside the safe margin (a full push first, then
-      // weaker ones until the whole family fits; none if nothing does).
-      const tight = this.wantDist < 24;
-      const t0 = this.base.copy(this.wantTarget);
-      const d0 = this.wantDist;
-      const e0 = this.wantEl;
-      const pitch = PITCH_UP * (1 - this.catchW * 0.6);
-      for (const k of PUSH_STEPS) {
-        const cw = this.catchW * k;
-        const w = cw * (tight ? 0.8 : 0.62);
-        // Round 20: aimed at the catcher 1.2 m up, like the group framing (it aimed 3 m up, at the fish held
-        // overhead, so a close push dropped the feet out of the safe box and only the weakest push fitted).
-        this.wantTarget.copy(t0).lerp(this.tmp.set(catchAt.x, catchAt.y - CATCH_UP + 1.2, catchAt.z), w);
-        // Round 17: deeper (tight 14 -> min(12, 0.62 d), spread 0.58 d / 17 m -> 0.5 d / 13 m): the round-16
-        // session showed no readable push at 320-332 s.
-        this.wantDist = d0 + ((tight ? Math.min(d0 * 0.62, 12) : Math.max(13, d0 * 0.5)) - d0) * (tight ? w : cw);
-        this.wantEl = e0 + (0.36 - e0) * cw * 0.8;
-        if (k === 0 || this.fits(this.wantTarget, this.wantDist, this.wantYaw, this.wantEl, pitch, true)) break;
-      }
-    }
+    // The catch moment (round 23): an eased push toward the catcher on the catch's own clock, applied on top of
+    // the followed framing after the springs (pushPose). It used to be folded into the framing goal and chased
+    // by springs sped up 2.3x (and up to 3.2x more while the push let a bobber out of the shot), and the scene
+    // drops the catch focus when the fish goes down (~3.1 s), half way out: the shot pushed in, then snapped
+    // back out in ~0.3 s (round 22 session 35-37 s, critic: "the camera wobbles").
+    this.catchClock(t, catchAt, groupMode && !campfire);
     // The discovery reveal (weight worked out above).
     this.revealW += (rw - this.revealW) * damp(5, dt);
     if (reveal && this.revealW > 0.001) {
@@ -633,9 +693,9 @@ export class CameraRig {
     // A catch push-in arrives while the fish is still up (the hold is only ~2.4 s).
     // Someone at or past the safe margin in the shot as it stands: the follow hurries (round 13: walkers on
     // the trail were cropped at the edge while the springs caught up).
-    const out = groupMode && !campfire && !this.ride && !this.board && !est && this.n > 0 && this.outside(cam);
-    this.urge += ((out ? 1 : 0) - this.urge) * damp(out ? 6 : 1.5, dt);
-    const r = rate * this.rateK * (0.25 + 0.75 * intro * intro) * (1 + this.catchW * 1.3) * (1 + 0.8 * this.revealW) * (1 + 2.2 * this.urge);
+    const out = groupMode && !campfire && !this.ride && !this.board && !est && this.n > 0 && this.outside(cam, true);
+    this.urge += ((out ? 1 : 0) - this.urge) * damp(out ? 2.5 : 1.2, dt);
+    const r = rate * this.rateK * (0.25 + 0.75 * intro * intro) * (1 + 0.8 * this.revealW) * (1 + 2.2 * this.urge);
     const k1 = damp(r * 2.2, dt);
     this.goalTarget.lerp(this.wantTarget, k1);
     this.goalDist += (this.wantDist - this.goalDist) * k1;
@@ -650,6 +710,78 @@ export class CameraRig {
     spring(this.yaw, V[4]!, this.goalYaw, om, dt, S); this.yaw = S.x; V[4] = S.v;
     spring(this.el, V[5]!, this.goalEl, om, dt, S); this.el = S.x; V[5] = S.v;
     spring(this.pitch, V[6]!, wantPitch, om * 1.2, dt, S); this.pitch = S.x; V[6] = S.v;
-    this.pose(cam, this.target, this.dist, this.yaw, this.el, this.pitch);
+    this.pushPose(groupMode && !campfire);
+    this.pose(cam, this.shownT, this.shownDist, this.yaw, this.shownEl, this.pitch);
   }
+
+  /** The catch timeline (s since the catch, continued on the rig's clock after the scene drops the focus). */
+  private catchAge = -1;
+  private catchLastT = 0;
+  private readonly catchPt = new Vector3();
+  /** The push strength held for this catch (the strongest that fits; it only ever eases down). */
+  private catchK = 1;
+  /** The pose on screen: the followed framing with the catch push on top. */
+  private readonly shownT = new Vector3(0, 0, -1);
+  private shownDist = 60;
+  private shownEl = EST_EL;
+
+  /** Advances the catch timeline and its weight (catchW): ~0.9 s in, held, ~1 s out, ending ~3.2 s in. */
+  private catchClock(t: number, catchAt: CatchAt | null, on: boolean): void {
+    if (catchAt && on) {
+      const fresh = this.catchAge < 0 || catchAt.age < this.catchAge - 0.05;
+      if (fresh) {
+        this.catchPt.set(catchAt.x, catchAt.y - CATCH_UP + 1.2, catchAt.z);
+        this.catchK = -1;
+      } else {
+        // A second catcher joins: the push point eases to the middle of both (no step).
+        this.catchPt.lerp(this.tmp.set(catchAt.x, catchAt.y - CATCH_UP + 1.2, catchAt.z), Math.min(1, (t - this.catchLastT) * 3));
+      }
+      this.catchAge = catchAt.age;
+    } else if (this.catchAge >= 0) {
+      this.catchAge += Math.max(0, t - this.catchLastT);
+      if (!on || this.catchAge > CATCH_END) this.catchAge = -1;
+    }
+    this.catchLastT = t;
+    this.catchW = this.catchAge < 0 ? 0 : catchWeight(this.catchAge);
+  }
+
+  /** Writes the shown pose: the followed framing pushed toward the catcher by catchW (only as far as keeps every fisher in the safe margin). */
+  private pushPose(on: boolean): void {
+    this.shownT.copy(this.target);
+    this.shownDist = this.dist;
+    this.shownEl = this.el;
+    if (!on || this.catchW <= 0.001) return;
+    // Round 09: only as far as keeps every fisher inside the safe margin (a full push first, then weaker
+    // ones); the strength is chosen once per catch at full weight and only eases down if the family moves.
+    let fit = 0;
+    for (const k of PUSH_STEPS) {
+      if (this.catchK >= 0 && k > this.catchK + 1e-6) continue;
+      this.pushed(k, 1);
+      if (k === 0 || this.fits(this.shownT, this.shownDist, this.yaw, this.shownEl, PITCH_UP * 0.4, true)) {
+        fit = k;
+        break;
+      }
+    }
+    this.catchK = this.catchK < 0 ? fit : Math.max(fit, this.catchK - 0.02);
+    this.pushed(this.catchK, this.catchW);
+  }
+
+  /** The pushed pose at strength k and weight w (round 17's depths; round 20's aim 1.2 m up the catcher). */
+  private pushed(k: number, w: number): void {
+    const d0 = this.dist;
+    const tight = d0 < 24;
+    const cw = w * k;
+    const lw = cw * (tight ? 0.8 : 0.62);
+    this.shownT.copy(this.target).lerp(this.catchPt, lw);
+    this.shownDist = d0 + ((tight ? Math.min(d0 * 0.62, 12) : Math.max(13, d0 * 0.5)) - d0) * (tight ? lw : cw);
+    this.shownEl = this.el + (0.36 - this.el) * cw * 0.8;
+  }
+}
+
+/** When the catch push has eased all the way out (s after the catch). */
+const CATCH_END = 3.2;
+/** The catch push weight at this age: smooth in over 0.9 s, held to 2.2 s, smooth out by CATCH_END. */
+export function catchWeight(age: number): number {
+  const w = age < 0.9 ? age / 0.9 : age < 2.2 ? 1 : Math.max(0, 1 - (age - 2.2) / (CATCH_END - 2.2));
+  return w * w * (3 - 2 * w);
 }

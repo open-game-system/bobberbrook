@@ -1,0 +1,18 @@
+Round 23 step 1 camera trace (scripts/camera-trace.mts, live TV on :8843, then replayed through camera.ts). Reversals: >0.4 deg pan/turn or >4% zoom one way and back within 1 s.
+
+== trace1 (old build, live recorded vs replayed with the step-1 rig): cast, catches, trail start, Mistmarsh reveal
+recorded: pan 4 turn 2 zoom 5
+replayed: pan 3 turn 2 zoom 3
+  pan 2.15-3.13 0.67 -> 3.13-4.12 -0.56
+  pan 58.16-59.16 -2.46 -> 59.16-60.16 6.23
+  pan 60.00-61.00 5.76 -> 61.00-61.65 -2.03
+  turn 3.10-4.08 4.57 -> 4.08-5.07 -17.28
+  turn 54.15-54.95 -1.71 -> 54.95-55.93 43.20
+  zoom 39.30-40.28 0.116 -> 40.28-41.28 -0.067
+  zoom 54.15-54.81 -0.120 -> 54.81-55.81 0.627
+  zoom 55.23-56.21 0.715 -> 56.21-57.21 -0.134
+
+== trace4 (step-1 build, live recorded): 246 s, Moonwell cast/catch/recast, trail walk, arrival at Mistmarsh
+recorded: pan 2 turn 3 zoom 0
+replayed: pan 1 turn 0 zoom 0
+  pan 3.25-4.25 2.89 -> 4.25-5.23 -2.41
