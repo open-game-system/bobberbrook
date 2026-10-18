@@ -33,6 +33,8 @@ export type Toast = {
   ride?: "boat" | "zeppelin";
   tod?: TimeOfDay;
   star?: boolean;
+  /** A rod upgrade the catch earned, shown on the catch's own banner. */
+  rodTier?: number;
   also: { fishId: string; seat: number; star: boolean | undefined }[];
 };
 
@@ -43,6 +45,11 @@ export type Toast = {
 export function queueToasts(queue: Toast[], fresh: Toast[]): Toast[] {
   const out = queue.map((t) => ({ ...t, also: [...t.also] }));
   for (const t of fresh) {
+    const earnedBy = t.kind === "upgrade" ? [...out].reverse().find((q) => q.kind === "new") : undefined;
+    if (earnedBy && t.tier !== undefined) {
+      earnedBy.rodTier = t.tier;
+      continue;
+    }
     const host = t.kind === "new" && t.fishId && t.seat !== undefined ? out.find((q) => q.kind === "new" && q.also.length < 2) : undefined;
     if (host && t.fishId && t.seat !== undefined) host.also.push({ fishId: t.fishId, seat: t.seat, star: t.star });
     // A new species jumps the queue: right after the banner on screen (round 19: it waited behind the rod toast).

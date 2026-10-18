@@ -50,6 +50,18 @@ describe("queueToasts", () => {
   });
 });
 
+describe("a rod upgrade rides on the catch that earned it", () => {
+  it("the upgrade joins the catch banner up or waiting, so it shows with that catch (round 22: 4 s late, over the campfire)", () => {
+    const catchBanner = { id: 1, kind: "new" as const, fishId: "bluegill", seat: 1, also: [] };
+    const q = queueToasts([], [catchBanner, { id: 2, kind: "upgrade" as const, tier: 1, also: [] }]);
+    expect(q).toHaveLength(1);
+    expect(q[0]!.rodTier).toBe(1);
+  });
+  it("with no catch banner around, the upgrade has its own banner", () => {
+    expect(queueToasts([], [{ id: 2, kind: "upgrade" as const, tier: 1, also: [] }]).map((t) => t.kind)).toEqual(["upgrade"]);
+  });
+});
+
 describe("a new species never waits behind other banners", () => {
   it("a starred catch goes right after the banner on screen, ahead of queued rod/place/time banners", () => {
     const up = { id: 1, kind: "upgrade" as const, tier: 1, also: [] };

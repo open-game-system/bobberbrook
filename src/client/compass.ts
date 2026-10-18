@@ -1,5 +1,5 @@
 import type { ButtonState } from "./fisherUi";
-import { LEASH, type Lake, type Swirl } from "../game/lake";
+import { LEASH, type Lake, type SeatColor, type Swirl } from "../game/lake";
 import { worldFor, type Platform } from "../game/regions";
 import { SHORE_REACH, pondRadius, type Vec } from "../game/world";
 
@@ -13,7 +13,7 @@ export function shoreFor(lake: Pick<Lake, "worldSeed">, s: Pick<Swirl, "theta" |
   return { x: a.center.x + Math.cos(s.theta) * r, z: a.center.z + Math.sin(s.theta) * r };
 }
 
-export type Compass = { angle: number; distance: number; golden: boolean; explore: boolean; family?: boolean; vehicle?: "boat" | "zeppelin"; arrived: boolean };
+export type Compass = { angle: number; distance: number; golden: boolean; explore: boolean; family?: boolean; /** Walking to someone: their hat colour on the arrow. */ toColor?: SeatColor; vehicle?: "boat" | "zeppelin"; arrived: boolean };
 
 /** The middle of everyone else (null when fishing alone). */
 export function familyMiddle(lake: Lake, mySeat: number): Vec | null {
@@ -104,10 +104,13 @@ export function sharedGoal(lake: Lake, from: Vec): Goal | null {
 function followingFamily(lake: Lake, from: Vec, mySeat: number | undefined): Compass | null {
   const me = lake.fishers.find((f) => f.seat === mySeat);
   if (!me?.following) return null;
-  const others = lake.fishers.filter((f) => f.seat !== mySeat);
-  const near = others.reduce<(typeof others)[number] | null>((b, f) => (!b || dist(f.pos, from) < dist(b.pos, from) ? f : b), null);
+  const near = nearestOther(lake, from, mySeat);
   if (!near) return null;
-  return { angle: Math.atan2(near.pos.z - from.z, near.pos.x - from.x), distance: dist(near.pos, from), golden: false, explore: false, family: true, arrived: false };
+  return { angle: Math.atan2(near.pos.z - from.z, near.pos.x - from.x), distance: dist(near.pos, from), golden: false, explore: false, family: true, toColor: near.color, arrived: false };
+}
+
+function nearestOther(lake: Lake, from: Vec, mySeat: number | undefined): Lake["fishers"][number] | null {
+  return lake.fishers.filter((f) => f.seat !== mySeat).reduce<Lake["fishers"][number] | null>((b, f) => (!b || dist(f.pos, from) < dist(b.pos, from) ? f : b), null);
 }
 
 /** Gone too far ahead: point back to the family (they're on their way). */
@@ -115,7 +118,8 @@ function backToFamily(lake: Lake, from: Vec, mySeat: number | undefined): Compas
   if (mySeat === undefined) return null;
   const mid = familyMiddle(lake, mySeat);
   if (!mid || !atLeashEnd(lake, mySeat, from)) return null;
-  return { angle: Math.atan2(mid.z - from.z, mid.x - from.x), distance: dist(mid, from), golden: false, explore: false, family: true, arrived: false };
+  const near = nearestOther(lake, from, mySeat);
+  return { angle: Math.atan2(mid.z - from.z, mid.x - from.x), distance: dist(mid, from), golden: false, explore: false, family: true, ...(near ? { toColor: near.color } : {}), arrived: false };
 }
 
 /** The arrow toward a goal: along the way there (round ponds, by trail), arrived once on a swirl's shore. */

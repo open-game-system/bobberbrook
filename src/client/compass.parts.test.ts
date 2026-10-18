@@ -117,4 +117,15 @@ describe("tagging along shows on the kid's iPad", () => {
     expect(c?.family).toBe(true);
     expect(Math.cos(c?.angle ?? 0)).toBeLessThan(-0.9);
   });
+  it("the arrow wears the hat colour of the one they follow (round 22: nothing said what it followed)", () => {
+    let lake = join(join(newLake(1, 0), { name: "Dad", ogsId: null }).lake, { name: "J", ogsId: null }).lake;
+    lake = { ...lake, fishers: lake.fishers.map((f) => (f.seat === 0 ? { ...f, pos: { x: -15, z: 20 } } : { ...f, pos: { x: 0, z: 20 }, following: true })) };
+    const dad = lake.fishers.find((f) => f.seat === 0)!;
+    expect(compassTo(lake, { x: 0, z: 20 }, 1)?.toColor).toBe(dad.color);
+  });
+  it("back at the end of the leash, the arrow wears the nearest one's hat colour", () => {
+    let lake = join(join(newLake(1, 0), { name: "A", ogsId: null }).lake, { name: "B", ogsId: null }).lake;
+    lake = { ...lake, fishers: lake.fishers.map((f) => ({ ...f, pos: f.seat === 0 ? { x: 0, z: 20 } : { x: -29, z: 20 } })) };
+    expect(compassTo(lake, { x: -29, z: 20 }, 1)?.toColor).toBe(lake.fishers[0]!.color);
+  });
 });

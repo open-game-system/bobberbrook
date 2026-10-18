@@ -47,6 +47,13 @@ describe("coachLine", () => {
     expect(coachLine(l, 0, 15_000)).toMatch(/your fishing buddy/);
     expect(coachLine(l, 0, 15_000)).not.toMatch(/Yellow|Green|Blue|Pink/);
   });
+  it("coaches my own reel before any tip (round 22: 'Explore!' showed while Dad was mid-reel)", () => {
+    const l = { ...withMode(family(), 0, { mode: "reel" }), catchSeq: 2 };
+    expect(coachLine(l, 0, 10)).toBe("Hold to reel it in. Let go while it splashes!");
+  });
+  it("the kid's reel still comes before my own", () => {
+    expect(coachLine(withMode(withMode(family(), 0, { mode: "reel" }), 1, { mode: "reel" }), 0, 10)).toContain("Juneau is reeling");
+  });
   it("coaches the reel", () => {
     expect(coachLine(withMode(family(), 1, { mode: "reel" }), 0, 10)).toContain("Juneau is reeling");
   });

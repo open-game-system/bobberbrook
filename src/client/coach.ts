@@ -54,6 +54,11 @@ const theirReel: Rule = (lake, mySeat) => {
   return f ? `${nameOf(lake, f.seat)} is reeling: hold the button, let go when the fish splashes!` : null;
 };
 
+const myReel: Rule = (lake, mySeat) => {
+  const mine = lake.fishers.find((f) => f.seat === mySeat);
+  return mine?.mode === "reel" && !mine.easy ? "Hold to reel it in. Let go while it splashes!" : null;
+};
+
 /** What a fresh catch says, by what came out of the water. */
 const article = (word: string) => (/^[aeiou]/i.test(word) ? "an" : "a");
 
@@ -181,7 +186,7 @@ const exploreTip: Rule = (lake) => {
 };
 
 /** In priority order: what's happening to someone right now first, then news, then a tip. */
-const RULES: Rule[] = [campfireLine, riding, boardingNow, myBite, myCatch, theirBite, theirReel, freshCatch, freshMiss, wentAhead, freshDiscovery, rideNearby, goldenSwirl, exploreTip, timeTip, talkTip, rodTip];
+const RULES: Rule[] = [campfireLine, riding, boardingNow, myBite, myCatch, theirBite, theirReel, myReel, freshCatch, freshMiss, wentAhead, freshDiscovery, rideNearby, goldenSwirl, exploreTip, timeTip, talkTip, rodTip];
 
 /**
  * The host phone's one line to read aloud. The grown-up is the coach: what's happening to the kids

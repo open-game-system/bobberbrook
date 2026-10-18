@@ -277,6 +277,14 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
                     {a.star && <span className="toast-star" aria-hidden="true">★</span>}
                   </span>
                 ))}
+                {t.rodTier !== undefined && (
+                  <span className="toast-also toast-rod">
+                    <span className="toast-icon">
+                      <RodIcon />
+                    </span>
+                    <span className="toast-text">{ROD_NAMES[t.rodTier]} rods for everyone!</span>
+                  </span>
+                )}
               </>
             )}
             {t.kind === "upgrade" && (
