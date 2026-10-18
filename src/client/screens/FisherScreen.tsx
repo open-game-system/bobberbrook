@@ -106,6 +106,11 @@ export function FisherScreen({ seat, host, hosting }: { seat: number; host: bool
       lake: () => latestLake.current,
       seat,
       now: () => clock.now(),
+      // Where this fisher is now (dead-reckoned between room updates), so the bot steers on fresh positions.
+      here: () => {
+        const f = latestLake.current.fishers.find((x) => x.seat === seat);
+        return f ? positionAt(f, clock.now()) : null;
+      },
       platforms: () => worldFor(latestLake.current.worldSeed).platformsNear({ x: 0, z: 0 }, 1),
       place: (id: string) => worldFor(latestLake.current.worldSeed).placeById(id),
       nav: (from: { x: number; z: number }, to: { x: number; z: number }) => worldFor(latestLake.current.worldSeed).navNext(from, to),

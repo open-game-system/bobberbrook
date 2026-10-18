@@ -40,11 +40,14 @@ async function walkTo(page: Page, target: V, near = 0.8, maxMs = 12_000): Promis
   let stuckSince = Date.now();
   let side = 1;
   while (Date.now() < end) {
-    const { f } = await me(page);
+    const { f: raw } = await me(page);
+    // Steer on the dead-reckoned position (round 24: stale room positions under load read as "stuck").
+    const here = await page.evaluate(() => (Reflect.get(window, "__bb") as { here?: () => V | null }).here?.() ?? null);
+    const f = here ? { ...raw, pos: here } : raw;
     if (Math.hypot(target.x - f.pos.x, target.z - f.pos.z) < near) break;
     if (lastPos && Math.hypot(f.pos.x - lastPos.x, f.pos.z - lastPos.z) > 0.3) stuckSince = Date.now();
     lastPos = lastPos && Math.hypot(f.pos.x - lastPos.x, f.pos.z - lastPos.z) <= 0.3 ? lastPos : f.pos;
-    if (Date.now() - stuckSince > 1500) {
+    if (Date.now() - stuckSince > 3000) {
       const dx0 = target.x - f.pos.x;
       const dz0 = target.z - f.pos.z;
       const d0 = Math.hypot(dx0, dz0) || 1;
