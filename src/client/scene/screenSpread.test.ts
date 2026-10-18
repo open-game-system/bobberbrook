@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ASHORE_STEP, LINE_SIDE, ashoreOffset, spreadAcross } from "./screenSpread";
+import { ASHORE_STEP, LINE_SIDE, SIDE_FLIP, ashoreOffset, pairSide, spreadAcross, type Sides } from "./screenSpread";
 import type { Spot } from "./personalSpace";
 
 const spot = (seat: number, x: number, z: number): Spot => ({ seat, x, z, ox: 0, oz: 0 });
@@ -83,3 +83,25 @@ describe("spreadAcross on a walk seen end-on (round 23)", () => {
   });
 });
 
+
+describe("pairs keep their side while one walks past the other (round 24, round 23 session 121.8 s)", () => {
+  it("holds the side until the rules' positions have crossed by SIDE_FLIP, then flips once", () => {
+    const sides: Sides = new Map();
+    // Dad (seat 0) walks right-to-left past Juneau (seat 2) standing 2.5 m nearer the lens.
+    const drawnAcross: number[] = [];
+    for (let x = 1.2; x >= -1.6; x -= 0.1) {
+      const s = [spot(2, 0, 0), spot(0, x, -2.5)];
+      spreadAcross(s, FWD, () => null, sides);
+      drawnAcross.push(s[1]!.x + s[1]!.ox - (s[0]!.x + s[0]!.ox));
+    }
+    // One sign change in the drawn order, and only after Dad is SIDE_FLIP past Juneau.
+    const flips = drawnAcross.filter((d, i) => i > 0 && Math.sign(d) !== Math.sign(drawnAcross[i - 1]!)).length;
+    expect(flips).toBe(1);
+    const at = drawnAcross.findIndex((d) => d < 0);
+    expect(1.2 - at * 0.1).toBeLessThanOrEqual(-SIDE_FLIP + 0.05);
+  });
+  it("pairSide without memory is the plain sign", () => {
+    expect(pairSide(undefined, 0, 1, 0.3)).toBe(1);
+    expect(pairSide(undefined, 0, 1, -0.3)).toBe(-1);
+  });
+});

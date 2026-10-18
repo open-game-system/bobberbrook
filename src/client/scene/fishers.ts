@@ -1,5 +1,5 @@
 import { lineFloor, underWalk, walkTangent } from "./walkways";
-import { spreadAcross } from "./screenSpread";
+import { spreadAcross, type Sides } from "./screenSpread";
 import { spreadOnScreen, type Body } from "./screenStack";
 import { spaceOut, type Spot } from "./personalSpace";
 import { READY_ARM_X, SLING_ARM, placeRod, slingTarget } from "./rodSling";
@@ -952,6 +952,8 @@ export class FisherViews {
   private readonly ridePose = { x: 0, y: 0, z: 0, facing: 0 };
   private readonly spots: Spot[] = [];
   private readonly bodies: Body[] = [];
+  /** Round 24: which side each pair of fishers parts to on the TV (held, so passing never swaps them). */
+  private readonly sides: Sides = new Map();
 
   frame(lake: Lake | null, sn: number, t: number, dt: number, camera: Camera, campSeats: { x: number; z: number; facing: number }[]): void {
     for (let i = 0; i < 4; i++) this.bySeat[i] = undefined;
@@ -972,7 +974,7 @@ export class FisherViews {
     spaceOut(spots);
     // Round 21: and never lined up on the camera axis (spread across the screen, along a dock or walk).
     camera.getWorldDirection(this.camFwd);
-    spreadAcross(spots, { x: this.camFwd.x, z: this.camFwd.z }, (x, z) => (onDock({ x, z }) ? DOCK_ALONG : walkTangent(x, z)));
+    spreadAcross(spots, { x: this.camFwd.x, z: this.camFwd.z }, (x, z) => (onDock({ x, z }) ? DOCK_ALONG : walkTangent(x, z)), this.sides);
     // Round 24: and never stacked as the TV sees them (screenStack.ts: projected body boxes, a grown-up's
     // taller than a kid's, the near one wider on screen).
     const bodies = this.bodies;
@@ -982,7 +984,7 @@ export class FisherViews {
       if (!v) continue;
       bodies.push({ ...sp, y: v.present ? v.y : groundY(sp.x, sp.z), top: v.rig.topY * FISHER_SCALE, hw: v.bodyHalfWidth() });
     }
-    spreadOnScreen(bodies, camera, (x, z) => activeWorld().walkable({ x, z }), (x, z) => (onDock({ x, z }) ? DOCK_ALONG : walkTangent(x, z)));
+    spreadOnScreen(bodies, camera, (x, z) => activeWorld().walkable({ x, z }), (x, z) => (onDock({ x, z }) ? DOCK_ALONG : walkTangent(x, z)), this.sides);
     for (const b of bodies) {
       const sp = spots.find((p) => p.seat === b.seat);
       if (sp) {

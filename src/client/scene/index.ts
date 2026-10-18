@@ -112,7 +112,7 @@ export type SceneDebug = {
   painterly?(on: boolean): boolean;
   /** Round 21 lab check: per framed fisher, the share of their body pixels scenery still covers (fade dither off). */
   coverCheck?(detail?: boolean | string): CoverReport;
-  stackCheck?(): StackReport;
+  stackCheck?(only?: number[]): StackReport;
 };
 
 declare global {
@@ -810,7 +810,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       return rc.intersectObjects(scene.children, true).filter((h) => shown(h.object)).slice(0, 8).map((h) => `${h.object.name || h.object.type}${h.object.parent?.name ? "<" + h.object.parent.name : ""} d=${h.distance.toFixed(1)} i=${h.instanceId ?? "-"}`);
     },
     coverCheck: (detail) => coverCheck(renderer, scene, camera, fishers.group, cover, detail ?? false),
-    stackCheck: () => stackCheck(renderer, scene, camera, fishers.group, fishers.stackParts()),
+    stackCheck: (only) => stackCheck(renderer, scene, camera, fishers.group, fishers.stackParts().filter((p) => !only || only.includes(p.seat))),
     names: () => scene.children.map((o, i) => o.name || `${o.type}#${i}`),
     toggle(name) {
       let n = 0;

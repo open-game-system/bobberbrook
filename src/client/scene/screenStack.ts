@@ -1,5 +1,6 @@
 import { PerspectiveCamera, Vector3, type Camera } from "three";
 import type { Spot } from "./personalSpace";
+import { pairSide, type Sides } from "./screenSpread";
 
 /**
  * Round 24 (round 23 session 136-211 s: Juneau stood in front of Dad at the foot of Mistmarsh's boardwalk and
@@ -54,7 +55,7 @@ export function stackShare(a: Body, b: Body, cam: PerspectiveCamera): number {
   return (ox * oy) / ((far.x1 - far.x0) * (far.y1 - far.y0));
 }
 
-export function spreadOnScreen(bodies: Body[], cam: Camera, walkable: (x: number, z: number) => boolean, along: (x: number, z: number) => Dir | null = () => null): void {
+export function spreadOnScreen(bodies: Body[], cam: Camera, walkable: (x: number, z: number) => boolean, along: (x: number, z: number) => Dir | null = () => null, sides?: Sides): void {
   if (!(cam instanceof PerspectiveCamera)) return;
   const pc = cam;
   pc.updateMatrixWorld();
@@ -76,8 +77,8 @@ export function spreadOnScreen(bodies: Body[], cam: Camera, walkable: (x: number
         const oy = Math.min(A.y1, B.y1) - Math.max(A.y0, B.y0);
         // Overlapping across, and more than a fifth of the shorter body in height.
         if (ox <= 0 || oy <= 0.2 * Math.min(A.y1 - A.y0, B.y1 - B.y0)) continue;
-        let sgn = Math.sign(B.x0 + B.x1 - A.x0 - A.x1);
-        if (sgn === 0) sgn = a.seat < b.seat ? 1 : -1;
+        // The side the pair parts to: held until the rules' positions really cross (screenSpread pairSide).
+        const sgn = pairSide(sides, a.seat, b.seat, (b.x - a.x) * r.x + (b.z - a.z) * r.z);
         // Half each in screen terms: metres = NDC x metres-per-NDC at each one's depth.
         const ka = (-sgn * ox * A.perNdc) / 2;
         const kb = (sgn * ox * B.perNdc) / 2;

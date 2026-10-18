@@ -19,7 +19,32 @@ const MAX_OFFSET = 1.6;
 
 type Dir = { x: number; z: number };
 
-export function spreadAcross(spots: Spot[], fwd: Dir, along: (x: number, z: number) => Dir | null = () => null): void {
+/**
+ * Round 24 (round 23 session 121.8 s: Dad walked past Juneau and the pair swapped sides on the TV in ~0.3 s,
+ * the framing snapping after them): which side each pair parts to is remembered (`sides`, keyed by seats) and
+ * only flips once the rules' positions have crossed by SIDE_FLIP metres the other way.
+ */
+export const SIDE_FLIP = 0.8;
+export type Sides = Map<number, number>;
+const pairKey = (a: number, b: number) => (a < b ? a * 8 + b : b * 8 + a);
+/** The side (+1: b right of a) a pair parts to, with hysteresis; `raw` is b's offset across from a. */
+export function pairSide(sides: Sides | undefined, a: number, b: number, raw: number): number {
+  const sgnRaw = raw > 0 ? 1 : raw < 0 ? -1 : a < b ? 1 : -1;
+  if (!sides) return sgnRaw;
+  const k = pairKey(a, b);
+  // Stored for the pair in seat order (lower seat first).
+  const flip = a < b ? 1 : -1;
+  const prev = sides.get(k);
+  let side = sgnRaw;
+  if (prev !== undefined) {
+    const was = prev * flip;
+    side = was !== sgnRaw && Math.abs(raw) < SIDE_FLIP ? was : sgnRaw;
+  }
+  sides.set(k, side * flip);
+  return side;
+}
+
+export function spreadAcross(spots: Spot[], fwd: Dir, along: (x: number, z: number) => Dir | null = () => null, sides?: Sides): void {
   const fl = Math.hypot(fwd.x, fwd.z) || 1;
   const fx = fwd.x / fl;
   const fz = fwd.z / fl;
@@ -37,7 +62,13 @@ export function spreadAcross(spots: Spot[], fwd: Dir, along: (x: number, z: numb
         const depth = dx * fx + dz * fz;
         let across = dx * rx + dz * rz;
         if (Math.abs(depth) > LINE_DEPTH || Math.abs(across) >= LINE_SIDE) continue;
-        // Exactly in line: split by seat so the pair always parts the same way.
+        // Exactly in line: split by seat so the pair always parts the same way; round 24: the side held
+        // until the pair has really crossed (pairSide).
+        if (it === 0) {
+          const rawAcross = (b.x - a.x) * rx + (b.z - a.z) * rz;
+          const side = pairSide(sides, a.seat, b.seat, rawAcross);
+          if (Math.sign(across) !== side || Math.abs(across) < 1e-4) across = side * 1e-4;
+        }
         if (Math.abs(across) < 1e-4) across = a.seat < b.seat ? 1e-4 : -1e-4;
         const push = (LINE_SIDE - Math.abs(across)) / 2;
         const sgn = Math.sign(across);
@@ -100,9 +131,9 @@ function deepen(s: Spot, k: number, fx: number, fz: number, w: Dir | null): void
 }
 
 /** Spacing of riders stepping aboard and ashore, side by side across the screen (m). */
-// Round 24: 1.4 -> 1.9 m (grown-ups now stand taller and wider than the kids; at 1.4 m a kid beside a grown-up
+// Round 24: 1.4 -> 1.75 m (grown-ups now stand taller and wider than the kids; at 1.4 m a kid beside a grown-up
 // stepping ashore lost a sixth of his body behind them, arrival.png).
-export const ASHORE_STEP = 1.9;
+export const ASHORE_STEP = 1.75;
 
 /**
  * Round 21 (arrival.png: all four overlapped stepping off the airship): where rider `rank` of `n` is drawn
