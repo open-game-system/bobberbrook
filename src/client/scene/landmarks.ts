@@ -322,7 +322,14 @@ function giantMushroom(seed: number, h: number, capR: number, hue: number): { st
   }
   stemG.computeVertexNormals();
   // Round 15: the stem carries painted fibres (the grain brushwork run up it).
-  const stem = surf(paint(prep(stemG), 0x8a9ac8, 0xd8e8ff, (p, _n, c) => c.multiplyScalar(0.8 + 0.25 * vnoise(p.x * 2, p.y * 0.8, seed))), PK.grain);
+  // Round 25: fibrous, not a smooth white column: fine vertical fibres (value streaks round the stem, wavering
+  // up it), a warmer lilac-cream, darker and damp at the flared foot, a shaded collar under the cap.
+  const stem = surf(paint(prep(stemG), 0x6e6a94, 0xd2cce4, (p, _n, c) => {
+    const th = Math.atan2(p.z, p.x);
+    const fib = 0.5 + 0.5 * Math.sin(th * 31 + vnoise(p.x, p.y * 0.4, seed) * 7);
+    c.multiplyScalar((0.78 + 0.22 * vnoise(p.x * 2, p.y * 0.8, seed)) * (0.86 + 0.2 * fib));
+    c.multiplyScalar(1 - 0.3 * Math.max(0, (p.y - h * 0.86) / (h * 0.14)));
+  }), PK.grain);
   const top = curve.getPointAt(1);
   // Round 15: the Codex cap paintings laid on from above (giantCap.ts), not vertex-painted streaks (still read
   // as plastic, round 14 critics). The vertex colours only carry the painted light: the cap's colour, lit from
@@ -355,6 +362,8 @@ function giantMushroom(seed: number, h: number, capR: number, hue: number): { st
       const Lb = (Math.floor(b) + fb * fb * (3 - 2 * fb)) / 3;
       c.multiplyScalar(0.74 + 0.38 * (L * 0.35 + Lb * 0.65));
       c.lerp(lip, Math.min(1, Math.max(0, (rho - 0.93) / 0.07)) * 0.3);
+      // Round 25: broad painted blotches over the whole cap (object space, so they read on its sides too).
+      c.multiplyScalar(0.72 + 0.4 * vnoise(p.x * 0.55 + seed, p.y * 0.9 + p.z * 0.55, seed + 11) + 0.12 * (vnoise(p.x * 2.2, p.z * 2.2 + p.y, seed + 5) - 0.5));
       c.multiplyScalar(0.62);
     }),
     capR,

@@ -120,6 +120,8 @@ function hamlet(c: KitCtx, R: () => number): void {
     const z = c.a.center.z + Math.sin(th) * rr;
     const k = i === 1 ? 2.2 : 1.6 + R() * 0.2;
     const { body, windows } = cottageGeometry(Math.floor(R() * 1000) + 20);
+    // Round 25: lamplit amber glass, like the Moonwell village's (the glow material is near white).
+    paint(windows, 0xffc884);
     const face = Math.atan2(c.a.center.x - x, c.a.center.z - z);
     const y = heightAt(x, z) - 0.15;
     for (const [g, out] of [[body, c.wood], [windows, c.glow]] as const) {

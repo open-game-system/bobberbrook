@@ -116,7 +116,7 @@ export function capMaterial(): MeshBasicMaterial {
       .replace("#include <common>", "#include <common>\nattribute vec3 aCap;\nvarying vec3 vCap;")
       .replace("#include <begin_vertex>", "#include <begin_vertex>\n  vCap = aCap;");
     shader.fragmentShader = shader.fragmentShader
-      .replace("#include <common>", `#include <common>\nuniform highp sampler2DArray tCap;\nuniform vec3 iCap[${LAYERS}];\nvarying vec3 vCap;`)
+      .replace("#include <common>", `#include <common>\nuniform highp sampler2DArray tCap;\nuniform vec3 iCap[${LAYERS}];\nvarying vec3 vCap;\nfloat gcH(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }\nfloat gcN(vec2 p) { vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(gcH(i), gcH(i + vec2(1.0, 0.0)), f.x), mix(gcH(i + vec2(0.0, 1.0)), gcH(i + vec2(1.0, 1.0)), f.x), f.y); }`)
       .replace(
         "#include <color_fragment>",
         `#include <color_fragment>
@@ -124,33 +124,42 @@ export function capMaterial(): MeshBasicMaterial {
     int li = int(vCap.z + 0.5);
     vec3 d = texture(tCap, vCap).rgb * iCap[li];
     float l = dot(d, vec3(0.3, 0.55, 0.15));
-    // Caps keep the painting's own hues (teal, violet, pale spots); the gills take the cap's hue, the
-    // painting's value and a little of its colour.
-    d = li == ${CAP_LAYER.gills} ? mix(vec3(l), d, 0.4) : d;
     if (li != ${CAP_LAYER.gills}) {
-      // Round 16: painted at TV distance. The streaks' value contrast pushed (mid-tones apart), the pale
-      // spots held down a little (flat white dabs), a darker band inside the rim, and the brightest
-      // radial strokes glow as veins.
+      // Round 25 (round 24 critic: "glossy vinyl domes", hollow.png): a matte, dry cap. The paintings carry a
+      // baked starburst and pale radial streaks that read as a highlight on a shiny dome: most of the painting's
+      // broad light is divided out (its blurred value, a high mip) and its brushwork kept, with fine mottling,
+      // fewer chalky warts, a darker band in from the rim, a dark lip at the edge and a ceiling on the value.
+      // The broad blotches are painted in the vertex colours (object space, landmarks.ts giantMushroom).
       float rho = length(vCap.xy - 0.5) / ${RIM.toFixed(2)};
-      float spot = smoothstep(1.25, 1.75, l);
-      vec3 dc = pow(max(d, vec3(0.0)), vec3(1.7));
-      // Round 18: the pale spots sit lower still and lean to the cap's own colour (bright dabs read as glare).
-      // Round 23: the spots half-way into the cap (0.6 of the way): whole pale dabs read as vinyl decals.
-      d = mix(dc, mix(vec3(l), d, 0.6) * 0.66, spot * 0.6);
-      float vein = smoothstep(1.05, 1.35, l) * (1.0 - spot) * smoothstep(0.15, 0.5, rho);
-      d *= 1.0 + 0.55 * vein;
-      d *= mix(1.0, 0.52, smoothstep(0.7, 0.9, rho) * (1.0 - smoothstep(0.95, 1.02, rho)));
-      // Round 18: the planar painting stretches its pale spots into long streaks down the cap's steep side,
-      // which read as glare on a glossy dome: toward the rim the pale strokes settle into the cap's colour.
-      d = mix(d, vec3(0.5), smoothstep(0.45, 0.8, rho) * smoothstep(1.0, 1.4, l) * 0.9);
-      // Round 23 (round 22 discovery.png: the cap still read as a glossy dome): the painting's own strokes
-      // again at 3.3x, swirled, as a value break-up over the whole cap, so no area is one smooth gradient.
-      vec2 q = vCap.xy - 0.5;
-      float sw = 2.4 * length(q);
-      vec2 qr = mat2(cos(sw), -sin(sw), sin(sw), cos(sw)) * q;
-      vec3 b = texture(tCap, vec3(fract(qr * 3.3 + 0.5), vCap.z)).rgb * iCap[li];
-      float bl = dot(b, vec3(0.3, 0.55, 0.15));
-      d *= clamp(0.35 + 0.7 * bl, 0.5, 1.3);
+      vec3 blur = textureLod(tCap, vCap, 5.0).rgb * iCap[li];
+      float lb = max(0.3, dot(blur, vec3(0.3, 0.55, 0.15)));
+      // The painting's broad light mostly divided out (its starburst and streaks), its brushwork and hue kept.
+      vec3 base = mix(d, d / lb, 0.7);
+      // Fine mottling in the painting's space (the broad blotches are in the vertex colours, object space).
+      float m2 = gcN(vCap.xy * 23.0 + 1.7);
+      float m3 = gcN(vCap.xy * 9.0 + 7.3);
+      base *= 0.8 + 0.25 * m3 + 0.12 * (m2 - 0.5);
+      // Warts: the painting's big pale spots (vinyl decals at TV distance) painted over in the cap's local colour,
+      // only their cores kept as small chalky dabs, edges broken by the fine noise.
+      // The cap's own colour: the painting's mean (iCap is 1 / mean), at a mid value.
+      vec3 under = vec3(1.0) / iCap[li];
+      under *= 0.85 / max(0.02, dot(under, vec3(0.3, 0.55, 0.15)));
+      base = mix(base, under * (0.8 + 0.25 * m3), smoothstep(1.05, 1.35, l));
+      float spot = smoothstep(1.75, 2.0, l + 0.35 * (m2 - 0.5)) * (1.0 - smoothstep(0.75, 0.95, rho));
+      base = mix(base, mix(vec3(dot(under, vec3(0.3, 0.55, 0.15))), under, 0.45) * 1.15, spot * 0.65);
+      // A darker band in from the rim and a dark lip at the very edge (the cap's thickness).
+      base *= mix(1.0, 0.62, smoothstep(0.72, 0.92, rho));
+      base *= mix(1.0, 0.45, smoothstep(0.96, 1.02, rho));
+      // Matte: never brighter than the painting's mid-tones (bright smooth areas read as gloss).
+      float lbase = dot(base, vec3(0.3, 0.55, 0.15));
+      base *= min(1.0, 1.05 / max(lbase, 1e-3));
+      d = base * 0.88;
+    } else {
+      // Round 25: the gills darker and in deeper relief (the painting's lines pushed apart), shadowed toward
+      // the stem, so the underside reads as gills under the rim.
+      float lg = dot(d, vec3(0.3, 0.55, 0.15));
+      d = mix(vec3(lg), d, 0.4) * mix(0.55, 1.15, smoothstep(0.7, 1.3, lg));
+      d *= mix(0.55, 1.0, smoothstep(0.1, 0.6, length(vCap.xy - vec2(0.5, 0.98))));
     }
     diffuseColor.rgb *= clamp(d, 0.22, 2.2);
   }`,

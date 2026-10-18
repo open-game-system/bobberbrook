@@ -407,18 +407,43 @@ export function cottageGeometry(seed: number): { body: BufferGeometry; windows: 
   const r = rng(seed);
   const R = 1.5 + r() * 0.4;
   const h = 1.9 + r() * 0.5;
-  // Round 22: the walls are the kit's carved stone tiles (painted courses, moss in the joints), warm
-  // lilac stone darkening to the ground, not flat untextured beige.
-  const walls = surf(prep(new CylinderGeometry(R * 0.96, R, h, 14, 3).translate(0, h / 2, 0)), PK.tiles);
-  paint(walls, 0x8a7e98, 0xd8cce0, (p, _n, c) => c.multiplyScalar(0.88 + 0.16 * vnoise(p.x * 2, p.y * 2, 2)));
+  // Round 25 (round 24 critic: "plain grey cylinders with cut-out arch windows"): a half-timbered cottage like
+  // concept/ashenvale/ref-day.jpg. A course of carved stone at the foot (the kit's tiles), warm cream plaster
+  // above it (painted brushwork, mottled, stained darker under the eave and over the stone), dark timber posts
+  // between the openings, a rail at sill and lintel height and crossed braces in the blank bays.
+  const sock = 0.62;
+  const stone = surf(prep(new CylinderGeometry(R * 1.01, R * 1.03, sock, 14, 1).translate(0, sock / 2, 0)), PK.tiles);
+  paint(stone, 0x6e6684, 0x9a90b0, (p, _n, c) => c.multiplyScalar(0.86 + 0.2 * vnoise(p.x * 2.5, p.y * 3, 4)));
+  const walls = surf(prep(new CylinderGeometry(R * 0.96, R, h - sock, 18, 4).translate(0, sock + (h - sock) / 2, 0)), PK.brush);
+  paint(walls, 0xd6b484, 0xf8e2b8, (p, _n, c) => {
+    // Plaster: broad soft blotches, damp and dark just over the stone, shaded under the eave.
+    c.multiplyScalar(0.78 + 0.32 * vnoise(p.x * 1.3, p.y * 1.6 + p.z * 1.3, 9) + 0.1 * vnoise(p.x * 6, p.y * 6, 3));
+    const t = (p.y - sock) / (h - sock);
+    c.multiplyScalar(0.78 + 0.22 * Math.min(1, t * 4));
+    c.multiplyScalar(1 - 0.28 * Math.max(0, (t - 0.72) / 0.28));
+  });
   const beams: BufferGeometry[] = [];
-  for (let i = 0; i < 7; i++) {
-    const a = (i / 7) * Math.PI * 2 + 0.2;
-    const g = surf(prep(new BoxGeometry(0.14, h, 0.1).translate(0, h / 2, R + 0.02).rotateY(a)), PK.grain);
-    paint(g, 0x4a3226, 0x6a4632);
-    beams.push(g);
+  const timber = (g: BufferGeometry) => paint(surf(prep(g), PK.grain), 0x3a261c, 0x5e4030, (p, _n, c) => c.multiplyScalar(0.85 + 0.25 * vnoise(p.x * 3, p.y * 2, 7)));
+  // Posts between the door (0) and the windows (+-0.75, +-2.2), and round the back.
+  const posts = [0.4, -0.4, 1.15, -1.15, 1.75, -1.75, 2.7, -2.7, Math.PI];
+  for (const a of posts) beams.push(timber(new BoxGeometry(0.16, h - sock + 0.05, 0.12).translate(0, sock + (h - sock) / 2, R + 0.02).rotateY(a)));
+  // Sill and lintel rails all round, and the wall plate under the eave.
+  for (const [y, t] of [[h * 0.5 - 0.3, 0.06], [h * 0.5 + 0.45, 0.06], [h * 0.97, 0.08]] as const) {
+    beams.push(timber(new TorusGeometry(R * 0.99 + 0.02, t, 4, 28).rotateX(Math.PI / 2).translate(0, y, 0)));
   }
-  const band = surf(prep(new TorusGeometry(R * 0.99, 0.07, 5, 18).rotateX(Math.PI / 2).translate(0, h * 0.98, 0)), PK.grain);
+  // Crossed braces in the blank bays (between posts with no opening), stone to sill rail.
+  const yb0 = sock + 0.04;
+  const yb1 = h * 0.5 - 0.32;
+  for (const [a0, a1] of [[1.15, 1.75], [-1.75, -1.15], [2.7, Math.PI], [-Math.PI, -2.7]] as const) {
+    const am = (a0 + a1) / 2;
+    const arc = Math.abs(a1 - a0) * R;
+    const len = Math.hypot(arc, yb1 - yb0);
+    const tilt = Math.atan2(yb1 - yb0, arc);
+    for (const sg of [-1, 1]) {
+      beams.push(timber(new BoxGeometry(len, 0.1, 0.08).rotateZ(sg * tilt).translate(0, (yb0 + yb1) / 2, R + 0.03).rotateY(am)));
+    }
+  }
+  const band = surf(prep(new TorusGeometry(R * 0.99, 0.07, 5, 18).rotateX(Math.PI / 2).translate(0, sock, 0)), PK.grain);
   paint(band, 0x4a3226);
   const base = surf(prep(new CylinderGeometry(R + 0.12, R + 0.2, 0.3, 14).translate(0, 0.15, 0)), PK.rock);
   paint(base, 0x6a6280, 0x8a84a0);
@@ -457,12 +482,20 @@ export function cottageGeometry(seed: number): { body: BufferGeometry; windows: 
   const tipY = Math.max(h - 0.05 + roofH, y2 + roofH * 0.62);
   const tip = gold(new ConeGeometry(0.07, 0.9, 6).translate(0, tipY + 0.4, 0));
   const orb = gold(new SphereGeometry(0.12, 8, 6).translate(0, tipY + 0.05, 0));
-  // Door: an arched dark-wood door with a lamp-lit frame.
+  // Door: an arched plank door in a lighter carved frame (jambs and an arched head), on a stone step.
   const door = surf(prep(new BoxGeometry(0.62, 0.95, 0.12).translate(0, 0.62, R - 0.02)), PK.planks);
   const arch = prep(new CylinderGeometry(0.31, 0.31, 0.12, 12, 1, false, 0, Math.PI).rotateX(Math.PI / 2).rotateZ(Math.PI / 2).translate(0, 1.09, R - 0.02));
-  paint(door, 0x4a2c4a, 0x6a3c5a);
-  paint(arch, 0x6a3c5a);
-  // Tall arched windows (lit glass) in carved dark-wood frames.
+  paint(door, 0x5a3420, 0x7a4a2c);
+  paint(arch, 0x7a4a2c);
+  const doorTrim = merge([
+    prep(new BoxGeometry(0.1, 1.0, 0.14).translate(-0.36, 0.6, R + 0.04)),
+    prep(new BoxGeometry(0.1, 1.0, 0.14).translate(0.36, 0.6, R + 0.04)),
+    prep(new TorusGeometry(0.36, 0.06, 4, 12, Math.PI).translate(0, 1.09, R + 0.04)),
+  ].map((g) => paint(surf(g, PK.grain), 0x6a4630, 0x8a6040)));
+  const step = surf(prep(new BoxGeometry(0.95, 0.16, 0.5).translate(0, 0.08, R + 0.3)), PK.rock);
+  paint(step, 0x766e8c, 0x9890ac);
+  // Tall arched windows (warm lit glass, a cross mullion) in carved dark-wood frames, a sill below and a
+  // lintel above.
   const wins: BufferGeometry[] = [];
   const frames: BufferGeometry[] = [];
   for (const a of [-0.75, 0.75, 2.2, -2.2]) {
@@ -476,14 +509,23 @@ export function cottageGeometry(seed: number): { body: BufferGeometry; windows: 
       prep(new BoxGeometry(0.06, 0.46, 0.1).translate(-0.22, h * 0.5, R + 0.04)),
       prep(new BoxGeometry(0.06, 0.46, 0.1).translate(0.22, h * 0.5, R + 0.04)),
       prep(new BoxGeometry(0.03, 0.5, 0.08).translate(0, h * 0.5 + 0.02, R + 0.05)),
+      prep(new BoxGeometry(0.4, 0.03, 0.08).translate(0, h * 0.5 + 0.06, R + 0.05)),
       prep(new TorusGeometry(0.2, 0.035, 4, 10, Math.PI).translate(0, h * 0.5 + 0.21, R + 0.04)),
+      prep(new BoxGeometry(0.66, 0.07, 0.2).translate(0, h * 0.5 - 0.3, R + 0.08)),
+      prep(new BoxGeometry(0.58, 0.07, 0.14).translate(0, h * 0.5 + 0.46, R + 0.06)),
     ].map((g) => paint(g, 0x3a2430, 0x5a3a40)));
     frames.push(fr.rotateY(a));
+  }
+  // Rafter tails under the eave: the roof's overhang reads as carpentry, not a shell.
+  const rafters: BufferGeometry[] = [];
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2 + 0.1;
+    rafters.push(timber(new BoxGeometry(0.1, 0.12, eave + 0.2 - R).translate(0, h - 0.1, (R + eave + 0.2) / 2).rotateY(a)));
   }
   // A small round attic window in the lower roof.
   const atR = eave * Math.pow(1 - 0.6 / roofH, 1.45) + 0.02;
   wins.push(paint(prep(new CylinderGeometry(0.15, 0.15, 0.08, 10).rotateX(Math.PI / 2 - 0.5).translate(0, h + 0.55, atR)), 0xffffff));
-  return { body: merge([walls, ...beams, band, base, roof, roof2, trim1, trim2, tip, orb, door, arch, ...frames]), windows: merge(wins) };
+  return { body: merge([stone, walls, ...beams, band, base, roof, roof2, trim1, trim2, tip, orb, door, arch, doorTrim, step, ...frames, ...rafters]), windows: merge(wins) };
 }
 
 
