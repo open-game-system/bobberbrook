@@ -29,7 +29,7 @@ export function ActionButton({ state, onPress, onHold }: { state: ButtonState; o
   return (
     <button
       type="button"
-      className={`action ${state.kind} ${state.kind === "reel" && state.thrashing ? "thrash" : ""} ${state.kind === "waiting" && state.nibble ? "nibble" : ""} ${state.kind === "caught" && state.canRecast ? "ready" : ""}`}
+      className={`action ${state.kind} ${state.kind === "reel" && state.thrashing ? "thrash" : ""} ${state.kind === "reel" && state.holding ? "holding" : ""} ${state.kind === "waiting" && state.nibble ? "nibble" : ""} ${state.kind === "caught" && state.canRecast ? "ready" : ""}`}
       style={{ "--progress": progress }}
       onPointerDown={(e) => {
         capturePointer(e.currentTarget, e.pointerId);

@@ -83,6 +83,9 @@ button { font: inherit; color: inherit; }
 @keyframes tug { 0%, 100% { translate: 0 0; } 50% { translate: 0 5px; } }
 .action.reel.thrash::after { content: ""; position: absolute; inset: -18px; border-radius: 50%; border: 6px solid #fff; pointer-events: none; animation: thrash-flash 0.45s ease-out both; }
 @keyframes thrash-flash { from { opacity: 1; scale: 0.9; } to { opacity: 0; scale: 1.25; } }
+/* Not holding while the fish is calm (round 25: nothing said "hold, don't tap"): a ring keeps closing in on the button like a finger pressing down. */
+.action.reel:not(.holding):not(.thrash)::before { content: ""; position: absolute; inset: -30px; border-radius: 50%; border: 8px solid rgba(255,255,255,.85); pointer-events: none; animation: press-in 0.9s ease-in infinite; }
+@keyframes press-in { from { scale: 1.15; opacity: 0; } 60% { opacity: 0.9; } to { scale: 0.82; opacity: 0; } }
 .reel-ring { position: absolute; inset: -14px; width: calc(100% + 28px); height: calc(100% + 28px); pointer-events: none; }
 .spin { animation: spin 0.6s linear infinite; }
 @keyframes breathe { 0%, 100% { scale: 1; } 50% { scale: 1.05; } }
