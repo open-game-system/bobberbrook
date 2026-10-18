@@ -198,6 +198,18 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
   const next = ROD_AT[lake.rodTier + 1];
   const base = ROD_AT[lake.rodTier] ?? 0;
   const meter = next === undefined ? 1 : (lake.shells - base) / (next - base);
+  // Shells earned show on the TV as they land (round 26: the rod upgrade's cause was a thin bar): the chip
+  // pops and a "+N" shell floats up for a moment.
+  const lastShells = useRef(lake.shells);
+  const [gain, setGain] = useState<{ n: number; key: number } | null>(null);
+  useEffect(() => {
+    const n = lake.shells - lastShells.current;
+    lastShells.current = lake.shells;
+    if (n <= 0) return;
+    setGain({ n, key: Date.now() });
+    const id = window.setTimeout(() => setGain(null), 1800);
+    return () => window.clearTimeout(id);
+  }, [lake.shells]);
   const tod = todOf({ startedAt: lake.startedAt, now: clock.now() });
   const qr = useMemo(() => qrDataUrl(joinUrl), [joinUrl]);
 
@@ -227,7 +239,12 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
           </svg>
           <span className="hud-count">{lake.discovered.length}</span>
         </div>
-        <div className="hud-chip rod-chip" aria-label={`${ROD_NAMES[lake.rodTier]} rod`}>
+        <div className={`hud-chip rod-chip ${gain ? "gain" : ""}`} aria-label={`${ROD_NAMES[lake.rodTier]} rod`}>
+          {gain && (
+            <span className="shell-gain" key={gain.key}>
+              +{gain.n}
+            </span>
+          )}
           <span className="shell">
             <ShellIcon />
           </span>
