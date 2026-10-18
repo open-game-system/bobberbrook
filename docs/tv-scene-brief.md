@@ -332,3 +332,25 @@ draws edge HUD (journal count, rod meter, time of day). The scene draws name tag
   and the far side of the body showing under it. The mittens still cross in front of the fish (not fixed this round).
 - **Giant caps** (`landmarks.ts`): a deeper wavering rim, a lumpier crown, a rim that droops here and curls there,
   a soft dent off the crown.
+
+## Round 27
+
+- **The reel reads from across the room** (`fishers.ts`, `splash.ts`, `escape.ts`, `fx.ts`): while a fish is on, a
+  churning white foam ring sits at the bobber (the splash ring program in churn mode, one per seat; calmer while
+  it comes in, bigger and brighter on a thrash); on a thrash a bold fountain of big droplets every 0.45 s and the
+  fish's orange tail flicking out of the water and slapping down every 1.1 s (the got-away tail, staying put). The
+  line is taut and thicker while reeling; the rod is held off to the side toward the fish as the TV sees it, so its
+  bend reads across the screen. A reel draws the bobber no closer than 2 m (`REEL_NEAR_M`). Water and light only.
+- **The held fish is in scale** (`holdCard.ts` `heldFishWidth`): visible width 1.0 + 0.012 m per cm of the catch (a
+  20 cm Bluegill 1.24 m, two hands at the chest), grown at most 1.25x to read across the room (`MIN_SCREEN_SHARE`
+  0.05). The catch **leaps**: 0.5 s from the water up a 1.5 m arc into the hands, turning nose-up to nose-down.
+  Lab: `catch-leap`, `scripts/lab-clip.mjs` (a video of the hero moment, frames at 25 fps).
+- **A steadier catch camera** (`camera.ts`): the push comes in over 1.4 s (`PUSH_IN`; full 2.0 s in the same
+  3.4 s beat); a catcher joining a push under way does not re-aim it; as the push eases out it hands its sideways
+  aim to the framing (a zoom out, not a pan back), with the dead zone widened to that offset. The group fit and the
+  calm hold keep 0.6 m of body either side of every fisher in the box (`BODY_PAD`). Tested on a replay of the
+  round 26 bot (`camera.handover.test.ts`).
+- **Less vinyl, fuller floors**: cloth takes a painted rim, skin a faint one, and the post brush is a little
+  stronger on the fishers; away from Moonwell the near corners of the shot carry the mossy roots of a colossal
+  trunk off frame, with ferns and bluebells (never in the middle lane to the water); Mistmarsh's water runs
+  from teal shallows to an indigo middle.
