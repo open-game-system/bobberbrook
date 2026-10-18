@@ -120,8 +120,9 @@ cover a fisher's face (`Particles.setFaces`), and the catch bursts are capped (l
 
 ## Fishers (from `lake.fishers`)
 
-- Chunky big-headed little fishers (head ≈ 40 % of height), each in a seat colour (green, yellow,
-  blue, pink) with a matching hat (bucket hat, rain hat, sun hat, flower hat), vest, boots, simple face.
+- A family by build (round 24, `fisherBuild.ts`): a named grown-up (`kid` false) stands ~1.3x a kid with long legs and a
+  head ~29 % of the height; a kid (`kid` true) is small and chunky (head ~43 %); the little one (`kid` and `easy`) ~0.9x
+  the kid. Each in a seat colour (green, yellow, blue, pink) carried by the hat and the vest (and a kid's shirt).
 - Walk/run cycle when moving (interpolate `pos` + `vel` from `movedAt`, smooth toward new server
   positions, never snap), idle sway, turning toward `facing`.
 - **Painted clothes** (round 15, `character.ts`, `figurePaint.ts`): the Codex fishers' kit in the prop texture
@@ -258,3 +259,24 @@ draws edge HUD (journal count, rod meter, time of day). The scene draws name tag
 - **Last vinyl**: falls spray is a faint drifting veil (no white ball at night); Mistmarsh's deep is dark indigo and its
   own blue haze wins over the golden hour's rose; giant caps carry a painted value break-up; an idle airship moored on
   its tower's camera side stays up and away until boarded (`placeSideYaw`), so no envelope cuts Moonwell's frame edge.
+
+## Round 24
+
+- **A family, not four peg dolls** (`fisherBuild.ts`, `character.ts`): the build comes from the rules (`Fisher.kid`,
+  `Fisher.easy`); grown-ups have a lathe-turned chest and waist, long legs, a smaller head; kids a round tummy and a
+  big head. Name tags sit 0.3 m above the hat of that build. The catch is held against the chest with the mittens
+  under the fish (not arms wide); reeling braces the feet apart and rocks with the crank; grown-ups walk with longer,
+  slower steps and sit on the log with their feet on the ground. The lab marks Juneau and Sis as kids, Sis easy.
+- **Faces** (`fisherFace.ts`): shaped heads (a kid's full low cheeks, a grown-up's longer face, jaw and chin), eyes with
+  whites, brown irises, pupils, two shines, an upper lid and lashes (all but Dad), arched brows, a nose; Dad's beard
+  in strands with a moustache; peach skin (0xf4cbb0). Natural faces on fishers only.
+- **Clothes from concept 08**: a shirt (cream; a kid's tinted by the seat colour) under an open vest with chest
+  pockets, a bandana at the neck, belt pouches, knee patches, boot cuffs, a grown-up's sleeves rolled to the elbow.
+- **Nobody stacked as the TV sees them** (`screenStack.ts`): after the world spacing, each fisher's body box (feet to
+  hat, the brim or a held fish included) is projected with the TV camera and overlapping pairs ease apart across the
+  screen, staying on ground anyone can stand on. A pair keeps its side until one has really walked past the other
+  (`pairSide`, 0.8 m), so nobody swaps sides on screen. Lab: `mistmarsh-dock-foot`, `__scene.stackCheck()` and the
+  shoot's stack threshold (2 % of a fisher or their held fish covered by another fisher).
+- **The catch push keeps whole bodies in frame** (`camera.ts`, `PUSH_PAD` 0.8 m either side of every fisher).
+- **Golden hour is light, not a tint** (`tod.ts`): a low amber key from the west over a cool lilac-blue and teal fill,
+  lilac fog, a near-neutral grade.

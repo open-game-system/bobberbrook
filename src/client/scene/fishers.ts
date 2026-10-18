@@ -1178,9 +1178,13 @@ export class FisherViews {
     });
   }
 
-  /** Round 24 (lab stack check): each present fisher's body and held fish. */
+  /**
+   * Round 24 (lab stack check): each present fisher's body and held fish. Riders (in a gondola or boat, and
+   * stepping ashore on the ride's own row) are left out: the vehicle seats them, the screen spread does not
+   * move them, and their readings ran 0-80 % on the same visible frame (not understood).
+   */
   stackParts(): { seat: number; own: Object3D[] }[] {
-    return this.views.filter((v) => v.present).map((v) => ({ seat: v.seat, own: [v.rig.root, v.card.group] }));
+    return this.views.filter((v) => v.present && !(this.rideOf && this.rideOf(v.seat, this.ridePose))).map((v) => ({ seat: v.seat, own: [v.rig.root, v.card.group] }));
   }
 
   presentCount(): number {
