@@ -76,6 +76,9 @@ export type FisherRig = {
 
 const HAIR = [0x5a3420, 0xd9a650, 0x6a3a1e, 0xa4522c];
 const TROUSERS = [0x7a6a44, 0x6a5a3a, 0x5a6a8a, 0x8a5a4a];
+/** Round 24: the shirt under the vest, and the bandana's colour by the seat colour (concept 08). */
+const SHIRT = 0xece0c6;
+const BANDANA: Record<string, number> = { green: 0xd65a3c, yellow: 0x8a62b4, blue: 0xd65a3c, pink: 0xeea6c4 };
 const SKIN = 0xf4cbb0;
 const HAT_STYLE = ["green", "yellow", "blue", "pink"];
 
@@ -119,7 +122,7 @@ function occludersOf(B: Build): Occluder[] {
  * Round 24: the torso turned on a lathe, centred on 0. A grown-up: hips, a waist, a broad chest and square
  * shoulders. A kid: a round tummy fuller low down, narrow shoulders.
  */
-function torsoGeometry(B: Build, role: Role): BufferGeometry {
+function torsoGeometry(B: Build, role: Role, shell: { from: number; to: number; grow: number; gap: number } | null = null): BufferGeometry {
   const pts: Vector2[] = [];
   const N = 14;
   for (let i = 0; i <= N; i++) {
@@ -135,6 +138,11 @@ function torsoGeometry(B: Build, role: Role): BufferGeometry {
       r = Math.sqrt(Math.max(0, 1 - t * t)) * (1 - 0.12 * Math.max(0, u));
     }
     pts.push(new Vector2(Math.max(0.001, r * B.torsoW), t * B.torsoH));
+  }
+  if (shell) {
+    // A garment over the torso (the vest): only from..to of the height, a little bigger, open down the front.
+    const sp = pts.filter((p) => p.y >= shell.from * B.torsoH && p.y <= shell.to * B.torsoH).map((p) => new Vector2(p.x * shell.grow + 0.004, p.y));
+    return new LatheGeometry(sp, 20, shell.gap, Math.PI * 2 - shell.gap * 2).scale(1, 1, B.torsoD / B.torsoW);
   }
   pts[0]!.x = 0;
   pts[N]!.x = 0;
@@ -311,7 +319,11 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials,
     const boot = leather(new SphereGeometry(0.078 * bs, 12, 8).scale(1, 0.72, 1.3).translate(0, -B.hip + 0.055 * bs, 0.025 * bs), 0x5a3420, 0x8a5634);
     const shaft = leather(new CylinderGeometry(B.legR * 1.12, 0.07 * bs, 0.07 * bs, 10).translate(0, -B.hip + 0.1 * bs, 0), 0x5a3420, 0x7a4a2c);
     const sole = leather(new CylinderGeometry(0.075 * bs, 0.08 * bs, 0.025 * bs, 12).scale(1, 1, 1.3).translate(0, -B.hip + 0.0125 * bs, 0.025 * bs), 0x3a2418);
-    pivot.add(mesh(shaded(merge([leg, boot, shaft, sole]), pivot.position)));
+    // Round 24 (concept 08): a turned-down boot cuff and a darker patch on each knee.
+    const bootCuff = leather(new TorusGeometry(B.legR * 1.14, 0.014 * bs, 5, 14).rotateX(Math.PI / 2).translate(0, -B.hip + 0.138 * bs, 0), 0x8a5a36);
+    const kneeY = -legLen * 0.52;
+    const knee = felt(new SphereGeometry(B.legR * 0.8, 9, 6).scale(1, 1.15, 0.45).translate(0, kneeY, B.legR * 0.86), shade(TROUSERS[seat]!, 0.72));
+    pivot.add(mesh(shaded(merge([leg, knee, boot, shaft, bootCuff, sole]), pivot.position)));
     body.add(pivot);
     return pivot;
   };
@@ -319,11 +331,27 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials,
   const legR = mkLeg(-1);
 
   // Body: a torso turned on a lathe (an adult's chest and waist, a kid's round tummy), collar, belt, a pack.
-  const torso = quilt(torsoGeometry(B, role).translate(0, B.torsoY, 0), shade(vest.getHex(), 0.78), lighten(vest.getHex(), 0.12));
-  const tummyY = B.torsoY - B.torsoH * 0.12;
-  const tummy = quilt(new SphereGeometry(B.torsoW * 0.64, 12, 8).scale(1, (B.torsoH / B.torsoW) * 1.0, 0.5).translate(0, tummyY, B.torsoD * 0.86), lighten(vest.getHex(), 0.12));
-  const collarY = B.torsoY + B.torsoH * 0.98;
-  const collar = knit(new TorusGeometry(B.torsoW * 0.55, 0.033, 6, 16).rotateX(Math.PI / 2).translate(0, collarY, 0.01), 0xf4ead2);
+  // Round 24 (concept 08): a cream shirt under an open vest in the seat colour with two chest pockets, a
+  // bandana knotted at the neck, a belt with pouches (was a smooth bean in the seat colour with a fluffy collar).
+  // A kid's shirt in a light tint of the seat colour (Juneau's blue sleeves in the concept), a grown-up's cream.
+  const shirt = role === "adult" ? SHIRT : new Color(SHIRT).lerp(vest, 0.45).getHex();
+  const torso = part(torsoGeometry(B, role).translate(0, B.torsoY, 0), shade(shirt, 0.86), shirt, PK.cloth);
+  const vestShell = quilt(torsoGeometry(B, role, { from: -0.62, to: 0.84, grow: 1.07, gap: role === "adult" ? 0.34 : 0.24 }).translate(0, B.torsoY, 0), shade(vest.getHex(), 0.74), lighten(vest.getHex(), 0.08));
+  const pockets: BufferGeometry[] = [];
+  for (const sx of [1, -1]) {
+    const px = sx * B.torsoW * 0.5;
+    const py = B.torsoY + B.torsoH * 0.18;
+    const pz = Math.sqrt(Math.max(0, 1 - 0.25)) * B.torsoD * 1.07;
+    pockets.push(felt(new BoxGeometry(B.torsoW * 0.42, B.torsoH * 0.36, 0.03).rotateY(sx * 0.5).translate(px, py, pz), shade(vest.getHex(), 0.8)));
+    pockets.push(felt(new BoxGeometry(B.torsoW * 0.46, B.torsoH * 0.11, 0.036).rotateY(sx * 0.5).translate(px, py + B.torsoH * 0.18, pz + 0.006), shade(vest.getHex(), 0.68)));
+  }
+  const collarY = B.torsoY + B.torsoH * 0.96;
+  const scarf = BANDANA[colorName] ?? 0xd8553a;
+  const bandana = merge([
+    part(new TorusGeometry(B.torsoW * 0.5, 0.03, 6, 16).rotateX(Math.PI / 2).translate(0, collarY, 0.01), shade(scarf, 0.8), scarf, PK.cloth),
+    part(new ConeGeometry(B.torsoW * 0.42, B.torsoH * 0.5, 3).rotateZ(Math.PI).rotateY(Math.PI).scale(1, 1, 0.35).translate(0, collarY - B.torsoH * 0.22, B.torsoD * 0.78), shade(scarf, 0.78), scarf, PK.cloth),
+  ]);
+  const pouches = [1, -1].map((sx) => leather(new BoxGeometry(0.075, 0.08, 0.05).translate(sx * B.torsoW * 0.78, B.torsoY - B.torsoH * 0.62, B.torsoD * 0.55), 0x7a4a26, 0x9a6438));
   const beltY = B.torsoY - B.torsoH * 0.55;
   const beltR = B.torsoW * 0.97;
   const belt = leather(new TorusGeometry(beltR, 0.026, 6, 20).rotateX(Math.PI / 2).scale(1, 1, B.torsoD / B.torsoW).translate(0, beltY, 0), 0x5a3a22);
@@ -331,7 +359,7 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials,
   const packY = B.torsoY + B.torsoH * 0.2;
   const pack = leather(new SphereGeometry(0.13, 10, 8).scale(1, 1.05, 0.62).translate(0, packY, -B.torsoD - 0.04), 0x8a5a32, 0xb07a48);
   const roll = knit(new CylinderGeometry(0.05, 0.05, 0.26, 10).rotateZ(Math.PI / 2).translate(0, packY + 0.14, -B.torsoD - 0.04), 0xd8c49a);
-  body.add(mesh(merge([shaded(merge([torso, tummy, collar, belt, pack, roll])), buckle])));
+  body.add(mesh(merge([shaded(merge([torso, vestShell, ...pockets, bandana, belt, ...pouches, pack, roll])), buckle])));
 
   // Arms (pivot at the shoulder; hang along -y): sleeves and mittens.
   const armS = B.armR / 0.05;
@@ -340,13 +368,16 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials,
     const pivot = new Group();
     pivot.position.set(sx * B.shoulderX, B.shoulderY, 0);
     const sl = B.armLen - 0.02;
-    const sleeve = quilt(new CylinderGeometry(B.armR * 1.1, B.armR, sl, 9).translate(0, -sl / 2, 0), shade(vest.getHex(), 0.9));
-    const shoulder = quilt(new SphereGeometry(B.armR * 1.16, 9, 6), shade(vest.getHex(), 0.95));
-    // Round 19: a mitten with a thumb and a knitted cuff, not a smooth ball on a tube.
-    const cuff = knit(new TorusGeometry(B.armR, 0.017, 5, 12).rotateX(Math.PI / 2).translate(0, -B.armLen + 0.005, 0), 0xf4ead2);
+    // Round 24: shirt sleeves; a grown-up's rolled to the elbow (bare forearm under a cream roll).
+    const rolled = role === "adult";
+    const sleeveLen = rolled ? sl * 0.55 : sl;
+    const sleeve = part(new CylinderGeometry(B.armR * 1.1, B.armR, sleeveLen, 9).translate(0, -sleeveLen / 2, 0), shade(shirt, 0.88), shirt, PK.cloth);
+    const shoulder = part(new SphereGeometry(B.armR * 1.16, 9, 6), shirt, undefined, PK.cloth);
+    const forearm = rolled ? [skin(new CylinderGeometry(B.armR * 0.82, B.armR * 0.72, sl - sleeveLen + 0.01, 9).translate(0, -sleeveLen - (sl - sleeveLen) / 2, 0), SKIN)] : [];
+    const cuff = part(new TorusGeometry(B.armR * (rolled ? 1.08 : 1.0), rolled ? 0.024 : 0.016, 5, 12).rotateX(Math.PI / 2).translate(0, rolled ? -sleeveLen : -B.armLen + 0.005, 0), lighten(shirt, 0.1), undefined, PK.cloth);
     const hand = skin(new SphereGeometry(0.058 * armS, 10, 7).scale(1, 1.08, 0.82).translate(0, handY, 0), SKIN);
     const thumb = skin(new SphereGeometry(0.026 * armS, 7, 5).scale(1, 1.3, 1).translate(-sx * 0.04 * armS, handY + 0.015, 0.03), SKIN);
-    pivot.add(mesh(merge([shaded(merge([shoulder, sleeve, cuff]), pivot.position), hand, thumb])));
+    pivot.add(mesh(merge([shaded(merge([shoulder, sleeve, cuff]), pivot.position), ...forearm, hand, thumb])));
     body.add(pivot);
     return pivot;
   };
