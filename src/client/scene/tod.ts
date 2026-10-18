@@ -69,10 +69,13 @@ const KEYS: Key[] = [
   // over a cool fill (hemi sky rose-pink 0xe4bce0 -> lilac-blue 0xa8b4e4, ground slate -> teal 0x2c5866,
   // hemiI 2.3 -> 1.8), so shade sides read teal-violet and lit sides amber; a lilac fog (0xd08aa8 -> 0x9c8cc4)
   // and an almost neutral grade (0xffe2c4 -> 0xfff2e6). The canopies keep their own purple.
-  { at: 0.4, skyTop: 0x4a3a92, skyHorizon: 0xffb08a, skyGlow: 0xffa050, cloud: 0xffc0b8, cloudShade: 0x7a5a9e, sun: 0xffa050, sunI: 4.2, az: 160 * D, el: 12 * D,
+  // Round 25 (round 24 critic: "the canopies go hot magenta-red"): an amber key on magenta leaves multiplies
+  // to red, so the key is a paler, less saturated amber (0xffa050 -> 0xffbc7c, 4.2 -> 3.9; 0xff9058 ->
+  // 0xffa874, 3.5 -> 3.3); the sky keeps the orange.
+  { at: 0.4, skyTop: 0x4a3a92, skyHorizon: 0xffb08a, skyGlow: 0xffa050, cloud: 0xffc0b8, cloudShade: 0x7a5a9e, sun: 0xffbc7c, sunI: 3.9, az: 160 * D, el: 12 * D,
     hemiSky: 0xa8b4e4, hemiGround: 0x2c5866, hemiI: 1.8, fog: 0x9c8cc4, fogNear: 50, fogFar: 250, exposure: 1.3, stars: 0.1, glow: 0.5, mist: 0.4,
     waterShallow: 0x5ad6d0, waterDeep: 0x1a5a8a, moon: 0, mountain: 0x7a64a4, discAz: 228 * D, discEl: 5 * D, grade: 0xfff2e6 },
-  { at: 0.47, skyTop: 0x36307e, skyHorizon: 0xf09a8a, skyGlow: 0xff8a5a, cloud: 0xf0a8b8, cloudShade: 0x5e4e8e, sun: 0xff9058, sunI: 3.5, az: 168 * D, el: 8 * D,
+  { at: 0.47, skyTop: 0x36307e, skyHorizon: 0xf09a8a, skyGlow: 0xff8a5a, cloud: 0xf0a8b8, cloudShade: 0x5e4e8e, sun: 0xffa874, sunI: 3.3, az: 168 * D, el: 8 * D,
     hemiSky: 0xa4a8de, hemiGround: 0x2a4e66, hemiI: 1.9, fog: 0x8c7cb8, fogNear: 45, fogFar: 235, exposure: 1.26, stars: 0.4, glow: 0.8, mist: 0.5,
     waterShallow: 0x52ccd0, waterDeep: 0x16507e, moon: 0, mountain: 0x60589c, discAz: 232 * D, discEl: 2 * D, grade: 0xffeee4 },
   // Night: deep indigo, the big moon over the falls, glowing water, mushrooms, wisps and lanterns.
