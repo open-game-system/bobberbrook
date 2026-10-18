@@ -305,3 +305,25 @@ draws edge HUD (journal count, rod meter, time of day). The scene draws name tag
 - **Fishers**: painted vests with dark piping, a leather strap and buckle and big pocket flaps; a grown-up's
   waist and shoulders; a soft contact shadow under every fisher; a walk with a wider arm swing, a roll and a nod.
 - **Golden hour**: a paler amber key (canopies no longer go red under it).
+
+## Round 26
+
+- **Where fishers stand** (rules, `src/game/spots.ts`): fishing spots keep clear of the bank's props (Moonwell's
+  campfire, Mistmarsh's two boardwalk feet) and, near anyone fishing, stand at least 2.2 m to the side of them as
+  the TV sees the place (the group camera's side of a place is the same `placeYaw` the scene uses, now in the
+  rules) and no more than 1.5x that apart in depth. Moonwell's campfire moved back off the south bank to
+  (0.5, 27.2), below the spawn row: the campfire shot is unchanged in kind, the fishing bank has no fire on it.
+  Lab: `moonwell-spawn`, `mistmarsh-tag`, `mistmarsh-tag-wait` (a kid who never steers, tagging along and
+  pressing the big button by the rules).
+- **A push-in on every catch, held** (`camera.ts`): the push holds at full for 2.5 s (to 3.4 s, the rules' catch
+  show) and eases out over a second; a catch landing while a push is on continues it from its weight, and a second
+  catcher joining during the hold holds it 2.5 s more (the scene reports the latest catcher's age); the framing under
+  the push is released as it starts easing out. The held fish stays up to 3.0 s.
+- **The top banner band is a keep-out** (`TOP_X`/`TOP_Y`, `keepDrop`): no name tag or body above NDC 0.6 within
+  0.5 of the centre (the catch ticket), like the join card's corner; the push aims 1.4 m up the catcher. Pushes are
+  a little shallower where a deeper one would lift a tag into the band.
+- **Golden hour's sky** (`sky.ts`): a painted gradient from under the true horizon (the TV sees the sky over the hills
+  at or below it, where the dome was one flat colour): warm on the sun's side, peach, rose, then the air's own lilac
+  before the zenith; the sun's halo is laid over the gradient instead of added past what the tone map shows.
+- **Mistmarsh at night**: two lanterns in the shallows of the near (south) shore with warm pools of light spilling up
+  the bank round the fishers' feet; more ferns, flowers and bluebells in marsh clearings.

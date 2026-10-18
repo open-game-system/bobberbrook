@@ -275,6 +275,19 @@ function mistmarsh(c: Ctx): void {
     c.lampGlow.push(place(lp.glass, p.x, p.z, ry));
     lampPools.push({ x: p.x, y: heightAt(p.x, p.z), z: p.z, s: 3.0, ry: 0 });
   }
+  // Round 26 (round 25 critic, mistmarsh_tod-night: one blue wash, an empty floor in the bottom third): two
+  // more lanterns on the near (south) shore where the family fishes, standing in the shallows at the water's
+  // edge (behind anyone fishing that bank, as the TV sees it), their warm pool of light spilling up the bank
+  // round the fishers' feet. Posts and glass dissolve round a fisher like every lamp post.
+  for (const th of [0.62, 1.32]) {
+    const p = at(a, th, -0.25);
+    const lp = lanternPost(2.1);
+    const ry = Math.atan2(a.center.x - p.x, a.center.z - p.z) - Math.PI / 2;
+    c.lamps.push(place(lp.wood, p.x, p.z, ry, 1, -heightAt(p.x, p.z) - 0.3));
+    c.lampGlow.push(place(lp.glass, p.x, p.z, ry, 1, -heightAt(p.x, p.z) - 0.3));
+    const q = at(a, th, 1.4);
+    lampPools.push({ x: q.x, y: heightAt(q.x, q.z), z: q.z, s: 4.0, ry: 0 });
+  }
   lampPools.push({ x: pv.x, y: py + 0.4, z: pv.z, s: 4.5, ry: 0 });
   c.group.add(poolMesh(lampPools));
   // Big glowing water lilies on their pads.

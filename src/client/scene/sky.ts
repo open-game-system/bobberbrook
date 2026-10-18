@@ -23,6 +23,7 @@ void main() {
 const SKY_FRAG = /* glsl */ `
 uniform vec3 uTop;
 uniform vec3 uHorizon;
+uniform vec3 uFog;
 uniform vec3 uGlow;
 uniform vec3 uCloud;
 uniform vec3 uCloudShade;
@@ -43,19 +44,40 @@ float fbm(vec2 p) { float s = 0.0; float a = 0.5; for (int i = 0; i < 5; i++) { 
 void main() {
   vec3 d = normalize(vDir);
   float h = d.y;
-  float up = clamp(h, 0.0, 1.0);
+  // Round 26: the painted horizon sits under the true one. The TV camera stands high over the lake and looks
+  // down across it, so the sky it sees over the trees on the hills is mostly at or below the true horizon, where
+  // the dome was one flat horizon colour (the "pasted orange band"): the gradient now runs from there.
+  float hv = h + 0.12;
+  float up = clamp(hv, 0.0, 1.0);
   // Round 16: a painted gradient, not a flat wash. Three stops (a warm horizon, a glow-tinted middle, a
   // deeper zenith), long horizontal brush streaks in the value, and a broad halo round the sun or moon.
   float az = atan(d.z, d.x);
-  float streak = fbm(vec2(az * 3.0, h * 26.0)) - 0.5;
+  float streak = fbm(vec2(az * 3.0, hv * 26.0)) - 0.5;
   float hb = up + streak * 0.05;
-  vec3 mid = mix(uHorizon, uGlow, 0.22);
-  vec3 col = mix(uHorizon, mid, smoothstep(0.0, 0.16, hb));
-  col = mix(col, uTop, pow(smoothstep(0.08, 0.8, hb), 0.75));
+  // Round 26 (round 25 critic, moonwell_tod-golden: a flat pasted orange band behind the trees): the warm
+  // horizon belongs to the sun's side of the sky; round from it the horizon cools to a lilac between the
+  // horizon and zenith colours, and up from it the warmth falls off through peach and rose into lilac
+  // before the zenith (more stops, low down where the TV sees the sky between the canopies).
+  vec2 sunH = normalize(uSunDir.xz + vec2(1e-4, 0.0));
+  float toSun = dot(normalize(d.xz + vec2(1e-4, 0.0)), sunH);
+  float warmAz = smoothstep(0.55, 1.0, toSun + streak * 0.12);
+  // The lilac is the air's own (the fog colour, a touch of zenith): mixing the orange horizon into the violet
+  // zenith only ever gave a muddy salmon.
+  vec3 lilac = mix(uFog * 1.12, uTop, 0.22);
+  vec3 hz = mix(lilac, uHorizon, 0.3 + 0.7 * warmAz);
+  vec3 peach = mix(hz, mix(uHorizon, uGlow, 0.35), warmAz);
+  vec3 rose = mix(mix(uHorizon, lilac, 0.55), lilac, 1.0 - warmAz);
+  vec3 col = mix(hz, peach, smoothstep(0.0, 0.07, hb));
+  col = mix(col, rose, smoothstep(0.08, 0.16, hb));
+  col = mix(col, lilac, smoothstep(0.13, 0.24, hb));
+  col = mix(col, uTop, pow(smoothstep(0.22, 0.85, hb), 0.8));
   col *= 1.0 + streak * 0.1 * smoothstep(0.0, 0.1, up);
   float sd = max(dot(d, uSunDir), 0.0);
   float horizonBand = 1.0 - smoothstep(0.0, 0.45, up);
-  col += uGlow * (pow(sd, 6.0) * 0.55 * horizonBand + pow(sd, 48.0) * 0.5 + pow(sd, 2.5) * 0.12);
+  // Round 26: the broad halo round the sun is laid over the gradient (it used to be added on top, and at golden
+  // hour, the sun low in the TV's view, sky + halo went past what the tone map shows: one flat orange).
+  float halo = clamp(pow(sd, 12.0) * 0.5 * horizonBand + pow(sd, 3.0) * 0.08, 0.0, 0.4);
+  col = mix(col, uGlow * 0.92 + uHorizon * 0.08, halo) + uGlow * pow(sd, 48.0) * 0.5;
   // Stars (night) with a faint band.
   if (uStars > 0.01 && h > 0.0) {
     vec2 sp = d.xz / (d.y + 0.35) * 90.0;
@@ -94,7 +116,7 @@ void main() {
   cc += uGlow * pow(sd, 4.0) * 0.4;
   col = mix(col, cc, cov * 0.92);
   // Below the horizon: fade to the horizon colour (hidden by hills anyway).
-  col = mix(col, uHorizon, smoothstep(0.0, -0.1, h));
+  col = mix(col, hz, smoothstep(0.0, -0.1, hv));
   gl_FragColor = vec4(max(col, vec3(0.0)), 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -226,6 +248,7 @@ export function buildSky(): Sky {
     uniforms: {
       uTop: { value: new Color() },
       uHorizon: { value: new Color() },
+      uFog: { value: new Color() },
       uGlow: { value: new Color() },
       uCloud: { value: new Color() },
       uCloudShade: { value: new Color() },
@@ -267,6 +290,7 @@ export function buildSky(): Sky {
       // Uniform values are typed `any` by three; these are the objects created above.
       (u.uTop!.value as Color).copy(tod.skyTop);
       (u.uHorizon!.value as Color).copy(tod.skyHorizon);
+      (u.uFog!.value as Color).copy(tod.fog);
       (u.uGlow!.value as Color).copy(tod.skyGlow);
       (u.uCloud!.value as Color).copy(tod.cloud);
       (u.uCloudShade!.value as Color).copy(tod.cloudShade);

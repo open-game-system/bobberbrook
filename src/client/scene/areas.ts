@@ -44,7 +44,8 @@ type Recipe = {
 const RECIPES: Record<Exclude<Biome, "moonwell">, Recipe> = {
   marsh: {
     flowers: [0xc9a6ff, 0x9a7aff, 0xff9ee0, 0xffffff], shrooms: [new Color(0.9, 0.8, 2.4), new Color(1.6, 0.9, 2.2)],
-    grass: 1.1, flower: 0.6, fern: 0.6, reed: 2.4, pad: 2.6, lily: 1.8, shroom: 0.5, rock: 0.5, bell: 0.6,
+    // Round 26: flower 0.6 -> 1.0, fern 0.6 -> 1.1, bell 0.6 -> 1.0 (mistmarsh_tod-night's bare bottom third).
+    grass: 1.1, flower: 1.0, fern: 1.1, reed: 2.4, pad: 2.6, lily: 1.8, shroom: 0.5, rock: 0.5, bell: 1.0,
   },
   pools: {
     flowers: [0xffffff, 0xc9a6ff, 0x9ad8ff, 0xffe0f0], shrooms: [new Color(0.5, 1.6, 2.2)],
