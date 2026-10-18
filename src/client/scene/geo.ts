@@ -1,4 +1,4 @@
-import { BufferAttribute, BufferGeometry, Color, Matrix4, MeshBasicMaterial, MeshDepthMaterial, MeshLambertMaterial, type Material, ShaderChunk, Vector3, Vector4, type Side } from "three";
+import { BufferAttribute, BufferGeometry, type Camera, Color, Matrix4, MeshBasicMaterial, MeshDepthMaterial, MeshLambertMaterial, type Material, ShaderChunk, Vector3, Vector4, type Side } from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { PK, applyPaint, type PaintKind } from "./painter";
 
@@ -155,7 +155,41 @@ export type OccluderUniforms = {
   uNear: { value: number };
   /** The main camera's view-projection: the fade is worked out from world position, so the shadow pass can apply it too. */
   uVP: { value: Matrix4 };
+  /**
+   * Round 25: each framed fisher's screen box (0..1, x0 y0 x1 y1, y up), padded BESIDE_PAD metres either side,
+   * feet to hat; x0 > x1 = unused. Posts, lanterns and rails (materials made with `beside`) dissolve inside it
+   * from the lens to BESIDE_BACK metres behind the fisher, so no post or lantern crosses a fisher's silhouette
+   * or held fish, in front or just behind (round 24 session 274-298 s: Mistmarsh's boardwalk lanterns).
+   */
+  uBeside: { value: Vector4[] };
+  /** Per fisher: view depth of the chest (m), feet height. */
+  uBesideD: { value: Vector4[] };
 };
+export const BESIDE_PAD = 0.9;
+export const BESIDE_BACK = 4;
+const bTmp = new Vector3();
+/** Sets the beside fade's boxes from the camera and the framed fishers' feet (and hat tops above the feet). */
+export function setBeside(u: OccluderUniforms, cam: Camera, feet: readonly { x: number; y: number; z: number; top: number }[]): void {
+  let n = 0;
+  for (const f of feet) {
+    if (n >= MAX_FOCUS) break;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    let ok = true;
+    for (let k = 0; k < 8; k++) {
+      bTmp.set(f.x + (k & 1 ? BESIDE_PAD : -BESIDE_PAD), f.y + (k & 2 ? f.top : 0), f.z + (k & 4 ? BESIDE_PAD : -BESIDE_PAD)).applyMatrix4(cam.matrixWorldInverse);
+      if (-bTmp.z < 0.1) { ok = false; break; }
+      bTmp.applyMatrix4(cam.projectionMatrix);
+      x0 = Math.min(x0, bTmp.x * 0.5 + 0.5); x1 = Math.max(x1, bTmp.x * 0.5 + 0.5);
+      y0 = Math.min(y0, bTmp.y * 0.5 + 0.5); y1 = Math.max(y1, bTmp.y * 0.5 + 0.5);
+    }
+    if (!ok) continue;
+    const depth = -bTmp.set(f.x, f.y + 1.1, f.z).applyMatrix4(cam.matrixWorldInverse).z;
+    u.uBeside.value[n]!.set(x0, y0, x1, y1);
+    u.uBesideD.value[n]!.set(depth, f.y, 0, 0);
+    n++;
+  }
+  for (let i = n; i < MAX_FOCUS; i++) u.uBeside.value[i]!.set(1, 1, 0, 0);
+}
 export const MAX_FOCUS = 5;
 
 /** The fade's maths, shared by the vertex stage (whole instances) and the fragment stage (one-off meshes). */
@@ -165,6 +199,27 @@ uniform float uNear;
 uniform mat4 uVP;
 uniform vec3 uCam;
 uniform vec3 uFocus[${MAX_FOCUS}];
+uniform vec4 uBeside[${MAX_FOCUS}];
+uniform vec4 uBesideD[${MAX_FOCUS}];
+uniform float uBesideK;
+/** Round 25: posts and lanterns (uBesideK 1) dissolve round a fisher on screen, in front or just behind. */
+float occBeside(vec3 p) {
+  if (uBesideK < 0.5) return 0.0;
+  vec4 clip = uVP * vec4(p, 1.0);
+  if (clip.w <= 0.05) return 0.0;
+  vec2 sc = clip.xy / clip.w * 0.5 + 0.5;
+  float occ = 0.0;
+  for (int i = 0; i < ${MAX_FOCUS}; i++) {
+    vec4 b = uBeside[i];
+    if (b.z < b.x) continue;
+    vec4 d = uBesideD[i];
+    float inX = smoothstep(b.x - 0.01, b.x + 0.01, sc.x) * (1.0 - smoothstep(b.z - 0.01, b.z + 0.01, sc.x));
+    float inY = smoothstep(b.y - 0.01, b.y + 0.01, sc.y) * (1.0 - smoothstep(b.w - 0.01, b.w + 0.01, sc.y));
+    float near = 1.0 - smoothstep(d.x + ${(BESIDE_BACK - 1).toFixed(1)}, d.x + ${BESIDE_BACK.toFixed(1)}, clip.w);
+    occ = max(occ, inX * inY * near * step(d.y - 1.5, p.y));
+  }
+  return occ;
+}
 /**
  * 0 = solid, 1 = gone, for a point p standing for something \`pad\` metres round (a canopy's reach): on the line
  * from the camera to a focus point and in front of it, in front of the action's screen box, or against the lens.
@@ -245,10 +300,13 @@ varying vec3 vOccW;
 varying float vOccI;
 ${OCC_CORE}
 float occAmount() {
-  return vOccI >= 0.0 ? vOccI : occAt(vOccW, 0.0);
+  return max(occBeside(vOccW), vOccI >= 0.0 ? vOccI : occAt(vOccW, 0.0));
 }`;
 
-function bindOcc(shader: { uniforms: Record<string, unknown> }, u: OccluderUniforms): void {
+function bindOcc(shader: { uniforms: Record<string, unknown> }, u: OccluderUniforms, beside = 0): void {
+  shader.uniforms.uBeside = u.uBeside;
+  shader.uniforms.uBesideD = u.uBesideD;
+  shader.uniforms.uBesideK = { value: beside };
   shader.uniforms.uCam = u.uCam;
   shader.uniforms.uFocus = u.uFocus;
   shader.uniforms.uBox = u.uBox;
@@ -257,8 +315,8 @@ function bindOcc(shader: { uniforms: Record<string, unknown> }, u: OccluderUnifo
 }
 
 /** Adds the occluder fade to a compiling shader (see occluderMaterial); the material needs alphaToCoverage. */
-export function applyOccluder(shader: { uniforms: Record<string, unknown>; vertexShader: string; fragmentShader: string }, u: OccluderUniforms): void {
-  bindOcc(shader, u);
+export function applyOccluder(shader: { uniforms: Record<string, unknown>; vertexShader: string; fragmentShader: string }, u: OccluderUniforms, beside = 0): void {
+  bindOcc(shader, u, beside);
   shader.vertexShader = shader.vertexShader
     .replace("#include <common>", `#include <common>\n${OCC_VERT_PARS}`)
     .replace("#include <project_vertex>", `#include <project_vertex>${OCC_VERT}`);
@@ -350,11 +408,13 @@ export function applyOccluderPerVertex(shader: { uniforms: Record<string, unknow
  * Painted material for trees and bushes that dissolve where they stand between the camera and the
  * action, so a canopy never hides a fisher.
  */
-export function occluderMaterial(u: OccluderUniforms): MeshLambertMaterial {
+export function occluderMaterial(u: OccluderUniforms, beside = 0): MeshLambertMaterial {
   const m = new MeshLambertMaterial({ vertexColors: true });
   const scale = { value: 1 };
+  // Round 25: `beside` 1 (posts, lanterns, rails) also dissolves round a fisher's feet. Same program as the
+  // trees (only a uniform differs), so no new shader.
   m.onBeforeCompile = (shader) => {
-    applyOccluder(shader, u);
+    applyOccluder(shader, u, beside);
     applyPaint(shader, scale);
   };
   m.alphaToCoverage = true;
@@ -369,7 +429,8 @@ export function occluderMaterial(u: OccluderUniforms): MeshLambertMaterial {
  */
 export function occluderGlowMaterial(u: OccluderUniforms, opts: { vertexColors?: boolean; color?: number } = {}): MeshBasicMaterial {
   const m = new MeshBasicMaterial({ vertexColors: opts.vertexColors ?? true, color: opts.color ?? 0xffffff });
-  m.onBeforeCompile = (shader) => applyOccluder(shader, u);
+  // Lamp glass and lantern cages go with their posts (round 25: round a fisher's feet too).
+  m.onBeforeCompile = (shader) => applyOccluder(shader, u, 1);
   m.alphaToCoverage = true;
   m.customProgramCacheKey = () => "bobber-occluder-glow";
   return m;
@@ -378,6 +439,7 @@ export function occluderGlowMaterial(u: OccluderUniforms, opts: { vertexColors?:
 /** The scene's fade materials, for builders that make lamps and posts (registered once by the scene). */
 let fadeSolid: Material | null = null;
 let fadeUniforms: OccluderUniforms | null = null;
+/** `solid`: the posts' material (round 25: one made with `beside`, so posts also clear round a fisher's feet). */
 export function registerFade(solid: Material, u: OccluderUniforms): void {
   fadeSolid = solid;
   fadeUniforms = u;

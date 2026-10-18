@@ -30,7 +30,7 @@ import { Fx } from "./fx";
 import { coverScene, makeCoverUniforms, setCoverFishers } from "./cover";
 import { coverCheck, stackCheck, type CoverReport, type StackReport } from "./coverCheck";
 import { keepPrograms } from "./keepPrograms";
-import { MAX_FOCUS, occluderDepthMaterial, occluderMaterial, patchLambertWrap, registerFade } from "./geo";
+import { MAX_FOCUS, occluderDepthMaterial, occluderMaterial, patchLambertWrap, registerFade, setBeside } from "./geo";
 import { makeParticles } from "./particles";
 import { TAG_LAYER, buildPost, type Post } from "./post";
 import { buildProps } from "./props";
@@ -223,10 +223,14 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     uBox: { value: new Vector4(0, 0, 0, 0) },
     uNear: { value: 0 },
     uVP: { value: new Matrix4() },
+    uBeside: { value: Array.from({ length: MAX_FOCUS }, () => new Vector4(1, 1, 0, 0)) },
+    uBesideD: { value: Array.from({ length: MAX_FOCUS }, () => new Vector4()) },
   };
   const treeMat = occluderMaterial(occ);
-  // Lamps, lantern posts and their glass, wherever they are built, dissolve through the same fade.
-  registerFade(treeMat, occ);
+  // Lamps, lantern posts and their glass, wherever they are built, dissolve through the same fade; round 25:
+  // posts also clear round a fisher's feet (the same program as the trees, a uniform apart).
+  const postMat = occluderMaterial(occ, 1);
+  registerFade(postMat, occ);
   // Leaf cards for every canopy built from here on (one program for both leaf sheets).
   const leafGlow = { value: 0 };
   /** A kit card cleaned for mipmaps (falls back to the raw texture). */
@@ -351,7 +355,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   scene.traverse((o) => {
     if (!(o instanceof Mesh)) return;
     const m = o.material;
-    if (m === treeMat || (Array.isArray(m) && m.includes(treeMat))) o.customDepthMaterial = treeDepth;
+    if (m === treeMat || m === postMat || (Array.isArray(m) && m.includes(treeMat))) o.customDepthMaterial = treeDepth;
   });
 
   let post: Post | null = full ? buildPost(renderer, scene, camera, w, h) : null;
@@ -674,6 +678,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     coverFeet.length = 0;
     fishers.forEachBody((seat, x, y, z, top) => { if (framed.has(seat)) coverFeet.push({ x, y, z, top }); });
     setCoverFishers(cover, camera, coverFeet);
+    setBeside(occ, camera, coverFeet);
     coverScene(scene, cover);
     renderer.info.reset();
     if (post) post.render();
@@ -947,6 +952,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       plantMat.dispose();
       plantTex.dispose();
       treeMat.dispose();
+      postMat.dispose();
       treeMatDouble.dispose();
       treeDepth.dispose();
       keepers.dispose();

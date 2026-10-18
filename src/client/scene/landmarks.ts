@@ -28,7 +28,7 @@ import { capLayerOf, capMaterial, capUV, gillUV } from "./giantCap";
 import { valance } from "./valance";
 import { RIM_SHARE, WISTERIA_TIP, WISTERIA_TOP, cliffRockGeometry, crystalShard, instanced, rockGeometry, type Inst } from "./kit";
 import { moonPoolMesh, poolMesh } from "./pools";
-import { fadeGlowMaterial, jitter, merge, paint, prep, puffNormals, surf } from "./geo";
+import { fadeGlowMaterial, fadeMaterial, jitter, merge, paint, prep, puffNormals, surf } from "./geo";
 import { PK } from "./painter";
 import { attachFoliage, leafCards, splitRim, wisteriaCards, type Puff, type Strand } from "./foliage";
 import { barked } from "./surfaces";
@@ -701,7 +701,7 @@ export function buildLandmark(a: PondPlace, style: LandmarkStyle, seed: number, 
   // Lamp posts dissolve like the trees between the camera and a fisher, their glass with them.
   const lampGlowMat = fadeGlowMaterial();
   if (c.lamps.length) {
-    const m = new Mesh(merge(c.lamps), tree);
+    const m = new Mesh(merge(c.lamps), fadeMaterial(tree));
     m.castShadow = full;
     m.name = `${id}-lamps`;
     group.add(m);

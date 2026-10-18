@@ -29,7 +29,7 @@ import { CAMPFIRE, DOCK, EAST, OBSTACLES, SOUTH, WEST, NORTH, angleGap, lakeRadi
 import { FALLS, PATH_D, heightAt } from "./terrain";
 import { clearOfTrails } from "./valley";
 import { fbm, rng, vnoise } from "./noise";
-import { fadeGlowMaterial, jitter, merge, paint, paintedMaterial, prep, puffNormals, surf } from "./geo";
+import { fadeGlowMaterial, fadeMaterial, jitter, merge, paint, paintedMaterial, prep, puffNormals, surf } from "./geo";
 import { buildCampfireFx } from "./campfire";
 import { PK } from "./painter";
 import type { TodState } from "./tod";
@@ -365,7 +365,7 @@ export function buildProps(quality: SceneQuality, swayMat: MeshLambertMaterial, 
   const lampCap = prep(new ConeGeometry(0.13, 0.12, 6).translate(0.28, 1.2, 0));
   paint(lampCap, 0x2a2228);
   // Lamp posts dissolve like the trees when they stand between the camera and a fisher.
-  add(instanced(merge([lampPost, lampHook, lampCap]), treeMat, lamps, true)).name = "lamp-posts";
+  add(instanced(merge([lampPost, lampHook, lampCap]), fadeMaterial(treeMat), lamps, true)).name = "lamp-posts";
   // The glass dissolves with its post (round 10: it floated on where the post had gone).
   const lampGlassMat = fadeGlowMaterial({ vertexColors: false });
   disposables.push(lampGlassMat);

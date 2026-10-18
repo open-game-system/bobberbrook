@@ -64,6 +64,22 @@ const SAFE = 0.8;
 /** The fishers' feet sit on this line (a short foreground band below them), not centred in the box. */
 const FIT_Y0 = -0.74;
 const FIT_Y1 = 0.6;
+/**
+ * Round 25: the TV's join card (QR and room code, tv.css .ticket.compact) is a keep-out corner. Measured on the
+ * round-24 session it spans NDC x -0.88..-0.65, y -0.88..-0.70: left of KEEP_X no fisher's feet or body may sit
+ * below KEEP_Y, so the fit lifts that column's floor (round 24 session 255 s: Dad under the card).
+ */
+export const KEEP_X = -0.62;
+export const KEEP_Y = -0.67;
+/** How much of the keep-out floor applies at NDC x (1 inside the card's column, eased over 0.1 to its right). */
+export function keepLift(x: number): number {
+  // Aimed 0.05 above the corner: the calm dead zone lets the framing settle a little short of its goal.
+  return Math.min(1, Math.max(0, (KEEP_X + 0.1 - x) / 0.1)) * (KEEP_Y + 0.04 - FIT_Y0);
+}
+/** Whether an NDC point falls in the join card's keep-out corner. */
+export function inKeepOut(x: number, y: number): boolean {
+  return x < KEEP_X && y < KEEP_Y;
+}
 /** The calm dead zone: the framing goal holds until the want leaves DEAD_M + DEAD_K x distance (m), the
  * distance until it is off by DEAD_DIST of itself, the yaw and elevation by DEAD_ANG (rad). */
 const DEAD_M = 0.6;
@@ -277,7 +293,7 @@ export class CameraRig {
       const p = this.pts[i]!;
       for (const lift of LIFTS) {
         this.tmp.set(p.x, p.y + lift, p.z).project(cam);
-        if (this.tmp.z < 1 && (Math.abs(this.tmp.x) > SAFE || Math.abs(this.tmp.y) > SAFE)) return true;
+        if (this.tmp.z < 1 && (Math.abs(this.tmp.x) > SAFE || Math.abs(this.tmp.y) > SAFE || inKeepOut(this.tmp.x, this.tmp.y))) return true;
       }
     }
     return false;
@@ -299,7 +315,7 @@ export class CameraRig {
       for (const lift of LIFTS) {
         for (const sd of pad > 0 ? SIDES : NO_SIDES) {
           this.tmp.set(p.x + this.side.x * sd, p.y + lift, p.z + this.side.z * sd).project(cam);
-          if (Math.abs(this.tmp.x) > SAFE || Math.abs(this.tmp.y) > SAFE) return false;
+          if (Math.abs(this.tmp.x) > SAFE || Math.abs(this.tmp.y) > SAFE || inKeepOut(this.tmp.x, this.tmp.y)) return false;
         }
       }
     }
@@ -332,7 +348,8 @@ export class CameraRig {
         for (const lift of LIFTS) {
           this.tmp.set(p.x, p.y + lift, p.z).project(cam);
           nx0 = Math.min(nx0, this.tmp.x); nx1 = Math.max(nx1, this.tmp.x);
-          ny0 = Math.min(ny0, this.tmp.y); ny1 = Math.max(ny1, this.tmp.y);
+          // Round 25: under the join card the floor is KEEP_Y, not FIT_Y0 (the point counts as that much lower).
+          ny0 = Math.min(ny0, this.tmp.y - keepLift(this.tmp.x)); ny1 = Math.max(ny1, this.tmp.y);
         }
       }
       // Scale: how full the safe box is.
