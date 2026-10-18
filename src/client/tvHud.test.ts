@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BOARD_MS } from "../game/lake";
-import { RECAP_EVERY_MS, RECAP_MAX, boardingProgress, campfireRecap, queueToasts, todChanged } from "./tvHud";
+import { RECAP_EVERY_MS, RECAP_MAX, boardingProgress, campfireRecap, fishOutAt, queueToasts, todChanged } from "./tvHud";
 
 describe("boardingProgress", () => {
   it("fills from 0 to 1 over the boarding wait, and is null when nobody is boarding", () => {
@@ -69,5 +69,13 @@ describe("a new species never waits behind other banners", () => {
     const newFish = { id: 3, kind: "new" as const, fishId: "ember-shiner", seat: 1, star: true, also: [] };
     const q = queueToasts([up, tod], [newFish]);
     expect(q.map((t) => t.id)).toEqual([1, 3, 2]);
+  });
+});
+
+describe("a new time of day shows what it brings (round 24: 'Night falls' changed nothing you could see)", () => {
+  it("names the fish that only come out then", () => {
+    expect(fishOutAt("night")).toEqual(["moonfin", "aurora-char"]);
+    expect(fishOutAt("golden")).toEqual(["golden-koi", "ember-shiner"]);
+    expect(fishOutAt("morning")).toEqual([]);
   });
 });

@@ -1,3 +1,4 @@
+import { FISH } from "../game/fish";
 import type { TimeOfDay } from "../game/daycycle";
 import { BOARD_MS, type Lake } from "../game/lake";
 
@@ -57,4 +58,12 @@ export function queueToasts(queue: Toast[], fresh: Toast[]): Toast[] {
     else out.push(t);
   }
   return out.slice(-4);
+}
+
+/** The fish that only bite at this time of day, rarest first (the TV shows them with the time's banner). */
+export function fishOutAt(tod: TimeOfDay): string[] {
+  const rank = { legendary: 0, rare: 1, uncommon: 2, common: 3, junk: 4, treasure: 5 };
+  return FISH.filter((f) => f.when === tod)
+    .sort((a, b) => rank[a.rarity] - rank[b.rarity])
+    .map((f) => f.id);
 }

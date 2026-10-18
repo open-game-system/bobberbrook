@@ -20,7 +20,7 @@ import { thrashingAt } from "../../game/reel";
 import { createServerClock } from "../serverClock";
 import { SEAT_HEX } from "../components/MiniMap";
 import { BoatIcon, CampfireIcon, RodIcon, ShellIcon, ZeppelinIcon } from "../components/Icons";
-import { boardingProgress, campfireRecap, queueToasts, todChanged, type Toast } from "../tvHud";
+import { boardingProgress, campfireRecap, fishOutAt, queueToasts, todChanged, type Toast } from "../tvHud";
 import { revealReady } from "../scene/revealGate";
 import type { TimeOfDay } from "../../game/daycycle";
 import { qualityFor, rendererName } from "../gpu";
@@ -302,6 +302,10 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
               <>
                 <span className={`tod-icon big ${t.tod}`} aria-hidden="true" />
                 <span className="toast-text">{TOD_NAMES[t.tod]}</span>
+                {/* What this time brings: the fish that only come out now (round 25). */}
+                {fishOutAt(t.tod).map((id) => (
+                  <img key={id} className="toast-fish" src={`/art/fish/${id}.webp`} alt="" />
+                ))}
               </>
             )}
             {t.kind === "golden" && <span className="toast-text">Golden swirl!</span>}
