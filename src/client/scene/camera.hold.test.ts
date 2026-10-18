@@ -54,4 +54,18 @@ describe("the catch push's timeline", () => {
     expect(Math.min(...ws.slice(60))).toBeGreaterThan(0.5);
     for (let i = 1; i < ws.length; i++) expect(Math.abs(ws[i]! - ws[i - 1]!)).toBeLessThan(0.05);
   });
+  it("a second catcher joining during the hold (the scene's age steps back to theirs) holds the push 2.5 s more", () => {
+    const rig = new CameraRig(16 / 9);
+    const ws: [number, number][] = [];
+    for (let i = 0; i < 60 * 16; i++) {
+      const t = i / 60;
+      // Dad's catch at 5 s; Juneau's at 7 s while Dad's fish is still up (fishers.ts catchFocus: the latest age).
+      const catchAt = t >= 5 && t < 10.1 ? { x: t < 7 ? 0 : 1.5, y: 2.2, z: 0, age: t < 7 ? t - 5 : t - 7 } : null;
+      frame(rig, t, catchAt);
+      if (t >= 5) ws.push([t, rig.debug().catchW]);
+    }
+    // Full from ~5.9 s and for 2.5 s after Juneau's catch, never easing out in between.
+    for (const [t, w] of ws) if (t > 6 && t < 9.45) expect(w, `at ${t.toFixed(2)} s`).toBeGreaterThan(0.999);
+    expect(ws.find(([t]) => t > 10.6)?.[1]).toBeLessThan(0.01);
+  });
 });

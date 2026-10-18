@@ -1159,8 +1159,12 @@ export class FisherViews {
     let sx = 0;
     let sz = 0;
     let sy = 0;
+    // Round 26: the push holds until the latest catcher's fish has had its moment (the camera picks the push up
+    // where it is when the age steps back), so a second catch never sees the push ease out under it.
+    let latest = found.catchStart;
     for (const v of this.views) {
       if (!v.present || v.catchStart < 0) continue;
+      latest = Math.max(latest, v.catchStart);
       up++;
       sx += v.x;
       sy += v.y;
@@ -1170,7 +1174,7 @@ export class FisherViews {
     out.x = up > 0 ? sx * k : found.x;
     out.y = (up > 0 ? sy * k : found.y) + 1.8;
     out.z = up > 0 ? sz * k : found.z;
-    out.age = t - found.catchStart;
+    out.age = t - latest;
     return out;
   }
 
