@@ -92,7 +92,8 @@ Mom (phone). Works with 1–4 fishers.
   south bank to (0.5, 27.2), below the spawn row (it stood 5 m from the water, in front of the east spawn spot).
 - **Trail treasures:** glowing shells along trails, a shell each, back after 3 minutes.
 - **A new place's own fish:** for the first 4 catches at a just-found place, species the family hasn't met
-  are 12× likelier (round 25; was the first catch only).
+  are 12× likelier (round 25; was the first catch only); from round 28 only species the family hasn't met
+  bite there while any of them live in that water.
 - **Kids' reels are shorter:** a fisher who joined as a kid reels in 1.5× faster on calm stretches and loses
   half as much holding through a thrash (round 27).
 - **Fish:** 30 species (rarer ones more likely farther from home); the Moonfin rises at Starfall Tarn at night.

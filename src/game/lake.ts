@@ -422,7 +422,10 @@ export function chooseCatch(ctx: BiteContext, r: () => number): FishDef {
   const junk = ctx.swirl === "none" ? junkRoll(ctx.water, r) : undefined;
   if (junk) return junk;
   if (moonfinRises(ctx) && r() < 0.3) return fishById("moonfin")!;
-  const pool = biterPool(ctx);
+  const all = biterPool(ctx);
+  // At a just-found place, only species the family hasn't met while any bite here (round 27: two Pond Pikes).
+  const unmet = ctx.freshPlace ? all.filter((f) => !ctx.known(f.id)) : [];
+  const pool = unmet.length > 0 ? unmet : all;
   return pool[pickWeighted(pool.map((f) => catchWeight(f, ctx)), r())]!;
 }
 

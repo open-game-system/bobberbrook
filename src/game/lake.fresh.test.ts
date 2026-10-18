@@ -24,6 +24,20 @@ describe("a new place keeps the coach's promise: its own fish first", () => {
   });
 });
 
+describe("at a just-found place, only fish the family hasn't met bite while any do (round 27: two Pond Pikes at Mistmarsh)", () => {
+  it("every catch in the fresh window is a new species when the water still has new ones", () => {
+    const pool = biterPool(ctx(true, () => false));
+    const known = new Set([pool[0]!.id]);
+    let seed = 7;
+    const r = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let i = 0; i < 300; i++) {
+      const id = chooseCatch(ctx(true, (x) => known.has(x)), r).id;
+      if (["chest", "boot", "teapot"].includes(id)) continue;
+      expect(known.has(id)).toBe(false);
+    }
+  });
+});
+
 describe("the new place's own fish keep coming for its first few catches (round 24: a repeat Stripy Perch at Mistmarsh)", () => {
   const T0 = 1_000_000;
   function atMarsh(catchesSince: number): Lake {
