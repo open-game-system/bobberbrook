@@ -25,6 +25,7 @@ import { fishById } from "../../game/fish";
 import { CAMPFIRE, onDock, type Vec } from "../../game/world";
 import { activeWorld } from "./worldQuery";
 import { FISHER_SCALE, ROD_SEGMENTS, buildFisher, type FisherRig, type RigMaterials } from "./character";
+import { fisherRole, type Role } from "./fisherBuild";
 import { CatchCard, lightPillar, type FishShadows, type FishTextures } from "./fishviz";
 import type { Fx } from "./fx";
 import { damp } from "./noise";
@@ -36,27 +37,31 @@ import { layoutTags, type TagBox, type TagShift } from "./tagLayout";
 import { CARD_PX, FISH_PX, chestHold, holdCard, liftFrom } from "./holdCard";
 
 const DECK_Y = 0.42;
+/** Round 24: the name tag's foot above the hat's top (world units). */
+const TAG_GAP = 0.3;
 const LINE_SEGS = 18;
 /** The lift from the water into the hands (round 11: 0.95 s read as a float; round 13: 0.6 -> 0.3 s). */
 const LEAP_S = 0.3;
 /** The lift starts at most this far from the catcher (round 13: a double catch flew a perch between two fishers). */
 const LIFT_REACH = 2.2;
-/** The arms while holding a catch across the chest: forward (rotation x) and out (rotation z). */
+/**
+ * The arms while holding a catch across the chest: forward (rotation x) and out (rotation z). Round 24:
+ * hands under the fish close to the body (z 0.42 -> 0.08 and reach 1.75 -> 1.3: round 22 double-catch.png
+ * read as arms held wide with the fish floating between them); a grown-up's longer arms angle down more.
+ */
 const HOLD_ARM_X = -1.25;
-const HOLD_ARM_Z = 0.42;
+const HOLD_ARM_X_ADULT = -0.9;
+const HOLD_ARM_Z = 0.08;
 /** The held fish's plane in front of the catcher's centre (world units): past the belly, behind the mittens. */
 const HOLD_FRONT = 0.5;
 /** The held fish's tilt (radians, head up). */
 const HOLD_TILT = 0.14;
-/** The chin above the feet (world units, at FISHER_SCALE): the held fish's top stays under it. */
-const CHIN_Y = 0.55 * FISHER_SCALE;
 /** The fish is held up until this age (s), then tucked away over TUCK_S. */
 const TUCK_AT = 2.75;
 const TUCK_S = 0.45;
-/** Half the fisher's head width with the hat brim (world units, at FISHER_SCALE). */
-const HEAD_HALF = 0.3 * FISHER_SCALE;
-/** How much longer the arms reach while holding a catch. */
-const HOLD_REACH = 0.75;
+/** How much longer the arms reach while holding a catch (a grown-up's arms are long enough). */
+const HOLD_REACH = 0.3;
+const HOLD_REACH_ADULT = 0.05;
 
 const scratch: Vec = { x: 0, z: 0 };
 const predicted: Vec = { x: 0, z: 0 };
@@ -122,15 +127,17 @@ function bobberGeometry(): BufferGeometry {
   return merge([top, bottom, band, stick, tip]);
 }
 
-type Pose = { legL: number; legR: number; armLx: number; armLz: number; armRx: number; armRz: number; bodyY: number; lean: number; tilt: number; headX: number; headY: number; sq: number; bend: number; sit: number; whip: number };
+type Pose = { legL: number; legR: number; armLx: number; armLz: number; armRx: number; armRz: number; bodyY: number; lean: number; tilt: number; headX: number; headY: number; sq: number; bend: number; sit: number; whip: number; stance: number };
 /** Moonwell's dock runs north-south (world.ts DOCK). */
 const DOCK_ALONG = { x: 0, z: 1 };
-const zeroPose = (): Pose => ({ legL: 0, legR: 0, armLx: 0, armLz: 0, armRx: 0, armRz: 0, bodyY: 0, lean: 0, tilt: 0, headX: 0, headY: 0, sq: 0, bend: 0, sit: 0, whip: 0 });
+const zeroPose = (): Pose => ({ legL: 0, legR: 0, armLx: 0, armLz: 0, armRx: 0, armRz: 0, bodyY: 0, lean: 0, tilt: 0, headX: 0, headY: 0, sq: 0, bend: 0, sit: 0, whip: 0, stance: 0 });
 
 class FisherView {
   rig: FisherRig;
   /** The colour the rig was built in: always the fisher's own `color` (chosen per device), never the seat's. */
   private colorName = "green";
+  /** Round 24: the build the rig was made in (a grown-up, a kid, the little one). */
+  private role: Role = "kid";
   get color(): string {
     return this.colorName;
   }
@@ -258,10 +265,11 @@ class FisherView {
   }
 
   /** Rebuilds the rig in a new colour (shared materials, so no shader compiles). */
-  private recolor(colorName: string): void {
+  private recolor(colorName: string, role: Role): void {
     const old = this.rig;
     this.colorName = colorName;
-    const rig = buildFisher(this.seat, colorName, this.mats);
+    this.role = role;
+    const rig = buildFisher(this.seat, colorName, this.mats, role);
     rig.root.visible = old.root.visible;
     rig.tag.visible = old.tag.visible;
     rig.root.position.copy(old.root.position);
@@ -331,7 +339,8 @@ class FisherView {
       }
       return;
     }
-    if (f.color !== this.colorName) this.recolor(f.color);
+    const role = fisherRole(f);
+    if (f.color !== this.colorName || role !== this.role) this.recolor(f.color, role);
     const rig = this.rig;
     rig.setName(f.name);
     // ---- position ----
@@ -401,6 +410,8 @@ class FisherView {
     // Base pose: idle breathing.
     target.legL = 0; target.legR = 0; target.lean = 0; target.tilt = Math.sin(t * 1.6 + this.seat) * 0.03; target.headX = 0;
     target.armLx = -0.15; target.armLz = 0.18; target.armRx = -0.15; target.armRz = -0.18; target.bodyY = Math.sin(t * 2 + this.seat) * 0.008; target.bend = 0; target.sit = 0; target.whip = 0;
+    // Round 24: feet a little apart standing (0.05), wider and braced while reeling (pose below).
+    target.stance = 0.05;
     target.sq = Math.sin(t * 2 + this.seat) * 0.02;
     // The face reads from the group camera: the head turns toward it (a glance back now and then).
     const toCam = Math.atan2(camera.position.z - this.z, camera.position.x - this.x);
@@ -417,7 +428,10 @@ class FisherView {
     const bob = this.bob;
     const mode = lake.campfire ? "walk" : f.mode;
     if (moving && mode === "walk") {
-      this.walkPhase += dt * (4 + this.speed * 2.2);
+      // Round 24: a grown-up's long legs take slower, longer steps; the little one's quicker ones.
+      const cadence = rig.role === "adult" ? 0.72 : rig.role === "little" ? 1.12 : 1;
+      this.walkPhase += dt * (4 + this.speed * 2.2) * cadence;
+      target.stance = 0;
       const s = Math.sin(this.walkPhase);
       target.legL = s * 0.75; target.legR = -s * 0.75;
       target.armLx = -s * 0.6; target.armRx = s * 0.6 - 0.1;
@@ -436,7 +450,7 @@ class FisherView {
       target.armRz += (SLING_ARM.z - target.armRz) * this.sling;
     }
     if (lake.campfire) {
-      target.sit = 1; target.legL = -1.45; target.legR = -1.45; target.armLx = -0.6; target.armRx = -0.6; target.armLz = 0.3; target.armRz = -0.3;
+      target.sit = 1; target.legL = rig.sitLeg; target.legR = rig.sitLeg; target.armLx = -0.6; target.armRx = -0.6; target.armLz = 0.3; target.armRz = -0.3;
       target.headX = Math.sin(t * 0.8 + this.seat) * 0.06;
       rodVisible = false;
     }
@@ -529,6 +543,10 @@ class FisherView {
       target.armLz = -0.45;
       target.lean = thrash ? -0.34 + Math.sin(t * 18) * 0.05 : -0.24;
       target.headY *= 0.25;
+      // Round 24: braced, feet apart, the weight rocking with each crank (round 22: stiff while reeling).
+      target.stance = 0.17;
+      target.tilt = Math.sin(t * (hold ? 4.5 : 1.8)) * (hold ? 0.06 : 0.03);
+      target.bodyY = Math.abs(Math.sin(t * (hold ? 4.5 : 1.8))) * -0.012;
       // Round 23 (round 22 session 30/33/126 s: no tug on the TV): a deeper bend toward the bobber, a rod tip
       // that whips side to side while the fish thrashes (a bend along the view reads from behind the fisher
       // only as a shorter rod), rings pulsing out from the bobber that grow as the fish comes in, and on a
@@ -614,12 +632,15 @@ class FisherView {
           const up = Math.min(1, age / LEAP_S) * (1 - out);
           // Round 13: both arms out in front at chest height, a mitten under each end of the fish (overhead
           // read as a sprite over the head). The arms reach a little longer to get round it.
-          target.armLx = -0.8 + (HOLD_ARM_X + 0.8) * up;
+          const adult = rig.role === "adult";
+          target.armLx = -0.8 + ((adult ? HOLD_ARM_X_ADULT : HOLD_ARM_X) + 0.8) * up;
           target.armRx = target.armLx;
           target.armLz = HOLD_ARM_Z * up;
           target.armRz = -HOLD_ARM_Z * up;
-          this.reachTarget.l = 1 + HOLD_REACH * up;
-          this.reachTarget.r = 1 + HOLD_REACH * up;
+          const reach = adult ? HOLD_REACH_ADULT : HOLD_REACH;
+          this.reachTarget.l = 1 + reach * up;
+          this.reachTarget.r = 1 + reach * up;
+          target.stance = 0.07;
           target.lean = -0.06 * up;
           target.headX = -0.1 * up;
           target.headY = 0;
@@ -648,15 +669,16 @@ class FisherView {
     pz2.bend += (target.bend - pz2.bend) * kk;
     pz2.whip += (target.whip - pz2.whip) * Math.min(1, kk * 2.5);
     pz2.sit += (target.sit - pz2.sit) * kk;
-    rig.legL.rotation.x = pz2.legL;
-    rig.legR.rotation.x = pz2.legR;
+    pz2.stance += (target.stance - pz2.stance) * kk;
+    rig.legL.rotation.set(pz2.legL, 0, pz2.stance * (1 - pz2.sit));
+    rig.legR.rotation.set(pz2.legR, 0, -pz2.stance * (1 - pz2.sit));
     rig.armL.rotation.set(pz2.armLx, 0, pz2.armLz);
     rig.armR.rotation.set(pz2.armRx, 0, pz2.armRz);
     this.reach.l += (this.reachTarget.l - this.reach.l) * kk;
     this.reach.r += (this.reachTarget.r - this.reach.r) * kk;
     rig.armL.scale.set(1, this.reach.l, 1);
     rig.armR.scale.set(1, this.reach.r, 1);
-    rig.body.position.y = pz2.bodyY - pz2.sit * 0.16;
+    rig.body.position.y = pz2.bodyY - pz2.sit * rig.sitDrop;
     rig.body.rotation.set(pz2.lean, 0, pz2.tilt);
     rig.head.rotation.set(pz2.headX, pz2.headY, 0);
     rig.body.scale.set(1 - pz2.sq * 0.5, 1 + pz2.sq, 1 - pz2.sq * 0.5);
@@ -677,7 +699,10 @@ class FisherView {
     rig.markerMat.opacity = biting ? 0.6 + 0.4 * Math.sin(t * 16) : 0.55 + 0.1 * Math.sin(t * 2);
     rig.marker.scale.setScalar(biting ? 1.25 : 1);
     if (!inCatch) this.tagLift = 0;
-    rig.tag.position.set(this.x, this.y + (lake.campfire ? 3.0 + (this.seat % 2) * 0.5 : 3.4) * Math.min(1, this.appear * 1.4) + this.tagLift, this.z);
+    // Round 24: just above the hat of this fisher's build (a grown-up's tag sits higher than a kid's), not
+    // ~1 head above it (round 22 double-catch.png); sitting by the fire it drops with the body.
+    const top = (rig.topY - pz2.sit * rig.sitDrop) * FISHER_SCALE;
+    rig.tag.position.set(this.x, this.y + (top + TAG_GAP + (lake.campfire ? (this.seat % 2) * 0.3 : 0)) * Math.min(1, this.appear * 1.4) + this.tagLift, this.z);
     // The name tag stays up through a catch, lifted over the fish held overhead.
     rig.tag.visible = true;
     rig.tag.scale.set(0.17, 0.0374, 1);
@@ -728,12 +753,12 @@ class FisherView {
       const dist = Math.hypot(camera.position.x - this.x, camera.position.y - this.y - 1.5, camera.position.z - this.z);
       screenW = 2 * Math.tan((camera.fov * Math.PI) / 360) * dist * camera.aspect;
     }
-    const held = holdCard({ base: w * (CARD_PX / FISH_PX) * 0.8, aspect: this.catchAspect, headHalf: HEAD_HALF, screenW });
+    const held = holdCard({ base: w * (CARD_PX / FISH_PX) * 0.8, aspect: this.catchAspect, headHalf: this.rig.headHalf * FISHER_SCALE, screenW });
     this.rig.hand.getWorldPosition(this.handA);
-    this.handB.set(0, -0.18, 0);
+    this.handB.set(0, this.rig.handY, 0);
     this.rig.armL.localToWorld(this.handB);
     this.toCam.copy(camera.position).sub(this.handA).setY(0).normalize();
-    const chest = chestHold({ size: held.size, aspect: this.catchAspect, handsY: (this.handA.y + this.handB.y) / 2, chinY: this.y + CHIN_Y, feetY: this.y });
+    const chest = chestHold({ size: held.size, aspect: this.catchAspect, handsY: (this.handA.y + this.handB.y) / 2, chinY: this.y + this.rig.chinY * FISHER_SCALE, feetY: this.y });
     const W0 = chest.size;
     // In front of the body, slid toward the lens along the view ray through the chest point (so on screen
     // it sits exactly where chestHold put it, top under the chin), just behind the mittens.
@@ -1042,6 +1067,11 @@ export class FisherViews {
   /** Every present fisher by seat, with their colour name and bobber (null when none is out). */
   forEachSeat(fn: (seat: number, x: number, y: number, z: number, color: string, bob: Vector3 | null) => void): void {
     for (const v of this.views) if (v.present) fn(v.seat, v.x, v.y, v.z, v.color, v.bobberVisible ? v.bob : null);
+  }
+
+  /** Round 24: every present fisher's feet and the top of their hat (world units above the feet). */
+  forEachBody(fn: (seat: number, x: number, y: number, z: number, top: number) => void): void {
+    for (const v of this.views) if (v.present) fn(v.seat, v.x, v.y, v.z, v.rig.topY * FISHER_SCALE);
   }
 
   /** Every shown name tag (drawn over the finished frame, after the painterly post chain). */

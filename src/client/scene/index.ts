@@ -342,7 +342,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   // Round 21: every scenery material takes the cover fade (cover.ts); these keep their look: the fishers,
   // the ground and water they stand in, the sky, effects, and the vehicles (the family rides in them).
   const cover = makeCoverUniforms();
-  const coverFeet: { x: number; y: number; z: number }[] = [];
+  const coverFeet: { x: number; y: number; z: number; top: number }[] = [];
   for (const o of [sky.dome, sky.mountains, ground.group, ...water.ponds, water.brook, water.falls, mist.mesh, fow.mesh, shells.mesh, vehicles.group, rays.mesh, parts.water.points, parts.glow.points, splashes.group, escape.group, shadows.mesh, fishers.group, swirls.group, ...markers.meshes])
     o.userData.coverExempt = true;
   // Every dissolving tree casts its shadow through the same fade (no shadow without its tree).
@@ -671,7 +671,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     // Nothing between the camera and a fisher (cover.ts): every framed fisher's body box, and whatever the
     // streams just built takes the fade before it first draws.
     coverFeet.length = 0;
-    fishers.forEachSeat((seat, x, y, z) => { if (framed.has(seat)) coverFeet.push({ x, y, z }); });
+    fishers.forEachBody((seat, x, y, z, top) => { if (framed.has(seat)) coverFeet.push({ x, y, z, top }); });
     setCoverFishers(cover, camera, coverFeet);
     coverScene(scene, cover);
     renderer.info.reset();

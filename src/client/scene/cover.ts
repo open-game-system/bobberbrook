@@ -56,7 +56,7 @@ const vp = new Matrix4();
  * 0.42 of the nearest fisher's depth, solid past 0.62 of it (clamped to 2.5-7 m and 4-11 m), so a push-in
  * clears hanging strands and drapes across the frame and the wide shot keeps the round-11 lens rule.
  */
-export function setCoverFishers(u: CoverUniforms, cam: Camera, feet: readonly { x: number; y: number; z: number }[]): void {
+export function setCoverFishers(u: CoverUniforms, cam: Camera, feet: readonly { x: number; y: number; z: number; top?: number }[]): void {
   cam.updateMatrixWorld();
   vp.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
   u.uCovVP.value.copy(vp);
@@ -72,7 +72,7 @@ export function setCoverFishers(u: CoverUniforms, cam: Camera, feet: readonly { 
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     let ok = true;
     for (let k = 0; k < 8; k++) {
-      tmp.set(f.x + (k & 1 ? BODY_HALF : -BODY_HALF), f.y + (k & 2 ? BODY_TOP : BODY_BOTTOM), f.z + (k & 4 ? BODY_HALF : -BODY_HALF)).applyMatrix4(cam.matrixWorldInverse);
+      tmp.set(f.x + (k & 1 ? BODY_HALF : -BODY_HALF), f.y + (k & 2 ? Math.max(BODY_TOP, (f.top ?? 0) - 0.2) : BODY_BOTTOM), f.z + (k & 4 ? BODY_HALF : -BODY_HALF)).applyMatrix4(cam.matrixWorldInverse);
       if (-tmp.z < 0.1) { ok = false; break; }
       tmp.applyMatrix4(cam.projectionMatrix);
       const sx = tmp.x * 0.5 + 0.5;

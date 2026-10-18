@@ -15,6 +15,8 @@ import {
   SpriteMaterial,
   SRGBColorSpace,
   TorusGeometry,
+  LatheGeometry,
+  Vector2,
   BoxGeometry,
   type Material,
   type MeshLambertMaterial,
@@ -26,6 +28,7 @@ import { bakeFigure, type Occluder } from "./figurePaint";
 import { PK, type PaintKind } from "./painter";
 import { hairLocks, paintSkull, waveBrim } from "./fisherShape";
 import { SEAT_HEX } from "./types";
+import { BUILDS, CHIN, HEAD_HALF, figureTop, type Build, type Role } from "./fisherBuild";
 
 /** World scale of a fisher (model is built ~1 unit tall). */
 export const FISHER_SCALE = 2.2;
@@ -51,6 +54,15 @@ export type FisherRig = {
   rodHand: Object3D;
   rodBack: Object3D;
   rods: RodRig[];
+  /** Round 24: the build (fisherBuild.ts) and its measures in figure units (x FISHER_SCALE for world). */
+  role: Role;
+  /** The hat's top, the chin, half the head's width with the brim, the mitten's y on its arm. */
+  topY: number;
+  chinY: number;
+  headHalf: number;
+  handY: number;
+  sitDrop: number;
+  sitLeg: number;
   marker: Mesh;
   markerMat: MeshBasicMaterial;
   tag: Sprite;
@@ -87,18 +99,46 @@ function knit(g: BufferGeometry, color: number, top?: number): BufferGeometry {
   return part(g, color, top, PK.knit);
 }
 
-/** The figure's bulk in rest pose (figure space): what shades what in the baked occlusion. */
-const OCCLUDERS: Occluder[] = [
-  { c: new Vector3(0, 0.8, 0), r: 0.25 },
-  { c: new Vector3(0, 0.36, 0), r: 0.2 },
-  { c: new Vector3(0.195, 0.41, 0), r: 0.06 },
-  { c: new Vector3(-0.195, 0.41, 0), r: 0.06 },
-  { c: new Vector3(0.085, 0.14, 0), r: 0.065 },
-  { c: new Vector3(-0.085, 0.14, 0), r: 0.065 },
-  { c: new Vector3(0, 0.4, -0.18), r: 0.1 },
-];
-/** Bakes the figure's occlusion and top light into a clothing part placed at `at` (its pivot) in the figure. */
-const shaded = (g: BufferGeometry, at: Vector3 = new Vector3()) => bakeFigure(g, at, OCCLUDERS);
+/** The figure's bulk in rest pose (figure space), by build: what shades what in the baked occlusion. */
+function occludersOf(B: Build): Occluder[] {
+  const legX = B.torsoW * 0.44;
+  const legY = B.hip * 0.6;
+  return [
+    { c: new Vector3(0, B.neckY + 0.24 * B.headS, 0), r: 0.25 * B.headS },
+    { c: new Vector3(0, B.torsoY, 0), r: Math.min(B.torsoW, B.torsoH) },
+    { c: new Vector3(B.shoulderX, B.shoulderY - B.armLen * 0.5, 0), r: 0.06 },
+    { c: new Vector3(-B.shoulderX, B.shoulderY - B.armLen * 0.5, 0), r: 0.06 },
+    { c: new Vector3(legX, legY, 0), r: 0.065 },
+    { c: new Vector3(-legX, legY, 0), r: 0.065 },
+    { c: new Vector3(0, B.torsoY + B.torsoH * 0.2, -B.torsoD - 0.03), r: 0.1 },
+  ];
+}
+
+/**
+ * Round 24: the torso turned on a lathe, centred on 0. A grown-up: hips, a waist, a broad chest and square
+ * shoulders. A kid: a round tummy fuller low down, narrow shoulders.
+ */
+function torsoGeometry(B: Build, role: Role): BufferGeometry {
+  const pts: Vector2[] = [];
+  const N = 14;
+  for (let i = 0; i <= N; i++) {
+    const t = -1 + (2 * i) / N;
+    let r: number;
+    if (role === "adult") {
+      // bottom round-off, hips 0.9, waist 0.84, chest 1.0, shoulders 0.96, then round into the neck.
+      const prof = t < -0.8 ? 0.9 * Math.sqrt(Math.max(0, 1 - ((t + 0.8) / 0.2) ** 2)) : t < -0.3 ? 0.9 - 0.06 * ((t + 0.8) / 0.5) : t < 0.45 ? 0.84 + 0.16 * Math.sin(((t + 0.3) / 0.75) * (Math.PI / 2)) : t < 0.8 ? 1.0 - 0.06 * ((t - 0.45) / 0.35) : 0.94 * Math.sqrt(Math.max(0, 1 - ((t - 0.8) / 0.2) ** 2)) + 0.0;
+      r = prof;
+    } else {
+      // A bean: fuller below the middle.
+      const u = t + 0.18;
+      r = Math.sqrt(Math.max(0, 1 - t * t)) * (1 - 0.12 * Math.max(0, u));
+    }
+    pts.push(new Vector2(Math.max(0.001, r * B.torsoW), t * B.torsoH));
+  }
+  pts[0]!.x = 0;
+  pts[N]!.x = 0;
+  return new LatheGeometry(pts, 18).scale(1, 1, B.torsoD / B.torsoW);
+}
 /** Skin (round 16): painted skin, a faint mottle and a warm shade (see painter.ts), never vinyl. */
 function skin(g: BufferGeometry, color: number, top?: number): BufferGeometry {
   return part(g, color, top, PK.skin);
@@ -236,9 +276,10 @@ function tagTexture(name: string | null, color: number, canvas: HTMLCanvasElemen
   return pw / w;
 }
 
-export function buildFisher(seat: number, colorName: string, mats: RigMaterials): FisherRig {
+export function buildFisher(seat: number, colorName: string, mats: RigMaterials, role: Role = "kid"): FisherRig {
   const color = SEAT_HEX[colorName] ?? 0x888888;
   const vest = new Color(color);
+  const B = BUILDS[role];
   const geos: BufferGeometry[] = [];
   const mesh = (g: BufferGeometry, m: Material = mats.body) => {
     geos.push(g);
@@ -251,47 +292,59 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials)
   root.scale.setScalar(FISHER_SCALE);
   const body = new Group();
   root.add(body);
+  const occluders = occludersOf(B);
+  const shaded = (g: BufferGeometry, at: Vector3 = new Vector3()) => bakeFigure(g, at, occluders);
 
-  // A chunky, rounded little fisher (~1 unit tall before scaling): boots, a bean body, stubby arms
-  // and a big round head (≈45 % of the height) with a simple friendly face.
+  // Round 24: built by role (fisherBuild.ts): grown-ups tall with long legs and a smaller head, kids small
+  // and chunky with a big head, the little one smaller still.
   const shade = (hex: number, k: number) => new Color(hex).multiplyScalar(k).getHex();
   const lighten = (hex: number, k: number) => new Color(hex).lerp(new Color(0xffffff), k).getHex();
 
-  // Legs (pivot at the hip): short trousers and big round boots.
+  // Legs (pivot at the hip): trousers down to big round boots.
   const mkLeg = (sx: number) => {
     const pivot = new Group();
-    pivot.position.set(sx * 0.085, 0.2, 0);
-    const leg = felt(new CylinderGeometry(0.062, 0.058, 0.12, 9).translate(0, -0.06, 0), TROUSERS[seat]!);
-    const boot = leather(new SphereGeometry(0.078, 12, 8).scale(1, 0.72, 1.3).translate(0, -0.145, 0.025), 0x5a3420, 0x8a5634);
-    const sole = leather(new CylinderGeometry(0.075, 0.08, 0.025, 12).scale(1, 1, 1.3).translate(0, -0.19, 0.025), 0x3a2418);
-    pivot.add(mesh(shaded(merge([leg, boot, sole]), pivot.position)));
+    pivot.position.set(sx * B.torsoW * 0.44, B.hip, 0);
+    const bs = B.boot;
+    const legLen = B.hip - 0.085 * bs;
+    const leg = felt(new CylinderGeometry(B.legR, B.legR * 0.92, legLen, 9).translate(0, -legLen / 2, 0), TROUSERS[seat]!);
+    const boot = leather(new SphereGeometry(0.078 * bs, 12, 8).scale(1, 0.72, 1.3).translate(0, -B.hip + 0.055 * bs, 0.025 * bs), 0x5a3420, 0x8a5634);
+    const shaft = leather(new CylinderGeometry(B.legR * 1.12, 0.07 * bs, 0.07 * bs, 10).translate(0, -B.hip + 0.1 * bs, 0), 0x5a3420, 0x7a4a2c);
+    const sole = leather(new CylinderGeometry(0.075 * bs, 0.08 * bs, 0.025 * bs, 12).scale(1, 1, 1.3).translate(0, -B.hip + 0.0125 * bs, 0.025 * bs), 0x3a2418);
+    pivot.add(mesh(shaded(merge([leg, boot, shaft, sole]), pivot.position)));
     body.add(pivot);
     return pivot;
   };
   const legL = mkLeg(1);
   const legR = mkLeg(-1);
 
-  // Body: a rounded bean in the fisher's colour, cream collar, belt, a little backpack.
-  const torso = quilt(new SphereGeometry(0.205, 18, 12).scale(1, 1.08, 0.92).translate(0, 0.36, 0), shade(vest.getHex(), 0.78), lighten(vest.getHex(), 0.12));
-  // A belly panel only a shade lighter (round 09: at 35 % toward white it read as a white paint blotch).
-  const tummy = quilt(new SphereGeometry(0.13, 12, 8).scale(1, 1.05, 0.5).translate(0, 0.33, 0.135), lighten(vest.getHex(), 0.12));
-  const collar = knit(new TorusGeometry(0.11, 0.035, 6, 16).rotateX(Math.PI / 2).translate(0, 0.555, 0.01), 0xf4ead2);
-  const belt = leather(new TorusGeometry(0.19, 0.026, 6, 20).rotateX(Math.PI / 2).scale(1, 1, 0.93).translate(0, 0.25, 0), 0x5a3a22);
-  const buckle = part(new BoxGeometry(0.06, 0.05, 0.025).translate(0, 0.25, 0.185), 0xe8c050);
-  const pack = leather(new SphereGeometry(0.13, 10, 8).scale(1, 1.05, 0.62).translate(0, 0.4, -0.18), 0x8a5a32, 0xb07a48);
-  const roll = knit(new CylinderGeometry(0.05, 0.05, 0.26, 10).rotateZ(Math.PI / 2).translate(0, 0.54, -0.18), 0xd8c49a);
+  // Body: a torso turned on a lathe (an adult's chest and waist, a kid's round tummy), collar, belt, a pack.
+  const torso = quilt(torsoGeometry(B, role).translate(0, B.torsoY, 0), shade(vest.getHex(), 0.78), lighten(vest.getHex(), 0.12));
+  const tummyY = B.torsoY - B.torsoH * 0.12;
+  const tummy = quilt(new SphereGeometry(B.torsoW * 0.64, 12, 8).scale(1, (B.torsoH / B.torsoW) * 1.0, 0.5).translate(0, tummyY, B.torsoD * 0.86), lighten(vest.getHex(), 0.12));
+  const collarY = B.torsoY + B.torsoH * 0.98;
+  const collar = knit(new TorusGeometry(B.torsoW * 0.55, 0.033, 6, 16).rotateX(Math.PI / 2).translate(0, collarY, 0.01), 0xf4ead2);
+  const beltY = B.torsoY - B.torsoH * 0.55;
+  const beltR = B.torsoW * 0.97;
+  const belt = leather(new TorusGeometry(beltR, 0.026, 6, 20).rotateX(Math.PI / 2).scale(1, 1, B.torsoD / B.torsoW).translate(0, beltY, 0), 0x5a3a22);
+  const buckle = part(new BoxGeometry(0.06, 0.05, 0.025).translate(0, beltY, B.torsoD * 0.98 + 0.01), 0xe8c050);
+  const packY = B.torsoY + B.torsoH * 0.2;
+  const pack = leather(new SphereGeometry(0.13, 10, 8).scale(1, 1.05, 0.62).translate(0, packY, -B.torsoD - 0.04), 0x8a5a32, 0xb07a48);
+  const roll = knit(new CylinderGeometry(0.05, 0.05, 0.26, 10).rotateZ(Math.PI / 2).translate(0, packY + 0.14, -B.torsoD - 0.04), 0xd8c49a);
   body.add(mesh(merge([shaded(merge([torso, tummy, collar, belt, pack, roll])), buckle])));
 
-  // Arms (pivot at the shoulder; hang along -y): stubby sleeves and round mittens.
+  // Arms (pivot at the shoulder; hang along -y): sleeves and mittens.
+  const armS = B.armR / 0.05;
+  const handY = -B.armLen - 0.035 * armS;
   const mkArm = (sx: number) => {
     const pivot = new Group();
-    pivot.position.set(sx * 0.195, 0.49, 0);
-    const sleeve = quilt(new CylinderGeometry(0.056, 0.05, 0.15, 9).translate(0, -0.07, 0), shade(vest.getHex(), 0.9));
-    const shoulder = quilt(new SphereGeometry(0.058, 9, 6), shade(vest.getHex(), 0.95));
+    pivot.position.set(sx * B.shoulderX, B.shoulderY, 0);
+    const sl = B.armLen - 0.02;
+    const sleeve = quilt(new CylinderGeometry(B.armR * 1.1, B.armR, sl, 9).translate(0, -sl / 2, 0), shade(vest.getHex(), 0.9));
+    const shoulder = quilt(new SphereGeometry(B.armR * 1.16, 9, 6), shade(vest.getHex(), 0.95));
     // Round 19: a mitten with a thumb and a knitted cuff, not a smooth ball on a tube.
-    const cuff = knit(new TorusGeometry(0.05, 0.017, 5, 12).rotateX(Math.PI / 2).translate(0, -0.145, 0), 0xf4ead2);
-    const hand = skin(new SphereGeometry(0.058, 10, 7).scale(1, 1.08, 0.82).translate(0, -0.185, 0), SKIN);
-    const thumb = skin(new SphereGeometry(0.026, 7, 5).scale(1, 1.3, 1).translate(-sx * 0.04, -0.17, 0.03), SKIN);
+    const cuff = knit(new TorusGeometry(B.armR, 0.017, 5, 12).rotateX(Math.PI / 2).translate(0, -B.armLen + 0.005, 0), 0xf4ead2);
+    const hand = skin(new SphereGeometry(0.058 * armS, 10, 7).scale(1, 1.08, 0.82).translate(0, handY, 0), SKIN);
+    const thumb = skin(new SphereGeometry(0.026 * armS, 7, 5).scale(1, 1.3, 1).translate(-sx * 0.04 * armS, handY + 0.015, 0.03), SKIN);
     pivot.add(mesh(merge([shaded(merge([shoulder, sleeve, cuff]), pivot.position), hand, thumb])));
     body.add(pivot);
     return pivot;
@@ -299,12 +352,13 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials)
   const armL = mkArm(1);
   const armR = mkArm(-1);
   const hand = new Object3D();
-  hand.position.set(0, -0.18, 0.0);
+  hand.position.set(0, handY, 0.0);
   armR.add(hand);
 
   // Head: big and round, a simple friendly face (two eyes with shines, rosy cheeks, a small smile), hair, the hat.
   const head = new Group();
-  head.position.set(0, 0.56, 0);
+  head.position.set(0, B.neckY, 0);
+  head.scale.setScalar(B.headS);
   body.add(head);
   const HR = 0.25;
   const skull = paintSkull(underBrim(skin(new SphereGeometry(HR, 22, 16).translate(0, 0.24, 0), SKIN, lighten(SKIN, 0.1))));
@@ -394,7 +448,7 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials)
   // its tip up and back over the pack, so it never points at the ground or out in front like a lance (round 20
   // session 100/131 s). The arm comes up to hold it (fishers.ts, SLING_ARM).
   const rodBack = new Object3D();
-  rodBack.position.set(-0.16, 0.4, 0.2);
+  rodBack.position.set(-B.shoulderX * 0.82, B.torsoY + B.torsoH * 0.25, B.torsoD + 0.04);
   rodBack.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), new Vector3(0.22, 0.62, -0.76).normalize());
   body.add(rodBack);
 
@@ -436,6 +490,13 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials)
     rodHand,
     rodBack,
     rods,
+    role,
+    topY: figureTop(B),
+    chinY: B.neckY + CHIN * B.headS,
+    headHalf: HEAD_HALF * B.headS,
+    handY,
+    sitDrop: B.sitDrop,
+    sitLeg: B.sitLeg,
     marker,
     markerMat,
     tag,

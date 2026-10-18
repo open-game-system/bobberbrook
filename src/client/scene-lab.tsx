@@ -20,7 +20,11 @@ import { boardwalkPath } from "./scene/walkways";
 type Bot = { stay: boolean; noHook: boolean; target: Vec; hookAt: number; nextCastAt: number; stick: { x: number; y: number }; holding: boolean; reactAt: number; wander: boolean };
 type Scenario = {
   phase: number;
-  fishers: { seat: number; name: string; spot: Vec | "swirl" | "golden"; easy?: boolean; at?: Vec; stay?: boolean; noHook?: boolean }[];
+  /**
+   * Round 24: `kid` (a wordless join: drawn child-sized) defaults to the family's kids by name (Juneau, Sis);
+   * `easy` is the little one (Sis), and the grown-ups' bots may use it to hook faster (still drawn grown-up).
+   */
+  fishers: { seat: number; name: string; spot: Vec | "swirl" | "golden"; easy?: boolean; kid?: boolean; at?: Vec; stay?: boolean; noHook?: boolean }[];
   setup?: (lake: Lake, now: number) => Lake;
   /** Tweaks every step (the "director"). */
   direct?: (lake: Lake, now: number) => Lake;
@@ -518,7 +522,7 @@ const SCENARIOS: Record<string, Scenario> = {
     phase: 0.36,
     fishers: [
       { seat: 0, name: "Dad", spot: shoreIn("mistmarsh", -0.45), easy: true, at: shoreIn("mistmarsh", -0.45, 2) },
-      { seat: 2, name: "Juneau", spot: shoreIn("mistmarsh", -0.7), easy: true, at: shoreIn("mistmarsh", -0.7, 2) },
+      { seat: 2, name: "Juneau", spot: shoreIn("mistmarsh", -0.7), at: shoreIn("mistmarsh", -0.7, 2) },
     ],
     setup: discoverOnly(["mistmarsh"]),
     warmUntil: (l) => l.fishers.some((f) => f.mode === "reel"),
@@ -530,7 +534,7 @@ const SCENARIOS: Record<string, Scenario> = {
     phase: 0.36,
     fishers: [
       { seat: 0, name: "Dad", spot: walkAt(4), easy: true, at: walkAt(4) },
-      { seat: 2, name: "Juneau", spot: shoreIn("mistmarsh", -1.62), easy: true, at: shoreIn("mistmarsh", -1.62, 2) },
+      { seat: 2, name: "Juneau", spot: shoreIn("mistmarsh", -1.62), at: shoreIn("mistmarsh", -1.62, 2) },
     ],
     setup: discoverOnly(["mistmarsh"]),
     warmUntil: (l) => l.fishers.some((f) => f.mode === "reel"),
@@ -541,7 +545,7 @@ const SCENARIOS: Record<string, Scenario> = {
     phase: 0.36,
     fishers: [
       { seat: 0, name: "Dad", spot: shoreIn("mistmarsh", -0.45), easy: true, at: shoreIn("mistmarsh", -0.45, 2) },
-      { seat: 2, name: "Juneau", spot: shoreIn("mistmarsh", -0.7), easy: true, at: shoreIn("mistmarsh", -0.7, 2) },
+      { seat: 2, name: "Juneau", spot: shoreIn("mistmarsh", -0.7), at: shoreIn("mistmarsh", -0.7, 2) },
     ],
     setup: discoverOnly(["mistmarsh"]),
     warmUntil: (l) => l.fishers.some((f) => f.mode === "reel"),
@@ -616,7 +620,7 @@ declare global {
   }
 }
 
-function joinAs(lake: Lake, seat: number, name: string, at: Vec | undefined, easy: boolean): Lake {
+function joinAs(lake: Lake, seat: number, name: string, at: Vec | undefined, easy: boolean, kid: boolean): Lake {
   // Join until the requested seat is ours, then drop the placeholders.
   let l = lake;
   const placeholders: number[] = [];
@@ -631,6 +635,7 @@ function joinAs(lake: Lake, seat: number, name: string, at: Vec | undefined, eas
     const f = d.fishers.find((x) => x.seat === seat);
     if (f) {
       f.easy = easy;
+      f.kid = kid;
       if (at) f.pos = { ...at };
     }
   });
@@ -704,7 +709,7 @@ async function main(): Promise<void> {
   lake = step(lake, now);
   const bots = new Map<number, Bot>();
   for (const spec of sc.fishers) {
-    lake = joinAs(lake, spec.seat, spec.name, spec.at, spec.easy ?? false);
+    lake = joinAs(lake, spec.seat, spec.name, spec.at, spec.easy ?? false, spec.kid ?? (spec.name === "Juneau" || spec.name === "Sis"));
     bots.set(spec.seat, { stay: spec.stay ?? false, noHook: spec.noHook ?? false, target: { x: 0, z: 0 }, hookAt: 0, nextCastAt: 0, stick: { x: 0, y: 0 }, holding: false, reactAt: 0, wander: false });
   }
   if (sc.setup) lake = sc.setup(lake, now);
