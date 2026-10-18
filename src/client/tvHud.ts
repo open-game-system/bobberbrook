@@ -25,7 +25,7 @@ export function campfireRecap(log: Lake["log"], since: number | null, now: numbe
 /** A TV banner. A catch banner can carry up to two more catches that landed while it was up. */
 export type Toast = {
   id: number;
-  kind: "new" | "upgrade" | "golden" | "place" | "tod";
+  kind: "new" | "upgrade" | "golden" | "place" | "tod" | "campfire";
   fishId?: string;
   seat?: number;
   tier?: number;

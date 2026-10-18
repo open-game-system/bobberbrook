@@ -19,7 +19,7 @@ import { shouldTeach, teachFor, type TeachMemory } from "../teach";
 import { thrashingAt } from "../../game/reel";
 import { createServerClock } from "../serverClock";
 import { SEAT_HEX } from "../components/MiniMap";
-import { BoatIcon, RodIcon, ShellIcon, ZeppelinIcon } from "../components/Icons";
+import { BoatIcon, CampfireIcon, RodIcon, ShellIcon, ZeppelinIcon } from "../components/Icons";
 import { boardingProgress, campfireRecap, queueToasts, todChanged, type Toast } from "../tvHud";
 import { revealReady } from "../scene/revealGate";
 import type { TimeOfDay } from "../../game/daycycle";
@@ -127,6 +127,8 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
     lastTod.current = todNow;
     if (turned) fresh.push({ id: ++toastId.current, also: [], kind: "tod", tod: turned });
     for (const e of events) {
+      // The campfire's cause on the TV (round 23: it just started): a banner as the family sits down.
+      if (e.kind === "campfire" && e.on) fresh.unshift({ id: ++toastId.current, also: [], kind: "campfire" });
       // Every catch gets its banner (two at once queue, one after the other); a new species gets the star.
       if (e.kind === "caught") fresh.push({ id: ++toastId.current, also: [], kind: "new", fishId: e.fishId, seat: e.seat, star: e.isNew });
       if (e.kind === "upgrade") fresh.push({ id: ++toastId.current, also: [], kind: "upgrade", tier: e.tier });
@@ -303,6 +305,14 @@ export function TvScreen({ joinUrl, autoSound }: { joinUrl: string; autoSound: b
               </>
             )}
             {t.kind === "golden" && <span className="toast-text">Golden swirl!</span>}
+            {t.kind === "campfire" && (
+              <>
+                <span className="toast-icon">
+                  <CampfireIcon />
+                </span>
+                <span className="toast-text">Campfire time: today's catches</span>
+              </>
+            )}
             {t.kind === "place" && (
               <span className="toast-text">
                 <span className="toast-kicker">{t.ride === "zeppelin" ? "Zeppelin to" : t.ride === "boat" ? "Boat to" : "New place"}</span> {t.place}
