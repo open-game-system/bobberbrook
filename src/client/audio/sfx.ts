@@ -103,8 +103,8 @@ export const sfx = {
   nibble: (o: Opts = {}) => tone(520, 0.07, { gain: 0.14, bend: 1.6, ...o }),
   bite: (o: Opts = {}) => {
     whoosh(0.5, 1000, 300, { gain: 0.42, q: 1.1, ...o });
-    tone(note(4), 0.25, { gain: 0.3, type: "sine", attack: 0.012, ...o, at: (o.at ?? 0) + 0.02 });
-    tone(note(6), 0.35, { gain: 0.3, type: "sine", attack: 0.012, ...o, at: (o.at ?? 0) + 0.12 });
+    tone(note(4), 0.25, { gain: 0.3, type: "sine", attack: 0.025, ...o, at: (o.at ?? 0) + 0.02 });
+    tone(note(6), 0.35, { gain: 0.3, type: "sine", attack: 0.025, ...o, at: (o.at ?? 0) + 0.12 });
   },
   // A soft wooden tick (tonal, low): a 3.5 kHz noise tick counted as a harsh click every reel.
   reelClick: (o: Opts = {}) => tone(880, 0.05, { gain: 0.09, type: "triangle", attack: 0.008, ...o }),
@@ -113,15 +113,15 @@ export const sfx = {
     whoosh(0.35, 1000, 450, { gain: 0.24, ...o });
     tone(note(6), 0.4, { gain: 0.14, type: "triangle", bend: 0.6, ...o, at: (o.at ?? 0) + 0.1 });
   },
+  // Round 25: one soft water bloop and a three-note rise (round 24's five voices plus a noise whoosh, all
+  // starting within 0.3 s, measured as 23–36 bright flecks a minute at the Moonwell catches).
   catch: (o: Opts = {}) => {
-    whoosh(0.45, 950, 400, { gain: 0.28, q: 1.1, ...o });
-    // A warm, clearly audible sting (round 08: after the octave drop a catch only lifted the mix 1–3 dB).
-    [0, 2, 4, 7].forEach((n, i) => tone(note(n), 0.5, { gain: 0.34, type: "sine", attack: 0.015, ...o, at: (o.at ?? 0) + 0.1 + i * 0.07 }));
-    tone(note(-5), 0.7, { gain: 0.22, type: "triangle", attack: 0.02, ...o, at: (o.at ?? 0) + 0.1 });
+    tone(196, 0.45, { gain: 0.34, type: "sine", attack: 0.03, bend: 0.55, ...o });
+    [0, 2, 4].forEach((n, i) => tone(note(n), 0.6, { gain: 0.28, type: "sine", attack: 0.03, ...o, at: (o.at ?? 0) + 0.12 + i * 0.1 }));
   },
   newFish: (o: Opts = {}) => {
-    [2, 4, 5, 7, 9, 12].forEach((n, i) => tone(note(n), 0.55, { gain: 0.2, type: "sine", attack: 0.015, ...o, at: (o.at ?? 0) + 0.45 + i * 0.08 }));
-    tone(note(0), 1.2, { gain: 0.16, type: "sine", ...o, at: (o.at ?? 0) + 0.45 });
+    [5, 7, 10].forEach((n, i) => tone(note(n), 0.7, { gain: 0.2, type: "sine", attack: 0.035, ...o, at: (o.at ?? 0) + 0.5 + i * 0.12 }));
+    tone(note(0), 1.2, { gain: 0.14, type: "sine", attack: 0.06, ...o, at: (o.at ?? 0) + 0.5 });
   },
   junk: (o: Opts = {}) => tone(180, 0.35, { gain: 0.3, type: "triangle", bend: 0.5, ...o }),
   upgrade: (o: Opts = {}) => {

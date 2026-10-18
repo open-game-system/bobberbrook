@@ -25,6 +25,10 @@ export function audio(): { ctx: AudioContext; out: GainNode } | null {
   const comp = ctx.createDynamicsCompressor();
   comp.threshold.value = -18;
   comp.ratio.value = 4;
+  // A gentle attack and knee: a 3 ms clamp on a sting's onset can fleck the top end (round 24).
+  comp.attack.value = 0.02;
+  comp.release.value = 0.3;
+  comp.knee.value = 12;
   master.connect(comp).connect(ctx.destination);
   if (tapDest === null && new URLSearchParams(location.search).has("record")) {
     tapDest = ctx.createMediaStreamDestination();
