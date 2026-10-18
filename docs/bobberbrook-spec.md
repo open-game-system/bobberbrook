@@ -79,6 +79,9 @@ Mom (phone). Works with 1–4 fishers.
 - **Tagging along:** a fisher who hasn't touched the stick for 6 s and is over 9 m from the family walks to
   them (by trail, round ponds); the family stays within a 30 m leash. When the one they follow is fishing,
   they walk down to a free shore spot (3.5 m apart) beside them instead, ready to cast (round 23).
+- **A spot of your own:** a press at the water within 3.4 m of someone fishing first steps aside to a free
+  shore spot (3.5 m apart along the bank), then casts; a walk down to the water doesn't cast on the way in
+  beside someone either (round 25: the TV saw one fisher behind the other).
 - **Trail treasures:** glowing shells along trails, a shell each, back after 3 minutes.
 - **Fish:** 30 species (rarer ones more likely farther from home); the Moonfin rises at Starfall Tarn at night.
 

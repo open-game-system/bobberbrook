@@ -942,12 +942,31 @@ export function action(lake: Lake, seat: number, now: number): Lake {
     if (!canCast(f, now)) return;
     const w = worldFor(d.worldSeed);
     const cast = w.castFrom(f.pos);
-    if (cast) return startCast(d, f, cast, now);
-    if (f.mode !== "walk") return;
     const taken = d.fishers.filter((o) => o !== f).map((o) => o.fishSpot ?? o.pos);
-    f.fishSpot = w.fishingSpot(f.pos, WADE_RANGE, taken);
+    // Right beside someone fishing: step aside to a free spot first (round 24: Juneau fished from inside Dad's spot).
+    const aside = cast && f.mode === "walk" && crowded(f.pos, fishingSpots(d.fishers, f)) ? w.fishingSpot(f.pos, STEP_ASIDE_RANGE, taken) : null;
+    if (cast && !aside) return startCast(d, f, cast, now);
+    if (f.mode !== "walk") return;
+    f.fishSpot = aside ?? w.fishingSpot(f.pos, WADE_RANGE, taken);
     if (f.fishSpot) steer(f, f.fishSpot, w, WALK_SPEED);
   });
+}
+
+/**
+ * Closer than this to another fisher's spot is too close to fish from (the TV saw one behind the other,
+ * round 24): fish from the shore ring's own spots, which are this far apart and side by side along the bank.
+ */
+export const CROWD = 3.4;
+/** How far a fisher steps aside along the shore for a spot of their own. */
+const STEP_ASIDE_RANGE = 8;
+
+/** Where the others fish (or are walking down to fish). */
+function fishingSpots(fishers: readonly Fisher[], f: Fisher): Vec[] {
+  return fishers.filter((o) => o !== f && (o.fishSpot !== null || (o.mode !== "walk" && o.mode !== "ride"))).map((o) => o.fishSpot ?? o.pos);
+}
+
+function crowded(p: Vec, taken: Vec[]): boolean {
+  return taken.some((t) => distance(t, p) < CROWD);
 }
 
 /** How far from the water the big button still walks a fisher down to it. */
@@ -962,7 +981,8 @@ function wadeIn(d: Draft<Lake>, now: number, w: World): void {
       continue;
     }
     const cast = w.castFrom(f.pos);
-    if (cast) {
+    // Cast on the way in once at the water, but not right beside someone fishing: walk on to the free spot.
+    if (cast && !crowded(f.pos, fishingSpots(d.fishers, f))) {
       f.fishSpot = null;
       f.following = false;
       startCast(d, f, cast, now);
