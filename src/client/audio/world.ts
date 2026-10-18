@@ -62,7 +62,8 @@ function startFire(ctx: AudioContext, out: AudioNode): Layer {
   const flicker = ctx.createGain();
   flicker.gain.value = 0.7;
   // Two slow, unrelated wobbles: the fire breathes rather than pulsing on a beat.
-  for (const [hz, depth] of [[0.7, 0.2], [1.9, 0.12]] as const) {
+  const wobbles: [number, number][] = [[0.7, 0.2], [1.9, 0.12]];
+  for (const [hz, depth] of wobbles) {
     const lfo = ctx.createOscillator();
     lfo.frequency.value = hz;
     const d = ctx.createGain();
