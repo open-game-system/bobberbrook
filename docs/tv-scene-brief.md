@@ -354,3 +354,27 @@ draws edge HUD (journal count, rod meter, time of day). The scene draws name tag
   stronger on the fishers; away from Moonwell the near corners of the shot carry the mossy roots of a colossal
   trunk off frame, with ferns and bluebells (never in the middle lane to the water); Mistmarsh's water runs
   from teal shallows to an indigo middle.
+
+## Round 28
+
+- **Nothing over a catch through the whole push-in** (`cover.ts`): the near band (anything far in front of the
+  nearest fisher, or behind the lens) now fades to none of its pixels, not to `uCovKeep`'s 0.15 (a strand the push
+  flew past filled the frame, and its kept pixels, smoothed by the painterly post, read as a lilac veil over the
+  catch); a wisteria strand fades as a whole where any of it hangs over a fisher (`userData.coverSpan`, `aCovSpan`:
+  each vertex takes the most cover along its strand, exact against each fisher's padded box in clip space); a
+  corner behind the lens counts as near, not clear. The fade over a fisher's own box is unchanged (0.15 kept).
+- **The lab checks the push, not only the still** (`scripts/shoot-scene.mjs` `<view>@push`, 7 catch scenarios):
+  from the first catch landing, the cover check runs on every rendered frame for 2 s with the dither as drawn
+  (`coverCheck(.., live)`), failing above 2 %. `__scene.coverLog` + `scripts/camera-trace.mts --cover` run the same
+  check on every push frame of the real bot session; `scripts/lab-clip.mjs --from catch` films the push.
+- **Where fishers stand, part 3** (rules, `src/game/spots.ts`): a spot the rules choose (spots, stepping aside,
+  tagging along) has dry feet: 1.5 m up the bank with no water drawn within 0.6 m (the TV draws a pond 0.9 m past
+  its edge); spots are 1.6 m up (was 1.2); a walk down to the water casts only with dry feet. Mistmarsh's boardwalk
+  is kept clear along its whole length (2.7 m, it runs along the bank past its east foot), its feet by 3.5 m, its
+  pavilion by 5 m (`PAVILION`, the one place both the rules and `landmarks.ts` read); neighbours 2.8 m apart
+  across the view (was 2.2). A lone press at the water's edge still casts there.
+- **Lab spot check** (`spotCheck.ts`, `__scene.spotCheck`): feet up the bank, and the gap between near pairs on
+  screen in body widths (0.45 of a fisher's height); shoreline shots fail with wet feet or under one body width.
+  New scenario `mistmarsh-foot-tag` (the round 27 session's formation at the east foot).
+- Not done this round: Mistmarsh's frame time (uncapped p50 13.0 ms vs Moonwell 10.6: leaf cards and the near
+  full-detail marsh trees; a shorter hi-detail distance did not help) and the fishers' size in wide shots.
