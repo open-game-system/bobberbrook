@@ -8,8 +8,12 @@ import type { Spot } from "./personalSpace";
  * screen (each half, along the camera's right). A fisher on a walk (dock, boardwalk) slides along it instead,
  * so they spread along the dock and never step off it. The rules' positions are untouched.
  */
-export const LINE_SIDE = 1.3;
-export const LINE_DEPTH = 5;
+// Round 23: 1.3 -> 1.6 m (mistmarsh-reel, round 22: at 1.3 m Juneau's shoulder still sat behind Dad's; a body
+// with its arms out is ~1 m wide, so 1.6 m leaves a clear gap).
+export const LINE_SIDE = 1.6;
+// Round 23: 5 -> 7 m (four-reel_tod-morning, round 22: Mom on the bank at the dock's foot ~6 m in front of Dad
+// at its tip covered his legs; at the group camera's elevation a body 5-7 m nearer still overlaps the far one).
+export const LINE_DEPTH = 7;
 /** No one is drawn further than this from where the rules put them (with personal space). */
 const MAX_OFFSET = 1.6;
 
@@ -37,8 +41,19 @@ export function spreadAcross(spots: Spot[], fwd: Dir, along: (x: number, z: numb
         if (Math.abs(across) < 1e-4) across = a.seat < b.seat ? 1e-4 : -1e-4;
         const push = (LINE_SIDE - Math.abs(across)) / 2;
         const sgn = Math.sign(across);
-        nudge(a, -sgn * push, rx, rz, walk[i] ?? null);
-        nudge(b, sgn * push, rx, rz, walk[j] ?? null);
+        // Round 23: a fisher on a walk that runs along the view (Moonwell's dock, Mistmarsh's boardwalk seen
+        // end-on) cannot move sideways; the other takes the whole push (round 22: neither moved, Mom stood in
+        // front of Dad on the dock, Dad behind Juneau on the boardwalk). When neither can, they part along
+        // their walks in depth (the far one rises clear on screen).
+        const da = nudge(a, -sgn * push, rx, rz, walk[i] ?? null);
+        const db = nudge(b, sgn * push, rx, rz, walk[j] ?? null);
+        if (Math.abs(da) < push - 1e-6) nudge(b, sgn * (push - Math.abs(da)), rx, rz, walk[j] ?? null);
+        if (Math.abs(db) < push - 1e-6) nudge(a, -sgn * (push - Math.abs(db)), rx, rz, walk[i] ?? null);
+        if (Math.abs(da) < 1e-6 && Math.abs(db) < 1e-6) {
+          const dsg = depth >= 0 ? 1 : -1;
+          deepen(a, -dsg * push, fx, fz, walk[i] ?? null);
+          deepen(b, dsg * push, fx, fz, walk[j] ?? null);
+        }
       }
     }
   }
@@ -51,22 +66,37 @@ export function spreadAcross(spots: Spot[], fwd: Dir, along: (x: number, z: numb
   }
 }
 
-/** Moves a spot `k` metres across the screen; on a walk, along the walk by as much as gives that sideways move. */
-function nudge(s: Spot, k: number, rx: number, rz: number, w: Dir | null): void {
+/**
+ * Moves a spot `k` metres across the screen; on a walk, along the walk by as much as gives that sideways move.
+ * Returns the sideways move it made (0 on a walk running along the view).
+ */
+function nudge(s: Spot, k: number, rx: number, rz: number, w: Dir | null): number {
   if (!w) {
     s.ox += rx * k;
     s.oz += rz * k;
-    return;
+    return k;
   }
   const wl = Math.hypot(w.x, w.z) || 1;
   const tx = w.x / wl;
   const tz = w.z / wl;
   // How much of the screen's sideways a step along the walk gives (a walk straight away from the lens: little).
   const across = tx * rx + tz * rz;
-  if (Math.abs(across) < 0.25) return;
+  if (Math.abs(across) < 0.25) return 0;
   const step = Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, k / across));
   s.ox += tx * step;
   s.oz += tz * step;
+  return step * across;
+}
+
+/** Moves a spot on a walk `k` metres deeper into the view along the walk (negative: toward the lens). */
+function deepen(s: Spot, k: number, fx: number, fz: number, w: Dir | null): void {
+  if (!w) return;
+  const wl = Math.hypot(w.x, w.z) || 1;
+  const along = (w.x * fx + w.z * fz) / wl;
+  if (Math.abs(along) < 0.25) return;
+  const step = Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, k / along));
+  s.ox += (w.x / wl) * step;
+  s.oz += (w.z / wl) * step;
 }
 
 /** Spacing of riders stepping aboard and ashore, side by side across the screen (m). */

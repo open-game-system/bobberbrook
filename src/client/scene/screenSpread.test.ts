@@ -62,3 +62,24 @@ describe("ashoreOffset (round 21: riders step ashore side by side across the scr
     expect(ashoreOffset(0, 1, right)).toEqual({ x: 0, z: 0 });
   });
 });
+
+describe("spreadAcross on a walk seen end-on (round 23)", () => {
+  // Moonwell's dock runs along z, straight away from a camera looking north.
+  const DOCK = { x: 0, z: 1 };
+  it("gives the whole push to the one on the bank when the other stands on the dock", () => {
+    // four-reel_tod-morning (round 22): Dad at the dock tip, Mom on the bank at its foot 6 m nearer the lens.
+    const s = [spot(0, 0, 0), spot(1, 0.4, 6)];
+    spreadAcross(s, FWD, (_x, z) => (z < 3 ? DOCK : null));
+    expect(s[0]!.ox).toBeCloseTo(0);
+    expect(side(s[0]!, s[1]!)).toBeGreaterThanOrEqual(LINE_SIDE - 1e-6);
+  });
+  it("parts two fishers on the same end-on walk in depth, along it", () => {
+    const s = [spot(0, 0, 0), spot(2, 0.1, 2)];
+    spreadAcross(s, FWD, () => DOCK);
+    expect(s.every((p) => Math.abs(p.ox) < 1e-9)).toBe(true);
+    // The near one comes nearer, the far one goes further.
+    expect(s[1]!.oz).toBeGreaterThan(0.3);
+    expect(s[0]!.oz).toBeLessThan(-0.3);
+  });
+});
+
