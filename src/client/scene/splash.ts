@@ -19,9 +19,28 @@ const RING_FRAG = /* glsl */ `
 #include <fog_pars_fragment>
 uniform float uAge;
 uniform float uSize;
+uniform float uChurn;
 varying vec2 vP;
 float ring(float d, float r, float w) { return smoothstep(r - w, r - w * 0.35, d) * (1.0 - smoothstep(r + w * 0.35, r + w, d)); }
 void main() {
+  // Round 27: a churning foam ring where a hooked fish fights (uChurn = strength, uAge = running time):
+  // a wobbling white band broken into moving clumps round a bright stirred middle. Water and light only.
+  if (uChurn > 0.0) {
+    float dc = length(vP) / uSize;
+    float ang = atan(vP.y, vP.x);
+    float n = 0.5 + 0.5 * sin(ang * 7.0 + uAge * 5.0 + sin(ang * 3.0 - uAge * 3.3) * 2.0);
+    float n2 = 0.5 + 0.5 * sin(ang * 13.0 - uAge * 9.0 + dc * 6.0);
+    float rr = 0.78 + 0.1 * sin(ang * 5.0 + uAge * 6.0);
+    float band = smoothstep(rr - 0.42, rr - 0.12, dc) * (1.0 - smoothstep(rr + 0.06, rr + 0.32, dc));
+    float inner = (1.0 - smoothstep(0.05, 0.6, dc)) * (0.4 + 0.5 * n2);
+    float ac = min(1.0, (band * (0.6 + 0.4 * n) + inner * 0.7) * min(uChurn, 1.0) * 1.1);
+    if (ac < 0.01) discard;
+    gl_FragColor = vec4(vec3(0.97, 1.0, 1.0), ac);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+    #include <fog_fragment>
+    return;
+  }
   if (uAge < 0.0 || uAge > 1.6) discard;
   float d = length(vP);
   float t = uAge;
@@ -87,10 +106,13 @@ void main() {
 
 // Round 23: 4 -> 10 (a thrashing fish bursts every 0.45 s; four reels at once must not steal a bite's splash).
 const POOL = 10;
+/** Round 27: one churn ring per seat (a hooked fish fighting at the bobber). */
+const CHURNS = 4;
 
 export class Splashes {
   readonly group = new Group();
   private readonly slots: { ring: Mesh; crown: Mesh; ringMat: ShaderMaterial; crownMat: ShaderMaterial; start: number }[] = [];
+  private readonly churns: { mesh: Mesh; mat: ShaderMaterial; until: number }[] = [];
   private next = 0;
   private readonly ringGeo = new PlaneGeometry(8, 8);
   private readonly crownGeo = new CylinderGeometry(1, 1, 1, 44, 6, true).translate(0, 0.5, 0);
@@ -106,7 +128,7 @@ export class Splashes {
           depthWrite: false,
           side: DoubleSide,
           fog: true,
-          uniforms: UniformsUtils.merge([UniformsLib.fog, { uAge: { value: 99 }, uSize: { value: 1 } }]),
+          uniforms: UniformsUtils.merge([UniformsLib.fog, { uAge: { value: 99 }, uSize: { value: 1 }, uChurn: { value: 0 } }]),
         });
       const ringMat = common(RING_VERT, RING_FRAG);
       const crownMat = common(CROWN_VERT, CROWN_FRAG);
@@ -118,7 +140,29 @@ export class Splashes {
       crown.frustumCulled = false;
       this.group.add(ring, crown);
       this.slots.push({ ring, crown, ringMat, crownMat, start: -99 });
+      if (i < CHURNS) {
+        // The same program as the splash rings (only uniforms differ), so no new shader to compile.
+        const mat = common(RING_VERT, RING_FRAG);
+        mat.uniforms.uChurn!.value = 1;
+        const mesh = new Mesh(this.ringGeo, mat);
+        mesh.rotation.x = -Math.PI / 2;
+        mesh.renderOrder = 4;
+        mesh.visible = false;
+        this.group.add(mesh);
+        this.churns.push({ mesh, mat, until: -99 });
+      }
     }
+  }
+
+  /** Round 27: keeps seat `i`'s churn ring at (x, z) this frame (strength 0..1, radius `size` m); it hides when not called. */
+  churn(i: number, x: number, z: number, t: number, strength: number, size: number): void {
+    const c = this.churns[i % CHURNS];
+    if (!c) return;
+    c.until = t + 0.12;
+    c.mesh.position.set(x, 0.045, z);
+    c.mat.uniforms.uChurn!.value = Math.max(0.001, strength);
+    c.mat.uniforms.uSize!.value = size;
+    c.mat.uniforms.uAge!.value = t;
   }
 
   spawn(x: number, z: number, t: number, size: number): void {
@@ -140,6 +184,7 @@ export class Splashes {
       s.ringMat.uniforms.uAge!.value = age;
       s.crownMat.uniforms.uAge!.value = age;
     }
+    for (const c of this.churns) c.mesh.visible = t <= c.until;
   }
 
   /** Everything visible once so its shaders compile at start. */
@@ -148,6 +193,7 @@ export class Splashes {
       s.ring.visible = true;
       s.crown.visible = true;
     }
+    for (const c of this.churns) c.mesh.visible = true;
   }
 
   dispose(): void {
@@ -157,5 +203,6 @@ export class Splashes {
       s.ringMat.dispose();
       s.crownMat.dispose();
     }
+    for (const c of this.churns) c.mat.dispose();
   }
 }

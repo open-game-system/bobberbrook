@@ -1,0 +1,188 @@
+{
+  "round": "27-base",
+  "shots": [
+    {
+      "label": "double-catch",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 91,
+      "programs": 91,
+      "calls": 736,
+      "triangles": 3217019,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 103,
+      "cover": 0,
+      "coverBoxes": [
+        0,
+        0
+      ],
+      "stack": 0,
+      "stackSeats": [
+        [
+          0,
+          0
+        ],
+        [
+          3,
+          0
+        ]
+      ]
+    },
+    {
+      "label": "mistmarsh-catch",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 91,
+      "programs": 91,
+      "calls": 643,
+      "triangles": 2983272,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 82,
+      "cover": 0.001,
+      "coverBoxes": [
+        0.001,
+        0
+      ],
+      "stack": 0,
+      "stackSeats": [
+        [
+          0,
+          0
+        ],
+        [
+          2,
+          0
+        ]
+      ]
+    },
+    {
+      "label": "mistmarsh-reel",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 91,
+      "programs": 91,
+      "calls": 672,
+      "triangles": 3123562,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 78,
+      "cover": 0,
+      "coverBoxes": [
+        0,
+        0
+      ],
+      "stack": 0,
+      "stackSeats": [
+        [
+          0,
+          0
+        ],
+        [
+          2,
+          0
+        ]
+      ]
+    },
+    {
+      "label": "four-reel",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 90,
+      "programs": 90,
+      "calls": 921,
+      "triangles": 3352205,
+      "p50": 16.700000762939453,
+      "p95": 16.700000762939453,
+      "meanLuma": 94,
+      "cover": 0.006,
+      "coverBoxes": [
+        0,
+        0.006,
+        0,
+        0.003
+      ],
+      "stack": 0,
+      "stackSeats": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ]
+      ]
+    },
+    {
+      "label": "reel-thrash",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "programsAtStart": 91,
+      "programs": 91,
+      "calls": 806,
+      "triangles": 3029855,
+      "p50": 16.700000762939453,
+      "p95": 16.799999237060547,
+      "meanLuma": 99,
+      "cover": 0,
+      "coverBoxes": [
+        0,
+        0
+      ],
+      "stack": 0,
+      "stackSeats": [
+        [
+          0,
+          0
+        ],
+        [
+          2,
+          0
+        ]
+      ]
+    }
+  ],
+  "soaks": {
+    "four-reel": {
+      "programsBefore": 90,
+      "programsAfter": 90,
+      "p50": 7.199999809265137,
+      "p95": 8.199999809265137,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 2695
+    },
+    "tower": {
+      "programsBefore": 90,
+      "programsAfter": 90,
+      "p50": 6.900000095367432,
+      "p95": 7.800000190734863,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 3233
+    },
+    "boarding": {
+      "programsBefore": 89,
+      "programsAfter": 89,
+      "p50": 5.5,
+      "p95": 6.5,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 4029
+    }
+  },
+  "soak": {
+    "programsBefore": 90,
+    "programsAfter": 90,
+    "p50": 7.199999809265137,
+    "p95": 8.199999809265137,
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+    "frames": 2695
+  },
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failures": []
+}

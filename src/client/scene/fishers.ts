@@ -40,6 +40,20 @@ const DECK_Y = 0.42;
 /** Round 24: the name tag's foot above the hat's top (world units). */
 const TAG_GAP = 0.3;
 const LINE_SEGS = 18;
+/**
+ * Round 27: how much of the way in a reel draws the bobber at full progress (was 0.85 x 0.72 = 0.61 of the
+ * cast, which put a landed fish at the fisher's feet, round 26 reel-thrash.png): now 0.62 x 0.72 = 0.45.
+ */
+export const REEL_PULL = 0.62;
+/** Round 27: a reel draws the bobber no closer to the fisher than this (m), unless it was cast closer. */
+export const REEL_NEAR_M = 2.0;
+/** Round 27: the most of the reel's pull (0..1 progress) that keeps a bobber cast `d0` m out at least REEL_NEAR_M away. */
+export function reelInCap(d0: number): number {
+  if (d0 <= REEL_NEAR_M) return 0;
+  return Math.min(1, (1 - REEL_NEAR_M / d0) / (0.72 * REEL_PULL));
+}
+/** Round 27: seconds between the hooked fish's tail flicks while it thrashes. */
+export const FLICK_EVERY = 1.1;
 /** The lift from the water into the hands (round 11: 0.95 s read as a float; round 13: 0.6 -> 0.3 s). */
 const LEAP_S = 0.3;
 /** The lift starts at most this far from the catcher (round 13: a double catch flew a perch between two fishers). */
@@ -214,6 +228,12 @@ class FisherView {
   private readonly toCam = new Vector3();
   /** How hard the line shivers (reeling: a fighting fish makes it thrash); time for its wave. */
   private lineShake = 0;
+  /** Round 27: the line's half width (thicker and taut while a fish is on); time since the last tail flick; the churn's strength. */
+  private lineWidth = 0.035;
+  private flickAcc = 0;
+  private churnK = 0;
+  /** Round 27: which way (+1/-1, the rod's local z) the rod is held off to the side while reeling. */
+  private bendSide = 1;
   private lineT = 0;
   private readonly tip = new Vector3();
   private readonly tmp = new Vector3();
@@ -541,9 +561,11 @@ class FisherView {
       showBobber = true;
       // Round 20: reeled in no further than the outer edge of a walk over the water (round 19 session 229 s:
       // the bobber was dragged in under Mistmarsh's boardwalk and the line ran through its planks).
-      let k = pr;
-      for (let i = 0; i < 12 && k > 0 && underWalk(f.bobber.x - dx * (1 - near) * k * 0.85, f.bobber.z - dz * (1 - near) * k * 0.85); i++) k = Math.max(0, k - 0.08);
-      bob.set(f.bobber.x - dx * (1 - near) * k * 0.85, 0, f.bobber.z - dz * (1 - near) * k * 0.85);
+      // Round 27: never drawn in closer than REEL_NEAR_M (a landed fish fights out on the water, not at the feet).
+      const d0 = Math.hypot(dx, dz);
+      let k = Math.min(pr, reelInCap(d0));
+      for (let i = 0; i < 12 && k > 0 && underWalk(f.bobber.x - dx * (1 - near) * k * REEL_PULL, f.bobber.z - dz * (1 - near) * k * REEL_PULL); i++) k = Math.max(0, k - 0.08);
+      bob.set(f.bobber.x - dx * (1 - near) * k * REEL_PULL, 0, f.bobber.z - dz * (1 - near) * k * REEL_PULL);
       const hold = f.reel.holding;
       target.armRx = -1.05 + (hold ? Math.sin(t * 9) * 0.06 : 0);
       target.armLx = hold ? -1.0 + Math.sin(t * 12) * 0.35 : -0.9;
@@ -559,9 +581,19 @@ class FisherView {
       // only as a shorter rod), rings pulsing out from the bobber that grow as the fish comes in, and on a
       // thrash a bright splash burst with a jerking bobber. All water and light, nothing dark.
       target.bend = thrash ? 1.7 + Math.sin(t * 30) * 0.15 : hold ? 1.25 + Math.sin(t * 9) * 0.06 : 0.7;
-      target.whip = thrash ? Math.sin(t * 13) * 0.55 + Math.sin(t * 31) * 0.12 : hold ? Math.sin(t * 4.5) * 0.08 : 0;
+      // Round 27: the rod is also held off to one side so its bend reads across the TV (a bend along the view,
+      // from behind the fisher, reads only as a shorter rod: round 26 strip), deeper on a thrash.
+      // Toward the fish's side of the fisher as the TV sees it (round 27 mistmarsh-reel: a fixed side swung the tip
+      // behind the hat), kept until the fish is clearly on the other side.
+      const vx = this.x - camera.position.x;
+      const vz = this.z - camera.position.z;
+      const across = (vx * dz - vz * dx) / Math.max(1e-6, Math.hypot(vx, vz) * Math.hypot(dx, dz));
+      if (Math.abs(across) > 0.2) this.bendSide = across > 0 ? 1 : -1;
+      const sideBend = this.bendSide * (thrash ? 0.75 : hold ? 0.55 : 0.35);
+      target.whip = sideBend + (thrash ? Math.sin(t * 13) * 0.45 + Math.sin(t * 31) * 0.1 : hold ? Math.sin(t * 4.5) * 0.08 : 0);
       sag = 0;
-      shake = thrash ? 0.2 : hold ? 0.05 : 0.015;
+      // Round 27: a taut line (round 26 reel-thrash.png: the thrash wave drew it as a loose squiggle).
+      shake = thrash ? 0.07 : hold ? 0.03 : 0.012;
       bob.y = thrash ? -0.08 + Math.abs(Math.sin(t * 13)) * 0.22 : 0.02 + Math.sin(t * 5) * 0.03;
       this.tugAcc += dt;
       if (this.tugAcc > (thrash ? 0.3 : hold ? 0.5 : 0.85)) {
@@ -581,7 +613,20 @@ class FisherView {
           this.burstAcc = 0;
           fx.thrashBurst(bob.x, bob.z, t);
         }
-      } else this.burstAcc = 0.45;
+        // Round 27: the fish's tail flicks out of the water and slaps down (the first at once).
+        this.flickAcc += dt;
+        if (this.flickAcc > FLICK_EVERY) {
+          this.flickAcc = 0;
+          fx.tailFlick(bob.x, bob.z, t, Math.atan2(dz, dx));
+        }
+      } else {
+        this.burstAcc = 0.45;
+        this.flickAcc = FLICK_EVERY;
+      }
+      // Round 27 (round 26 session 12.5-30 s: nothing at Juneau's bobber while he reeled): a churning white ring
+      // where the fish fights the whole time it is on, bigger and brighter on a thrash, calmer while it comes in.
+      this.churnK += ((thrash ? 1 : hold ? 0.7 : 0.45) - this.churnK) * damp(6, dt);
+      fx.churn(this.seat, bob.x, bob.z, t, this.churnK, (0.75 + 0.45 * this.churnK) * Math.min(1.25, 0.85 + (f.reel.cm / 100)));
       const head = Math.atan2(dz, dx) + Math.sin(t * (thrash ? 14 : 4)) * (thrash ? 0.8 : 0.4);
       const big = def ? 0.9 + Math.min(1.6, f.reel.cm / 60) : 1.2;
       shadows.add(bob.x + Math.cos(head) * 0.35, bob.z + Math.sin(head) * 0.35, head, big * 1.25, Math.sin(t * (thrash ? 24 : 8)) * 0.25, 0.03, 0.14, 0.18);
@@ -733,6 +778,7 @@ class FisherView {
     if (lineTo && rod.root.visible) {
       this.tipWorld();
       this.lineShake += (shake - this.lineShake) * damp(10, dt);
+      this.lineWidth += ((mode === "reel" ? 0.055 : 0.035) - this.lineWidth) * damp(8, dt);
       this.lineT = t;
       this.updateLine(this.tip, lineTo, sag, camera);
       this.line.visible = true;
@@ -855,7 +901,7 @@ class FisherView {
 
   private updateLine(a: Vector3, b: Vector3, sag: number, camera: Camera): void {
     const p = this.linePos;
-    const width = 0.035;
+    const width = this.lineWidth;
     // Round 20: a line never runs through a walk's planks or rails (round 19 session 226-257 s, Mistmarsh's
     // boardwalk): where it would, it is drawn taut over the walk's outer edge, two straight runs from the rod
     // tip to that edge and down to the bobber, like a line laid over a rail.

@@ -16,6 +16,8 @@ export type Escape = {
   group: Group;
   /** A miss at (x, z); `away` is the heading the fish escapes along (radians, atan2(z, x)). */
   spawn(x: number, z: number, t: number, away: number): void;
+  /** Round 27: a hooked fish fighting at (x, z): the same tail flicks up, waggles and slaps down where it is (no swim away). */
+  flick(x: number, z: number, t: number, away: number): void;
   /** Animates the tails (each faces the camera at cx, cz); calls `slap` once per tail when it hits the water. */
   frame(t: number, slap: (x: number, z: number, t: number, away: number) => void, cx?: number, cz?: number): void;
   /** Shows one tail mid-flick (shader prewarm), or hides them all. */
@@ -66,26 +68,34 @@ export function buildEscape(painted: Material): Escape {
   const group = new Group();
   group.name = "escapes";
   const geo = tailGeometry();
-  type Tail = { mesh: Mesh; at: number; x: number; z: number; away: number; slapped: boolean };
+  type Tail = { mesh: Mesh; at: number; x: number; z: number; away: number; slapped: boolean; stay: boolean };
   const tails: Tail[] = [];
-  for (let i = 0; i < 3; i++) {
+  // Round 27: 3 -> 6 (four reels can flick at once without stealing a miss's tail).
+  for (let i = 0; i < 6; i++) {
     const mesh = new Mesh(geo, painted);
     mesh.visible = false;
     mesh.castShadow = false;
     group.add(mesh);
-    tails.push({ mesh, at: -1e9, x: 0, z: 0, away: 0, slapped: true });
+    tails.push({ mesh, at: -1e9, x: 0, z: 0, away: 0, slapped: true, stay: false });
   }
   let next = 0;
   const S = 1.25;
+  const start = (x: number, z: number, t: number, away: number, stay: boolean): void => {
+    const tl = tails[next++ % tails.length]!;
+    tl.at = t;
+    tl.x = x;
+    tl.z = z;
+    tl.away = away;
+    tl.slapped = false;
+    tl.stay = stay;
+  };
   return {
     group,
     spawn(x, z, t, away) {
-      const tl = tails[next++ % tails.length]!;
-      tl.at = t;
-      tl.x = x;
-      tl.z = z;
-      tl.away = away;
-      tl.slapped = false;
+      start(x, z, t, away, false);
+    },
+    flick(x, z, t, away) {
+      start(x, z, t, away, true);
     },
     frame(t, slap, cx = 0, cz = 1e6) {
       for (const tl of tails) {
@@ -98,7 +108,7 @@ export function buildEscape(painted: Material): Escape {
         m.visible = true;
         const { rise, swish, lean } = tailPose(a);
         // A little way along its heading once it dives.
-        const go = Math.max(0, a - SLAP_AT) * 1.6;
+        const go = tl.stay ? 0 : Math.max(0, a - SLAP_AT) * 1.6;
         const x = tl.x + Math.cos(tl.away) * go;
         const z = tl.z + Math.sin(tl.away) * go;
         m.position.set(x, -0.62 + 0.62 * rise, z);

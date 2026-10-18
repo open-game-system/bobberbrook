@@ -90,11 +90,30 @@ export class Fx {
     }
   }
 
-  /** Round 23: the fish thrashes (the phone says let go): a bright crown of white water, a wide ring and glints. */
+  /**
+   * Round 23: the fish thrashes (the phone says let go): a bright crown of white water, a wide ring and glints.
+   * Round 27 (round 26 reel-thrash.png: "two thin rings"): a bold white fountain, a tall jet of big droplets
+   * that reads from across the room at 720p.
+   */
   thrashBurst(x: number, z: number, t: number): void {
-    this.splashes?.spawn(x, z, t, 0.8);
-    this.surface.ripple(x, z, t, 1.5);
+    this.splashes?.spawn(x, z, t, 1.05);
+    this.surface.ripple(x, z, t, 1.8);
+    for (let i = 0; i < (this.lite ? 10 : 18); i++) {
+      const a = this.r() * Math.PI * 2;
+      const s = this.r() * 0.7;
+      this.water.emit({ x, y: 0.1, z, vx: Math.cos(a) * s, vy: 4.5 + this.r() * 3, vz: Math.sin(a) * s, life: 0.95, size: 0.18 + this.r() * 0.14, r: 1, g: 1, b: 1, gravity: 12, alpha: 1 });
+    }
     this.sparkle(x, 0.6, z, this.lite ? 4 : 8, 1, 0.95, 0.75, 1.8, 0.3);
+  }
+
+  /** Round 27: the hooked fish's tail flicks out of the water at the bobber (bright, friendly; it stays hooked). */
+  tailFlick(x: number, z: number, t: number, away: number): void {
+    this.escape?.flick(x, z, t, away);
+  }
+
+  /** Round 27: the churning foam ring where a hooked fish fights (call every frame while it is on; seat's own ring). */
+  churn(seat: number, x: number, z: number, t: number, strength: number, size: number): void {
+    this.splashes?.churn(seat, x, z, t, strength, size);
   }
 
   /** A small "got away" splash. */
