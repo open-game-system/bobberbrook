@@ -280,3 +280,28 @@ draws edge HUD (journal count, rod meter, time of day). The scene draws name tag
 - **The catch push keeps whole bodies in frame** (`camera.ts`, `PUSH_PAD` 0.8 m either side of every fisher).
 - **Golden hour is light, not a tint** (`tod.ts`): a low amber key from the west over a cool lilac-blue and teal fill,
   lilac fog, a near-neutral grade.
+
+## Round 25
+
+- **Nothing in front of a fisher, part 2** (`geo.ts` `setBeside`): posts, lantern posts, rope collars, rails and
+  every lamp glass dissolve inside each framed fisher's screen box (padded 0.9 m either side, feet to hat) from
+  the lens to 4 m behind the fisher, so no lantern stands between or just behind two fishers at a catch. One
+  material per kind with the trees' program (`occluderMaterial(u, 1)`, a uniform apart), registered as the fade
+  material for posts.
+- **The join card is a keep-out corner** (`camera.ts` `KEEP_X`/`KEEP_Y`, `keepLift`, `inKeepOut`): left of NDC
+  -0.62 the fit's floor is -0.63 instead of -0.74, and the push and the follow's hurry treat the card's corner
+  as outside the safe box. Tested in `camera.keepout.test.ts` (the lab has no TV HUD).
+- **Spacing from where walkers are drawn** (`fishers.ts`): the spacing passes start from each fisher's
+  dead-reckoned position, not the last snapshot (walkers are drawn up to 1.2 s ahead, each by its own lead, so
+  a trail walk stacked although the passes saw it apart). Lab: `trail-file` (the family single file).
+- **The lab checks measure the still** (`scripts/shoot-scene.mjs`): the rules pause, the cover and stack checks
+  run in one task and the still is taken right after; frame times and programs are read before the checks.
+- **Cottages** (`kit.ts` `cottageGeometry`): half-timbered: a carved stone course, warm cream plaster, timber
+  posts, rails, braces and rafter tails, a carved door frame on a step, window sills, lintels and mullions, amber
+  glass at the hamlets.
+- **Giant caps** (`giantCap.ts`): matte: the painting's broad light divided out, its big pale spots painted over
+  (small chalky cores kept), mottling at two scales, a dark rim band and lip, a value ceiling; darker gills;
+  fibrous stems.
+- **Fishers**: painted vests with dark piping, a leather strap and buckle and big pocket flaps; a grown-up's
+  waist and shoulders; a soft contact shadow under every fisher; a walk with a wider arm swing, a roll and a nod.
+- **Golden hour**: a paler amber key (canopies no longer go red under it).
