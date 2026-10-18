@@ -48,6 +48,7 @@ export const FisherSchema = z.object({
   name: z.string().nullable(),
   color: z.enum(["green", "yellow", "blue", "pink"]),
   ogsId: z.string().nullable(),
+  kid: z.boolean().default(false),
   easy: z.boolean(),
   pos: VecSchema,
   vel: VecSchema,

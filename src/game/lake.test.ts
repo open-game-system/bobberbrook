@@ -35,6 +35,12 @@ function reelIn(lake: Lake, at: number): { lake: Lake; at: number } {
 }
 
 describe("joining", () => {
+  it("a wordless join (a kid's hat, no name) is a kid; a named join is a grown-up (the TV sizes them)", () => {
+    let lake = newLake(1, T0);
+    lake = join(lake, { name: "Dad", ogsId: null }).lake;
+    lake = join(lake, { name: null, ogsId: null, color: "blue" }).lake;
+    expect(lake.fishers.map((f) => f.kid)).toEqual([false, true]);
+  });
   it("seats up to four fishers in seat order with their colours", () => {
     const lake = lakeWith(4);
     expect(lake.fishers.map((f) => f.seat)).toEqual([0, 1, 2, 3]);

@@ -44,6 +44,8 @@ export type Fisher = {
   name: string | null;
   color: SeatColor;
   ogsId: string | null;
+  /** Joined wordlessly (a kid's hat, no name): the TV draws them child-sized. Set at join. */
+  kid: boolean;
   easy: boolean;
   pos: Vec;
   vel: Vec;
@@ -845,6 +847,7 @@ export function join(lake: Lake, input: { name: string | null; ogsId: string | n
       name: input.name,
       color: colorFor(input.color, d.fishers.map((f) => f.color)),
       ogsId: input.ogsId,
+      kid: input.name === null,
       easy: false,
       pos,
       vel: { x: 0, z: 0 },
