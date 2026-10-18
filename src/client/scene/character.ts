@@ -27,6 +27,7 @@ import { merge, paint, prep, surf } from "./geo";
 import { bakeFigure, type Occluder } from "./figurePaint";
 import { PK, type PaintKind } from "./painter";
 import { hairLocks, paintSkull, waveBrim } from "./fisherShape";
+import { crownLift, onFace, shapeHead } from "./fisherFace";
 import { SEAT_HEX } from "./types";
 import { BUILDS, CHIN, HEAD_HALF, figureTop, type Build, type Role } from "./fisherBuild";
 
@@ -75,7 +76,7 @@ export type FisherRig = {
 
 const HAIR = [0x5a3420, 0xd9a650, 0x6a3a1e, 0xa4522c];
 const TROUSERS = [0x7a6a44, 0x6a5a3a, 0x5a6a8a, 0x8a5a4a];
-const SKIN = 0xffd0ae;
+const SKIN = 0xf4cbb0;
 const HAT_STYLE = ["green", "yellow", "blue", "pink"];
 
 function part(g: BufferGeometry, color: number, top?: number, kind?: PaintKind): BufferGeometry {
@@ -361,58 +362,124 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials,
   head.scale.setScalar(B.headS);
   body.add(head);
   const HR = 0.25;
-  const skull = paintSkull(underBrim(skin(new SphereGeometry(HR, 22, 16).translate(0, 0.24, 0), SKIN, lighten(SKIN, 0.1))));
+  // Round 24: a shaped head (fisherFace.ts: a kid's full cheeks, a grown-up's longer face and jaw), not a ball;
+  // the skull, hair and every feature go through the same shape so the face sits on it.
+  const shape = { adult: role === "adult" };
+  const kidFace = role !== "adult";
+  const shaped = (g: BufferGeometry): BufferGeometry => {
+    const pos = g.getAttribute("position");
+    const v = new Vector3();
+    for (let i = 0; i < pos.count; i++) {
+      shapeHead(v.fromBufferAttribute(pos, i), shape, v);
+      pos.setXYZ(i, v.x, v.y, v.z);
+    }
+    g.computeVertexNormals();
+    return g;
+  };
+  const at = (x: number, y: number, z: number) => shapeHead(new Vector3(x, y, z), shape);
+  const skull = paintSkull(underBrim(skin(shaped(new SphereGeometry(HR, 26, 18).translate(0, 0.24, 0)), SKIN, lighten(SKIN, 0.08))));
   // Hair (round 19): painted in strands (the rod wood's streaks run along it) with a ragged edge of locks
   // (sideburns, a fringe of three under the brim, locks round the back below the hat), not a smooth cap.
   const hairHex = HAIR[seat]!;
-  const hair = part(new SphereGeometry(HR + 0.012, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.6).rotateX(-0.75).translate(0, 0.25, -0.02), shade(hairHex, 0.85), lighten(hairHex, 0.12), PK.rodwood);
+  const hair = part(shaped(new SphereGeometry(HR + 0.014, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.6).rotateX(-0.75).translate(0, 0.25, -0.02)), shade(hairHex, 0.85), lighten(hairHex, 0.12), PK.rodwood);
   const fringe = merge(
-    hairLocks(seat).map((l) =>
-      part(
+    hairLocks(seat).map((l) => {
+      const p = at(l.at.x, l.at.y, l.at.z);
+      return part(
         new SphereGeometry(l.size, 8, 6)
           .scale(l.scale.x, l.scale.y, l.scale.z)
           .rotateX(l.rot.x === 0 ? -0.35 : l.rot.x)
           .rotateZ(l.rot.z)
           .rotateY(l.rot.y)
-          .translate(l.at.x, l.at.y, l.at.z),
+          .translate(p.x, p.y, p.z),
         lighten(hairHex, 0.06),
         shade(hairHex, 0.8),
         PK.rodwood,
-      ),
-    ),
+      );
+    }),
   );
-  const ears = [1, -1].map((sx) => skin(new SphereGeometry(0.05, 8, 6).scale(0.55, 1, 0.9).translate(sx * HR, 0.22, 0), SKIN));
-  const eyes = [1, -1].map((sx) => feature(new SphereGeometry(0.038, 10, 8).scale(0.85, 1.2, 0.45).translate(sx * 0.088, 0.255, 0.226), 0x24160f));
-  const shines = [1, -1].map((sx) => feature(new SphereGeometry(0.013, 6, 4).translate(sx * 0.088 + 0.012, 0.272, 0.244), 0xffffff));
+  const ears = [1, -1].map((sx) => {
+    const p = at(sx * HR, 0.22, 0);
+    return skin(new SphereGeometry(0.055, 9, 7).scale(0.5, 1, 0.85).translate(p.x, p.y, p.z), SKIN, lighten(SKIN, 0.05));
+  });
+  // Eyes (concept 08): a white with a brown iris, a pupil and two shines, an upper lid line, lashes at the
+  // outer corner for Mom and the kids; brows above in the hair's colour. Natural faces only.
+  const lidHex = 0x3a2016;
+  const eyeY = shape.adult ? 0.262 : 0.248;
+  const eyeX = shape.adult ? 0.085 : 0.092;
+  const eyeR = shape.adult ? 0.04 : 0.047;
+  const lashes = colorName !== "green";
+  const eyeParts: BufferGeometry[] = [];
+  const eyeAt: Vector3[] = [];
+  for (const sx of [1, -1]) {
+    const c = onFace(sx * eyeX, eyeY, shape, -0.004);
+    eyeAt.push(c);
+    eyeParts.push(feature(new SphereGeometry(eyeR, 12, 9).scale(1, 1.12, 0.4).translate(c.x, c.y, c.z), 0xfaf4ec));
+    eyeParts.push(feature(new SphereGeometry(eyeR * 0.74, 12, 9).scale(1, 1.08, 0.36).translate(c.x - sx * 0.004, c.y - 0.003, c.z + 0.009), 0x6a3c1e));
+    eyeParts.push(feature(new SphereGeometry(eyeR * 0.4, 9, 7).scale(1, 1.08, 0.3).translate(c.x - sx * 0.004, c.y - 0.003, c.z + 0.016), 0x1a100a));
+    eyeParts.push(feature(new SphereGeometry(eyeR * 0.24, 6, 5).translate(c.x - sx * 0.004 + eyeR * 0.28, c.y + eyeR * 0.34, c.z + 0.022), 0xffffff));
+    eyeParts.push(feature(new SphereGeometry(eyeR * 0.12, 5, 4).translate(c.x - sx * 0.004 - eyeR * 0.25, c.y - eyeR * 0.3, c.z + 0.021), 0xffffff));
+    // The upper lid: a dark arc over the top of the white.
+    const arc = Math.PI * 0.86;
+    eyeParts.push(feature(new TorusGeometry(eyeR * 1.02, eyeR * 0.17, 4, 14, arc).rotateZ(Math.PI / 2 - arc / 2).scale(1, 1.12, 1).translate(c.x, c.y + 0.002, c.z + 0.008), lidHex));
+    if (lashes) {
+      for (let k = 0; k < 2; k++) {
+        const a = Math.PI / 2 - sx * (0.95 + k * 0.32);
+        eyeParts.push(feature(new ConeGeometry(eyeR * 0.13, eyeR * 0.5, 4).translate(0, eyeR * 0.25, 0).rotateZ(a - Math.PI / 2 + sx * 0.25).translate(c.x + Math.cos(a) * eyeR * 1.05, c.y + Math.sin(a) * eyeR * 1.17, c.z + 0.008), lidHex));
+      }
+    }
+    // A painted brow, arched, in the hair's colour (a grown-up's heavier).
+    const b = onFace(sx * (eyeX + 0.004), eyeY + eyeR * 1.85, shape, 0.002);
+    eyeParts.push(feature(new SphereGeometry(eyeR * 1.15, 9, 5).scale(1, shape.adult ? 0.26 : 0.2, 0.22).rotateZ(-sx * 0.14).translate(b.x, b.y, b.z), shade(hairHex, 0.75)));
+  }
   // Soft blush (round 16): half way from the skin to rose, and flatter, so it reads as warmth, not a sticker.
-  const cheeks = [1, -1].map((sx) => skin(new SphereGeometry(0.044, 9, 6).scale(1, 0.6, 0.28).translate(sx * 0.145, 0.185, 0.2), new Color(SKIN).lerp(new Color(0xf08878), 0.5).getHex()));
-  const smile = feature(new TorusGeometry(0.045, 0.012, 5, 12, Math.PI).rotateZ(Math.PI).rotateX(-0.35).translate(0, 0.18, 0.236), 0x8a3a2a);
-  const nose = skin(new SphereGeometry(0.024, 8, 6).translate(0, 0.215, 0.25), 0xffb896);
+  const cheeks = [1, -1].map((sx) => {
+    const p = onFace(sx * 0.15, shape.adult ? 0.185 : 0.18, shape, -0.012);
+    return skin(new SphereGeometry(0.046, 9, 6).scale(1, 0.62, 0.3).translate(p.x, p.y, p.z), new Color(SKIN).lerp(new Color(0xf08878), 0.45).getHex());
+  });
+  const mouthY = shape.adult ? 0.15 : 0.168;
+  const beard = colorName === "green" && shape.adult;
+  const m = onFace(0, mouthY, shape, beard ? 0.03 : 0.0);
+  const smile = feature(new TorusGeometry(kidFace ? 0.042 : 0.036, 0.011, 5, 12, Math.PI).rotateZ(Math.PI).rotateX(-0.35).translate(m.x, m.y + 0.01, m.z), 0x8a3a2a);
+  const np = onFace(0, shape.adult ? 0.205 : 0.212, shape, 0.004);
+  const nr = shape.adult ? (beard ? 0.046 : 0.036) : 0.03;
+  const nose = skin(new SphereGeometry(nr, 10, 8).scale(1, 0.88, 0.8).translate(np.x, np.y, np.z), new Color(SKIN).lerp(new Color(0xf0a088), 0.3).getHex(), lighten(SKIN, 0.05));
+  const eyes = eyeParts;
+  const shines: BufferGeometry[] = [];
   // The hat style follows the colour the player picked (blue is always the sun hat), not the seat.
   const style = Math.max(0, HAT_STYLE.indexOf(colorName));
-  // Scaled up for the bigger head and tipped back so the brim never hides the face.
-  const hat = shaded(hatGeometry(style, color).scale(1.16, 1.16, 1.16).translate(0, 0.0, 0).rotateX(-0.28).translate(0, 0.03, -0.02), head.position);
+  // Scaled up for the bigger head and tipped back so the brim never hides the face (lifted on a longer head).
+  const hat = shaded(hatGeometry(style, color).scale(1.16, 1.16, 1.16).translate(0, 0.0, 0).rotateX(-0.28).translate(0, 0.03 + crownLift(shape), -0.02), head.position);
   // One gentle trait each, by colour, so the family tell each other apart at a glance.
   const traits: BufferGeometry[] = [];
-  if (colorName === "green") {
-    // A round, soft beard under the smile.
-    traits.push(part(new SphereGeometry(0.15, 14, 10).scale(1.15, 0.8, 0.75).translate(0, 0.07, 0.15), HAIR[seat]!, lighten(HAIR[seat]!, 0.15), PK.rodwood));
-    traits.push(part(new SphereGeometry(0.05, 8, 6).scale(1.7, 0.55, 0.7).translate(0, 0.155, 0.235), HAIR[seat]!, undefined, PK.rodwood));
+  if (beard) {
+    // Dad's beard (concept 08): a full beard over the jaw and up the cheeks to the ears, painted in strands
+    // (rod wood streaks run down it), a ragged lower edge of locks and a moustache over the smile.
+    traits.push(part(shaped(new SphereGeometry(HR + 0.022, 22, 12, Math.PI / 2 - 1.45, 2.9, Math.PI * 0.55, Math.PI * 0.4).translate(0, 0.24, 0)), shade(hairHex, 0.85), lighten(hairHex, 0.12), PK.rodwood));
+    for (let k = 0; k < 9; k++) {
+      const a = Math.PI / 2 + (k - 4) * 0.3;
+      const p = at(Math.cos(a) * 0.17, 0.05 + Math.abs(k - 4) * 0.02, Math.sin(a) * 0.17);
+      traits.push(part(new SphereGeometry(0.045, 8, 6).scale(0.7, 1.7, 0.6).rotateX(0.25).rotateY(-a + Math.PI / 2).translate(p.x, p.y - 0.02, p.z), lighten(hairHex, 0.05), shade(hairHex, 0.75), PK.rodwood));
+    }
+    for (const sx of [1, -1]) {
+      const p = onFace(sx * 0.042, mouthY + 0.035, shape, 0.03);
+      traits.push(part(new SphereGeometry(0.042, 9, 6).scale(1.35, 0.55, 0.6).rotateZ(sx * 0.32).translate(p.x, p.y, p.z), hairHex, lighten(hairHex, 0.1), PK.rodwood));
+    }
   } else if (colorName === "pink") {
     // A braid down the back with a little bow.
     for (let i = 0; i < 5; i++) traits.push(part(new SphereGeometry(0.058 - i * 0.004, 9, 7).translate(0.04 + i * 0.012, 0.2 - i * 0.075, -0.24 - i * 0.012), HAIR[seat]!, lighten(HAIR[seat]!, 0.12)));
     traits.push(part(new SphereGeometry(0.04, 8, 6).scale(1.8, 0.8, 0.6).translate(0.09, -0.17, -0.3), color));
   } else if (colorName === "yellow") {
-    // Round glasses.
-    for (const sx of [1, -1]) traits.push(feature(new TorusGeometry(0.058, 0.011, 6, 18).translate(sx * 0.088, 0.255, 0.238), 0x3a2a24));
-    traits.push(feature(new CylinderGeometry(0.008, 0.008, 0.06, 5).rotateZ(Math.PI / 2).translate(0, 0.262, 0.245), 0x3a2a24));
+    // Round glasses round the eyes.
+    for (const c of eyeAt) traits.push(feature(new TorusGeometry(eyeR * 1.42, 0.01, 6, 18).translate(c.x, c.y, c.z + 0.02), 0x3a2a24));
+    const l = eyeAt[0]!;
+    traits.push(feature(new CylinderGeometry(0.008, 0.008, Math.max(0.02, l.x * 2 - eyeR * 2.84), 5).rotateZ(Math.PI / 2).translate(0, l.y + 0.006, l.z + 0.026), 0x3a2a24));
   } else if (colorName === "blue") {
     // Freckles across the cheeks and nose.
-    for (const [fx, fy] of [[0.13, 0.215], [0.165, 0.2], [0.12, 0.19], [0.05, 0.225]] as [number, number][]) {
+    for (const [fx, fy] of [[0.13, 0.2], [0.165, 0.188], [0.12, 0.176], [0.05, 0.212]] as [number, number][]) {
       for (const sx of [1, -1]) {
-        const x = sx * fx;
-        const z = Math.sqrt(Math.max(0, HR * HR - x * x - (fy - 0.24) * (fy - 0.24))) + 0.002;
-        traits.push(feature(new SphereGeometry(0.009, 5, 4).translate(x, fy, z), 0xb0603a));
+        const p = onFace(sx * fx, fy, shape, 0.002);
+        traits.push(feature(new SphereGeometry(0.009, 5, 4).translate(p.x, p.y, p.z), 0xb0603a));
       }
     }
   }
