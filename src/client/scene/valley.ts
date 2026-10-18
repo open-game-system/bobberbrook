@@ -164,7 +164,9 @@ export const LOOKS: Record<AreaId, AreaLook> = {
     canopy: [c(0xc8a8ff), c(0xb090f0), c(0xe0b8ff)],
     // Round 23: a darker indigo deep (0x8a74e8 lilac: the pond read as one pale value under the haze), so the
     // water runs dark in the middle to glowing shallows.
-    waterShallow: c(0xd4ecff), waterDeep: c(0x5a4cc8), calm: 0.3,
+    // Round 27 (round 26 mistmarsh.png: flat lavender water): teal-glowing shallows like Moonwell's (0xd4ecff read
+    // as lilac under the marsh's blue haze) over a darker indigo deep (0x5a4cc8), so it runs bright rim to dark middle.
+    waterShallow: c(0xa8fff0), waterDeep: c(0x4436a8), calm: 0.3,
     // Round 22: a thinner, bluer haze (fog 0xb8b0e8 K 0.6 at 0.6 of the distance, mist 0.5, sun 0.9, a pink
     // fill 0xc8c0f4 flattened the marsh into pastel mush and the family into the water).
     // Round 23: still a pink-magenta veil at golden hour (the time of day's rose fog 0xd08aa8 only a third of

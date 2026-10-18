@@ -482,6 +482,9 @@ export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexSh
       float hueK = pk > 15.5 && pk < 16.5 ? 1.0 : 0.55;
       diffuseColor.rgb *= mix(vec3(1.0), clamp(mix(vec3(l), d, hueK), rng.x, rng.y), str);
       if (pk > 10.5 && pk < 15.5) pkRimK = 0.55 * clamp(l * l, 0.0, 1.6);
+      // Round 27 (round 26 campfire.png: shirts and sleeves still read as glossy vinyl): the cloth's rim follows
+      // its painted value too, and lower (it was a clean full-strength edge on every sleeve).
+      if (pk > 2.5 && pk < 3.5) pkRimK = 0.4 * clamp(l * l, 0.0, 1.6);
       // Baked top light: painted surfaces are lit from above, shaded underneath.
       diffuseColor.rgb *= mix(0.82, 1.1, smoothstep(-0.6, 0.85, n.y));
     } else if (pk > ${LAYERS + 0.5} && pk < ${LAYERS + 1.5}) {
@@ -494,7 +497,8 @@ export function applyPaint(shader: { uniforms: Record<string, unknown>; vertexSh
       float l = dot(tx * iPk[0], vec3(0.3, 0.55, 0.15));
       diffuseColor.rgb *= mix(1.0, clamp(l, 0.74, 1.24), 0.7);
       diffuseColor.rgb *= mix(vec3(0.74, 0.58, 0.58), vec3(1.05, 1.01, 0.95), smoothstep(-0.7, 0.8, n.y));
-      pkRimK = 0.3;
+      // Round 27: 0.3 -> 0.12 (a bright rim round cheeks and arms is the vinyl doll's sheen).
+      pkRimK = 0.12;
       gPkSkin = 1.0;
       // Round 19: half the clothes' painted planes of light on skin too (a smooth turn read as a vinyl doll).
       gPkBand = 0.5;

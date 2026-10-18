@@ -324,8 +324,9 @@ const PaintBlendShader = {
     tPaint: { value: null },
     uAmount: { value: 0.58 },
     /** Round 18: the fishers' clothes and skin take a gentler brush (their features none, see CHAR_MASK). */
-    uBody: { value: 0.4 },
-    uSkin: { value: 0.16 },
+    // Round 27: 0.4 -> 0.5 and 0.16 -> 0.24 (round 26 campfire.png: the fishers still read glossy beside the brushed world).
+    uBody: { value: 0.5 },
+    uSkin: { value: 0.24 },
   },
   vertexShader: VERT,
   fragmentShader: /* glsl */ `

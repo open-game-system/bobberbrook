@@ -1,4 +1,6 @@
-import { Color, Group, InstancedMesh, MeshLambertMaterial, type Camera, type Material } from "three";
+import { CatmullRomCurve3, Color, Group, InstancedMesh, Mesh, MeshLambertMaterial, TubeGeometry, Vector3, type BufferGeometry, type Camera, type Material } from "three";
+import { merge, paint, prep, surf } from "./geo";
+import { PK } from "./painter";
 import { pondRadius, segmentDistance, type Area, type PondPlace } from "../../game/world";
 import type { Biome, Place } from "../../game/regions";
 import { flowerGeometry, giantGeometry, instanced, lilyGeometry, padGeometry, reedGeometry, rockGeometry, tuftGeometry, type Inst } from "./kit";
@@ -98,6 +100,10 @@ const SHOW_DIST = 150;
 const BUILD_DIST = 200;
 const KEEP_DIST = 260;
 
+/** Round 27: how far round from the camera's side (rad) the foreground roots lie (the shot's near corners). */
+const FORE_CORNER = 0.34;
+const MOSS = new Color(0x3f8f7c);
+
 function* dress(a: PondPlace, r0: Recipe, full: boolean, m: AreaMats, glow: MeshLambertMaterial, lilyMat: Material, key: string, home: boolean): Generator<void, Group> {
   const R = rng(a.center.x * 13 + a.center.z * 7 + 99);
   // Each generated place leans its recipe its own way (more ferns here, more rocks there).
@@ -185,6 +191,59 @@ function* dress(a: PondPlace, r0: Recipe, full: boolean, m: AreaMats, glow: Mesh
   // The near band: a few more ferns over the grass cards, so it is planted, not bare.
   clump("fern", n(6 * r.fern + 2), 1.2, 1.5, 14, () => white().lerp(fl, 0.22), 1);
   clump("foxglove", n(4 * r.lily + 4), 0.9, 5, 24, bellTint, 0);
+  // Round 27 (round 26 mistmarsh.png, hollow.png: the bottom third an empty dark lawn): away from Moonwell, the
+  // two near corners of the shot carry the roots of a colossal Ashenvale trunk standing off frame, low over
+  // the ground, with ferns and bluebells round them. The middle lane to the water stays open (and the roots
+  // stay under a metre high), so nothing stands over a fisher or their water.
+  const roots: BufferGeometry[] = [];
+  if (a.id !== "moonwell") {
+    for (const side of [-1, 1]) {
+      const th = camTh + side * FORE_CORNER;
+      const edge = pondRadius(a, th);
+      for (let k = 0; k < 3; k++) {
+        const thK = th + side * (k - 0.5) * 0.08;
+        const pts: Vector3[] = [];
+        const r0 = edge + 13 + R() * 2;
+        const r1 = edge + 3.2 + k * 0.9 + R() * 0.8;
+        for (let i = 0; i <= 6; i++) {
+          const u = i / 6;
+          const rr = r0 + (r1 - r0) * u;
+          const wob = Math.sin(u * 5 + k * 2) * 0.6;
+          const x = a.center.x + Math.cos(thK) * rr - Math.sin(thK) * wob;
+          const z = a.center.z + Math.sin(thK) * rr + Math.cos(thK) * wob;
+          // Arches out of the ground and back in (one hump), the far end high where it leaves the trunk.
+          const hump = Math.sin(u * Math.PI) * (0.3 + 0.2 * R()) + (1 - u) * 0.4;
+          pts.push(new Vector3(x, heightAt(x, z) + hump - 0.2, z));
+        }
+        const curve = new CatmullRomCurve3(pts);
+        const tube = new TubeGeometry(curve, 24, 1, 9, false);
+        const tp = tube.getAttribute("position");
+        // Taper from the trunk (0.6 m) to a point at the shore end.
+        for (let i = 0; i < tp.count; i++) {
+          const u = Math.floor(i / 10) / 24;
+          const c0 = curve.getPointAt(Math.min(1, u));
+          const rad = 0.7 * (1 - u) + 0.08;
+          tp.setXYZ(i, c0.x + (tp.getX(i) - c0.x) * rad, c0.y + (tp.getY(i) - c0.y) * rad, c0.z + (tp.getZ(i) - c0.z) * rad);
+        }
+        tube.computeVertexNormals();
+        roots.push(surf(paint(prep(tube), 0x3c3646, 0x7a7080, (q, nn, c) => {
+          // Bark: ridges along the root (value streaks round it), a darker underside.
+          const ridge = 0.5 + 0.5 * Math.sin(Math.atan2(nn.y, nn.x + nn.z) * 9 + vnoise(q.x * 0.8, q.z * 0.8, 85) * 4);
+          c.multiplyScalar((0.78 + 0.28 * vnoise(q.x * 1.5, q.z * 1.5, 81)) * (0.8 + 0.22 * ridge) * (0.7 + 0.35 * Math.max(0, nn.y)));
+          // Teal moss along the top of the root, like the Ashenvale trunks.
+          if (nn.y > 0.45 && vnoise(q.x * 0.9, q.z * 0.9, 83) > 0.38) c.lerp(MOSS, 0.6);
+        }), PK.grain));
+        // Ferns and bluebells tucked along it.
+        for (let j = 0; j < 4; j++) {
+          const pt = curve.getPointAt(0.15 + R() * 0.75);
+          const ox = pt.x + (R() - 0.5) * 2.2;
+          const oz = pt.z + (R() - 0.5) * 2.2;
+          if (R() < 0.65) plants.fern.push({ x: ox, y: heightAt(ox, oz) - 0.03, z: oz, s: 1.0 + R() * 0.6, ry: R() * 6, tint: white().lerp(fl, 0.22) });
+          else plants.bluebell.push({ x: ox, y: heightAt(ox, oz) - 0.03, z: oz, s: 0.9 + R() * 0.4, ry: R() * 6, tint: bellTint() });
+        }
+      }
+    }
+  }
   if (r.litter) {
     for (let i = 0; i < n(26 * r.litter); i++) {
       const p = land(0.8, 24);
@@ -237,6 +296,13 @@ function* dress(a: PondPlace, r0: Recipe, full: boolean, m: AreaMats, glow: Mesh
   add(pads, padGeometry(), m.paintedDouble, false, "pads");
   add(lilies, lilyGeometry(), lilyMat, false, "lilies");
   add(rocks, rockGeometry(a.pond.r), m.painted, true, "rocks");
+  if (roots.length > 0) {
+    const rm = new Mesh(merge(roots), m.painted);
+    rm.name = "foreground-roots";
+    rm.castShadow = full;
+    rm.receiveShadow = true;
+    g.add(rm);
+  }
   for (const mesh of plantMeshes(plants, m.plant)) g.add(mesh);
   return g;
 }
@@ -308,6 +374,8 @@ export function buildAreaDressing(full: boolean, m: AreaMats, jobs: Jobs): AreaD
         o.geometry.dispose();
         o.dispose();
       }
+      // Round 27: the foreground roots (one merged mesh per place).
+      else if (o instanceof Mesh && o.name === "foreground-roots") o.geometry.dispose();
     });
   }
 
