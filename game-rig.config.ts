@@ -210,7 +210,7 @@ const config: GameRigInput = {
     await rig.wait(2500);
     // Dad walks out on the dock; Juneau stays beside him and just presses the big button (it walks him
     // down the bank and casts), like a 5-year-old next to his dad.
-    await walkTo(dad, { x: 0, z: 17 }, 0.6).then(() => walkTo(dad, { x: 0, z: 9 }, 0.6));
+    await walkTo(dad, { x: 0, z: 17 }, 0.6, 45_000).then(() => walkTo(dad, { x: 0, z: 9 }, 0.6, 45_000));
     rig.mark("at the water");
     for (let i = 0; i < 2; i++) {
       await Promise.all([fishOnce(rig, kid, "Juneau", i > 0), fishOnce(rig, dad, "Dad", true)]);
@@ -227,12 +227,13 @@ const config: GameRigInput = {
       { x: -45.5, z: 28.1 },
     ];
     // Dad walks the trail; Juneau lets go of his stick and tags along by himself (auto-follow).
-    for (const p of trail) await walkTo(dad, p, 1.8, 15_000);
+    // Generous budgets: under a loaded Mac 15 s legs ran out and Dad pressed from the trail, far from the water (round 24).
+    for (const p of trail) await walkTo(dad, p, 1.8, 45_000);
     const marsh = (theta: number) => {
       const r = 13 + 2.2 * Math.sin(2 * theta + 1.3) + 1.6 * Math.sin(3 * theta + 0.4) + 1.0 * Math.sin(5 * theta - 0.7) + 1.2;
       return { x: -64 + Math.cos(theta) * r, z: 40 + Math.sin(theta) * r };
     };
-    await walkTo(dad, marsh(-0.6), 1, 15_000);
+    await walkTo(dad, marsh(-0.6), 1, 60_000);
     rig.mark("found Mistmarsh");
     // Dad casts straight away while Juneau tags along (round 19: the bot waited ~30 s for him first and
     // the critic saw a family that couldn't fish); Juneau presses the button when he arrives and wades in.
