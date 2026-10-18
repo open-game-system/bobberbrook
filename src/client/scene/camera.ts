@@ -76,9 +76,21 @@ export function keepLift(x: number): number {
   // Aimed 0.05 above the corner: the calm dead zone lets the framing settle a little short of its goal.
   return Math.min(1, Math.max(0, (KEEP_X + 0.1 - x) / 0.1)) * (KEEP_Y + 0.04 - FIT_Y0);
 }
-/** Whether an NDC point falls in the join card's keep-out corner. */
+/**
+ * Round 26: the top banner band (the catch ticket, tv.css .ticket at the top centre) is a keep-out too. Measured
+ * on the round-25 session (263 s) a two-line ticket spans NDC x -0.46..0.45, y 0.89 down to 0.60: no name tag
+ * or body above TOP_Y (that bottom edge; a three-line ticket reaches 0.49) within TOP_X of the centre (round 25 session 263/280 s: the ticket covered Dad's tag).
+ */
+export const TOP_X = 0.5;
+export const TOP_Y = 0.6;
+/** How much lower the group fit's ceiling sits at NDC x (1 inside the band's columns, eased over 0.3 outside: a sharp edge see-sawed the fit). */
+export function keepDrop(x: number): number {
+  // Aimed 0.04 under the band: the calm dead zone lets the framing settle a little short of its goal.
+  return Math.min(1, Math.max(0, (TOP_X + 0.3 - Math.abs(x)) / 0.3)) * (FIT_Y1 - (TOP_Y - 0.04));
+}
+/** Whether an NDC point falls in the join card's keep-out corner or the top banner band. */
 export function inKeepOut(x: number, y: number): boolean {
-  return x < KEEP_X && y < KEEP_Y;
+  return (x < KEEP_X && y < KEEP_Y) || (Math.abs(x) < TOP_X && y > TOP_Y);
 }
 /** The calm dead zone: the framing goal holds until the want leaves DEAD_M + DEAD_K x distance (m), the
  * distance until it is off by DEAD_DIST of itself, the yaw and elevation by DEAD_ANG (rad). */
@@ -126,6 +138,13 @@ const NO_SIDES = [0];
 const PUSH_PAD = 0.8;
 /** How far above the catcher's feet the scene puts the catch focus (fishers.ts catchFocus). */
 const CATCH_UP = 1.8;
+/**
+ * How far up the catcher the push aims (round 20: 1.2 m). Round 26: 1.4 m. With the top banner keep-out a
+ * deep push lifts the catcher's own name tag into the band, so some pushes are shallower: replayed live trace,
+ * six catches, 6-30 % (mean 23 %) without the band; with TOP_Y 0.6: 9-30 % (mean 20 %) at 1.4 m, mean 19 % at
+ * 1.2 and 1.6 m, mean 16 % with TOP_Y 0.55.
+ */
+const PUSH_AIM = 1.4;
 
 /** The group camera: from the south, high three-quarter, eased, yaw roughly fixed. */
 export class CameraRig {
@@ -349,7 +368,9 @@ export class CameraRig {
           this.tmp.set(p.x, p.y + lift, p.z).project(cam);
           nx0 = Math.min(nx0, this.tmp.x); nx1 = Math.max(nx1, this.tmp.x);
           // Round 25: under the join card the floor is KEEP_Y, not FIT_Y0 (the point counts as that much lower).
-          ny0 = Math.min(ny0, this.tmp.y - keepLift(this.tmp.x)); ny1 = Math.max(ny1, this.tmp.y);
+          // Round 26: under the top banner a fisher's ceiling is TOP_Y, not FIT_Y1 (the point counts as that much
+          // higher); soft points (bobbers in flight, the water) carry no name tag.
+          ny0 = Math.min(ny0, this.tmp.y - keepLift(this.tmp.x)); ny1 = Math.max(ny1, this.tmp.y + (this.softPt[i] ? 0 : keepDrop(this.tmp.x)));
         }
       }
       // Scale: how full the safe box is.
@@ -761,12 +782,12 @@ export class CameraRig {
     if (catchAt && on) {
       const fresh = this.catchAge < 0 || catchAt.age + this.catchShift < this.catchAge - 0.05;
       if (fresh && this.catchAge < 0) {
-        this.catchPt.set(catchAt.x, catchAt.y - CATCH_UP + 1.2, catchAt.z);
+        this.catchPt.set(catchAt.x, catchAt.y - CATCH_UP + PUSH_AIM, catchAt.z);
         this.catchK = -1;
         this.catchShift = 0;
       } else {
         // A second catcher joins: the push point eases to the middle of both (no step).
-        this.catchPt.lerp(this.tmp.set(catchAt.x, catchAt.y - CATCH_UP + 1.2, catchAt.z), Math.min(1, (t - this.catchLastT) * 3));
+        this.catchPt.lerp(this.tmp.set(catchAt.x, catchAt.y - CATCH_UP + PUSH_AIM, catchAt.z), Math.min(1, (t - this.catchLastT) * 3));
         // Round 26: a new catch while the last push is still easing out picks the push up where it is (on the
         // way in at the same weight), not from nothing: with the longer hold the two overlapped and the shot
         // zoomed out and straight back in (judder replay, 22 s).
