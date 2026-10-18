@@ -299,7 +299,7 @@ export function tagAlong(fishers: Tagger[], now: number, w: World = worldFor(HOM
   for (const f of fishers) {
     const others = fishers.filter((o) => o !== f);
     if (others.length === 0 || resting(f, now)) continue;
-    tagStep(f, nearestOf(f, others), w, boardingId);
+    tagStep(f, nearestOf(f, others), w, boardingId, others);
   }
 }
 
@@ -313,7 +313,7 @@ function nearestOf(f: Tagger, others: Tagger[]): Tagger {
 }
 
 /** One fisher's tag-along move toward `near`, the closest of the others. */
-function tagStep(f: Tagger, near: Tagger, w: World, boardingId: string | null): void {
+function tagStep(f: Tagger, near: Tagger, w: World, boardingId: string | null, others: Tagger[]): void {
   // Someone waiting at a dock or tower: walk right up onto that one so the trip can start (the one the
   // family is already boarding, never its neighbour, or the trip would flip to another destination).
   const boarding = boardingId ? w.platformsNear(near.pos, 0).find((q) => q.id === boardingId && distance(q.at, near.pos) <= PLATFORM_REACH) : undefined;
@@ -321,9 +321,23 @@ function tagStep(f: Tagger, near: Tagger, w: World, boardingId: string | null): 
   const mine = mooringAt(w, f.pos, PLATFORM_REACH - 1);
   const target = boardingTarget(f, near, platform, mine);
   if (target) return steer(f, target.at, w, arrivalSpeed(distance(target.at, f.pos)));
+  // The one they follow is fishing: walk down to a free spot on the shore beside them, ready to cast.
+  const beside = FISHING_MODES.includes(near.mode) ? besideAtShore(f, near, others, w) : null;
+  if (beside) return distance(beside, f.pos) <= 0.5 ? halt(f) : steer(f, beside, w, arrivalSpeed(distance(beside, f.pos)));
   // On the family's mooring, or waiting on your own at a dock or tower: stay put.
   if (platform || mine || closeEnough(f, distance(near.pos, f.pos))) return halt(f);
   steer(f, near.pos, w, FOLLOW_SPEED);
+}
+
+const FISHING_MODES: Mode[] = ["cast", "wait", "bite", "reel", "catch"];
+/** How far along the shore from the one they follow a follower looks for a free spot. */
+const BESIDE_RANGE = 8;
+
+/** A free castable spot near `near` (nobody else's spot), or null. Already castable and free where they stand: stay. */
+function besideAtShore(f: Tagger, near: Tagger, others: Tagger[], w: World): Vec | null {
+  const taken = others.map((o) => o.fishSpot ?? o.pos);
+  const here = w.fishingSpot(f.pos, 0.01, taken);
+  return here ?? w.fishingSpot(near.pos, BESIDE_RANGE, taken);
 }
 
 function mooringAt(w: World, p: Vec, reach: number): Platform | undefined {

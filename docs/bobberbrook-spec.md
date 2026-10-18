@@ -77,7 +77,8 @@ Mom (phone). Works with 1–4 fishers.
   (Moonwell's on its east shore) flies to the neighbouring blocks' towers. Everyone stands on a mooring
   together for 3 s and it leaves; a tagging-along kid walks onto the mooring by itself.
 - **Tagging along:** a fisher who hasn't touched the stick for 6 s and is over 9 m from the family walks to
-  them (by trail, round ponds); the family stays within a 30 m leash.
+  them (by trail, round ponds); the family stays within a 30 m leash. When the one they follow is fishing,
+  they walk down to a free shore spot (3.5 m apart) beside them instead, ready to cast (round 23).
 - **Trail treasures:** glowing shells along trails, a shell each, back after 3 minutes.
 - **Fish:** 30 species (rarer ones more likely farther from home); the Moonfin rises at Starfall Tarn at night.
 
