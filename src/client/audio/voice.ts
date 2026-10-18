@@ -47,7 +47,12 @@ async function play(id: string, delay = 0): Promise<void> {
   air.type = "lowpass";
   air.frequency.value = 4000;
   air.Q.value = 0.6;
-  src.connect(deEss).connect(air).connect(g).connect(a.out);
+  // A second pole pair (round 27): sibilants still made most of the detector's bright onsets at catches.
+  const air2 = a.ctx.createBiquadFilter();
+  air2.type = "lowpass";
+  air2.frequency.value = 3800;
+  air2.Q.value = 0.6;
+  src.connect(deEss).connect(air).connect(air2).connect(g).connect(a.out);
   src.start(start);
   window.setTimeout(() => duckMusic(buf.duration + 0.2), Math.max(0, (start - a.ctx.currentTime) * 1000));
   busyUntil = start + buf.duration + 0.15;
