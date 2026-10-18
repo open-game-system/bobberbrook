@@ -213,6 +213,7 @@ button { font: inherit; color: inherit; }
 .compass.explore .compass-swirl { background: radial-gradient(circle, rgba(200,170,255,.6), rgba(200,170,255,0) 70%); border-color: rgba(220,200,255,.9); }
 .type-name { width: 56px; height: 56px; padding: 8px; border-radius: 50%; background: rgba(255,255,255,.08); opacity: 0.6; }
 .type-name svg { width: 100%; height: 100%; }
+.type-name:active { scale: 0.9; opacity: 1; background: rgba(255,255,255,.25); }
 .loading-card { background: radial-gradient(circle at 50% 40%, #3b2f7a, var(--deep)); }
 .loading-fish { width: min(40vmin, 260px); animation: wiggle 1.2s ease-in-out infinite, breathe 2s ease-in-out infinite; filter: drop-shadow(0 10px 20px rgba(0,0,0,.4)); }
 .compass.family .compass-swirl { background: radial-gradient(circle, rgba(255,255,255,.45), rgba(255,255,255,0) 70%); border-color: rgba(255,255,255,.9); }
