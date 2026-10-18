@@ -10,7 +10,8 @@ import { Matrix4, Mesh, Points, Line, Vector2, Vector3, Vector4, type Camera, ty
  *
  * Per fragment: anything inside a fisher's screen box, more than ~half a metre nearer the lens than
  * that fisher and above their feet (decks and paths they stand on stay), and anything in the near band
- * well in front of the nearest fisher (a push-in), dithers away to `uCovKeep` (0.15) of its pixels.
+ * well in front of the nearest fisher (a push-in), dithers away to `uCovKeep` (0.15) of its pixels (round 28:
+ * the near band to none).
  */
 export const COVER_MAX = 5;
 /**
@@ -100,7 +101,8 @@ uniform vec4 uCovBox[${COVER_MAX}];
 uniform vec4 uCovFish[${COVER_MAX}];
 uniform vec3 uCovNear;
 float covAmount(vec3 p, vec4 clip, vec2 pad) {
-  if (clip.w <= 0.05) return 0.0;
+  // Round 28: a point behind the lens is nearer than the near band (a card the push flies through), not clear.
+  if (clip.w <= 0.05) return uCovNear.y > 0.01 ? 2.0 * step(uCovNear.z + 0.12, p.y) : 0.0;
   vec2 sc = clip.xy / clip.w * 0.5 + 0.5;
   vec2 pd = pad / clip.w;
   float occ = 0.0;
@@ -118,7 +120,43 @@ float covAmount(vec3 p, vec4 clip, vec2 pad) {
     occ = max(occ, inX * inY * front * up);
   }
   float nearOcc = (1.0 - smoothstep(uCovNear.x, uCovNear.y, clip.w)) * smoothstep(uCovNear.z + 0.12, uCovNear.z + 0.28, p.y);
-  return max(occ, nearOcc);
+  // Round 28: the near band goes all the way (2: none of uCovKeep's 0.15 left). A strand the push flies past
+  // filled the frame, and its kept pixels, smoothed by the painterly post, read as a lilac veil over the catch.
+  return max(occ, 2.0 * nearOcc);
+}`;
+/**
+ * Round 28 (round 27 session 120.9-121.1 s, 128.6-129.2 s): a hanging strand is one tall card per side, its
+ * corners above and below a fisher's box, so per corner it never faded while its middle hung over the catcher
+ * through the push-in. A strand material (`userData.coverSpan`) gives every vertex the way to the other end of
+ * its strand (\`aCovSpan\`) and takes the most cover along that segment: both ends, plus, per fisher box, the
+ * middle of the stretch inside the padded box (exact: the box sides are linear in clip space along the segment).
+ */
+const COVER_SPAN_FN = `
+void covClipT(float fa, float fb, inout float t0, inout float t1) {
+  float d = fb - fa;
+  if (abs(d) < 1e-6) { if (fa < 0.0) { t0 = 1.0; t1 = 0.0; } return; }
+  float t = -fa / d;
+  if (d > 0.0) t0 = max(t0, t); else t1 = min(t1, t);
+}
+float covSpanAmount(vec3 a, vec3 b, vec2 pad) {
+  vec4 ca = uCovVP * vec4(a, 1.0);
+  vec4 cb = uCovVP * vec4(b, 1.0);
+  float occ = max(covAmount(a, ca, pad), covAmount(b, cb, pad));
+  for (int i = 0; i < ${COVER_MAX}; i++) {
+    vec4 bx = uCovBox[i];
+    if (bx.z < bx.x) continue;
+    float t0 = 0.0, t1 = 1.0;
+    covClipT(ca.w - 0.05, cb.w - 0.05, t0, t1);
+    // sc.x >= x0 - pad.x / w  <=>  0.5 clip.x + (0.5 - x0) w + pad.x >= 0 (and likewise for each side).
+    covClipT(0.5 * ca.x + (0.5 - bx.x) * ca.w + pad.x, 0.5 * cb.x + (0.5 - bx.x) * cb.w + pad.x, t0, t1);
+    covClipT(-0.5 * ca.x + (bx.z - 0.5) * ca.w + pad.x, -0.5 * cb.x + (bx.z - 0.5) * cb.w + pad.x, t0, t1);
+    covClipT(0.5 * ca.y + (0.5 - bx.y) * ca.w + pad.y, 0.5 * cb.y + (0.5 - bx.y) * cb.w + pad.y, t0, t1);
+    covClipT(-0.5 * ca.y + (bx.w - 0.5) * ca.w + pad.y, -0.5 * cb.y + (bx.w - 0.5) * cb.w + pad.y, t0, t1);
+    if (t1 <= t0) continue;
+    float tm = 0.5 * (t0 + t1);
+    occ = max(occ, covAmount(mix(a, b, tm), mix(ca, cb, tm), pad));
+  }
+  return occ;
 }`;
 const COVER_DITHER = `
 uniform float uCovKeep;
@@ -133,7 +171,9 @@ const ditherBy = (cov: string) => `
     if (cov > 0.0) {
       ivec2 cq = ivec2(mod(gl_FragCoord.xy, 4.0));
       float th = (COV_BAYER[cq.x + cq.y * 4] + 0.5) / 16.0;
-      if (th >= 1.0 - cov * (1.0 - uCovKeep)) discard;
+      // 0..1: fades to uCovKeep of the pixels; 1..2 (the near band): on to none.
+      float cut = min(cov, 1.0) * (1.0 - uCovKeep) + max(cov - 1.0, 0.0) * uCovKeep;
+      if (th >= 1.0 - cut) discard;
     }
   }`;
 const COVER_FRAG = ditherBy("covAmount(vCovW, vCovClip)");
@@ -154,14 +194,22 @@ const COVER_VERT_V = `
     covP = instanceMatrix * covP;
     #endif
     vec3 covW = (modelMatrix * covP).xyz;
+    #ifdef COVER_SPAN
+    vec4 covE = vec4(transformed + aCovSpan, 1.0);
+    #ifdef USE_INSTANCING
+    covE = instanceMatrix * covE;
+    #endif
+    vCovA = covSpanAmount(covW, (modelMatrix * covE).xyz, uCovPad);
+    #else
     vCovA = covAmount(covW, uCovVP * vec4(covW, 1.0), uCovPad);
+    #endif
   }`;
 
 type Shader = { uniforms: Record<string, unknown>; vertexShader: string; fragmentShader: string };
 const ANCHORS = { vc: "#include <common>", vp: "#include <project_vertex>", fc: "#include <common>", fp: "#include <clipping_planes_fragment>" };
 
 /** Adds the fade to a compiling shader that has three's standard chunks (others are left as they are). */
-export function applyCover(shader: Shader, u: CoverUniforms, perVertex = false): void {
+export function applyCover(shader: Shader, u: CoverUniforms, perVertex = false, span = false): void {
   const v = shader.vertexShader;
   const f = shader.fragmentShader;
   if (!v.includes(ANCHORS.vc) || !v.includes(ANCHORS.vp) || !f.includes(ANCHORS.fc) || !f.includes(ANCHORS.fp)) return;
@@ -172,7 +220,8 @@ export function applyCover(shader: Shader, u: CoverUniforms, perVertex = false):
   shader.uniforms.uCovKeep = u.uCovKeep;
   if (perVertex) {
     shader.uniforms.uCovPad = u.uCovPad;
-    shader.vertexShader = v.replace(ANCHORS.vc, `${ANCHORS.vc}\nuniform mat4 uCovVP;\nuniform vec2 uCovPad;\nvarying float vCovA;${COVER_FN}`).replace(ANCHORS.vp, `${ANCHORS.vp}${COVER_VERT_V}`);
+    const spanPars = span ? `\n#define COVER_SPAN\nattribute vec3 aCovSpan;${COVER_SPAN_FN}` : "";
+    shader.vertexShader = v.replace(ANCHORS.vc, `${ANCHORS.vc}\nuniform mat4 uCovVP;\nuniform vec2 uCovPad;\nvarying float vCovA;${COVER_FN}${spanPars}`).replace(ANCHORS.vp, `${ANCHORS.vp}${COVER_VERT_V}`);
     shader.fragmentShader = f.replace(ANCHORS.fc, `${ANCHORS.fc}${COVER_DITHER}\nvarying float vCovA;`).replace(ANCHORS.fp, `${ANCHORS.fp}${ditherBy("vCovA")}`);
     return;
   }
@@ -199,12 +248,13 @@ export function patchCover(m: Material, u: CoverUniforms): void {
   const key = m.customProgramCacheKey();
   originals.set(m, { hook, key: () => key });
   const perVertex = m.userData.coverPerVertex === true;
+  const span = perVertex && m.userData.coverSpan === true;
   const wrapped: Hook = function (this: Material, shader, renderer) {
     hook.call(this, shader, renderer);
-    applyCover(shader, u, perVertex);
+    applyCover(shader, u, perVertex, span);
   };
   m.onBeforeCompile = wrapped;
-  m.customProgramCacheKey = () => `${key}|cover${perVertex ? "-v" : ""}`;
+  m.customProgramCacheKey = () => `${key}|cover${perVertex ? "-v" : ""}${span ? "s" : ""}`;
   m.needsUpdate = true;
 }
 

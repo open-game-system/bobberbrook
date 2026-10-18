@@ -1,0 +1,31 @@
+{
+  "round": "28-s1b",
+  "shots": [
+    {
+      "label": "mistmarsh-catch@push",
+      "frames": 47,
+      "cover": 0.005,
+      "coverAt": 325,
+      "coverBy": {},
+      "coverOver": 0,
+      "p95": 49.900001525878906,
+      "programs": 118
+    },
+    {
+      "label": "mistmarsh-dock@push",
+      "frames": 31,
+      "cover": 0.021,
+      "coverAt": 1055,
+      "coverBy": {
+        "areas#17": 0.021
+      },
+      "coverOver": 2,
+      "p95": 50,
+      "programs": 131
+    }
+  ],
+  "errors": [],
+  "failures": [
+    "mistmarsh-dock@push"
+  ]
+}

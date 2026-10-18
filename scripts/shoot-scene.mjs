@@ -77,10 +77,18 @@ const SHOTS = [
 // "<view>@tod-<name>", files "<view>_tod-<name>.png". --no-tod skips it.
 const TOD = [["morning", 0.2], ["golden", 0.44], ["night", 0.68], ["dawn", 0.93]];
 const TOD_VIEWS = ["moonwell", "far-place", "mistmarsh", "hollow", "tower", "trail", "discovery", "four-reel"];
+// Round 28: the cover check on every frame of a catch push-in (the round 27 session's wisteria curtain swept
+// over Juneau's Mistmarsh catch mid-push while the settled still passed with 0 cover). Labels "<view>@push":
+// from the first catch landing, coverCheck runs on each rendered frame for PUSH_MS (rules running) with the
+// fade's dither as drawn (live: a faded surface's kept pixels count), and the worst frame must stay under
+// COVER_MAX_FRAC. The still is the end of the push (not the worst frame).
+const PUSH_VIEWS = ["mistmarsh-catch", "mistmarsh-dock", "mistmarsh-dock-foot", "mistmarsh-tag", "double-catch", "catch-leap", "night-catch"];
+const PUSH_MS = 2000;
 const only = typeof args.only === "string" ? args.only.split(",") : null;
 const matrix = args["no-tod"] ? [] : TOD_VIEWS.flatMap((v) => TOD.map(([name, ph]) => [v, ph, true, name]));
 // --soak: only the uncapped soaks (A/B perf), no stills.
-const shots = args.soak ? [] : [...SHOTS, ...matrix].filter(([s]) => !only || only.includes(s)).slice(0, args.quick ? 4 : undefined);
+const pushes = args["no-push"] ? [] : PUSH_VIEWS.filter((v) => !only || only.includes(v) || only.includes(`${v}@push`)).map((v) => [v, null, true, null, true]);
+const shots = args.soak ? [] : [...(args["push-only"] ? [] : [...SHOTS, ...matrix].filter(([s]) => !only || only.includes(s))), ...pushes].slice(0, args.quick ? 4 : undefined);
 
 // Real GPU: full Chromium (not the headless shell, which renders on SwiftShader).
 // --disable-audio-output: a fake speaker, so a hung coreaudiod never blocks the TV page's AudioContext.
@@ -109,7 +117,8 @@ const files = [];
 const saveMetrics = () => writeFileSync(join(out, "metrics.json"), JSON.stringify({ ...metrics, errors, failures }, null, 2));
 
 // One page per shot (a GPU process that dies takes only that shot), a fresh browser when it is gone.
-async function shoot(scenario, phase, hero, tod) {
+async function shoot(scenario, phase, hero, tod, push) {
+  if (push) return shootPush(scenario);
   if (!browser.isConnected()) browser = await launch();
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
   page.on("pageerror", (e) => errors.push(String(e)));
@@ -168,12 +177,50 @@ async function shoot(scenario, phase, hero, tod) {
   }
 }
 
-for (const [scenario, phase, hero, tod] of shots) {
-  const label = tod ? `${scenario}@tod-${tod}` : `${scenario}${phase !== null ? `@${phase}` : ""}`;
+async function shootPush(scenario) {
+  if (!browser.isConnected()) browser = await launch();
+  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
+  page.on("pageerror", (e) => errors.push(String(e)));
+  const label = `${scenario}@push`;
+  try {
+    await page.goto(`${base}/scene-lab.html?scenario=${scenario}`, { timeout: 120_000 });
+    await page.waitForFunction(() => window.__lab?.ready === true, null, { timeout: 60_000 });
+    const landed = await page.waitForFunction(() => window.__lab?.lake()?.fishers.some((f) => f.mode === "catch" && f.catch !== null) === true, null, { timeout: 45_000, polling: 16 }).then(() => true, () => false);
+    if (!landed) return { label, failed: "no catch landed (no push sampled)" };
+    // One check per rendered frame (each check is its own task, so the scene keeps drawing in between).
+    const samples = await page.evaluate(async (ms) => {
+      const out = [];
+      const t0 = performance.now();
+      while (performance.now() - t0 < ms) {
+        await new Promise((r) => requestAnimationFrame(() => r(null)));
+        // Live: the fade's kept pixels count (as the TV draws them).
+        let c = window.__scene.coverCheck?.(false, true);
+        if (c && c.worst > 0.02) c = window.__scene.coverCheck?.(true, true) ?? c;
+        if (c) out.push({ t: Math.round(performance.now() - t0), worst: Math.round(c.worst * 1000) / 1000, by: c.by ?? {} });
+      }
+      return out;
+    }, PUSH_MS);
+    const worst = samples.reduce((w, s) => (s.worst > w.worst ? s : w), { t: -1, worst: 0, by: {} });
+    const file = join(out, `${scenario}_push.png`);
+    await page.screenshot({ path: file, timeout: 120_000 });
+    files.push([label, file]);
+    const info = await page.evaluate(() => window.__scene.info());
+    metrics.shots.push({ label, frames: samples.length, cover: worst.worst, coverAt: worst.t, coverBy: worst.by, coverOver: samples.filter((s) => s.worst > COVER_MAX_FRAC).length, p95: info.frameP95, programs: info.programs });
+    console.log(label, JSON.stringify(metrics.shots.at(-1)));
+    if (samples.length < 8) return { label, failed: `only ${samples.length} frames sampled in the push` };
+    if (worst.worst > COVER_MAX_FRAC) return { label, failed: `scenery covers a fisher during the push (${worst.worst} at ${worst.t} ms > ${COVER_MAX_FRAC})` };
+    return { label };
+  } finally {
+    await page.close().catch(() => {});
+  }
+}
+
+for (const [scenario, phase, hero, tod, push] of shots) {
+  const label = push ? `${scenario}@push` : tod ? `${scenario}@tod-${tod}` : `${scenario}${phase !== null ? `@${phase}` : ""}`;
   let res;
   for (let attempt = 0; attempt < 2 && !res; attempt++) {
     try {
-      res = await shoot(scenario, phase, hero, tod);
+      res = await shoot(scenario, phase, hero, tod, push);
     } catch (e) {
       console.error(`ERR ${label} (attempt ${attempt + 1}): ${String(e).split("\n")[0]}`);
       if (!browser.isConnected()) browser = await launch();
@@ -187,7 +234,7 @@ for (const [scenario, phase, hero, tod] of shots) {
 }
 
 // Motion pair + a 20 s soak on four-reel (programs must not grow).
-if (!only || only.includes("four-reel") || args.soak) try {
+if (!args["push-only"] && (!only || only.includes("four-reel") || args.soak)) try {
   if (!browser.isConnected()) browser = await launch();
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
   await page.goto(`${base}/scene-lab.html?scenario=four-reel${args.lite ? "&lite=1" : ""}`, { timeout: 120_000 });

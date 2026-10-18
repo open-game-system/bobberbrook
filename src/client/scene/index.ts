@@ -111,11 +111,18 @@ export type SceneDebug = {
   /** Turns the painterly post (contact shadow, knee, Kuwahara) off or on, for an in-page perf A/B. */
   painterly?(on: boolean): boolean;
   /** Round 21 lab check: per framed fisher, the share of their body pixels scenery still covers (fade dither off). */
-  coverCheck?(detail?: boolean | string): CoverReport;
+  coverCheck?(detail?: boolean | string, live?: boolean): CoverReport;
+  /**
+   * Round 28 probe: starts (on) or stops and returns (off) a per-frame cover check taken while a catch push is on
+   * (the round 27 session's curtain swept over a catcher mid-push; the lab only checked settled stills).
+   */
+  coverLog?(on: boolean): CoverSample[];
   stackCheck?(only?: number[]): StackReport;
   /** Round 25 lab probe: per present seat, where it is drawn and its spacing offsets (fishers.debugBodies). */
   bodies?(): { seat: number; x: number; z: number; spaceX: number; spaceZ: number; wantX: number; wantZ: number }[];
 };
+
+export type CoverSample = { t: number; w: number; worst: number; by?: Record<string, number> };
 
 declare global {
   interface Window {
@@ -259,6 +266,8 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     // Painted wisteria strands on willows and the giant trees (the sheet keeps most of its own colour).
     wisteria: leafMaterial(cleanPaint(kit.wisteria), occ, time, { hue: 0.85 }),
   };
+  // Round 28: a wisteria strand fades as a whole where any of it hangs over a fisher (cover.ts COVER_SPAN).
+  leafMats.wisteria.userData.coverSpan = true;
   setFoliageMaterials(leafMats);
   // Painted rock on every boulder and cliff, painted bark on trunks, stone tiles on the tower dais.
   const surfMats = { rock: rockMaterial(kit.rock), bark: barkMaterial(kit.bark, occ), tiles: tilesMaterial(kit.tiles) };
@@ -386,6 +395,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   const streamBudget = 3;
   let frameN = 0;
   let last = performance.now();
+  let coverRec: CoverSample[] | null = null;
   const t0 = last;
   let raf = 0;
   let disposed = false;
@@ -685,6 +695,11 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
     renderer.info.reset();
     if (post) post.render();
     else renderer.render(scene, camera);
+    if (coverRec && rig.debug().catchW > 0.01) {
+      let c = coverCheck(renderer, scene, camera, fishers.group, cover, false, true);
+      if (c.worst > 0.02) c = coverCheck(renderer, scene, camera, fishers.group, cover, true, true);
+      coverRec.push({ t: Math.round(now), w: Math.round(rig.debug().catchW * 100) / 100, worst: Math.round(c.worst * 1000) / 1000, ...(c.by ? { by: c.by } : {}) });
+    }
   };
 
   const loop = (now: number) => {
@@ -775,6 +790,11 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       rig.record = on ? [] : null;
       return on ? [] : got;
     },
+    coverLog(on) {
+      const got = coverRec ?? [];
+      coverRec = on ? [] : null;
+      return on ? [] : got;
+    },
     cameraAt: () => ({ x: camera.position.x, y: camera.position.y, z: camera.position.z }),
     info: () => ({
       renderer: rendererName,
@@ -816,7 +836,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       const shown = (o: Object3D | null): boolean => !o || (o.visible && shown(o.parent));
       return rc.intersectObjects(scene.children, true).filter((h) => shown(h.object)).slice(0, 8).map((h) => `${h.object.name || h.object.type}${h.object.parent?.name ? "<" + h.object.parent.name : ""} d=${h.distance.toFixed(1)} i=${h.instanceId ?? "-"}`);
     },
-    coverCheck: (detail) => coverCheck(renderer, scene, camera, fishers.group, cover, detail ?? false),
+    coverCheck: (detail, live) => coverCheck(renderer, scene, camera, fishers.group, cover, detail ?? false, live ?? false),
     bodies: () => fishers.debugBodies(),
     stackCheck: (only) => stackCheck(renderer, scene, camera, fishers.group, fishers.stackParts().filter((p) => !only || only.includes(p.seat))),
     names: () => scene.children.map((o, i) => o.name || `${o.type}#${i}`),

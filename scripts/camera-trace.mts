@@ -1,7 +1,7 @@
 /**
  * Round 23 judder probe: plays the recorded session's bot (game-rig.config.ts) against a dev server with
  * no video, logs the TV camera rig's per-frame inputs and pose (window.__scene.camLog) and writes them as
- * JSON. Usage: npx tsx scripts/camera-trace.mts --base http://127.0.0.1:8843 --out trace.json [--until "explore: trail to Mistmarsh"]
+ * JSON (--cover: also the cover check on every catch-push frame). Usage: npx tsx scripts/camera-trace.mts --base http://127.0.0.1:8843 --out trace.json [--until "explore: trail to Mistmarsh"]
  */
 import { writeFileSync } from "node:fs";
 import { chromium, type Page } from "playwright";
@@ -31,6 +31,7 @@ const startLog = async () => {
     await tv.waitForTimeout(500);
   }
   await tv.evaluate(() => window.__scene?.camLog?.(true));
+  if (argv.includes("--cover")) await tv.evaluate(() => window.__scene?.coverLog?.(true));
   started = true;
 };
 class Stop extends Error {}
@@ -53,6 +54,13 @@ try {
   if (!(e instanceof Stop)) console.error("session ended:", e);
 }
 const frames = await tv.evaluate(() => window.__scene?.camLog?.(false) ?? []);
-writeFileSync(out, JSON.stringify({ marks, frames }));
+// Round 28 (--cover): the cover check on every frame a catch push is on, with the worst offenders by object.
+const cover = argv.includes("--cover") ? await tv.evaluate(() => window.__scene?.coverLog?.(false) ?? []) : [];
+const tvStart = await tv.evaluate(() => performance.timeOrigin);
+writeFileSync(out, JSON.stringify({ marks, frames, cover, tvStart, t0 }));
+if (cover.length) {
+  const bad = cover.filter((c) => c.worst > 0.02);
+  console.log(`cover: ${cover.length} push frames, ${bad.length} over 0.02, worst ${Math.max(0, ...cover.map((c) => c.worst))}`);
+}
 console.log(`${frames.length} frames -> ${out}`);
 await browser.close();

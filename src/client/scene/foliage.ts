@@ -342,6 +342,8 @@ export function wisteriaCards(strands: Strand[], top: number | Color, tip: numbe
   const nor: number[] = [];
   const uv: number[] = [];
   const col: number[] = [];
+  // Round 28 (cover.ts COVER_SPAN): from each vertex to the other end of its strand, along the same side.
+  const span: number[] = [];
   const ct = new Color(top);
   const cp = new Color(tip);
   for (const st of strands) {
@@ -368,6 +370,9 @@ export function wisteriaCards(strands: Strand[], top: number | Color, tip: numbe
         nor.push(ox * 0.8, 0.45, oz * 0.8);
         const c = ct.clone().lerp(cp, t).multiplyScalar(k);
         col.push(c.r, c.g, c.b);
+        const ot = 1 - t;
+        const oo = 0.35 * ot * ot;
+        span.push(ox * (oo - out), -h * (ot - t), oz * (oo - out));
       }
     }
   }
@@ -376,6 +381,7 @@ export function wisteriaCards(strands: Strand[], top: number | Color, tip: numbe
   g.setAttribute("normal", new BufferAttribute(new Float32Array(nor), 3));
   g.setAttribute("uv", new BufferAttribute(new Float32Array(uv), 2));
   g.setAttribute("color", new BufferAttribute(new Float32Array(col), 3));
+  g.setAttribute("aCovSpan", new BufferAttribute(new Float32Array(span), 3));
   g.computeBoundingSphere();
   return g;
 }

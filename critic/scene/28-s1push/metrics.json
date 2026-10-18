@@ -1,0 +1,84 @@
+{
+  "round": "28-s1push",
+  "shots": [
+    {
+      "label": "mistmarsh-catch@push",
+      "frames": 49,
+      "cover": 0.005,
+      "coverAt": 339,
+      "coverBy": {},
+      "coverOver": 0,
+      "p95": 33.400001525878906,
+      "programs": 118
+    },
+    {
+      "label": "mistmarsh-dock@push",
+      "frames": 36,
+      "cover": 0.022,
+      "coverAt": 1666,
+      "coverBy": {
+        "areas#17": 0.022
+      },
+      "coverOver": 10,
+      "p95": 66.5999984741211,
+      "programs": 131
+    },
+    {
+      "label": "mistmarsh-dock-foot@push",
+      "frames": 62,
+      "cover": 0.003,
+      "coverAt": 279,
+      "coverBy": {},
+      "coverOver": 0,
+      "p95": 33.400001525878906,
+      "programs": 119
+    },
+    {
+      "label": "mistmarsh-tag@push",
+      "frames": 50,
+      "cover": 0.024,
+      "coverAt": 379,
+      "coverBy": {
+        "areas#17": 0.024
+      },
+      "coverOver": 1,
+      "p95": 33.400001525878906,
+      "programs": 131
+    },
+    {
+      "label": "double-catch@push",
+      "frames": 48,
+      "cover": 0.006,
+      "coverAt": 1374,
+      "coverBy": {},
+      "coverOver": 0,
+      "p95": 50,
+      "programs": 127
+    },
+    {
+      "label": "catch-leap@push",
+      "frames": 49,
+      "cover": 0.005,
+      "coverAt": 2002,
+      "coverBy": {},
+      "coverOver": 0,
+      "p95": 50,
+      "programs": 125
+    },
+    {
+      "label": "night-catch@push",
+      "frames": 45,
+      "cover": 0.011,
+      "coverAt": 763,
+      "coverBy": {},
+      "coverOver": 0,
+      "p95": 50,
+      "programs": 128
+    }
+  ],
+  "errors": [],
+  "failures": [
+    "mistmarsh-dock@push",
+    "mistmarsh-tag@push"
+  ]
+}

@@ -1,0 +1,121 @@
+{
+  "round": "28-s1pre",
+  "shots": [
+    {
+      "label": "mistmarsh-catch@push",
+      "frames": 39,
+      "cover": 0.05,
+      "coverAt": 1052,
+      "coverBy": {
+        "forest#15": 0.05
+      },
+      "coverOver": 1,
+      "p95": 50,
+      "programs": 126
+    },
+    {
+      "label": "mistmarsh-dock@push",
+      "frames": 25,
+      "cover": 0.022,
+      "coverAt": 1275,
+      "coverBy": {
+        "areas#17": 0.022
+      },
+      "coverOver": 7,
+      "p95": 50,
+      "programs": 128
+    },
+    {
+      "label": "mistmarsh-dock-foot@push",
+      "frames": 41,
+      "cover": 0.002,
+      "coverAt": 402,
+      "coverBy": {},
+      "coverOver": 0,
+      "p95": 50,
+      "programs": 117
+    },
+    {
+      "label": "mistmarsh-tag@push",
+      "frames": 33,
+      "cover": 0.078,
+      "coverAt": 678,
+      "coverBy": {
+        "areas#17": 0.078
+      },
+      "coverOver": 3,
+      "p95": 50,
+      "programs": 128
+    },
+    {
+      "label": "double-catch@push",
+      "frames": 42,
+      "cover": 0.006,
+      "coverAt": 804,
+      "coverBy": {},
+      "coverOver": 0,
+      "p95": 50,
+      "programs": 125
+    },
+    {
+      "label": "catch-leap@push",
+      "frames": 42,
+      "cover": 0.005,
+      "coverAt": 1139,
+      "coverBy": {},
+      "coverOver": 0,
+      "p95": 50,
+      "programs": 123
+    },
+    {
+      "label": "night-catch@push",
+      "frames": 39,
+      "cover": 0.009,
+      "coverAt": 493,
+      "coverBy": {},
+      "coverOver": 0,
+      "p95": 50,
+      "programs": 125
+    }
+  ],
+  "soaks": {
+    "four-reel": {
+      "programsBefore": 90,
+      "programsAfter": 90,
+      "p50": 15,
+      "p95": 18.100000381469727,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 1366
+    },
+    "tower": {
+      "programsBefore": 90,
+      "programsAfter": 90,
+      "p50": 12.600000381469727,
+      "p95": 15.699999809265137,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 1669
+    },
+    "boarding": {
+      "programsBefore": 89,
+      "programsAfter": 89,
+      "p50": 10.399999618530273,
+      "p95": 13.899999618530273,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+      "frames": 2013
+    }
+  },
+  "soak": {
+    "programsBefore": 90,
+    "programsAfter": 90,
+    "p50": 15,
+    "p95": 18.100000381469727,
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5 Max, Unspecified Version)",
+    "frames": 1366
+  },
+  "errors": [],
+  "failures": [
+    "mistmarsh-catch@push",
+    "mistmarsh-dock@push",
+    "mistmarsh-tag@push"
+  ]
+}

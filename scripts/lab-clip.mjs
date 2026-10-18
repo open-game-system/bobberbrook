@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Round 27: a short video of one lab scenario from its hero moment (the strip rig's screenshots are ~250 ms
 // apart, too slow for a 0.5 s leap), plus frames pulled from it every --every ms (ffmpeg).
-// Usage: node scripts/lab-clip.mjs --base http://127.0.0.1:8843 --scenario catch-leap --out dir [--ms 1500] [--every 60] [--crop w:h:x:y]
+// Usage: node scripts/lab-clip.mjs --base http://127.0.0.1:8843 --scenario catch-leap --out dir [--ms 1500] [--every 60] [--crop w:h:x:y] [--from catch]
 import { chromium } from "playwright";
 import { mkdirSync, renameSync } from "node:fs";
 import { join } from "node:path";
@@ -16,7 +16,9 @@ const page = await ctx.newPage();
 const t0 = Date.now();
 await page.goto(`${base}/scene-lab.html?scenario=${a.scenario}`, { timeout: 120_000 });
 await page.waitForFunction(() => window.__lab?.ready === true, null, { timeout: 90_000 });
-await page.waitForFunction(() => window.__lab?.heroReady === true, null, { timeout: 90_000, polling: 16 });
+// --from catch (round 28): start at the first catch landing (the push-in) instead of the scenario's hero moment.
+if (a.from === "catch") await page.waitForFunction(() => window.__lab?.lake()?.fishers.some((f) => f.mode === "catch" && f.catch !== null) === true, null, { timeout: 90_000, polling: 16 });
+else await page.waitForFunction(() => window.__lab?.heroReady === true, null, { timeout: 90_000, polling: 16 });
 const heroAt = (Date.now() - t0) / 1000;
 await page.waitForTimeout(Number(a.ms ?? 1500));
 const video = page.video();

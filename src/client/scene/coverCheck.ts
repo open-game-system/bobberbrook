@@ -38,7 +38,7 @@ export function coveredIn(all: Uint8Array, seen: Uint8Array, w: number, h: numbe
  * fully gone). A fisher pixel inside its box that the second pass loses is scenery left over a fisher.
  * Same render-target kind as the post chain, so no new shader programs.
  */
-export function coverCheck(renderer: WebGLRenderer, scene: Scene, camera: Camera, fishers: Object3D, cover: CoverUniforms, detail: boolean | string = false): CoverReport {
+export function coverCheck(renderer: WebGLRenderer, scene: Scene, camera: Camera, fishers: Object3D, cover: CoverUniforms, detail: boolean | string = false, live = false): CoverReport {
   const rt = new WebGLRenderTarget(W, H, { type: UnsignedByteType });
   const prevTarget = renderer.getRenderTarget();
   const prevAuto = renderer.autoClear;
@@ -66,7 +66,9 @@ export function coverCheck(renderer: WebGLRenderer, scene: Scene, camera: Camera
   };
   try {
     scene.background = null;
-    cover.uCovKeep.value = 0;
+    // Round 28 (`live`, the push check): the fade's dither as the TV draws it, so the kept 0.15 of a faded
+    // surface counts too (the round 27 curtain was such a residue, smoothed into a veil by the post).
+    if (!live) cover.uCovKeep.value = 0;
     renderer.setRenderTarget(rt);
     renderer.setClearColor(KEY, 1);
     renderer.autoClear = false;
