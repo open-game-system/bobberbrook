@@ -22,6 +22,7 @@ import {
 } from "three";
 import { dayPhase } from "../../game/daycycle";
 import type { Lake } from "../../game/lake";
+import { showOpening } from "./opening";
 import { CameraRig, REVEAL_S, isView, VIEWS, type RigFrame } from "./camera";
 import { FisherViews, type CatchFocus } from "./fishers";
 import { FishShadows, FishTextures, sharedCardGeometry } from "./fishviz";
@@ -151,7 +152,9 @@ const LEAF_GLOW = 0.3;
 const CHAR_NIGHT = { fill: 0.55, rim: 0.35, fire: 0.7 };
 const tmpFire = new Color();
 
-export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality: SceneQuality; assetBase?: string; textureBase?: string }): Promise<LakeScene> {
+export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality: SceneQuality; assetBase?: string; textureBase?: string; openingSrc?: string }): Promise<LakeScene> {
+  // Round 23: the painted establishing view shows while everything below compiles (no empty navy TV).
+  const opening = await showOpening(canvas, opts.openingSrc ?? "/art/scene/establish.webp");
   patchLambertWrap();
   const full = opts.quality === "full";
   const renderer = new WebGLRenderer({ canvas, antialias: !full, powerPreference: "high-performance", alpha: false });
@@ -745,6 +748,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
   seaShow.geometry.dispose();
   fow.mesh.visible = false;
   frame(performance.now(), 0);
+  opening.reveal();
 
   const percentile = (p: number) => {
     const n = Math.min(frameN, FRAME_SAMPLES);
@@ -903,6 +907,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       parts.glow.setScale(h * renderer.getPixelRatio(), camera.fov);
     },
     dispose() {
+      opening.dispose();
       disposed = true;
       cancelAnimationFrame(raf);
       sky.dispose();
