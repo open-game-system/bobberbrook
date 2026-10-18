@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GOLDEN_FIRST_MS, biterPool, chooseCatch, join, newLake, step, type BiteContext, type Lake } from "./lake";
+import { GOLDEN_FIRST_MS, biterPool, chooseCatch, freshPlaceFor, join, newLake, step, type BiteContext, type Lake } from "./lake";
 import { worldFor } from "./regions";
 
 const ctx = (freshPlace: boolean, known: (id: string) => boolean): BiteContext => ({
@@ -21,6 +21,23 @@ describe("a new place keeps the coach's promise: its own fish first", () => {
     for (let i = 0; i < 400; i++) if (!known(chooseCatch(ctx(false, known), r).id)) plain++;
     expect(fresh / 400).toBeGreaterThan(0.8);
     expect(fresh).toBeGreaterThan(plain);
+  });
+});
+
+describe("the new place's own fish keep coming for its first few catches (round 24: a repeat Stripy Perch at Mistmarsh)", () => {
+  const T0 = 1_000_000;
+  function atMarsh(catchesSince: number): Lake {
+    let l: Lake = join(newLake(7, T0), { name: "A", ogsId: null }).lake;
+    const marsh = worldFor(l.worldSeed).placeById("mistmarsh")!;
+    const found = { area: "mistmarsh" as const, seat: 0, at: T0 + 1000, seq: 1 };
+    const log = Array.from({ length: catchesSince }, (_, i) => ({ seat: 0, fishId: "perch", cm: 20, isNew: false, at: T0 + 2000 + i }));
+    l = { ...l, discovered: ["moonwell", "mistmarsh"], discovery: found, log, fishers: l.fishers.map((f) => ({ ...f, pos: { x: marsh.center.x + marsh.pond.r + 1, z: marsh.center.z } })) };
+    return l;
+  }
+  it("fresh for the first four catches there, then plain", () => {
+    expect(freshPlaceFor(atMarsh(0), atMarsh(0).fishers[0]!)).toBe(true);
+    expect(freshPlaceFor(atMarsh(3), atMarsh(3).fishers[0]!)).toBe(true);
+    expect(freshPlaceFor(atMarsh(4), atMarsh(4).fishers[0]!)).toBe(false);
   });
 });
 

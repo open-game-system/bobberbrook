@@ -505,12 +505,15 @@ function hook(d: Draft<Lake>, f: Draft<Fisher>, at: number): void {
   f.reel = { fishId: def.id, cm, hookAt: at, seed: Math.floor(roll(d) * 2 ** 31), progress: REEL_START, at, holding: false };
 }
 
-/** The place this fisher stands in was the last one found, and nobody has caught anything since. */
-function freshPlaceFor(d: Draft<Lake>, f: Draft<Fisher>): boolean {
+/** How many catches at a just-found place still favour its own new fish. */
+export const FRESH_PLACE_CATCHES = 4;
+
+/** The place this fisher stands in was the last one found, and fewer than FRESH_PLACE_CATCHES catches came since. */
+export function freshPlaceFor(d: Pick<Lake, "discovery" | "worldSeed" | "log">, f: Pick<Fisher, "pos">): boolean {
   const found = d.discovery;
   if (!found) return false;
   const here = worldFor(d.worldSeed).areaAt(f.pos);
-  return here?.id === found.area && !d.log.some((e) => e.at >= found.at);
+  return here?.id === found.area && d.log.filter((e) => e.at >= found.at).length < FRESH_PLACE_CATCHES;
 }
 
 export const LOG_LENGTH = 40;

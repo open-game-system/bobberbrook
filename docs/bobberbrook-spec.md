@@ -83,6 +83,8 @@ Mom (phone). Works with 1–4 fishers.
   shore spot (3.5 m apart along the bank), then casts; a walk down to the water doesn't cast on the way in
   beside someone either (round 25: the TV saw one fisher behind the other).
 - **Trail treasures:** glowing shells along trails, a shell each, back after 3 minutes.
+- **A new place's own fish:** for the first 4 catches at a just-found place, species the family hasn't met
+  are 12× likelier (round 25; was the first catch only).
 - **Fish:** 30 species (rarer ones more likely farther from home); the Moonfin rises at Starfall Tarn at night.
 
 ## Decisions and assumptions
