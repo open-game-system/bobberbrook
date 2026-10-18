@@ -1,0 +1,245 @@
+[
+ {
+  "section": "everyone in",
+  "seconds": 58.6,
+  "rmsDbfs": -13.0,
+  "lowShare<250Hz": 0.32,
+  "trebleShare>3k": 0.0026,
+  "tonalOnsetsPerMin (notes, sfx)": 14.3,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 2.0
+ },
+ {
+  "section": "at the water",
+  "seconds": 1.4,
+  "rmsDbfs": -12.6,
+  "lowShare<250Hz": 0.353,
+  "trebleShare>3k": 0.0007,
+  "tonalOnsetsPerMin (notes, sfx)": 0.0,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 0.0
+ },
+ {
+  "section": "Dad casts",
+  "seconds": 0.9,
+  "rmsDbfs": -12.9,
+  "lowShare<250Hz": 0.413,
+  "trebleShare>3k": 0.0004,
+  "tonalOnsetsPerMin (notes, sfx)": 0.0,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 0.0
+ },
+ {
+  "section": "Juneau casts",
+  "seconds": 10.1,
+  "rmsDbfs": -13.3,
+  "lowShare<250Hz": 0.223,
+  "trebleShare>3k": 0.0011,
+  "tonalOnsetsPerMin (notes, sfx)": 11.9,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 0.0
+ },
+ {
+  "section": "Dad hooks",
+  "seconds": 1.0,
+  "rmsDbfs": -11.2,
+  "lowShare<250Hz": 0.101,
+  "trebleShare>3k": 0.0345,
+  "tonalOnsetsPerMin (notes, sfx)": 180.0,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 0.0
+ },
+ {
+  "section": "Juneau no catch (fish got away)",
+  "seconds": 9.9,
+  "rmsDbfs": -11.7,
+  "lowShare<250Hz": 0.125,
+  "trebleShare>3k": 0.0249,
+  "tonalOnsetsPerMin (notes, sfx)": 169.7,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 6.1
+ },
+ {
+  "section": "Dad catch",
+  "seconds": 5.2,
+  "rmsDbfs": -11.7,
+  "lowShare<250Hz": 0.13,
+  "trebleShare>3k": 0.0088,
+  "tonalOnsetsPerMin (notes, sfx)": 103.8,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 11.5
+ },
+ {
+  "section": "Dad casts",
+  "seconds": 5.2,
+  "rmsDbfs": -14.1,
+  "lowShare<250Hz": 0.133,
+  "trebleShare>3k": 0.0017,
+  "tonalOnsetsPerMin (notes, sfx)": 0.0,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 0.0
+ },
+ {
+  "section": "Dad hooks",
+  "seconds": 25.5,
+  "rmsDbfs": -13.3,
+  "lowShare<250Hz": 0.139,
+  "trebleShare>3k": 0.0068,
+  "tonalOnsetsPerMin (notes, sfx)": 49.4,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 2.4
+ },
+ {
+  "section": "Dad catch",
+  "seconds": 6.7,
+  "rmsDbfs": -13.9,
+  "lowShare<250Hz": 0.176,
+  "trebleShare>3k": 0.0012,
+  "tonalOnsetsPerMin (notes, sfx)": 0.0,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 0.0
+ },
+ {
+  "section": "Juneau casts",
+  "seconds": 2.6,
+  "rmsDbfs": -14.2,
+  "lowShare<250Hz": 0.183,
+  "trebleShare>3k": 0.0011,
+  "tonalOnsetsPerMin (notes, sfx)": 0.0,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 0.0
+ },
+ {
+  "section": "Juneau hooks",
+  "seconds": 7.5,
+  "rmsDbfs": -11.9,
+  "lowShare<250Hz": 0.119,
+  "trebleShare>3k": 0.0162,
+  "tonalOnsetsPerMin (notes, sfx)": 136.0,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 8.0
+ },
+ {
+  "section": "Juneau catch",
+  "seconds": 3.7,
+  "rmsDbfs": -11.6,
+  "lowShare<250Hz": 0.098,
+  "trebleShare>3k": 0.0193,
+  "tonalOnsetsPerMin (notes, sfx)": 162.2,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 32.4
+ },
+ {
+  "section": "explore: trail to Mistmarsh",
+  "seconds": 104.2,
+  "rmsDbfs": -13.1,
+  "lowShare<250Hz": 0.347,
+  "trebleShare>3k": 0.0028,
+  "tonalOnsetsPerMin (notes, sfx)": 12.1,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 0.0
+ },
+ {
+  "section": "Dad casts",
+  "seconds": 0.4,
+  "rmsDbfs": -12.2,
+  "lowShare<250Hz": 0.519,
+  "trebleShare>3k": 0.0004,
+  "tonalOnsetsPerMin (notes, sfx)": 0.0,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 0.0
+ },
+ {
+  "section": "Juneau casts",
+  "seconds": 5.8,
+  "rmsDbfs": -13.0,
+  "lowShare<250Hz": 0.394,
+  "trebleShare>3k": 0.0006,
+  "tonalOnsetsPerMin (notes, sfx)": 0.0,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 0.0
+ },
+ {
+  "section": "Dad hooks",
+  "seconds": 1.6,
+  "rmsDbfs": -15.2,
+  "lowShare<250Hz": 0.612,
+  "trebleShare>3k": 0.0024,
+  "tonalOnsetsPerMin (notes, sfx)": 0.0,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 0.0
+ },
+ {
+  "section": "Juneau hooks",
+  "seconds": 8.3,
+  "rmsDbfs": -13.7,
+  "lowShare<250Hz": 0.254,
+  "trebleShare>3k": 0.0049,
+  "tonalOnsetsPerMin (notes, sfx)": 28.9,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 7.2
+ },
+ {
+  "section": "Juneau catch",
+  "seconds": 1.6,
+  "rmsDbfs": -13.5,
+  "lowShare<250Hz": 0.236,
+  "trebleShare>3k": 0.0085,
+  "tonalOnsetsPerMin (notes, sfx)": 37.5,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 0.0
+ },
+ {
+  "section": "Dad catch",
+  "seconds": 4.1,
+  "rmsDbfs": -10.4,
+  "lowShare<250Hz": 0.137,
+  "trebleShare>3k": 0.0123,
+  "tonalOnsetsPerMin (notes, sfx)": 175.6,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 0.0
+ },
+ {
+  "section": "Dad casts",
+  "seconds": 6.5,
+  "rmsDbfs": -14.0,
+  "lowShare<250Hz": 0.266,
+  "trebleShare>3k": 0.0055,
+  "tonalOnsetsPerMin (notes, sfx)": 27.7,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 9.2
+ },
+ {
+  "section": "Dad hooks",
+  "seconds": 0.3,
+  "rmsDbfs": -12.7,
+  "lowShare<250Hz": 0.23,
+  "trebleShare>3k": 0.0004,
+  "tonalOnsetsPerMin (notes, sfx)": 0.0,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 0.0
+ },
+ {
+  "section": "Juneau hooks",
+  "seconds": 4.1,
+  "rmsDbfs": -14.6,
+  "lowShare<250Hz": 0.229,
+  "trebleShare>3k": 0.0012,
+  "tonalOnsetsPerMin (notes, sfx)": 0.0,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 0.0
+ },
+ {
+  "section": "Dad catch",
+  "seconds": 0.5,
+  "rmsDbfs": -13.8,
+  "lowShare<250Hz": 0.314,
+  "trebleShare>3k": 0.0004,
+  "tonalOnsetsPerMin (notes, sfx)": 0.0,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 0.0
+ },
+ {
+  "section": "Juneau catch",
+  "seconds": 4.4,
+  "rmsDbfs": -12.7,
+  "lowShare<250Hz": 0.18,
+  "trebleShare>3k": 0.0326,
+  "tonalOnsetsPerMin (notes, sfx)": 122.7,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 0.0
+ },
+ {
+  "section": "campfire",
+  "seconds": 7.4,
+  "rmsDbfs": -13.7,
+  "lowShare<250Hz": 0.302,
+  "trebleShare>3k": 0.0339,
+  "tonalOnsetsPerMin (notes, sfx)": 48.6,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 8.1
+ },
+ {
+  "section": "back to fishing",
+  "seconds": 4.8,
+  "rmsDbfs": -14.3,
+  "lowShare<250Hz": 0.253,
+  "trebleShare>3k": 0.0004,
+  "tonalOnsetsPerMin (notes, sfx)": 0.0,
+  "harshClicksOrThumpsPerMin (want ~0; soft paper foley is not counted here)": 0.0
+ }
+]
