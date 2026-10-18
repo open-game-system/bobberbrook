@@ -19,17 +19,19 @@ function frame(rig: CameraRig, t: number, catchAt: CatchAt | null): void {
 }
 
 describe("the catch push's timeline", () => {
-  it("holds at full weight for at least 2.5 s and takes a second to ease out", () => {
+  // Round 27: the push comes in over 1.4 s (was 0.9 s, the session's camera_jerk flags after each catch), so
+  // with the same 3.4 s beat it is at full for 2.0 s (was 2.5 s); the beat's end and the ease out are unchanged.
+  it("holds at full weight for at least 2.0 s and takes a second to ease out", () => {
     let full = 0;
     for (let a = 0; a < 5; a += 0.01) if (catchWeight(a) === 1) full += 0.01;
-    expect(full).toBeGreaterThanOrEqual(2.5);
+    expect(full).toBeGreaterThanOrEqual(2.0 - 1e-6);
     expect(catchWeight(3.4 + 0.5)).toBeGreaterThan(0.3);
     expect(catchWeight(4.4)).toBe(0);
   });
   it("rampAt inverts the way in", () => {
     for (const w of [0.1, 0.5, 0.9]) expect(catchWeight(rampAt(w))).toBeCloseTo(w, 3);
   });
-  it("in the rig: full push for 2.5 s, no step on the way out", () => {
+  it("in the rig: full push for 2.0 s (round 27: was 2.5 s), no step on the way out", () => {
     const rig = new CameraRig(16 / 9);
     const ws: number[] = [];
     for (let i = 0; i < 60 * 12; i++) {
@@ -38,7 +40,7 @@ describe("the catch push's timeline", () => {
       frame(rig, t, t >= 5 && t < 8.1 ? { x: 0, y: 2.2, z: 0, age: t - 5 } : null);
       if (t >= 5) ws.push(rig.debug().catchW);
     }
-    expect(ws.filter((w) => w > 0.999).length / 60).toBeGreaterThanOrEqual(2.5);
+    expect(ws.filter((w) => w > 0.999).length / 60).toBeGreaterThanOrEqual(1.95);
     for (let i = 1; i < ws.length; i++) expect(Math.abs(ws[i]! - ws[i - 1]!)).toBeLessThan(0.05);
   });
   it("a second catch while the first push eases out continues it, never dropping back to nothing", () => {
@@ -54,7 +56,7 @@ describe("the catch push's timeline", () => {
     expect(Math.min(...ws.slice(60))).toBeGreaterThan(0.5);
     for (let i = 1; i < ws.length; i++) expect(Math.abs(ws[i]! - ws[i - 1]!)).toBeLessThan(0.05);
   });
-  it("a second catcher joining during the hold (the scene's age steps back to theirs) holds the push 2.5 s more", () => {
+  it("a second catcher joining during the hold (the scene's age steps back to theirs) holds the push 2.0 s more (round 27: was 2.5 s)", () => {
     const rig = new CameraRig(16 / 9);
     const ws: [number, number][] = [];
     for (let i = 0; i < 60 * 16; i++) {
@@ -64,8 +66,9 @@ describe("the catch push's timeline", () => {
       frame(rig, t, catchAt);
       if (t >= 5) ws.push([t, rig.debug().catchW]);
     }
-    // Full from ~5.9 s and for 2.5 s after Juneau's catch, never easing out in between.
-    for (const [t, w] of ws) if (t > 6 && t < 9.45) expect(w, `at ${t.toFixed(2)} s`).toBeGreaterThan(0.999);
+    // Full from ~6.4 s and for 2.0 s after Juneau's catch (round 27: a 1.4 s push-in in the same 3.4 s beat; was
+    // ~5.9 s and 2.5 s), never easing out in between.
+    for (const [t, w] of ws) if (t > 6.45 && t < 8.95) expect(w, `at ${t.toFixed(2)} s`).toBeGreaterThan(0.999);
     expect(ws.find(([t]) => t > 10.6)?.[1]).toBeLessThan(0.01);
   });
 });

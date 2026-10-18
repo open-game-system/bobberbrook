@@ -136,6 +136,8 @@ const SIDES = [-1, 1];
 const NO_SIDES = [0];
 /** Round 24: a body's half width (m) kept inside the safe margin by the catch push. */
 const PUSH_PAD = 0.8;
+/** Round 27: the body half width (m, either side of a fisher's feet) the group fit and the calm hold keep in the box. */
+const BODY_PAD = 0.6;
 /** How far above the catcher's feet the scene puts the catch focus (fishers.ts catchFocus). */
 const CATCH_UP = 1.8;
 /**
@@ -362,10 +364,13 @@ export class CameraRig {
     for (let iter = 0; iter < 8; iter++) {
       this.pose(cam, t, d, yaw, el, PITCH_UP);
       let nx0 = Infinity, nx1 = -Infinity, ny0 = Infinity, ny1 = -Infinity;
+      // Round 27: a fisher's body half width either side of the feet (round 26 session 40-42 s: Dad, leading on
+      // the trail, cut at the frame edge with his centre line still inside the box).
+      this.side.setFromMatrixColumn(cam.matrixWorld, 0).setY(0).normalize().multiplyScalar(BODY_PAD);
       for (let i = 0; i < this.n; i++) {
         const p = this.pts[i]!;
-        for (const lift of LIFTS) {
-          this.tmp.set(p.x, p.y + lift, p.z).project(cam);
+        for (const lift of LIFTS) for (const sd of this.softPt[i] ? NO_SIDES : SIDES) {
+          this.tmp.set(p.x + this.side.x * sd, p.y + lift, p.z + this.side.z * sd).project(cam);
           nx0 = Math.min(nx0, this.tmp.x); nx1 = Math.max(nx1, this.tmp.x);
           // Round 25: under the join card the floor is KEEP_Y, not FIT_Y0 (the point counts as that much lower).
           // Round 26: under the top banner a fisher's ceiling is TOP_Y, not FIT_Y1 (the point counts as that much
@@ -625,7 +630,7 @@ export class CameraRig {
       }
       // The calm hold never keeps a framing that has let someone out of the safe box (round 13: on the
       // trail the hold kept the shot while a walker left it).
-      if (!this.fits(this.held, this.heldDist, this.heldYaw, this.heldEl, PITCH_UP)) {
+      if (!this.fits(this.held, this.heldDist, this.heldYaw, this.heldEl, PITCH_UP, false, BODY_PAD)) {
         this.held.copy(this.wantTarget);
         this.heldDist = this.wantDist;
         this.heldYaw = this.wantYaw;
@@ -636,7 +641,12 @@ export class CameraRig {
       // Round 26: until the push starts easing out (with the longer hold, a framing released only at its end
       // zoomed out past the new framing and back, judder replay 22 s).
       const holding = (this.catchAge >= 0 && this.catchAge < CATCH_HOLD) || catchAt !== null;
-      const zone = holding ? Infinity : DEAD_M + DEAD_K * this.wantDist;
+      // Round 27: after a push hands its aim to the framing, the dead zone starts as wide as that offset and
+      // narrows over a few seconds (the shot does not drift back toward the old centre and then reverse as
+      // the family sets off; it moves only when they leave the widened zone).
+      this.handZone = Math.max(0, Math.min(this.handZone - dt * HAND_ZONE_SHRINK, this.held.distanceTo(this.rawWant) + 0.05));
+      const zone = holding ? Infinity : Math.max(DEAD_M + DEAD_K * this.wantDist, this.handZone);
+      this.rawWant.copy(this.wantTarget);
       const dx = this.wantTarget.x - this.held.x;
       const dy = this.wantTarget.y - this.held.y;
       const dz = this.wantTarget.z - this.held.z;
@@ -770,6 +780,15 @@ export class CameraRig {
   private catchShift = 0;
   private catchLastT = 0;
   private readonly catchPt = new Vector3();
+  /**
+   * Round 27: the push's sideways aim has been handed to the follow (at the start of its ease-out the framing
+   * under it takes the pushed look-at, so easing out is a zoom only, not a pan back that the family's next
+   * move then reverses: judder replay 27.7 s, 4.6 deg one way and 7.5 back as they set off).
+   */
+  private catchHanded = false;
+  /** Round 27: the widened dead zone after a handover (m) and the fit's own look-at before the dead zone. */
+  private handZone = 0;
+  private readonly rawWant = new Vector3();
   /** The push strength held for this catch (the strongest that fits; it only ever eases down). */
   private catchK = 1;
   /** The pose on screen: the followed framing with the catch push on top. */
@@ -777,7 +796,7 @@ export class CameraRig {
   private shownDist = 60;
   private shownEl = EST_EL;
 
-  /** Advances the catch timeline and its weight (catchW): ~0.9 s in, held, ~1 s out, ending ~3.2 s in. */
+  /** Advances the catch timeline and its weight (catchW): PUSH_IN in, held to CATCH_HOLD, out by CATCH_END. */
   private catchClock(t: number, catchAt: CatchAt | null, on: boolean): void {
     if (catchAt && on) {
       const fresh = this.catchAge < 0 || catchAt.age + this.catchShift < this.catchAge - 0.05;
@@ -785,9 +804,12 @@ export class CameraRig {
         this.catchPt.set(catchAt.x, catchAt.y - CATCH_UP + PUSH_AIM, catchAt.z);
         this.catchK = -1;
         this.catchShift = 0;
+        this.catchHanded = false;
       } else {
-        // A second catcher joins: the push point eases to the middle of both (no step).
-        this.catchPt.lerp(this.tmp.set(catchAt.x, catchAt.y - CATCH_UP + PUSH_AIM, catchAt.z), Math.min(1, (t - this.catchLastT) * 3));
+        // A second catcher joins: the push point eases toward them (no step). Round 27: not while the push is
+        // on and not yet handed over (judder replay 11.2 s: a pan toward Dad's catch and straight back toward
+        // Juneau's 0.7 s later); the fit already keeps every fisher in the shot.
+        if (this.catchHanded || this.catchW < 0.3) this.catchPt.lerp(this.tmp.set(catchAt.x, catchAt.y - CATCH_UP + PUSH_AIM, catchAt.z), Math.min(1, (t - this.catchLastT) * 3));
         // Round 26: a new catch while the last push is still easing out picks the push up where it is (on the
         // way in at the same weight), not from nothing: with the longer hold the two overlapped and the shot
         // zoomed out and straight back in (judder replay, 22 s).
@@ -821,6 +843,23 @@ export class CameraRig {
     }
     this.catchK = this.catchK < 0 ? fit : Math.max(fit, this.catchK - 0.02);
     this.pushed(this.catchK, this.catchW);
+    if (!this.catchHanded && this.catchAge >= CATCH_HOLD) {
+      this.catchHanded = true;
+      const ox = this.shownT.x - this.target.x;
+      const oz = this.shownT.z - this.target.z;
+      this.target.x += ox;
+      this.target.z += oz;
+      this.goalTarget.x += ox;
+      this.goalTarget.z += oz;
+      if (this.haveHeld) {
+        this.held.x += ox;
+        this.held.z += oz;
+        this.handZone = this.held.distanceTo(this.rawWant) + 0.05;
+      }
+      this.catchPt.x = this.target.x;
+      this.catchPt.z = this.target.z;
+      this.pushed(this.catchK, this.catchW);
+    }
   }
 
   /** The pushed pose at strength k and weight w (round 17's depths; round 20's aim 1.2 m up the catcher). */
@@ -840,13 +879,20 @@ export class CameraRig {
  * full, the length of the rules' catch show, 3.4 s) and eased out over a second. Was held to 2.2, out by 3.2.
  */
 const CATCH_HOLD = 3.4;
+/** Round 27: how fast the widened dead zone after a catch narrows back by itself (m/s; a slow drift home). */
+const HAND_ZONE_SHRINK = 0.12;
 /** When the catch push has eased all the way out (s after the catch). */
 const CATCH_END = 4.4;
-/** The catch push weight at this age: smooth in over 0.9 s, held to CATCH_HOLD, smooth out by CATCH_END. */
-/** The age on the way in at which the push has weight `w` (the inverse of catchWeight's first 0.9 s). */
+/**
+ * Round 27: the push comes in over 1.4 s (was 0.9 s: the round 26 session's camera_jerk flags cluster in the
+ * push after each catch, 30.0-30.6, 55.5, 61.8-62.2, 76.1-76.5 s, a whole-frame change ~10x the median each frame).
+ */
+export const PUSH_IN = 1.4;
+/** The catch push weight at this age: smooth in over PUSH_IN, held to CATCH_HOLD, smooth out by CATCH_END. */
+/** The age on the way in at which the push has weight `w` (the inverse of catchWeight's first PUSH_IN s). */
 export function rampAt(w: number): number {
   let lo = 0;
-  let hi = 0.9;
+  let hi = PUSH_IN;
   for (let i = 0; i < 24; i++) {
     const mid = (lo + hi) / 2;
     if (catchWeight(mid) < w) lo = mid;
@@ -856,6 +902,6 @@ export function rampAt(w: number): number {
 }
 
 export function catchWeight(age: number): number {
-  const w = age < 0.9 ? age / 0.9 : age < CATCH_HOLD ? 1 : Math.max(0, 1 - (age - CATCH_HOLD) / (CATCH_END - CATCH_HOLD));
+  const w = age < PUSH_IN ? age / PUSH_IN : age < CATCH_HOLD ? 1 : Math.max(0, 1 - (age - CATCH_HOLD) / (CATCH_END - CATCH_HOLD));
   return w * w * (3 - 2 * w);
 }

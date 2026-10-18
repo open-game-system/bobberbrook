@@ -1,0 +1,74 @@
+reversals 6
+  pan 11.23s -3.99 -> 4.07 deg
+  pan 27.68s 4.56 -> -7.47 deg
+  pan 55.10s -2.28 -> 4.41 deg
+  pan 56.81s 4.06 -> -3.64 deg
+  zoom 51.01s -0.113 -> 0.443
+  zoom 80.46s 0.130 -> -0.165
+median speed 0.0158 p95 0.5000 max 344.1389
+fast 1.08s 8.1x 
+fast 1.60s 16.7x 
+fast 2.12s 27.8x 
+fast 2.62s 37.4x 
+fast 3.13s 34.1x 
+fast 3.65s 24.1x 
+fast 4.17s 19.6x 
+fast 4.68s 9.0x 
+fast 11.28s 8.0x catch
+fast 11.80s 34.0x catch
+fast 14.72s 9.0x 
+fast 15.23s 26.3x 
+fast 15.90s 8.0x 
+fast 24.35s 8.2x catch
+fast 24.87s 34.6x catch
+fast 27.75s 8.3x 
+fast 28.27s 30.7x 
+fast 29.13s 8.2x 
+fast 29.65s 19.5x 
+fast 30.17s 18.1x 
+fast 30.68s 17.3x 
+fast 31.20s 20.2x 
+fast 31.72s 30.6x 
+fast 32.23s 30.5x 
+fast 32.75s 29.4x 
+fast 33.27s 19.6x 
+fast 33.78s 17.5x 
+fast 34.30s 17.4x 
+fast 34.82s 22.7x 
+fast 35.33s 24.4x 
+fast 36.47s 8.1x 
+fast 48.23s 8.1x 
+fast 48.75s 11.6x trail
+fast 49.25s 10.3x trail
+fast 49.76s 10.3x trail
+fast 50.28s 15.0x trail
+fast 50.80s 14.0x trail
+fast 51.31s 15.6x trail
+fast 51.83s 15.4x reveal
+fast 52.35s 127.7x reveal
+fast 52.86s 141.3x reveal
+fast 53.38s 58.3x reveal
+fast 53.90s 10.7x reveal
+fast 54.41s 8.1x reveal
+fast 54.93s 8.5x reveal
+fast 55.43s 9.2x reveal
+fast 55.95s 10.0x reveal
+fast 56.46s 25.3x reveal
+fast 56.98s 41.7x reveal
+fast 57.50s 34.9x trail
+fast 58.01s 24.3x trail
+fast 58.53s 18.3x trail
+fast 59.05s 15.3x trail
+fast 59.56s 15.1x trail
+fast 60.08s 15.9x trail
+fast 60.60s 19.3x trail
+fast 61.11s 13.5x trail
+fast 76.13s 9.3x catch
+fast 76.65s 23.5x catch
+fast 77.95s 12.8x catch
+fast 80.58s 8.3x trail
+fast 81.10s 16.1x trail
+fast 81.68s 21750.8x trail
+fast 84.33s 8.0x trail
+fast 88.73s 19901.1x trail
+fast 90.85s 8.0x trail
