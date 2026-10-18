@@ -601,7 +601,7 @@ const stepBite: ModeStep = (d, f, now) => {
 const stepReel: ModeStep = (d, f, now) => {
   if (!f.reel) return false;
   const def = fishById(f.reel.fishId)!;
-  const r = integrateReel(f.reel, def.fight, now, { easy: f.easy, tier: d.rodTier });
+  const r = integrateReel(f.reel, def.fight, now, { easy: f.easy, tier: d.rodTier, kid: f.kid });
   f.reel = r;
   if (r.progress >= 1 || now >= r.hookAt + RESCUE_REEL_MS) land(d, f, now);
   return false;

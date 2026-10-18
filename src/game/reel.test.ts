@@ -46,6 +46,20 @@ describe("reel speed", () => {
   });
 });
 
+describe("a kid's reel is shorter (round 26: Juneau's reel ran 17 s and read as nothing happening)", () => {
+  const at = (o: Partial<Parameters<typeof reelRate>[0]>) => reelRate({ thrashing: false, holding: false, easy: false, tier: 0, pull: 1, ...o });
+  it("calm and holding: half again as fast", () => {
+    expect(at({ holding: true, kid: true })).toBeCloseTo(at({ holding: true }) * 1.5);
+  });
+  it("holding through a thrash costs half as much", () => {
+    expect(at({ thrashing: true, holding: true, kid: true })).toBeCloseTo(at({ thrashing: true, holding: true }) * 0.5);
+  });
+  it("an easy kid reels faster too, and still gains through a thrash", () => {
+    expect(at({ holding: true, easy: true, kid: true })).toBeCloseTo(at({ holding: true, easy: true }) * 1.5);
+    expect(at({ thrashing: true, holding: true, easy: true, kid: true })).toBe(at({ thrashing: true, holding: true, easy: true }));
+  });
+});
+
 describe("integrating a reel", () => {
   const opts = { easy: false, tier: 0 };
   it("does nothing for no time", () => {

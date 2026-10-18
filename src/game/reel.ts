@@ -41,15 +41,20 @@ export function thrashingAt(fight: Fight, reel: Pick<Reel, "hookAt" | "seed">, t
 }
 
 /** Reel speed per second in each situation. Bigger tiers reel faster; easy fishers never lose ground. */
-export function reelRate(opts: { thrashing: boolean; holding: boolean; easy: boolean; tier: number; pull: number }): number {
+export function reelRate(opts: { thrashing: boolean; holding: boolean; easy: boolean; tier: number; pull: number; kid?: boolean }): number {
   const { thrashing, holding, easy, tier, pull } = opts;
-  if (!thrashing) return holding ? (0.3 * (1 + 0.12 * tier)) / (0.8 + pull * 0.35) : easy ? 0 : -0.03;
+  // Kids' fights are shorter (round 26: a 17 s reel read as nothing happening): faster in, gentler pull back.
+  const kid = opts.kid === true;
+  if (!thrashing) return holding ? ((0.3 * (1 + 0.12 * tier)) / (0.8 + pull * 0.35)) * (kid ? KID_REEL : 1) : easy ? 0 : -0.03;
   if (!holding) return 0;
-  return easy ? 0.08 : -0.16 * pull;
+  return easy ? 0.08 : -0.16 * pull * (kid ? KID_THRASH : 1);
 }
 
+const KID_REEL = 1.5;
+const KID_THRASH = 0.5;
+
 /** Advances a reel's progress to time `to`, stretch by stretch. */
-export function integrateReel(reel: Reel, fight: Fight, to: number, opts: { easy: boolean; tier: number }): Reel {
+export function integrateReel(reel: Reel, fight: Fight, to: number, opts: { easy: boolean; tier: number; kid?: boolean }): Reel {
   if (to <= reel.at) return reel;
   let progress = reel.progress;
   let t = reel.at;
@@ -58,7 +63,7 @@ export function integrateReel(reel: Reel, fight: Fight, to: number, opts: { easy
     const end = start + phaseLength(fight, reel.seed, k);
     if (end > t) {
       const until = Math.min(end, to);
-      const rate = reelRate({ thrashing: k % 2 === 1, holding: reel.holding, easy: opts.easy, tier: opts.tier, pull: fight.pull });
+      const rate = reelRate({ thrashing: k % 2 === 1, holding: reel.holding, easy: opts.easy, tier: opts.tier, pull: fight.pull, kid: opts.kid === true });
       progress = Math.min(1, Math.max(MIN_PROGRESS, progress + (rate * (until - t)) / 1000));
       t = until;
       if (progress >= 1) break;

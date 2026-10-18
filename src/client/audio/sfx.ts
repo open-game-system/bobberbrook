@@ -116,8 +116,9 @@ export const sfx = {
   // Round 25: one soft water bloop and a three-note rise (round 24's five voices plus a noise whoosh, all
   // starting within 0.3 s, measured as 23–36 bright flecks a minute at the Moonwell catches).
   catch: (o: Opts = {}) => {
-    tone(196, 0.45, { gain: 0.34, type: "sine", attack: 0.03, bend: 0.55, ...o });
-    [0, 2, 4].forEach((n, i) => tone(note(n), 0.6, { gain: 0.28, type: "sine", attack: 0.03, ...o, at: (o.at ?? 0) + 0.12 + i * 0.1 }));
+    // Round 26: an octave up and louder (the low, soft version read as silence under the bed at Mistmarsh).
+    tone(330, 0.4, { gain: 0.42, type: "sine", attack: 0.02, bend: 0.6, ...o });
+    [5, 7, 9].forEach((n, i) => tone(note(n), 0.6, { gain: 0.4, type: "sine", attack: 0.02, ...o, at: (o.at ?? 0) + 0.1 + i * 0.09 }));
   },
   newFish: (o: Opts = {}) => {
     [5, 7, 10].forEach((n, i) => tone(note(n), 0.7, { gain: 0.2, type: "sine", attack: 0.035, ...o, at: (o.at ?? 0) + 0.5 + i * 0.12 }));

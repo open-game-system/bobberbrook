@@ -88,7 +88,8 @@ async function fishOnce(rig: SessionRig, page: Page, who: string, careful: boole
   while (Date.now() < deadline) {
     const { f, now } = await me(page);
     if (f.mode === "bite" || (f.mode === "wait" && now >= f.biteAt)) {
-      await page.waitForTimeout(250);
+      // A kid's reaction time (round 26: a 250 ms press left the bite state on screen for a blink).
+      await page.waitForTimeout(700);
       await press(page);
       rig.mark(`${who} hooks`);
       break;

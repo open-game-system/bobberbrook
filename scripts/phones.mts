@@ -89,6 +89,8 @@ const biting = async (p: Page) => {
   }
 };
 await Promise.all([biting(kid), biting(dad)]);
+// Wait for the screens to draw the bite (round 21 and 26 strips caught the frame before it).
+await Promise.all([kid, dad].map((p) => p.locator("button.action.bite").waitFor({ timeout: 3000 }).catch(() => undefined)));
 await kid.waitForTimeout(150);
 await snap("4-bite");
 // Hook and hold: both reel.

@@ -93,6 +93,8 @@ Mom (phone). Works with 1–4 fishers.
 - **Trail treasures:** glowing shells along trails, a shell each, back after 3 minutes.
 - **A new place's own fish:** for the first 4 catches at a just-found place, species the family hasn't met
   are 12× likelier (round 25; was the first catch only).
+- **Kids' reels are shorter:** a fisher who joined as a kid reels in 1.5× faster on calm stretches and loses
+  half as much holding through a thrash (round 27).
 - **Fish:** 30 species (rarer ones more likely farther from home); the Moonfin rises at Starfall Tarn at night.
 
 ## Decisions and assumptions
