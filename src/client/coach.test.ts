@@ -52,6 +52,10 @@ describe("coachLine", () => {
     const l = { ...withMode(family(), 0, { mode: "reel" }), catchSeq: 2 };
     expect(coachLine(l, 0, 10)).toBe("Hold to reel it in. Let go while it splashes!");
   });
+  it("the kid's fish getting away is said at once, even while I reel (round 25: 11 s late)", () => {
+    const l = withMode(withMode(family(), 0, { mode: "reel" }), 1, { mode: "wait", missAt: 1000 });
+    expect(coachLine(l, 0, 1300)).toMatch(/^Juneau's fish got away/);
+  });
   it("the kid's reel still comes before my own", () => {
     expect(coachLine(withMode(withMode(family(), 0, { mode: "reel" }), 1, { mode: "reel" }), 0, 10)).toContain("Juneau is reeling");
   });

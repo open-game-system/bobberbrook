@@ -50,14 +50,14 @@ describe("queueToasts", () => {
   });
 });
 
-describe("a rod upgrade rides on the catch that earned it", () => {
-  it("the upgrade joins the catch banner up or waiting, so it shows with that catch (round 22: 4 s late, over the campfire)", () => {
+describe("a rod upgrade gets its own beat right after the catch that earned it", () => {
+  it("round 23 merged it into the catch banner and round 25's critic found it buried: it queues right behind the banner on screen", () => {
     const catchBanner = { id: 1, kind: "new" as const, fishId: "bluegill", seat: 1, also: [] };
-    const q = queueToasts([], [catchBanner, { id: 2, kind: "upgrade" as const, tier: 1, also: [] }]);
-    expect(q).toHaveLength(1);
-    expect(q[0]!.rodTier).toBe(1);
+    const tod = { id: 3, kind: "tod" as const, also: [] };
+    const q = queueToasts([catchBanner, tod], [{ id: 2, kind: "upgrade" as const, tier: 1, also: [] }]);
+    expect(q.map((t) => t.id)).toEqual([1, 2, 3]);
   });
-  it("with no catch banner around, the upgrade has its own banner", () => {
+  it("with nothing on screen, the upgrade shows at once", () => {
     expect(queueToasts([], [{ id: 2, kind: "upgrade" as const, tier: 1, also: [] }]).map((t) => t.kind)).toEqual(["upgrade"]);
   });
 });

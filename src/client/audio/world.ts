@@ -452,7 +452,8 @@ export function startWorld(): void {
   loop();
 }
 
-const MUSIC_LEVEL = 2.8;
+// The bed under the effects and voice (round 25: about 2 dB down with the master, so catches stand out).
+const MUSIC_LEVEL = 2.25;
 
 /** Dips the music under the narrator for `seconds`, then brings it back. */
 export function duckMusic(seconds: number): void {

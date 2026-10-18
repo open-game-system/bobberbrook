@@ -21,7 +21,8 @@ export function audio(): { ctx: AudioContext; out: GainNode } | null {
   master = ctx.createGain();
   // Loud enough for TV speakers after the stream (the bed sat at about -22 dBFS): about +4 dB into a
   // compressor that holds the peaks.
-  master.gain.value = 1.45;
+  // Round 25: the whole session sat at −11 to −14 dBFS RMS, loud for a cozy game: about 4 dB down.
+  master.gain.value = 0.92;
   const comp = ctx.createDynamicsCompressor();
   comp.threshold.value = -18;
   comp.ratio.value = 4;
