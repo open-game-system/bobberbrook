@@ -95,10 +95,11 @@ function whoosh(dur: number, from: number, to: number, opts: Opts & { q?: number
 export const sfx = {
   tap: (o: Opts = {}) => tone(note(7), 0.08, { gain: 0.18, type: "triangle", ...o }),
   nope: (o: Opts = {}) => tone(note(2), 0.14, { gain: 0.12, type: "triangle", bend: 0.8, ...o }),
-  cast: (o: Opts = {}) => whoosh(0.45, 500, 1300, { gain: 0.22, q: 1.2, ...o }),
+  // Round 28: louder after the master came down 4 dB (Mistmarsh casts read as silent in round 27).
+  cast: (o: Opts = {}) => whoosh(0.45, 500, 1300, { gain: 0.34, q: 1.2, ...o }),
   plop: (o: Opts = {}) => {
-    tone(420, 0.16, { gain: 0.35, bend: 2.2, ...o });
-    whoosh(0.18, 1200, 500, { gain: 0.12, ...o, at: (o.at ?? 0) + 0.02 });
+    tone(420, 0.16, { gain: 0.5, bend: 2.2, ...o });
+    whoosh(0.18, 1200, 500, { gain: 0.16, ...o, at: (o.at ?? 0) + 0.02 });
   },
   nibble: (o: Opts = {}) => tone(520, 0.07, { gain: 0.14, bend: 1.6, ...o }),
   bite: (o: Opts = {}) => {

@@ -39,13 +39,20 @@ async function walkTo(page: Page, target: V, near = 0.8, maxMs = 12_000): Promis
   let lastPos: V | null = null;
   let stuckSince = Date.now();
   let side = 1;
+  let lastStuckLog = 0;
+  let movedAt = Date.now();
   while (Date.now() < end) {
     const { f: raw } = await me(page);
     // Steer on the dead-reckoned position (round 24: stale room positions under load read as "stuck").
     const here = await page.evaluate(() => (Reflect.get(window, "__bb") as { here?: () => V | null }).here?.() ?? null);
     const f = here ? { ...raw, pos: here } : raw;
     if (Math.hypot(target.x - f.pos.x, target.z - f.pos.z) < near) break;
-    if (lastPos && Math.hypot(f.pos.x - lastPos.x, f.pos.z - lastPos.z) > 0.3) stuckSince = Date.now();
+    if (lastPos && Math.hypot(f.pos.x - lastPos.x, f.pos.z - lastPos.z) > 0.3) stuckSince = movedAt = Date.now();
+    // Evidence for the critic (round 27: a 42 s "stall" nobody could explain): say when the bot is stuck.
+    if (Date.now() - movedAt > 6000 && Date.now() - lastStuckLog > 6000) {
+      lastStuckLog = Date.now();
+      console.log(`rig: walker stuck ${((Date.now() - movedAt) / 1000).toFixed(0)} s at ${f.pos.x.toFixed(1)},${f.pos.z.toFixed(1)} heading ${target.x.toFixed(1)},${target.z.toFixed(1)}`);
+    }
     lastPos = lastPos && Math.hypot(f.pos.x - lastPos.x, f.pos.z - lastPos.z) <= 0.3 ? lastPos : f.pos;
     if (Date.now() - stuckSince > 3000) {
       const dx0 = target.x - f.pos.x;
