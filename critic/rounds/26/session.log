@@ -1,0 +1,257 @@
+[4.5s] everyone in
+[8.1s] at the water
+[8.2s] Dad casts
+[8.2s] Juneau casts
+[11.3s] Dad hooks
+[12.5s] Juneau hooks
+[12.5s] Juneau no catch (still reel)
+[15.4s] Dad catch
+[19.0s] Dad casts
+[22.5s] Dad hooks
+[25.1s] Juneau casts
+[25.6s] Dad catch
+[30.1s] Juneau catch
+[33.7s] explore: trail to Mistmarsh
+[46.8s] found Mistmarsh
+[46.8s] Dad casts
+[51.7s] Dad hooks
+[51.8s] Juneau tagged along
+[51.9s] Juneau casts
+[55.2s] Dad catch
+[57.9s] Juneau hooks
+[61.6s] Juneau catch
+[65.2s] Dad casts
+[65.2s] Juneau casts
+[70.8s] Dad hooks
+[71.6s] Juneau hooks
+[75.9s] Juneau catch
+[75.9s] Dad catch
+[79.5s] campfire
+[86.6s] back to fishing
+{
+  "out": "critic/rounds/26/session.mp4",
+  "panels": [
+    "tv",
+    "dad",
+    "kid"
+  ],
+  "pass": false,
+  "failures": [
+    {
+      "code": "frozen",
+      "at": "1.1–2.6s"
+    }
+  ],
+  "warnings": [
+    {
+      "code": "pop_in",
+      "at": "3.47s",
+      "t": 3.466667,
+      "ratio": 20.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "3.67s",
+      "t": 3.666667,
+      "ratio": 9.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "4.40s",
+      "t": 4.4,
+      "ratio": 26.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "8.83s",
+      "t": 8.833333,
+      "ratio": 11.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "30.03s",
+      "t": 30.033333,
+      "ratio": 9.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "30.43s",
+      "t": 30.433333,
+      "ratio": 9.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "30.50s",
+      "t": 30.5,
+      "ratio": 9.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "30.63s",
+      "t": 30.633333,
+      "ratio": 9.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "42.20s",
+      "t": 42.2,
+      "ratio": 9.2
+    },
+    {
+      "code": "camera_jerk",
+      "at": "42.63s",
+      "t": 42.633333,
+      "ratio": 9.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "42.70s",
+      "t": 42.7,
+      "ratio": 9.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "42.83s",
+      "t": 42.833333,
+      "ratio": 9.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "46.03s",
+      "t": 46.033333,
+      "ratio": 10.2
+    },
+    {
+      "code": "camera_jerk",
+      "at": "46.13s",
+      "t": 46.133333,
+      "ratio": 9.2
+    },
+    {
+      "code": "camera_jerk",
+      "at": "47.40s",
+      "t": 47.4,
+      "ratio": 12.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "47.53s",
+      "t": 47.533333,
+      "ratio": 10.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "47.60s",
+      "t": 47.6,
+      "ratio": 9.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "55.53s",
+      "t": 55.533333,
+      "ratio": 10.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "55.60s",
+      "t": 55.6,
+      "ratio": 9.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "58.83s",
+      "t": 58.833333,
+      "ratio": 10.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "58.93s",
+      "t": 58.933333,
+      "ratio": 9.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "59.00s",
+      "t": 59,
+      "ratio": 9.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "61.83s",
+      "t": 61.833333,
+      "ratio": 10.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "61.90s",
+      "t": 61.9,
+      "ratio": 10.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "62.00s",
+      "t": 62,
+      "ratio": 11
+    },
+    {
+      "code": "camera_jerk",
+      "at": "62.13s",
+      "t": 62.133333,
+      "ratio": 10.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "62.20s",
+      "t": 62.2,
+      "ratio": 9.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "65.03s",
+      "t": 65.033333,
+      "ratio": 9.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "65.23s",
+      "t": 65.233333,
+      "ratio": 15.8
+    },
+    {
+      "code": "camera_jerk",
+      "at": "65.30s",
+      "t": 65.3,
+      "ratio": 9.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "76.10s",
+      "t": 76.1,
+      "ratio": 9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "76.20s",
+      "t": 76.2,
+      "ratio": 9.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "76.30s",
+      "t": 76.3,
+      "ratio": 9.8
+    },
+    {
+      "code": "camera_jerk",
+      "at": "76.43s",
+      "t": 76.433333,
+      "ratio": 10
+    },
+    {
+      "code": "camera_jerk",
+      "at": "76.50s",
+      "t": 76.5,
+      "ratio": 9.7
+    }
+  ]
+}
