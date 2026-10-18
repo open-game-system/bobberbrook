@@ -48,6 +48,9 @@ const shoreIn = (id: AreaId, theta: number, out = 1.3): Vec => {
 };
 /** A point on Mistmarsh's boardwalk (0 = its shore end, 14 = its far end). */
 const walkAt = (i: number): Vec => boardwalkPath(areaById("mistmarsh"))[i]!;
+/** Round 24: the castable shore spot nearest the boardwalk's shore end, and the rules' free spot beside it. */
+const dockFoot = (): Vec => W.fishingSpot(walkAt(0), 6) ?? walkAt(0);
+const besideDockFoot = (): Vec => W.fishingSpot(dockFoot(), 8, [dockFoot()]) ?? dockFoot();
 const discoverAll = (l: Lake): Lake => produce(l, (d) => { d.discovered = AREAS.map((a) => a.id); });
 const discoverOnly = (ids: AreaId[]) => (l: Lake): Lake => produce(l, (d) => { d.discovered = ["moonwell", ...ids]; });
 const swirlIn = (id: AreaId, theta: number, golden: boolean) => (l: Lake, now: number): Lake =>
@@ -538,6 +541,20 @@ const SCENARIOS: Record<string, Scenario> = {
     ],
     setup: discoverOnly(["mistmarsh"]),
     warmUntil: (l) => l.fishers.some((f) => f.mode === "reel"),
+    hero: (l, now) => inCatch(l, now, 1300, 2000),
+  },
+  // Round 24 (round 23 session 136-211 s): Dad fishing on the shore at the foot of Mistmarsh's boardwalk,
+  // Juneau tagged along to the free castable spot the rules give him beside Dad (lake.ts besideAtShore:
+  // world.fishingSpot within 8 m, Dad's spot taken), which put him in front of Dad on the TV; the shot is
+  // Dad's catch held up (the stack check: nobody covers the catcher or the fish).
+  "mistmarsh-dock-foot": {
+    phase: 0.36,
+    fishers: [
+      { seat: 0, name: "Dad", spot: dockFoot(), easy: true, at: dockFoot() },
+      { seat: 2, name: "Juneau", spot: besideDockFoot(), at: besideDockFoot(), noHook: true },
+    ],
+    setup: discoverOnly(["mistmarsh"]),
+    warmUntil: (l) => l.fishers.some((f) => f.seat === 0 && f.mode === "reel"),
     hero: (l, now) => inCatch(l, now, 1300, 2000),
   },
   // The same, while both reel in (the lines and bobbers by the boardwalk).

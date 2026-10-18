@@ -28,7 +28,7 @@ import { FisherViews, type CatchFocus } from "./fishers";
 import { FishShadows, FishTextures, sharedCardGeometry } from "./fishviz";
 import { Fx } from "./fx";
 import { coverScene, makeCoverUniforms, setCoverFishers } from "./cover";
-import { coverCheck, type CoverReport } from "./coverCheck";
+import { coverCheck, stackCheck, type CoverReport, type StackReport } from "./coverCheck";
 import { keepPrograms } from "./keepPrograms";
 import { MAX_FOCUS, occluderDepthMaterial, occluderMaterial, patchLambertWrap, registerFade } from "./geo";
 import { makeParticles } from "./particles";
@@ -112,6 +112,7 @@ export type SceneDebug = {
   painterly?(on: boolean): boolean;
   /** Round 21 lab check: per framed fisher, the share of their body pixels scenery still covers (fade dither off). */
   coverCheck?(detail?: boolean | string): CoverReport;
+  stackCheck?(): StackReport;
 };
 
 declare global {
@@ -809,6 +810,7 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       return rc.intersectObjects(scene.children, true).filter((h) => shown(h.object)).slice(0, 8).map((h) => `${h.object.name || h.object.type}${h.object.parent?.name ? "<" + h.object.parent.name : ""} d=${h.distance.toFixed(1)} i=${h.instanceId ?? "-"}`);
     },
     coverCheck: (detail) => coverCheck(renderer, scene, camera, fishers.group, cover, detail ?? false),
+    stackCheck: () => stackCheck(renderer, scene, camera, fishers.group, fishers.stackParts()),
     names: () => scene.children.map((o, i) => o.name || `${o.type}#${i}`),
     toggle(name) {
       let n = 0;

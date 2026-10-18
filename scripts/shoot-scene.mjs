@@ -53,6 +53,7 @@ const SHOTS = [
   ["mistmarsh-catch", null, true],
   ["mistmarsh-reel", null, true],
   ["mistmarsh-dock", null, true],
+  ["mistmarsh-dock-foot", null, true],
   ["miss", null, true],
   ["morning", null, false],
   ["morning", 0.97, false],
@@ -96,6 +97,8 @@ const errors = [];
 const metrics = { round, shots: [] };
 /** Round 21: at most this share of any framed fisher's body pixels may be covered by scenery (see coverCheck.ts). */
 const COVER_MAX_FRAC = 0.02;
+/** Round 24: at most this share of any fisher (body and held fish) may be covered by another fisher (stackCheck). */
+const STACK_MAX_FRAC = 0.02;
 const failures = [];
 const files = [];
 // Everything taken so far is on disk after every shot: a crash later never loses the stills.
@@ -141,9 +144,12 @@ async function shoot(scenario, phase, hero, tod) {
     // that scenery still covers. Anything over COVER_MAX_FRAC is a broken "nothing over a fisher" veto.
     const cover = await page.evaluate(() => window.__scene.coverCheck?.() ?? null).catch(() => null);
     const coverWorst = cover ? Math.round(cover.worst * 1000) / 1000 : null;
-    metrics.shots.push({ label, renderer: info.renderer, programsAtStart: before.programs, programs: info.programs, calls: info.calls, triangles: info.triangles, p50: info.frameP50, p95: info.frameP95, meanLuma: luma === null ? null : Math.round(luma), cover: coverWorst, coverBoxes: cover?.boxes.map((b) => Math.round(b.frac * 1000) / 1000) });
+    const stack = await page.evaluate(() => window.__scene.stackCheck?.() ?? null).catch(() => null);
+    const stackWorst = stack ? Math.round(stack.worst * 1000) / 1000 : null;
+    metrics.shots.push({ label, renderer: info.renderer, programsAtStart: before.programs, programs: info.programs, calls: info.calls, triangles: info.triangles, p50: info.frameP50, p95: info.frameP95, meanLuma: luma === null ? null : Math.round(luma), cover: coverWorst, coverBoxes: cover?.boxes.map((b) => Math.round(b.frac * 1000) / 1000), stack: stackWorst, stackSeats: stack?.seats.map((b) => [b.seat, Math.round(b.frac * 1000) / 1000]) });
     console.log(label, JSON.stringify(metrics.shots.at(-1)));
     if (coverWorst !== null && coverWorst > COVER_MAX_FRAC) return { label, failed: `scenery covers a fisher (${coverWorst} of the body > ${COVER_MAX_FRAC})` };
+    if (stackWorst !== null && stackWorst > STACK_MAX_FRAC) return { label, failed: `a fisher covers another (${stackWorst} > ${STACK_MAX_FRAC})` };
     return { label };
   } finally {
     await page.close().catch(() => {});

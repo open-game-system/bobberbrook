@@ -1,4 +1,4 @@
-import { Color, Light, UnsignedByteType, WebGLRenderTarget, type Camera, type Object3D, type Scene, type Vector4, type WebGLRenderer } from "three";
+import { Color, Light, UnsignedByteType, Vector4 as Vector4Box, WebGLRenderTarget, type Camera, type Object3D, type Scene, type Vector4, type WebGLRenderer } from "three";
 import type { CoverUniforms } from "./cover";
 
 export type CoverReport = { boxes: { px: number; covered: number; frac: number }[]; worst: number; /** With `detail`: worst share per top-level scenery object that covers anyone. */ by?: Record<string, number> };
@@ -136,6 +136,77 @@ export function coverCheck(renderer: WebGLRenderer, scene: Scene, camera: Camera
     for (const c of decals) c.visible = true;
     scene.background = prevBg;
     cover.uCovKeep.value = prevKeep;
+    renderer.setClearColor(prevClear, prevAlpha);
+    renderer.autoClear = prevAuto;
+    renderer.setRenderTarget(prevTarget);
+    rt.dispose();
+  }
+}
+
+export type StackReport = { seats: { seat: number; px: number; covered: number; frac: number }[]; worst: number };
+
+/**
+ * Round 24: the lab's stack check (round 23 session 136-211 s: Juneau in front of Dad hid both of Dad's
+ * catches). Per fisher (body and held fish): its pixels drawn alone, then the other fishers (bodies and held
+ * fish) drawn first and it depth-tested against them; the share it loses is how much of it another fisher
+ * covers on the TV. Bobbers, lines and the seat rings are left out.
+ */
+export function stackCheck(renderer: WebGLRenderer, scene: Scene, camera: Camera, fishers: Object3D, parts: readonly { seat: number; own: readonly Object3D[] }[]): StackReport {
+  const rt = new WebGLRenderTarget(W, H, { type: UnsignedByteType });
+  const prevTarget = renderer.getRenderTarget();
+  const prevAuto = renderer.autoClear;
+  const prevClear = renderer.getClearColor(new Color());
+  const prevAlpha = renderer.getClearAlpha();
+  const prevBg = scene.background;
+  const vis = new Map<Object3D, boolean>();
+  for (const o of scene.children) vis.set(o, o.visible);
+  const kids = new Map<Object3D, boolean>();
+  for (const o of fishers.children) kids.set(o, o.visible);
+  const decals: Object3D[] = [];
+  fishers.traverse((c) => { if (c.userData.coverCheckSkip === true && c.visible) decals.push(c); });
+  for (const c of decals) c.visible = false;
+  const read = () => {
+    const buf = new Uint8Array(W * H * 4);
+    renderer.readRenderTargetPixels(rt, 0, 0, W, H, buf);
+    return buf;
+  };
+  const showOnly = (set: readonly Object3D[]) => {
+    for (const [o, v] of kids) o.visible = v && set.includes(o);
+  };
+  const out: StackReport = { seats: [], worst: 0 };
+  const whole = [new Vector4Box(0, 0, 1, 1)];
+  try {
+    scene.background = null;
+    for (const o of scene.children) o.visible = (vis.get(o) ?? false) && (o instanceof Light || o === fishers);
+    renderer.setRenderTarget(rt);
+    renderer.setClearColor(KEY, 1);
+    renderer.autoClear = false;
+    for (const p of parts) {
+      const own = p.own.filter((o) => kids.get(o) === true);
+      if (own.length === 0) continue;
+      const others = parts.filter((q) => q !== p).flatMap((q) => q.own);
+      showOnly(own);
+      renderer.clear(true, true, true);
+      renderer.render(scene, camera);
+      const all = read();
+      showOnly(others);
+      renderer.clear(true, true, true);
+      renderer.render(scene, camera);
+      renderer.clear(true, false, false);
+      showOnly(own);
+      renderer.render(scene, camera);
+      const r = coveredIn(all, read(), W, H, whole);
+      const b = r.boxes[0];
+      if (!b) continue;
+      out.seats.push({ seat: p.seat, ...b });
+      out.worst = Math.max(out.worst, b.frac);
+    }
+    return out;
+  } finally {
+    for (const [o, v] of vis) o.visible = v;
+    for (const [o, v] of kids) o.visible = v;
+    for (const c of decals) c.visible = true;
+    scene.background = prevBg;
     renderer.setClearColor(prevClear, prevAlpha);
     renderer.autoClear = prevAuto;
     renderer.setRenderTarget(prevTarget);

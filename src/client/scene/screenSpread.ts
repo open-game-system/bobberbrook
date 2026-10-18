@@ -100,7 +100,9 @@ function deepen(s: Spot, k: number, fx: number, fz: number, w: Dir | null): void
 }
 
 /** Spacing of riders stepping aboard and ashore, side by side across the screen (m). */
-export const ASHORE_STEP = 1.4;
+// Round 24: 1.4 -> 1.9 m (grown-ups now stand taller and wider than the kids; at 1.4 m a kid beside a grown-up
+// stepping ashore lost a sixth of his body behind them, arrival.png).
+export const ASHORE_STEP = 1.9;
 
 /**
  * Round 21 (arrival.png: all four overlapped stepping off the airship): where rider `rank` of `n` is drawn

@@ -104,6 +104,10 @@ const MAX_POINTS = 24;
 const PUSH_STEPS = [1, 0.8, 0.6, 0.4, 0.2, 0];
 /** Heights above each focus point that must be in frame: the foot ring's front edge and the name tag. */
 const LIFTS = [-0.7, 4.0];
+const SIDES = [-1, 1];
+const NO_SIDES = [0];
+/** Round 24: a body's half width (m) kept inside the safe margin by the catch push. */
+const PUSH_PAD = 0.8;
 /** How far above the catcher's feet the scene puts the catch focus (fishers.ts catchFocus). */
 const CATCH_UP = 1.8;
 
@@ -280,22 +284,28 @@ export class CameraRig {
   }
 
   /** Whether every focus point (feet to name tag) sits inside the safe margin from this pose. */
-  private fits(target: Vector3, dist: number, yaw: number, el: number, pitch: number, hardOnly = false): boolean {
+  private fits(target: Vector3, dist: number, yaw: number, el: number, pitch: number, hardOnly = false, pad = 0): boolean {
     const cam = this.probe;
     cam.fov = this.camera.fov;
     cam.aspect = this.camera.aspect;
     cam.updateProjectionMatrix();
     this.pose(cam, target, dist, yaw, el, pitch);
+    // Round 24: `pad` metres either side of each point along the view's right (a body's half width: the
+    // centre line in the margin let half of Juneau out at the edge in round 23's catch push, 36.8 s).
+    this.side.setFromMatrixColumn(cam.matrixWorld, 0).setY(0).normalize().multiplyScalar(pad);
     for (let i = 0; i < this.n; i++) {
       if (hardOnly && this.softPt[i]) continue;
       const p = this.pts[i]!;
       for (const lift of LIFTS) {
-        this.tmp.set(p.x, p.y + lift, p.z).project(cam);
-        if (Math.abs(this.tmp.x) > SAFE || Math.abs(this.tmp.y) > SAFE) return false;
+        for (const sd of pad > 0 ? SIDES : NO_SIDES) {
+          this.tmp.set(p.x + this.side.x * sd, p.y + lift, p.z + this.side.z * sd).project(cam);
+          if (Math.abs(this.tmp.x) > SAFE || Math.abs(this.tmp.y) > SAFE) return false;
+        }
       }
     }
     return true;
   }
+  private readonly side = new Vector3();
 
   /**
    * Fits every focus point (feet to name tag) inside the safe box: a few rounds of "recentre, then
@@ -757,7 +767,7 @@ export class CameraRig {
     for (const k of PUSH_STEPS) {
       if (this.catchK >= 0 && k > this.catchK + 1e-6) continue;
       this.pushed(k, 1);
-      if (k === 0 || this.fits(this.shownT, this.shownDist, this.yaw, this.shownEl, PITCH_UP * 0.4, true)) {
+      if (k === 0 || this.fits(this.shownT, this.shownDist, this.yaw, this.shownEl, PITCH_UP * 0.4, true, PUSH_PAD)) {
         fit = k;
         break;
       }

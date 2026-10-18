@@ -1,5 +1,6 @@
 import { lineFloor, underWalk, walkTangent } from "./walkways";
 import { spreadAcross } from "./screenSpread";
+import { spreadOnScreen, type Body } from "./screenStack";
 import { spaceOut, type Spot } from "./personalSpace";
 import { READY_ARM_X, SLING_ARM, placeRod, slingTarget } from "./rodSling";
 import {
@@ -733,6 +734,13 @@ class FisherView {
     if (this.upgradeFlash > 0) this.upgradeFlash = Math.max(0, this.upgradeFlash - dt);
   }
 
+  /** Round 24: half this fisher's width on screen terms (the hat brim; a fish held up). */
+  bodyHalfWidth(): number {
+    const brim = this.rig.headHalf * FISHER_SCALE * 1.2;
+    const fish = this.catchStart >= 0 && this.card.group.visible ? Math.abs(this.card.card.scale.x) * 0.45 : 0;
+    return Math.max(brim, fish);
+  }
+
   private tipWorld(): void {
     let rod = this.rig.rods[0]!;
     for (const r of this.rig.rods) if (r.root.visible) rod = r;
@@ -943,6 +951,7 @@ export class FisherViews {
   rideOf: ((seat: number, out: { x: number; y: number; z: number; facing: number }) => boolean) | null = null;
   private readonly ridePose = { x: 0, y: 0, z: 0, facing: 0 };
   private readonly spots: Spot[] = [];
+  private readonly bodies: Body[] = [];
 
   frame(lake: Lake | null, sn: number, t: number, dt: number, camera: Camera, campSeats: { x: number; z: number; facing: number }[]): void {
     for (let i = 0; i < 4; i++) this.bySeat[i] = undefined;
@@ -964,6 +973,23 @@ export class FisherViews {
     // Round 21: and never lined up on the camera axis (spread across the screen, along a dock or walk).
     camera.getWorldDirection(this.camFwd);
     spreadAcross(spots, { x: this.camFwd.x, z: this.camFwd.z }, (x, z) => (onDock({ x, z }) ? DOCK_ALONG : walkTangent(x, z)));
+    // Round 24: and never stacked as the TV sees them (screenStack.ts: projected body boxes, a grown-up's
+    // taller than a kid's, the near one wider on screen).
+    const bodies = this.bodies;
+    bodies.length = 0;
+    for (const sp of spots) {
+      const v = this.views[sp.seat];
+      if (!v) continue;
+      bodies.push({ ...sp, y: v.present ? v.y : groundY(sp.x, sp.z), top: v.rig.topY * FISHER_SCALE, hw: v.bodyHalfWidth() });
+    }
+    spreadOnScreen(bodies, camera, (x, z) => activeWorld().walkable({ x, z }), (x, z) => (onDock({ x, z }) ? DOCK_ALONG : walkTangent(x, z)));
+    for (const b of bodies) {
+      const sp = spots.find((p) => p.seat === b.seat);
+      if (sp) {
+        sp.ox = b.ox;
+        sp.oz = b.oz;
+      }
+    }
     const ks = damp(3, dt);
     for (const v of this.views) {
       const sp = spots.find((p) => p.seat === v.seat);
@@ -1144,8 +1170,15 @@ export class FisherViews {
         catchStart: v.catchStart,
         tag: { visible: v.rig.tag.visible, dx: v.tagDx, dy: v.tagDy },
         rod: v.rodDebug(),
+        space: [Math.round(v.spaceX * 100) / 100, Math.round(v.spaceZ * 100) / 100],
+        at: [Math.round(v.x * 10) / 10, Math.round(v.z * 10) / 10],
       };
     });
+  }
+
+  /** Round 24 (lab stack check): each present fisher's body and held fish. */
+  stackParts(): { seat: number; own: Object3D[] }[] {
+    return this.views.filter((v) => v.present).map((v) => ({ seat: v.seat, own: [v.rig.root, v.card.group] }));
   }
 
   presentCount(): number {

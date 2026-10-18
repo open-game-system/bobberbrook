@@ -433,6 +433,8 @@ export function buildFisher(seat: number, colorName: string, mats: RigMaterials,
       pivots.push(pv);
       parent = pv;
     }
+    // Round 24: a thin rod across a neighbour is not a body hidden (the lab's cover and stack checks skip it).
+    rroot.userData.coverCheckSkip = true;
     const tip = new Object3D();
     tip.position.y = ROD_LEN / ROD_SEGMENTS;
     parent.add(tip);
