@@ -964,7 +964,6 @@ export async function createLakeScene(canvas: HTMLCanvasElement, opts: { quality
       shadows.dispose();
       textures.dispose();
       cardGeo.rays.dispose();
-      cardGeo.plane.dispose();
       fishers.dispose();
       swirls.dispose();
       rigMats.body.dispose();

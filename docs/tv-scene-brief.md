@@ -327,3 +327,8 @@ draws edge HUD (journal count, rod meter, time of day). The scene draws name tag
   before the zenith; the sun's halo is laid over the gradient instead of added past what the tone map shows.
 - **Mistmarsh at night**: two lanterns in the shallows of the near (south) shore with warm pools of light spilling up
   the bank round the fishers' feet; more ferns, flowers and bluebells in marsh clearings.
+- **The held fish has volume** (`fishviz.ts` `CatchCard`): its own subdivided card bows toward the lens and the tail
+  end flicks while it is held; the painted sprite carries a darker back, a lit band along the flank, a shaded belly
+  and the far side of the body showing under it. The mittens still cross in front of the fish (not fixed this round).
+- **Giant caps** (`landmarks.ts`): a deeper wavering rim, a lumpier crown, a rim that droops here and curls there,
+  a soft dent off the crown.

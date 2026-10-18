@@ -142,7 +142,14 @@ export class CatchCard {
   private readonly canvas: HTMLCanvasElement;
   private readonly tex: CanvasTexture;
 
-  constructor(raysGeo: BufferGeometry, planeGeo: PlaneGeometry) {
+  /**
+   * Round 26 (round 25 critic, mistmarsh-catch: "a flat sticker with blob hands on top"): the card's own plane,
+   * subdivided along the fish, so it bows a little toward the lens (a body, not a sheet) and the tail end flicks.
+   */
+  private readonly geo = new PlaneGeometry(1, 1, 16, 2);
+  private readonly base: Float32Array;
+
+  constructor(raysGeo: BufferGeometry) {
     this.canvas = document.createElement("canvas");
     this.canvas.width = 640;
     this.canvas.height = 640;
@@ -156,13 +163,31 @@ export class CatchCard {
     this.cardMat.blendDst = OneMinusSrcAlphaFactor;
     this.cardMat.blendSrcAlpha = ZeroFactor;
     this.cardMat.blendDstAlpha = OneMinusSrcAlphaFactor;
-    this.card = new Mesh(planeGeo, this.cardMat);
+    this.base = Float32Array.from(this.geo.getAttribute("position").array);
+    this.card = new Mesh(this.geo, this.cardMat);
     this.card.renderOrder = 15;
     this.raysMat = new MeshBasicMaterial({ vertexColors: true, transparent: true, blending: AdditiveBlending, depthWrite: false, side: DoubleSide });
     this.rays = new Mesh(raysGeo, this.raysMat);
     this.rays.renderOrder = 14;
     this.rays.position.z = -0.05;
     this.group.add(this.rays, this.card);
+  }
+
+  /**
+   * Bows the card toward the lens by `bow` (card widths at the middle) and flicks the tail end (the sprites face
+   * right: the tail is the left end) up and down by `flick` (card widths at the tip).
+   */
+  flex(bow: number, flick: number): void {
+    const pos = this.geo.getAttribute("position");
+    const half = FISH_HALF;
+    for (let i = 0; i < pos.count; i++) {
+      const x = this.base[i * 3]!;
+      const y = this.base[i * 3 + 1]!;
+      const u = Math.min(1, Math.abs(x) / half);
+      const tail = Math.max(0, (-x - TAIL_FROM) / (half - TAIL_FROM));
+      pos.setXYZ(i, x, y + flick * tail * tail, bow * (1 - u * u) + Math.abs(flick) * tail * 0.4);
+    }
+    pos.needsUpdate = true;
   }
 
   /** Paints the fish into the card with a soft thin rim of light (reads on any background). Returns the aspect. */
@@ -184,21 +209,61 @@ export class CatchCard {
     ctx.globalAlpha = 0.55;
     ctx.drawImage(img, pad, y, w, h);
     ctx.restore();
+    // Round 26: the far side of the body showing under the belly (thickness): the sprite in a deep shade, a
+    // little lower and behind.
+    const shade = this.shadeCanvas(img, w, h, "rgb(34, 22, 48)");
+    if (shade) {
+      ctx.globalAlpha = 0.8;
+      ctx.drawImage(shade, pad + w * 0.006, y + h * 0.05);
+      ctx.globalAlpha = 1;
+    }
     ctx.drawImage(img, pad, y, w, h);
+    // Round 26: painted volume on the fish only: a darker back, a soft lit band along the flank, a shaded belly.
+    ctx.save();
+    ctx.globalCompositeOperation = "source-atop";
+    const gr = ctx.createLinearGradient(0, y, 0, y + h);
+    gr.addColorStop(0, "rgba(28, 18, 56, 0.42)");
+    gr.addColorStop(0.24, "rgba(28, 18, 56, 0.08)");
+    gr.addColorStop(0.36, "rgba(255, 250, 230, 0.2)");
+    gr.addColorStop(0.5, "rgba(255, 250, 230, 0)");
+    gr.addColorStop(0.82, "rgba(40, 24, 60, 0.1)");
+    gr.addColorStop(1, "rgba(40, 24, 60, 0.38)");
+    ctx.fillStyle = gr;
+    ctx.fillRect(pad - 20, y - 20, w + 40, h + 40);
+    ctx.restore();
     this.tex.needsUpdate = true;
     return aspect;
   }
 
+  /** The sprite filled with one colour (its silhouette), at the painted size; null without a 2D context. */
+  private shadeCanvas(img: HTMLImageElement, w: number, h: number, col: string): HTMLCanvasElement | null {
+    const c = document.createElement("canvas");
+    c.width = Math.ceil(w);
+    c.height = Math.ceil(h);
+    const x = c.getContext("2d");
+    if (!x) return null;
+    x.drawImage(img, 0, 0, w, h);
+    x.globalCompositeOperation = "source-in";
+    x.fillStyle = col;
+    x.fillRect(0, 0, c.width, c.height);
+    return c;
+  }
+
   dispose(): void {
+    this.geo.dispose();
     this.tex.dispose();
     this.cardMat.dispose();
     this.raysMat.dispose();
   }
 }
 
-export function sharedCardGeometry(): { rays: BufferGeometry; plane: PlaneGeometry } {
-  return { rays: raysGeometry(14), plane: new PlaneGeometry(1, 1) };
+export function sharedCardGeometry(): { rays: BufferGeometry } {
+  return { rays: raysGeometry(14) };
 }
+
+/** Half the painted fish's width on the card (FISH_PX / CARD_PX / 2), and where its tail end starts bending. */
+const FISH_HALF = 0.41;
+const TAIL_FROM = 0.14;
 
 /** A soft light pillar for the golden swirl: brightest where you look through it edge-on, fading up. */
 /** Shared GLSL value noise for the pillar and its ground ring. */

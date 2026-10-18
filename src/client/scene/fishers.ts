@@ -17,7 +17,6 @@ import {
   PerspectiveCamera,
   type ShaderMaterial,
   type Camera,
-  type PlaneGeometry,
   type Object3D,
 } from "three";
 import { CAST_FLIGHT_MS, CATCH_SHOW_MS, type Fisher, type Lake } from "../../game/lake";
@@ -236,7 +235,7 @@ class FisherView {
     bobberGeo: BufferGeometry,
     bobberMat: MeshBasicMaterial | import("three").MeshLambertMaterial,
     lineMat: MeshBasicMaterial,
-    cardGeo: { rays: BufferGeometry; plane: PlaneGeometry },
+    cardGeo: { rays: BufferGeometry },
     private readonly textures: FishTextures,
   ) {
     this.rig = buildFisher(seat, this.colorName, mats);
@@ -255,7 +254,7 @@ class FisherView {
     this.line = new Mesh(this.lineGeo, lineMat);
     this.line.frustumCulled = false;
     this.line.renderOrder = 8;
-    this.card = new CatchCard(cardGeo.rays, cardGeo.plane);
+    this.card = new CatchCard(cardGeo.rays);
     const p = lightPillar();
     this.pillar = p.mesh;
     this.pillarMat = p.mat;
@@ -810,6 +809,11 @@ class FisherView {
     const wiggle = age < LEAP_S ? (this.catchJunk ? s * Math.PI * 2 : Math.sin(age * 22) * 0.2) : Math.sin(age * 6) * 0.05;
     // Held, not pinned: tilted a touch, head up, toward the catcher's side of the frame.
     this.card.card.rotation.z = wiggle * (1 - o) + HOLD_TILT * Math.min(1, age / LEAP_S) * (1 - o);
+    // Round 26: a body that bows toward the lens and a tail that flicks while it is held (a quick flap now and
+    // then, a slow sway between); still while it leaps (the whole card wiggles then) and as it is tucked away.
+    const inHands = Math.min(1, Math.max(0, (age - LEAP_S) / 0.3)) * (1 - o);
+    const flap = Math.sin(age * 11) * (0.5 + 0.5 * Math.max(0, Math.sin(age * 2.3))) * 0.06 + Math.sin(age * 3.1) * 0.02;
+    this.card.flex(0.07 * inHands, this.catchJunk ? 0 : flap * inHands);
     // Rays behind rare catches and new species (gold); legendary: bigger, brighter.
     const rayOn = tier >= 1 || this.catchNew || this.catchGolden;
     const rayK = rayOn && age > LEAP_S * 0.8 ? Math.min(1, (age - LEAP_S * 0.8) * 3) * (1 - out) : 0;
@@ -929,7 +933,7 @@ export class FisherViews {
 
   constructor(
     mats: RigMaterials,
-    cardGeo: { rays: BufferGeometry; plane: PlaneGeometry },
+    cardGeo: { rays: BufferGeometry },
     textures: FishTextures,
     private readonly fx: Fx,
     private readonly shadows: FishShadows,

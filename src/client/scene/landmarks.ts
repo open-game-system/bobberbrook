@@ -357,9 +357,14 @@ function giantMushroom(seed: number, h: number, capR: number, hue: number): { st
     const z = cp.getZ(i);
     const th = Math.atan2(z, x);
     const rho = Math.min(1, Math.hypot(x, z) / capR);
-    const wave = 1 + 0.035 * Math.sin(th * 5 + seed) + 0.02 * Math.sin(th * 11 + seed * 1.7);
-    const lump = 1 + 0.08 * (vnoise(x * 0.5, z * 0.5, seed + 3) - 0.5) * (1 - rho * 0.6);
-    cp.setXYZ(i, x * wave, y * lump, z * wave);
+    // Round 26 (round 25 critic, hollow.png: still smooth vinyl caps): a more hand-made cap: a deeper wavering
+    // rim (0.035/0.02 -> 0.07/0.035), a lumpier crown (0.08 -> 0.18), the rim drooping here and curling up there,
+    // and a soft dent off the crown.
+    const wave = 1 + 0.07 * Math.sin(th * 5 + seed) + 0.035 * Math.sin(th * 11 + seed * 1.7) + 0.02 * Math.sin(th * 23 + seed * 0.6);
+    const lump = 1 + 0.18 * (vnoise(x * 0.5, z * 0.5, seed + 3) - 0.5) * (1 - rho * 0.6);
+    const droop = rho > 0.7 ? ((rho - 0.7) / 0.3) ** 2 * capR * 0.09 * Math.sin(th * 3 + seed * 2.3) : 0;
+    const dent = 1 - 0.12 * Math.exp(-(((x / capR - 0.28) ** 2 + (z / capR + 0.18) ** 2) / 0.04));
+    cp.setXYZ(i, x * wave, y * lump * dent - droop, z * wave);
   }
   capG.computeVertexNormals();
   const base = new Color().setHSL(hue, 0.5, 0.54);
