@@ -187,7 +187,7 @@ const rideNearby: Rule = (lake, mySeat) => {
 const catchesHere = (lake: Lake) => (lake.discovery ? lake.log.filter((c) => c.at > (lake.discovery?.at ?? 0)).length : lake.catchSeq);
 
 const exploreTip: Rule = (lake) => {
-  if (lake.catchSeq < 2 || catchesHere(lake) < 2) return null;
+  if (lake.catchSeq < 2 || catchesHere(lake) < 2 || lake.fishers.some((f) => f.mode !== "walk")) return null;
   const w = worldFor(lake.worldSeed);
   const here = lake.fishers[0]?.pos ?? { x: 0, z: 0 };
   const unfound = w.placesNear(here, 1).find((p) => !lake.discovered.includes(p.id));

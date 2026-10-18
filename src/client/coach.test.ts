@@ -109,6 +109,9 @@ describe("coachLine", () => {
   it("sends the family exploring once they've caught a couple here", () => {
     expect(coachLine({ ...family(), catchSeq: 2 }, 0, 0)).toBe("Explore! Follow a trail into the fog: every new place has its own fish. 1 place found so far.");
   });
+  it("no 'Explore!' while someone is still fishing (round 24: it showed through Mistmarsh's last catches)", () => {
+    expect(coachLine(withMode({ ...family(), catchSeq: 2 }, 1, { mode: "wait" }), 0, 0)).not.toMatch(/^Explore!/);
+  });
   it("just arrived somewhere new: fish here first, no 'Explore!' until a couple of catches here (round 23)", () => {
     const found = { area: "mistmarsh" as const, seat: 1, at: 1000, seq: 1 };
     const arrived = { ...family(), catchSeq: 4, discovered: ["moonwell" as const, "mistmarsh" as const], discovery: found, log: [{ seat: 0, fishId: "minnow", cm: 9, isNew: false, at: 500 }] };

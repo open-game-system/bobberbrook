@@ -78,6 +78,11 @@ button { font: inherit; color: inherit; }
 .action.caught { background: radial-gradient(circle at 40% 30%, #ffe9a0, #e0a83a); }
 .action.caught.ready { background: radial-gradient(circle at 40% 30%, #7ff0e4, #1f9aa6); animation: breathe 1.6s ease-in-out infinite; }
 .action.campfire { background: radial-gradient(circle at 40% 30%, #ffb07a, #a8401a); }
+/* Reeling (round 25): the button tugs gently with the fish's pull; a thrash starts with a white flash ring. */
+.action.reel:not(.thrash) { animation: tug 0.7s ease-in-out infinite; }
+@keyframes tug { 0%, 100% { translate: 0 0; } 50% { translate: 0 5px; } }
+.action.reel.thrash::after { content: ""; position: absolute; inset: -18px; border-radius: 50%; border: 6px solid #fff; pointer-events: none; animation: thrash-flash 0.45s ease-out both; }
+@keyframes thrash-flash { from { opacity: 1; scale: 0.9; } to { opacity: 0; scale: 1.25; } }
 .reel-ring { position: absolute; inset: -14px; width: calc(100% + 28px); height: calc(100% + 28px); pointer-events: none; }
 .spin { animation: spin 0.6s linear infinite; }
 @keyframes breathe { 0%, 100% { scale: 1; } 50% { scale: 1.05; } }
