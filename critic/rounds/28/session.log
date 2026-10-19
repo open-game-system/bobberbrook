@@ -1,0 +1,1260 @@
+[4.8s] everyone in
+[8.4s] at the water
+[8.5s] Dad casts
+[8.5s] Juneau casts
+[14.9s] Dad hooks
+[15.3s] Juneau hooks
+[17.4s] Juneau catch
+[18.1s] Dad catch
+[21.8s] Juneau casts
+[21.8s] Dad casts
+[27.8s] Dad hooks
+[28.4s] Juneau hooks
+[30.5s] Juneau catch
+[31.8s] Dad catch
+[35.4s] explore: trail to Mistmarsh
+[73.3s] found Mistmarsh
+[73.4s] Juneau tagged along
+[73.8s] Dad casts
+[74.1s] Juneau casts
+[80.1s] Juneau hooks
+[81.9s] Dad hooks
+[86.6s] Dad catch
+[91.9s] Juneau catch
+[96.3s] Juneau casts
+[96.3s] Dad casts
+[102.1s] Dad hooks
+[103.4s] Juneau hooks
+[112.1s] Juneau catch
+[112.1s] Dad catch
+[116.9s] campfire
+[124.4s] back to fishing
+{
+  "out": "critic/rounds/28/session.mp4",
+  "panels": [
+    "tv",
+    "dad",
+    "kid"
+  ],
+  "pass": false,
+  "failures": [
+    {
+      "code": "frozen",
+      "at": "1.1–3.1s"
+    }
+  ],
+  "warnings": [
+    {
+      "code": "pop_in",
+      "at": "3.60s",
+      "t": 3.6,
+      "ratio": 24.8
+    },
+    {
+      "code": "pop_in",
+      "at": "3.67s",
+      "t": 3.666667,
+      "ratio": 26
+    },
+    {
+      "code": "camera_jerk",
+      "at": "4.43s",
+      "t": 4.433333,
+      "ratio": 18
+    },
+    {
+      "code": "camera_jerk",
+      "at": "4.53s",
+      "t": 4.533333,
+      "ratio": 12.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "4.83s",
+      "t": 4.833333,
+      "ratio": 10.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "9.13s",
+      "t": 9.133333,
+      "ratio": 14.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "14.77s",
+      "t": 14.766667,
+      "ratio": 9.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "17.70s",
+      "t": 17.7,
+      "ratio": 13.8
+    },
+    {
+      "code": "camera_jerk",
+      "at": "17.83s",
+      "t": 17.833333,
+      "ratio": 15.2
+    },
+    {
+      "code": "camera_jerk",
+      "at": "17.93s",
+      "t": 17.933333,
+      "ratio": 10.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "18.43s",
+      "t": 18.433333,
+      "ratio": 10.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "18.50s",
+      "t": 18.5,
+      "ratio": 12
+    },
+    {
+      "code": "camera_jerk",
+      "at": "20.97s",
+      "t": 20.966667,
+      "ratio": 10.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "30.43s",
+      "t": 30.433333,
+      "ratio": 10.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "30.83s",
+      "t": 30.833333,
+      "ratio": 9.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "30.93s",
+      "t": 30.933333,
+      "ratio": 9.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "31.03s",
+      "t": 31.033333,
+      "ratio": 13.2
+    },
+    {
+      "code": "camera_jerk",
+      "at": "31.13s",
+      "t": 31.133333,
+      "ratio": 15
+    },
+    {
+      "code": "camera_jerk",
+      "at": "31.33s",
+      "t": 31.333333,
+      "ratio": 21.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "31.47s",
+      "t": 31.466667,
+      "ratio": 20.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "31.57s",
+      "t": 31.566667,
+      "ratio": 15.8
+    },
+    {
+      "code": "camera_jerk",
+      "at": "34.13s",
+      "t": 34.133333,
+      "ratio": 18.2
+    },
+    {
+      "code": "camera_jerk",
+      "at": "34.23s",
+      "t": 34.233333,
+      "ratio": 14.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "34.30s",
+      "t": 34.3,
+      "ratio": 21.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "34.43s",
+      "t": 34.433333,
+      "ratio": 14.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "34.57s",
+      "t": 34.566667,
+      "ratio": 19.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "37.43s",
+      "t": 37.433333,
+      "ratio": 26
+    },
+    {
+      "code": "camera_jerk",
+      "at": "37.77s",
+      "t": 37.766667,
+      "ratio": 24.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "38.07s",
+      "t": 38.066667,
+      "ratio": 20.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "38.17s",
+      "t": 38.166667,
+      "ratio": 20
+    },
+    {
+      "code": "camera_jerk",
+      "at": "38.43s",
+      "t": 38.433333,
+      "ratio": 18.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "38.53s",
+      "t": 38.533333,
+      "ratio": 9.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "38.77s",
+      "t": 38.766667,
+      "ratio": 9.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "38.83s",
+      "t": 38.833333,
+      "ratio": 21
+    },
+    {
+      "code": "camera_jerk",
+      "at": "38.93s",
+      "t": 38.933333,
+      "ratio": 14.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "39.03s",
+      "t": 39.033333,
+      "ratio": 18
+    },
+    {
+      "code": "camera_jerk",
+      "at": "39.17s",
+      "t": 39.166667,
+      "ratio": 16.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "39.67s",
+      "t": 39.666667,
+      "ratio": 18.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "40.67s",
+      "t": 40.666667,
+      "ratio": 17.2
+    },
+    {
+      "code": "camera_jerk",
+      "at": "41.10s",
+      "t": 41.1,
+      "ratio": 15.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "41.53s",
+      "t": 41.533333,
+      "ratio": 19.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "41.97s",
+      "t": 41.966667,
+      "ratio": 18.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "42.07s",
+      "t": 42.066667,
+      "ratio": 13.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "42.30s",
+      "t": 42.3,
+      "ratio": 17.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "42.43s",
+      "t": 42.433333,
+      "ratio": 14.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "42.57s",
+      "t": 42.566667,
+      "ratio": 11.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "42.63s",
+      "t": 42.633333,
+      "ratio": 10.2
+    },
+    {
+      "code": "camera_jerk",
+      "at": "42.77s",
+      "t": 42.766667,
+      "ratio": 17
+    },
+    {
+      "code": "camera_jerk",
+      "at": "43.27s",
+      "t": 43.266667,
+      "ratio": 18.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "43.50s",
+      "t": 43.5,
+      "ratio": 10.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "43.67s",
+      "t": 43.666667,
+      "ratio": 12.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "43.83s",
+      "t": 43.833333,
+      "ratio": 11.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "43.90s",
+      "t": 43.9,
+      "ratio": 10.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "44.10s",
+      "t": 44.1,
+      "ratio": 12.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "44.17s",
+      "t": 44.166667,
+      "ratio": 12.2
+    },
+    {
+      "code": "camera_jerk",
+      "at": "46.73s",
+      "t": 46.733333,
+      "ratio": 10.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "47.03s",
+      "t": 47.033333,
+      "ratio": 9.8
+    },
+    {
+      "code": "camera_jerk",
+      "at": "47.10s",
+      "t": 47.1,
+      "ratio": 9.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "47.43s",
+      "t": 47.433333,
+      "ratio": 10.8
+    },
+    {
+      "code": "camera_jerk",
+      "at": "47.87s",
+      "t": 47.866667,
+      "ratio": 15.8
+    },
+    {
+      "code": "camera_jerk",
+      "at": "48.43s",
+      "t": 48.433333,
+      "ratio": 18.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "48.50s",
+      "t": 48.5,
+      "ratio": 16.2
+    },
+    {
+      "code": "camera_jerk",
+      "at": "48.67s",
+      "t": 48.666667,
+      "ratio": 25.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "48.77s",
+      "t": 48.766667,
+      "ratio": 16.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "48.87s",
+      "t": 48.866667,
+      "ratio": 14.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "49.03s",
+      "t": 49.033333,
+      "ratio": 9.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "49.30s",
+      "t": 49.3,
+      "ratio": 22.2
+    },
+    {
+      "code": "camera_jerk",
+      "at": "49.37s",
+      "t": 49.366667,
+      "ratio": 13.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "49.57s",
+      "t": 49.566667,
+      "ratio": 17.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "49.63s",
+      "t": 49.633333,
+      "ratio": 16.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "49.90s",
+      "t": 49.9,
+      "ratio": 19.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "50.13s",
+      "t": 50.133333,
+      "ratio": 9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "50.23s",
+      "t": 50.233333,
+      "ratio": 13.8
+    },
+    {
+      "code": "camera_jerk",
+      "at": "50.30s",
+      "t": 50.3,
+      "ratio": 14.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "50.57s",
+      "t": 50.566667,
+      "ratio": 15.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "50.77s",
+      "t": 50.766667,
+      "ratio": 12.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "51.10s",
+      "t": 51.1,
+      "ratio": 11.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "51.37s",
+      "t": 51.366667,
+      "ratio": 10.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "51.43s",
+      "t": 51.433333,
+      "ratio": 10.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "51.73s",
+      "t": 51.733333,
+      "ratio": 14.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "51.93s",
+      "t": 51.933333,
+      "ratio": 14.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "52.43s",
+      "t": 52.433333,
+      "ratio": 13.8
+    },
+    {
+      "code": "camera_jerk",
+      "at": "52.97s",
+      "t": 52.966667,
+      "ratio": 14.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "53.37s",
+      "t": 53.366667,
+      "ratio": 9.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "53.77s",
+      "t": 53.766667,
+      "ratio": 16.8
+    },
+    {
+      "code": "camera_jerk",
+      "at": "53.83s",
+      "t": 53.833333,
+      "ratio": 16.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "54.03s",
+      "t": 54.033333,
+      "ratio": 17.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "54.30s",
+      "t": 54.3,
+      "ratio": 17.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "54.53s",
+      "t": 54.533333,
+      "ratio": 15.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "54.70s",
+      "t": 54.7,
+      "ratio": 13.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "55.27s",
+      "t": 55.266667,
+      "ratio": 18.2
+    },
+    {
+      "code": "camera_jerk",
+      "at": "55.33s",
+      "t": 55.333333,
+      "ratio": 13.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "55.67s",
+      "t": 55.666667,
+      "ratio": 15
+    },
+    {
+      "code": "camera_jerk",
+      "at": "55.97s",
+      "t": 55.966667,
+      "ratio": 18.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "56.37s",
+      "t": 56.366667,
+      "ratio": 13.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "56.43s",
+      "t": 56.433333,
+      "ratio": 17.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "56.50s",
+      "t": 56.5,
+      "ratio": 9.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "56.57s",
+      "t": 56.566667,
+      "ratio": 9.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "57.03s",
+      "t": 57.033333,
+      "ratio": 21.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "57.43s",
+      "t": 57.433333,
+      "ratio": 26.2
+    },
+    {
+      "code": "camera_jerk",
+      "at": "57.63s",
+      "t": 57.633333,
+      "ratio": 23.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "58.10s",
+      "t": 58.1,
+      "ratio": 28.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "58.30s",
+      "t": 58.3,
+      "ratio": 24.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "58.50s",
+      "t": 58.5,
+      "ratio": 18
+    },
+    {
+      "code": "camera_jerk",
+      "at": "58.90s",
+      "t": 58.9,
+      "ratio": 20.2
+    },
+    {
+      "code": "camera_jerk",
+      "at": "59.77s",
+      "t": 59.766667,
+      "ratio": 17.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "60.87s",
+      "t": 60.866667,
+      "ratio": 19.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "60.97s",
+      "t": 60.966667,
+      "ratio": 18.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "61.03s",
+      "t": 61.033333,
+      "ratio": 11.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "61.67s",
+      "t": 61.666667,
+      "ratio": 31.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "62.07s",
+      "t": 62.066667,
+      "ratio": 29.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "62.17s",
+      "t": 62.166667,
+      "ratio": 24.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "62.33s",
+      "t": 62.333333,
+      "ratio": 27.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "62.67s",
+      "t": 62.666667,
+      "ratio": 28.8
+    },
+    {
+      "code": "camera_jerk",
+      "at": "62.73s",
+      "t": 62.733333,
+      "ratio": 13
+    },
+    {
+      "code": "camera_jerk",
+      "at": "62.90s",
+      "t": 62.9,
+      "ratio": 24.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "63.03s",
+      "t": 63.033333,
+      "ratio": 15.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "63.53s",
+      "t": 63.533333,
+      "ratio": 21.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "63.97s",
+      "t": 63.966667,
+      "ratio": 27.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "64.03s",
+      "t": 64.033333,
+      "ratio": 11.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "64.27s",
+      "t": 64.266667,
+      "ratio": 27.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "64.33s",
+      "t": 64.333333,
+      "ratio": 19
+    },
+    {
+      "code": "camera_jerk",
+      "at": "64.63s",
+      "t": 64.633333,
+      "ratio": 15.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "64.93s",
+      "t": 64.933333,
+      "ratio": 13.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "65.43s",
+      "t": 65.433333,
+      "ratio": 12.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "65.87s",
+      "t": 65.866667,
+      "ratio": 10.8
+    },
+    {
+      "code": "camera_jerk",
+      "at": "66.97s",
+      "t": 66.966667,
+      "ratio": 17.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "67.17s",
+      "t": 67.166667,
+      "ratio": 16.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "67.53s",
+      "t": 67.533333,
+      "ratio": 10.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "68.03s",
+      "t": 68.033333,
+      "ratio": 19.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "68.57s",
+      "t": 68.566667,
+      "ratio": 22.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "68.70s",
+      "t": 68.7,
+      "ratio": 16.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "68.90s",
+      "t": 68.9,
+      "ratio": 22.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "69.37s",
+      "t": 69.366667,
+      "ratio": 14.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "69.57s",
+      "t": 69.566667,
+      "ratio": 26.2
+    },
+    {
+      "code": "camera_jerk",
+      "at": "69.93s",
+      "t": 69.933333,
+      "ratio": 25.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "70.17s",
+      "t": 70.166667,
+      "ratio": 15.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "70.50s",
+      "t": 70.5,
+      "ratio": 25.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "70.97s",
+      "t": 70.966667,
+      "ratio": 16.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "71.17s",
+      "t": 71.166667,
+      "ratio": 13.2
+    },
+    {
+      "code": "camera_jerk",
+      "at": "71.67s",
+      "t": 71.666667,
+      "ratio": 9.2
+    },
+    {
+      "code": "camera_jerk",
+      "at": "71.87s",
+      "t": 71.866667,
+      "ratio": 18.8
+    },
+    {
+      "code": "camera_jerk",
+      "at": "72.23s",
+      "t": 72.233333,
+      "ratio": 19
+    },
+    {
+      "code": "camera_jerk",
+      "at": "72.30s",
+      "t": 72.3,
+      "ratio": 9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "72.63s",
+      "t": 72.633333,
+      "ratio": 19.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "74.67s",
+      "t": 74.666667,
+      "ratio": 19
+    },
+    {
+      "code": "camera_jerk",
+      "at": "74.73s",
+      "t": 74.733333,
+      "ratio": 17
+    },
+    {
+      "code": "camera_jerk",
+      "at": "74.93s",
+      "t": 74.933333,
+      "ratio": 19.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "75.07s",
+      "t": 75.066667,
+      "ratio": 17.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "75.43s",
+      "t": 75.433333,
+      "ratio": 24.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "75.70s",
+      "t": 75.7,
+      "ratio": 20.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "76.03s",
+      "t": 76.033333,
+      "ratio": 12.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "76.10s",
+      "t": 76.1,
+      "ratio": 12.8
+    },
+    {
+      "code": "camera_jerk",
+      "at": "78.63s",
+      "t": 78.633333,
+      "ratio": 20.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "78.77s",
+      "t": 78.766667,
+      "ratio": 18.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "78.87s",
+      "t": 78.866667,
+      "ratio": 12.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "78.93s",
+      "t": 78.933333,
+      "ratio": 14.8
+    },
+    {
+      "code": "camera_jerk",
+      "at": "79.30s",
+      "t": 79.3,
+      "ratio": 22.8
+    },
+    {
+      "code": "camera_jerk",
+      "at": "79.43s",
+      "t": 79.433333,
+      "ratio": 10.2
+    },
+    {
+      "code": "camera_jerk",
+      "at": "79.77s",
+      "t": 79.766667,
+      "ratio": 18.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "80.17s",
+      "t": 80.166667,
+      "ratio": 13.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "86.13s",
+      "t": 86.133333,
+      "ratio": 18.2
+    },
+    {
+      "code": "camera_jerk",
+      "at": "86.23s",
+      "t": 86.233333,
+      "ratio": 15.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "86.47s",
+      "t": 86.466667,
+      "ratio": 25.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "86.70s",
+      "t": 86.7,
+      "ratio": 16
+    },
+    {
+      "code": "camera_jerk",
+      "at": "87.03s",
+      "t": 87.033333,
+      "ratio": 17.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "87.27s",
+      "t": 87.266667,
+      "ratio": 13.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "89.13s",
+      "t": 89.133333,
+      "ratio": 10.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "89.23s",
+      "t": 89.233333,
+      "ratio": 11.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "89.47s",
+      "t": 89.466667,
+      "ratio": 15.9
+    },
+    {
+      "code": "pop_in",
+      "at": "89.53s",
+      "t": 89.533333,
+      "ratio": 9.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "89.63s",
+      "t": 89.633333,
+      "ratio": 15.4
+    },
+    {
+      "code": "camera_jerk",
+      "at": "89.93s",
+      "t": 89.933333,
+      "ratio": 20.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "90.17s",
+      "t": 90.166667,
+      "ratio": 13.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "91.70s",
+      "t": 91.7,
+      "ratio": 16.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "91.97s",
+      "t": 91.966667,
+      "ratio": 13.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "92.03s",
+      "t": 92.033333,
+      "ratio": 14.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "92.30s",
+      "t": 92.3,
+      "ratio": 15.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "92.53s",
+      "t": 92.533333,
+      "ratio": 13
+    },
+    {
+      "code": "camera_jerk",
+      "at": "92.67s",
+      "t": 92.666667,
+      "ratio": 13.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "94.87s",
+      "t": 94.866667,
+      "ratio": 9.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "95.30s",
+      "t": 95.3,
+      "ratio": 22
+    },
+    {
+      "code": "camera_jerk",
+      "at": "95.67s",
+      "t": 95.666667,
+      "ratio": 20.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "95.97s",
+      "t": 95.966667,
+      "ratio": 20.3
+    },
+    {
+      "code": "camera_jerk",
+      "at": "96.10s",
+      "t": 96.1,
+      "ratio": 11
+    },
+    {
+      "code": "camera_jerk",
+      "at": "96.47s",
+      "t": 96.466667,
+      "ratio": 19.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "96.67s",
+      "t": 96.666667,
+      "ratio": 22.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "96.77s",
+      "t": 96.766667,
+      "ratio": 12
+    },
+    {
+      "code": "camera_jerk",
+      "at": "96.87s",
+      "t": 96.866667,
+      "ratio": 10.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "111.73s",
+      "t": 111.733333,
+      "ratio": 14.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "112.03s",
+      "t": 112.033333,
+      "ratio": 12.9
+    },
+    {
+      "code": "camera_jerk",
+      "at": "112.23s",
+      "t": 112.233333,
+      "ratio": 18.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "112.37s",
+      "t": 112.366667,
+      "ratio": 9.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "112.77s",
+      "t": 112.766667,
+      "ratio": 19.1
+    },
+    {
+      "code": "camera_jerk",
+      "at": "115.10s",
+      "t": 115.1,
+      "ratio": 12.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "115.43s",
+      "t": 115.433333,
+      "ratio": 20.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "115.77s",
+      "t": 115.766667,
+      "ratio": 16
+    },
+    {
+      "code": "camera_jerk",
+      "at": "116.07s",
+      "t": 116.066667,
+      "ratio": 13.8
+    },
+    {
+      "code": "camera_jerk",
+      "at": "117.07s",
+      "t": 117.066667,
+      "ratio": 33.7
+    },
+    {
+      "code": "camera_jerk",
+      "at": "117.30s",
+      "t": 117.3,
+      "ratio": 9.6
+    },
+    {
+      "code": "camera_jerk",
+      "at": "124.70s",
+      "t": 124.7,
+      "ratio": 10.5
+    },
+    {
+      "code": "camera_jerk",
+      "at": "126.33s",
+      "t": 126.333333,
+      "ratio": 9.7
+    }
+  ]
+}
