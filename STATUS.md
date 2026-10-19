@@ -12,3 +12,7 @@
 - Deployed: https://bobberbrook.jonathanrmumm.workers.dev (round 14 build). Listed in the live OGS catalogue (`/api/v1/catalogue`). Not yet verified on a real device.
 - Stuck rows (4–5): Camera, Onboarding, Art, Characters, Lighting, Audio. Why: the critic still reads the fishers and many props as vinyl next to painted canopies (the owner's "amateur" note); camera framing of a moving family in an endless world; narrator consonants count as "harsh" in the audio metric.
 - Next: a real-device family playtest; then either a quiet machine for evidence, or a hero-asset pass (painted character sheet / generated 3D props) that needs a budget decision.
+
+## 2026-10-18: hill-climb rounds 22–28 (stopped by the stop rule)
+- Minimum by round: 22:4 · 23:4 · 24:4 · 25:5 · 26:5 · 27:4 (veto regression) · 28:5. Details, video path and next directions: progress.md.
+- Merged to origin/main; not deployed; not verified on a real device.
